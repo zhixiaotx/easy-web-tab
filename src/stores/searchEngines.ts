@@ -14,8 +14,7 @@ const BUILT_IN_OVERRIDES_KEY = 'built-in-engine-overrides'
 
 // 默认内置搜索引擎 (不可删除)
 const BUILT_IN_ENGINES: SearchEngine[] = [
-  { id: 'metaso', name: '秘塔AI', url: 'https://metaso.cn/search?q=', isDefault: true, sort: 1 },
-  { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd=', isDefault: false, sort: 2 },
+  { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd=', isDefault: true, sort: 1 },
 ]
 
 // 默认搜索引擎 (将被迁移到自定义)
@@ -62,9 +61,16 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     return [...builtIn, ...customEngines.value].sort((a, b) => a.sort - b.sort)
   })
 
-  // 默认搜索引擎
+  // 默认搜索引擎 (自定义引擎优先)
   const defaultEngine = computed(() => {
-    return allEngines.value.find(e => e.isDefault) || allEngines.value[0]
+    // 优先从自定义引擎中找默认
+    const customDefault = customEngines.value.find(e => e.isDefault)
+    if (customDefault) return customDefault
+    // 再从内置引擎中找
+    const builtInDefault = builtInEngines.value.find(e => e.isDefault)
+    if (builtInDefault) return builtInDefault
+    // 最后取第一个
+    return allEngines.value[0]
   })
 
   // 持久化自定义引擎

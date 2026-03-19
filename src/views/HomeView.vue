@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.vue'
 import SiteModal from '../components/SiteModal.vue'
 import SettingsButton from '../components/SettingsButton.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
+import ThemeToggle from '../components/ThemeToggle.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 
@@ -126,6 +127,7 @@ const triggerImport = () => {
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
           <button class="btn-action" @click="showEngineManager = true">🔍 引擎管理</button>
           <SettingsButton />
+          <ThemeToggle />
         </div>
       </div>
     </header>

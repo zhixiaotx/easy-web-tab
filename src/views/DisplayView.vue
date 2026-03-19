@@ -7,6 +7,7 @@ import GlobalSearch from '../components/GlobalSearch.vue'
 import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
+import ThemeToggle from '../components/ThemeToggle.vue'
 
 const store = useSitesStore()
 const router = useRouter()
@@ -30,6 +31,7 @@ const goToAdmin = () => {
       </div>
       <div class="actions-row">
         <button class="btn-admin" @click="goToAdmin">管理后台</button>
+        <ThemeToggle />
       </div>
     </header>
 

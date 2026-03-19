@@ -1,0 +1,776 @@
+/* 暗色模式样式 */
+
+/* 基础变量覆盖 - 增强对比度 */
+:root.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-card: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --border-color: #374151;
+  --border-light: #4b5563;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --hover-bg: #374151;
+  --input-bg: #374151;
+}
+
+/* 全局暗色样式 */
+:root.dark {
+  color-scheme: dark;
+}
+
+:root.dark body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* 全局字体优化 */
+:root.dark {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 通用组件 */
+:root.dark .container {
+  background-color: var(--bg-primary);
+}
+
+:root.dark .header {
+  background-color: var(--bg-primary);
+}
+
+/* 分类标签容器 */
+:root.dark .category-tabs,
+:root.dark .category-container {
+  background-color: var(--bg-primary);
+}
+
+:root.dark .category-tabs .tabs-wrapper,
+:root.dark .category-wrapper {
+  background-color: var(--bg-primary);
+}
+
+/* 按钮 */
+:root.dark .btn-action {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .btn-action:hover {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+:root.dark .btn-add {
+  background-color: var(--accent-color);
+}
+
+:root.dark .btn-add:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+:root.dark .btn-submit {
+  background-color: var(--accent-color);
+}
+
+:root.dark .btn-fetch {
+  background-color: var(--success-color);
+}
+
+:root.dark .btn-cancel {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+/* 输入框 - 修复白色问题 */
+:root.dark input,
+:root.dark textarea,
+:root.dark select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:root.dark input:focus,
+:root.dark textarea:focus,
+:root.dark select:focus {
+  border-color: var(--accent-color) !important;
+  background-color: var(--input-bg) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+:root.dark input::placeholder,
+:root.dark textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* 网站卡片 - 修复白色问题 */
+:root.dark .site-card {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root.dark .site-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 8px 24px var(--shadow-color);
+}
+
+:root.dark .site-name {
+  color: var(--text-primary);
+}
+
+:root.dark .site-desc {
+  color: var(--text-secondary);
+}
+
+:root.dark .favicon {
+  background-color: var(--hover-bg);
+}
+
+:root.dark .action-btn {
+  color: var(--text-secondary);
+}
+
+:root.dark .action-btn:hover {
+  color: var(--text-primary);
+}
+
+/* 分类标签 */
+:root.dark .category-tab {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .category-tab:hover,
+:root.dark .category-tab.active {
+  background-color: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* 标签筛选 */
+:root.dark .tag {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .tag:hover,
+:root.dark .tag.active {
+  background-color: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* 模态框 - 修复白色问题 */
+:root.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+:root.dark .modal {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .modal-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+:root.dark .modal-header h2 {
+  color: var(--text-primary);
+}
+
+:root.dark .modal-body {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .modal-footer {
+  background-color: var(--bg-secondary);
+  border-top-color: var(--border-color);
+}
+
+:root.dark .form-group label {
+  color: var(--text-primary);
+}
+
+:root.dark .form-group input,
+:root.dark .form-group textarea,
+:root.dark .form-group select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 管理面板 - 修复白色问题 */
+:root.dark .manager-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+:root.dark .manager {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .manager-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+:root.dark .manager-header h2 {
+  color: var(--text-primary);
+}
+
+:root.dark .manager-body {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .add-form {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+:root.dark .add-form h3 {
+  color: var(--text-secondary);
+}
+
+:root.dark .engine-section {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .engine-section h3 {
+  color: var(--text-secondary);
+}
+
+:root.dark .engine-item {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+:root.dark .engine-item.is-default {
+  background-color: #422006;
+  border-color: #b45309;
+}
+
+:root.dark .engine-name {
+  color: var(--text-primary);
+}
+
+:root.dark .engine-url {
+  color: var(--text-muted);
+}
+
+/* 搜索引擎选择器 */
+:root.dark .engine-select {
+  background-color: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+:root.dark .search-input {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+:root.dark .global-search {
+  background-color: var(--bg-secondary);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* 分页 */
+:root.dark .pagination-btn {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .pagination-btn:hover:not(:disabled) {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+:root.dark .pagination-btn.active {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+:root.dark .pagination-btn:disabled {
+  opacity: 0.5;
+}
+
+/* 主题切换按钮 */
+:root.dark .theme-toggle {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .theme-toggle:hover {
+  background-color: var(--hover-bg);
+  color: var(--warning-color);
+}
+
+/* 空状态 */
+:root.dark .empty-state {
+  color: var(--text-muted);
+}
+
+:root.dark .empty-state p {
+  color: var(--text-muted);
+}
+
+/* 设置按钮 */
+:root.dark .settings-btn {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .settings-btn:hover {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+}
+
+/* 分类管理 */
+:root.dark .category-item {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+:root.dark .category-name {
+  color: var(--text-primary);
+}
+
+/* 工具提示 */
+:root.dark .form-hint {
+  color: var(--text-muted);
+}
+
+:root.dark .error-msg {
+  color: var(--error-color);
+}
+
+/* 搜索建议 */
+:root.dark .tag-suggestions {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .tag-suggestion {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+:root.dark .tag-suggestion:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* 滚动条 */
+:root.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+:root.dark ::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+:root.dark ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+:root.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+
+/* 焦点样式 */
+:root.dark *:focus-visible {
+  outline-color: var(--accent-color);
+}
+
+/* 图标颜色 */
+:root.dark .icon-img {
+  opacity: 0.9;
+}
+
+/* 管理后台入口按钮 */
+:root.dark .btn-admin {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .btn-admin:hover {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+/* 分类管理面板 */
+:root.dark .category-manager-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+:root.dark .category-manager {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .category-manager-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+:root.dark .category-manager-body {
+  background-color: var(--bg-secondary);
+}
+
+/* 标签输入样式 */
+:root.dark .tag-group .tag-input-wrapper input {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* URL输入组 */
+:root.dark .url-input-group input {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 分类选择器 */
+:root.dark .category-select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 排序控件 */
+:root.dark .btn-sort {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+:root.dark .btn-sort:hover:not(:disabled) {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+}
+
+/* 锁定图标 */
+:root.dark .lock-icon {
+  color: var(--text-muted);
+}
+
+/* 默认标签 */
+:root.dark .default-tag {
+  background-color: #b45309;
+  color: white;
+}
+
+/* 编辑输入框 */
+:root.dark .edit-input {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 动作按钮行 */
+:root.dark .actions-row {
+  background-color: var(--bg-primary);
+}
+
+/* 搜索区域 */
+:root.dark .search-section {
+  background-color: var(--bg-primary);
+}
+
+/* 网站网格 */
+:root.dark .sites-grid {
+  background-color: var(--bg-primary);
+}
+
+/* ========================================
+   分类管理弹框 - 全面暗色模式覆盖
+   ======================================== */
+
+/* 分类管理容器 */
+:root.dark .manager-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+:root.dark .manager {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .manager-header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+:root.dark .manager-header h2 {
+  color: var(--text-primary);
+}
+
+:root.dark .manager-body {
+  background-color: var(--bg-secondary);
+}
+
+/* 添加表单 */
+:root.dark .add-form {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+:root.dark .add-form h3 {
+  color: var(--text-secondary);
+}
+
+/* 图标按钮 */
+:root.dark .icon-btn {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+:root.dark .icon-btn:hover {
+  background-color: var(--hover-bg);
+}
+
+:root.dark .icon-btn.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+:root.dark .icon-label {
+  color: var(--text-muted);
+}
+
+/* 分类列表 */
+:root.dark .category-list h3 {
+  color: var(--text-secondary);
+}
+
+:root.dark .section-title {
+  color: var(--text-muted);
+}
+
+/* 分类项 - 修复白色问题 */
+:root.dark .category-item {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+:root.dark .category-item.built-in {
+  background-color: #422006;
+  border-color: #b45309;
+  opacity: 1;
+}
+
+:root.dark .category-item.custom {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+:root.dark .category-icon {
+  color: inherit;
+}
+
+:root.dark .category-name {
+  color: var(--text-primary);
+}
+
+:root.dark .site-count {
+  color: var(--text-muted);
+}
+
+/* 排序控件 */
+:root.dark .btn-sort {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+:root.dark .btn-sort:hover:not(:disabled) {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+}
+
+:root.dark .sort-hint {
+  color: var(--text-muted);
+}
+
+/* 编辑输入框 */
+:root.dark .edit-input {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:root.dark .edit-icon-suggestions {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+:root.dark .icon-btn-small {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+:root.dark .icon-btn-small:hover {
+  background-color: var(--hover-bg);
+}
+
+:root.dark .icon-btn-small.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+/* 动作按钮 */
+:root.dark .btn-icon {
+  color: var(--text-muted);
+}
+
+:root.dark .btn-icon:hover {
+  color: var(--text-primary);
+}
+
+:root.dark .btn-icon.delete:hover {
+  color: var(--error-color);
+}
+
+/* 空状态 */
+:root.dark .empty-custom {
+  color: var(--text-muted);
+}
+
+/* 关闭按钮 */
+:root.dark .close-btn {
+  color: var(--text-muted);
+}
+
+:root.dark .close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* 添加按钮 */
+:root.dark .btn-add {
+  background-color: var(--accent-color);
+}
+
+:root.dark .btn-add:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+:root.dark .btn-add:disabled {
+  background-color: var(--text-muted);
+}
+
+/* ========================================
+   引擎管理弹框 - 全面暗色模式覆盖
+   ======================================== */
+
+/* 引擎区域 */
+:root.dark .engine-section {
+  background-color: var(--bg-secondary);
+}
+
+:root.dark .engine-section h3 {
+  color: var(--text-secondary);
+}
+
+:root.dark .engine-item {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+:root.dark .engine-item.is-default {
+  background-color: #422006;
+  border-color: #b45309;
+}
+
+:root.dark .engine-name {
+  color: var(--text-primary);
+}
+
+:root.dark .engine-url {
+  color: var(--text-muted);
+}
+
+:root.dark .lock-icon {
+  color: var(--text-muted);
+}
+
+:root.dark .default-tag {
+  background-color: #b45309;
+  color: white;
+}
+
+/* 搜索建议 */
+:root.dark .tag-suggestions {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .tag-suggestion {
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+:root.dark .tag-suggestion:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* 排序控件 */
+:root.dark .btn-sort {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+:root.dark .btn-sort:hover:not(:disabled) {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+}
+
+/* ========================================
+   全局修复
+   ======================================== */
+
+/* 确保所有 scoped 组件中的输入框也是暗色 */
+:root.dark input,
+:root.dark textarea,
+:root.dark select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 输入框聚焦 */
+:root.dark input:focus,
+:root.dark textarea:focus,
+:root.dark select:focus {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* 占位符 */
+:root.dark input::placeholder,
+:root.dark textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+

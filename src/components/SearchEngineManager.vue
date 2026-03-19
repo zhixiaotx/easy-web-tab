@@ -16,6 +16,10 @@ const editingId = ref<string | null>(null)
 const editingName = ref('')
 const editingUrl = ref('')
 
+// 内置引擎编辑状态
+const builtInEditingId = ref<string | null>(null)
+const builtInEditingUrl = ref('')
+
 // 按排序显示
 const sortedEngines = computed(() => 
   [...store.customEngines].sort((a, b) => a.sort - b.sort)
@@ -80,6 +84,32 @@ function handleSetDefault(id: string) {
 function handleMove(id: string, direction: 'up' | 'down') {
   store.moveEngine(id, direction)
 }
+
+// 开始编辑内置引擎 URL
+function startEditBuiltIn(engine: SearchEngine) {
+  builtInEditingId.value = engine.id
+  builtInEditingUrl.value = engine.url
+}
+
+// 取消编辑内置引擎
+function cancelEditBuiltIn() {
+  builtInEditingId.value = null
+  builtInEditingUrl.value = ''
+}
+
+// 保存内置引擎 URL
+function saveBuiltInUrl() {
+  if (!builtInEditingId.value || !builtInEditingUrl.value.trim()) return
+  store.updateBuiltInEngineUrl(builtInEditingId.value, builtInEditingUrl.value.trim())
+  builtInEditingId.value = null
+  builtInEditingUrl.value = ''
+}
+
+// 截断 URL 显示
+function truncateUrl(url: string, maxLength = 40) {
+  if (url.length <= maxLength) return url
+  return url.slice(0, maxLength) + '...'
+}
 </script>
 
 <template>
@@ -137,16 +167,34 @@ function handleMove(id: string, direction: 'up' | 'down') {
             <div class="sort-controls">
               <span class="lock-icon">🔒</span>
             </div>
-            <span class="engine-name">
-              {{ engine.name }}
-              <span v-if="engine.isDefault" class="default-tag">默认</span>
-            </span>
-            <button 
-              v-if="!engine.isDefault" 
-              class="btn-icon set-default" 
-              @click="handleSetDefault(engine.id)"
-              title="设为默认"
-            >⭐</button>
+            
+            <!-- 编辑模式 -->
+            <template v-if="builtInEditingId === engine.id">
+              <input
+                v-model="builtInEditingUrl"
+                type="text"
+                class="edit-input url built-in-url"
+                placeholder="URL"
+              />
+              <button class="btn-icon" @click="saveBuiltInUrl">✓</button>
+              <button class="btn-icon" @click="cancelEditBuiltIn">✕</button>
+            </template>
+            
+            <!-- 显示模式 -->
+            <template v-else>
+              <span class="engine-name">
+                {{ engine.name }}
+                <span v-if="engine.isDefault" class="default-tag">默认</span>
+              </span>
+              <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
+              <button 
+                v-if="!engine.isDefault" 
+                class="btn-icon set-default" 
+                @click="handleSetDefault(engine.id)"
+                title="设为默认"
+              >⭐</button>
+              <button class="btn-icon" @click="startEditBuiltIn(engine)" title="编辑URL">✏️</button>
+            </template>
           </div>
         </div>
 
@@ -407,6 +455,15 @@ function handleMove(id: string, direction: 'up' | 'down') {
   gap: 8px;
 }
 
+.engine-url {
+  font-size: 12px;
+  color: #94a3b8;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .default-tag {
   font-size: 10px;
   padding: 2px 6px;
@@ -428,6 +485,10 @@ function handleMove(id: string, direction: 'up' | 'down') {
 
 .edit-input.url {
   flex: 1;
+}
+
+.edit-input.url.built-in-url {
+  min-width: 250px;
 }
 
 .btn-icon {

@@ -10,6 +10,7 @@ export interface SearchEngine {
 }
 
 const STORAGE_KEY = 'user-search-engines'
+const BUILT_IN_OVERRIDES_KEY = 'built-in-engine-overrides'
 
 // 默认内置搜索引擎 (不可删除)
 const BUILT_IN_ENGINES: SearchEngine[] = [
@@ -38,9 +39,22 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || []
   )
 
+  // 从 localStorage 加载内置引擎 URL 覆盖
+  const builtInOverrides = ref<Record<string, string>>(
+    JSON.parse(localStorage.getItem(BUILT_IN_OVERRIDES_KEY) || '{}')
+  )
+
+  // 获取带覆盖的完整内置引擎列表
+  const builtInEngines = computed(() => {
+    return BUILT_IN_ENGINES.map(engine => ({
+      ...engine,
+      url: builtInOverrides.value[engine.id] || engine.url
+    }))
+  })
+
   // 如果没有自定义数据，初始化为默认列表
   const allEngines = computed(() => {
-    const builtIn = [...BUILT_IN_ENGINES]
+    const builtIn = builtInEngines.value
     if (customEngines.value.length === 0) {
       // 首次加载，将其他引擎迁移到自定义
       return [...builtIn, ...DEFAULT_ENGINES]
@@ -48,17 +62,19 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     return [...builtIn, ...customEngines.value].sort((a, b) => a.sort - b.sort)
   })
 
-  // 内置引擎
-  const builtInEngines = computed(() => BUILT_IN_ENGINES)
-
   // 默认搜索引擎
   const defaultEngine = computed(() => {
     return allEngines.value.find(e => e.isDefault) || allEngines.value[0]
   })
 
-  // 持久化
+  // 持久化自定义引擎
   function saveEngines() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(customEngines.value))
+  }
+
+  // 持久化内置引擎覆盖
+  function saveBuiltInOverrides() {
+    localStorage.setItem(BUILT_IN_OVERRIDES_KEY, JSON.stringify(builtInOverrides.value))
   }
 
   // 添加引擎
@@ -76,12 +92,20 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     return id
   }
 
-  // 更新引擎
+  // 更新自定义引擎
   function updateEngine(id: string, updates: { name?: string; url?: string }) {
     const index = customEngines.value.findIndex(e => e.id === id)
     if (index !== -1) {
       customEngines.value[index] = { ...customEngines.value[index], ...updates }
       saveEngines()
+    }
+  }
+
+  // 更新内置引擎 URL
+  function updateBuiltInEngineUrl(id: string, url: string) {
+    if (BUILT_IN_ENGINES.some(e => e.id === id)) {
+      builtInOverrides.value[id] = url
+      saveBuiltInOverrides()
     }
   }
 
@@ -157,11 +181,13 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
 
   return {
     customEngines,
+    builtInOverrides,
     allEngines,
     builtInEngines,
     defaultEngine,
     addEngine,
     updateEngine,
+    updateBuiltInEngineUrl,
     deleteEngine,
     setDefault,
     moveEngine,

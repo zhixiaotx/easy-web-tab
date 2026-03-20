@@ -2,7 +2,7 @@
 categories:
   - id: custom_1773890047269
     name: 人工智能
-    icon: 🌟
+    icon: 💡
     sort: 4
 
   - id: custom_1773899482306
@@ -78,7 +78,7 @@ sites:
     url: https://github.com
     description: 全球最大的代码托管平台，提供 Git 仓库托管和协作开发工具
     category: tech
-    tags: [开源代码, 项目托管]
+    tags: [开源代码, 项目托管, 搜索引擎]
     icon: https://github.com/favicon.ico
     sort: 10
     createdAt: 2024-01-01T00:00:00.000Z
@@ -110,7 +110,7 @@ sites:
     sort: 4
     createdAt: 2024-01-04T00:00:00.000Z
 
-  - name: Vue.js
+  - name: Vue
     url: https://vuejs.org
     description: 渐进式 JavaScript 框架，易学易用
     category: tech
@@ -213,7 +213,7 @@ sites:
     url: https://gitee.com
     description: 面向企业提供一站式研发管理解决方案
     category: tech
-    tags: [开源代码, 项目托管]
+    tags: [开源代码, 项目托管, 搜索引擎]
     icon: https://gitee.com/favicon.ico
     sort: 20
     createdAt: 2026-03-19T08:06:02.081Z
@@ -267,7 +267,7 @@ sites:
     url: https://skywalking.apache.org
     description: End-to-end distributed tracing. Service topology analysis, service-centric observability and APIs dashboards.。Java, .Net Core, PHP, NodeJS, Golang, LUA, Rust, C++, Client JavaScript and Python agents with active development and maintenance.。Rover agent works as a monitor and profiler powered by eBPF...
     category: tech
-    tags: [开源代码]
+    tags: [工具]
     icon: https://skywalking.apache.org/favicon.ico
     sort: 27
     createdAt: 2026-03-20T08:23:14.855Z
@@ -331,7 +331,7 @@ sites:
     description: 智谱是由清华大学计算机系技术成果转化而来的公司，致力于打造新一代认知智能通用模型。公司合作研发了双语千亿级超大规模预训练模型GLM-130B，并构建了高精度通用知识图谱，形成数据与知识双轮驱动的认知引擎，基于此模型打造了ChatGLM（chatglm.cn）。此外，智谱还推出了认知大模型平台Bigmodel.ai，包括CodeGeeX和CogView等产品，提供智能API服务，链接物理世界的亿级用户、赋能元宇宙数字人、成为具身机器人的基座，赋予机器像人一样“思考”的能力。
     category: custom_1773890047269
     tags: []
-    icon: https://www.zhipuai.cn/assets/images/logo_icon.jpeg
+    icon: https://www.zhipuai.cn/favicon.ico
     sort: 34
     createdAt: 2026-03-20T08:42:36.444Z
 

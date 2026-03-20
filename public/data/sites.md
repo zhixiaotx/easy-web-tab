@@ -61,46 +61,34 @@ categories:
     sort: 17
 
 searchEngines:
-  - id: metaso
-    name: 秘塔AI
-    url: https://metaso.cn/search?q=
-    isDefault: true
-    sort: 1
-
   - id: baidu
     name: 百度
     url: https://www.baidu.com/s?wd=
-    isDefault: false
-    sort: 2
+    isDefault: true
+    sort: 1
 
   - id: engine_1773904398721
     name: 必应
     url: https://www.bing.com/?search?q=
-    isDefault: false
+    isDefault: true
     sort: 15
-
-  - id: engine_1773904767274
-    name: Deepseek
-    url: https://www.deepseek.com/?/search?q=
-    isDefault: false
-    sort: 14
 
 sites:
   - name: GitHub
     url: https://github.com
     description: 全球最大的代码托管平台，提供 Git 仓库托管和协作开发工具
     category: tech
-    tags: [代码, 开源]
-    icon: 
-    sort: 1
+    tags: [开源代码, 项目托管]
+    icon: https://github.com/favicon.ico
+    sort: 10
     createdAt: 2024-01-01T00:00:00.000Z
 
   - name: Stack Overflow
     url: https://stackoverflow.com
     description: 程序员问答社区，解决编程问题的首选网站
     category: tech
-    tags: [问答, 技术]
-    icon: 
+    tags: [问答]
+    icon: https://stackoverflow.com/favicon.ico
     sort: 2
     createdAt: 2024-01-02T00:00:00.000Z
 
@@ -108,8 +96,8 @@ sites:
     url: https://developer.mozilla.org
     description: Mozilla 开发的 Web 技术文档，是前端开发者的必备参考
     category: tech
-    tags: [前端, 文档]
-    icon: 
+    tags: [前端]
+    icon: https://developer.mozilla.org/favicon.ico
     sort: 3
     createdAt: 2024-01-03T00:00:00.000Z
 
@@ -117,8 +105,8 @@ sites:
     url: https://vitejs.dev
     description: 下一代前端构建工具，快速、简洁、高效
     category: tech
-    tags: [工具, 前端]
-    icon: 
+    tags: [前端]
+    icon: https://vitejs.dev/favicon.ico
     sort: 4
     createdAt: 2024-01-04T00:00:00.000Z
 
@@ -126,8 +114,8 @@ sites:
     url: https://vuejs.org
     description: 渐进式 JavaScript 框架，易学易用
     category: tech
-    tags: [前端, 框架]
-    icon: 
+    tags: [前端]
+    icon: https://vuejs.org/favicon.ico
     sort: 5
     createdAt: 2024-01-05T00:00:00.000Z
 
@@ -136,7 +124,7 @@ sites:
     description: JavaScript 的超集，提供类型系统
     category: tech
     tags: [前端]
-    icon: 
+    icon: https://www.typescriptlang.org/favicon.ico
     sort: 6
     createdAt: 2024-01-06T00:00:00.000Z
 
@@ -145,27 +133,18 @@ sites:
     description: Node.js 包管理器，全球最大的 JavaScript 包仓库
     category: tech
     tags: [工具, Node.js]
-    icon: 
+    icon: https://www.npmjs.com/favicon.ico
     sort: 7
     createdAt: 2024-01-07T00:00:00.000Z
 
   - name: CSS-Tricks
     url: https://css-tricks.com
     description: CSS 技巧和教程网站，前端开发者必看
-    category: custom_1773899614797
-    tags: [前端, 设计]
-    icon: 
+    category: tech
+    tags: [前端]
+    icon: https://css-tricks.com/favicon.ico
     sort: 8
     createdAt: 2024-01-08T00:00:00.000Z
-
-  - name: Google
-    url: https://www.google.com
-    description: 全球最大的搜索引擎
-    category: other
-    tags: [搜索]
-    icon: https://www.google.com/s2/favicons?domain=google.com&sz=64
-    sort: 9
-    createdAt: Tue Jan 09 2024 08:00:00 GMT+0800 (中国标准时间)
 
   - name: 掘金
     url: https://juejin.cn
@@ -178,18 +157,18 @@ sites:
 
   - name: 百度一下，你就知道
     url: https://www.baidu.com
-    description: 百度一下，你就知道    [hao123](https://www.ha
-    category: other
-    tags: []
+    description: 百度一下，你就知道
+    category: news
+    tags: [搜索引擎]
     icon: https://www.baidu.com/favicon.ico
-    sort: 0
+    sort: 11
     createdAt: 2026-03-19T00:32:06.601Z
 
   - name: DeepSeek | 深度求索
     url: https://deepseek.com
     description: DeepSeek | 深度求索  !  [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线，点击查看详情。](https:/
     category: custom_1773890047269
-    tags: [人工智能, 大模型]
+    tags: [人工智能]
     icon: https://deepseek.com/favicon.ico
     sort: 1
     createdAt: 2026-03-19T03:15:33.215Z
@@ -205,7 +184,7 @@ sites:
 
   - name: Halo - 建站工具
     url: https://www.halo.run
-    description: Halo - 强大易用的开源建站工具  ](https://www.fit2cloud.com/)  了解飞致云旗下开源产品  [MaxKB 强大易用的企业级智能体平台]
+    description: Halo - 强大易用的开源建站工具 
     category: tech
     tags: []
     icon: https://www.halo.run/favicon.ico
@@ -221,7 +200,7 @@ sites:
     sort: 18
     createdAt: 2026-03-19T07:53:05.443Z
 
-  - name: 百度网盘-免费云盘丨文件共享软件丨超大容量丨存储安全
+  - name: 百度网盘
     url: https://pan.baidu.com
     description: 为你电脑/手机中的文件提供云备份、预览、分享等服务，帮你更便捷安全地管理数据。。不止存储，数据管理更便捷。智能搜索，盘中文件一搜即有
     category: office
@@ -234,10 +213,55 @@ sites:
     url: https://gitee.com
     description: 面向企业提供一站式研发管理解决方案
     category: tech
-    tags: [开源, 代码]
+    tags: [开源代码, 项目托管]
     icon: https://gitee.com/favicon.ico
     sort: 20
     createdAt: 2026-03-19T08:06:02.081Z
+
+  - name: JAVA
+    url: https://www.oracle.com/java
+    description: Java Software |Oracle
+    category: tech
+    tags: []
+    icon: https://www.oracle.com/favicon.ico
+    sort: 22
+    createdAt: 2026-03-20T00:26:10.192Z
+
+  - name: Apache Tomcat
+    url: https://tomcat.apache.org
+    description: Apache Tomcat® 软件是 Jakarta Servlet、Jakarta Pages、Jakarta Expression Language、Jakarta WebSocket、Jakarta Annotations 和 Jakarta Authentication 规范的开源实现。这些规范属于 Jakarta EE 平台的一部分。Jakarta EE 平台是。
+    category: tech
+    tags: []
+    icon: https://tomcat.apache.org/favicon.ico
+    sort: 23
+    createdAt: 2026-03-20T00:30:17.746Z
+
+  - name: Spring
+    url: https://spring.io
+    description: Spring Framework、Spring Boot、Spring Cloud等生态的官方手册。
+    category: tech
+    tags: []
+    icon: https://spring.io/favicon.ico
+    sort: 24
+    createdAt: 2026-03-20T00:31:56.464Z
+
+  - name: Maven Central
+    url: https://central.sonatype.com
+    description: Java最常用的依赖仓库
+    category: tech
+    tags: []
+    icon: https://central.sonatype.com/favicon.ico
+    sort: 25
+    createdAt: 2026-03-20T00:33:43.089Z
+
+  - name: ClawHub
+    url: https://clawhub.ai/
+    description: 龙虾光。代理右。上传代理技能包，像npm一样进行版本管理，并通过向量使其可搜索。无需审核，仅凭信号。搜索技能。版本化，随时可回滚。
+    category: custom_1773890047269
+    tags: []
+    icon: https://clawhub.ai/favicon.ico
+    sort: 26
+    createdAt: 2026-03-20T01:08:57.076Z
 ---
 
 # 我的书签

@@ -102,8 +102,15 @@ const handleFetchMetadata = async () => {
     return
   }
 
+  // 重复检测（新增模式才检测，编辑模式跳过）
+  const duplicate = !isEditing.value ? sitesStore.sites.find(s => s.url === form.value.url) : null
+
   isLoading.value = true
-  errors.value.url = ''
+  if (!duplicate) {
+    errors.value.url = ''
+  } else {
+    errors.value.url = `⚠️ 该网址已存在（${duplicate.name}），继续获取将覆盖现有条目`
+  }
 
   const metadata = await fetchMetadata(form.value.url)
 

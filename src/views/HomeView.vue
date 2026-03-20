@@ -68,10 +68,25 @@ const handleDelete = (url: string) => {
 
 const handleSave = (site: Site) => {
   if (editingSite.value) {
+    // 编辑模式 - 直接更新
     store.updateSite(editingSite.value.url, site)
-  } else {
-    store.addSite(site)
+    showModal.value = false
+    return
   }
+
+  // 添加模式 - 检查重复
+  const existing = store.sites.find(s => s.url === site.url)
+  if (existing) {
+    const action = confirm(`该网址已存在：${existing.name}\n\n确定更新？取消则跳过。`)
+    if (action) {
+      store.updateSite(site.url, site)
+    }
+    showModal.value = false
+    return
+  }
+
+  // 无重复 - 正常添加
+  store.addSite(site)
   showModal.value = false
 }
 

@@ -1012,3 +1012,13 @@
   color: var(--text-muted);
 }
 
+/* 拖拽排序 */
+:root.dark .site-card.is-drag-over {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+:root.dark .site-card.is-dragging {
+  opacity: 0.5;
+}
+

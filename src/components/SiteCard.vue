@@ -6,6 +6,8 @@ import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
 const props = defineProps<{
   site: Site
   readonly?: boolean
+  isDragOver?: boolean
+  isDragging?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +38,7 @@ const handleClick = () => {
 <template>
   <div
     class="site-card"
+    :class="{ 'is-drag-over': props.isDragOver, 'is-dragging': props.isDragging }"
     :data-site-url="site.url"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
@@ -85,14 +88,26 @@ const handleClick = () => {
   position: relative;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 0.25s ease,
-              border-color 0.25s ease;
-  border: 1px solid #f1f5f9;
+              border-color 0.25s ease,
+              opacity 0.15s ease;
 }
 
 .site-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
   border-color: #e2e8f0;
+}
+
+.site-card.is-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.site-card.is-drag-over {
+  border-color: #3b82f6;
+  border-style: dashed;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .card-header {

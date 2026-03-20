@@ -300,6 +300,23 @@ export const useSitesStore = defineStore('sites', () => {
     currentPage.value = page
   }
 
+  // 交换两个站点的 sort 值（用于拖拽排序）
+  function swapSort(urlA: string, urlB: string) {
+    const siteA = sites.value.find(s => s.url === urlA)
+    const siteB = sites.value.find(s => s.url === urlB)
+    if (!siteA || !siteB) return
+
+    const sortA = siteA.sort ?? 999
+    const sortB = siteB.sort ?? 999
+
+    // 交换 sort 值
+    siteA.sort = sortB
+    siteB.sort = sortA
+
+    // 持久化到 localStorage
+    saveUserSites()
+  }
+
   function saveUserSites() {
     // 只保存非内置的网站（这里简化处理，保存所有）
     localStorage.setItem('user-sites', JSON.stringify(sites.value))
@@ -423,6 +440,8 @@ ${sitesList}
     linkCheckProgress,
     showOnlyInvalid,
     invalidCount,
-    checkDeadLinks: checkDeadLinksAction
+    checkDeadLinks: checkDeadLinksAction,
+    // 拖拽排序
+    swapSort
   }
 })

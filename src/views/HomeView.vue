@@ -22,6 +22,38 @@ const showModal = ref(false)
 const showEngineManager = ref(false)
 const editingSite = ref<Site | null>(null)
 
+// 拖拽排序状态
+const dragSourceUrl = ref<string | null>(null)
+const dragOverUrl = ref<string | null>(null)
+
+const handleDragStart = (site: Site) => {
+  dragSourceUrl.value = site.url
+}
+
+const handleDragOver = (site: Site, event: DragEvent) => {
+  event.preventDefault()
+  if (dragSourceUrl.value && dragSourceUrl.value !== site.url) {
+    dragOverUrl.value = site.url
+  }
+}
+
+const handleDragLeave = () => {
+  dragOverUrl.value = null
+}
+
+const handleDrop = (site: Site) => {
+  if (dragSourceUrl.value && dragSourceUrl.value !== site.url) {
+    store.swapSort(dragSourceUrl.value, site.url)
+  }
+  dragSourceUrl.value = null
+  dragOverUrl.value = null
+}
+
+const handleDragEnd = () => {
+  dragSourceUrl.value = null
+  dragOverUrl.value = null
+}
+
 onMounted(() => {
   store.loadSites()
 })
@@ -186,8 +218,16 @@ const triggerImport = () => {
         :key="site.url"
         :site="site"
         :readonly="false"
+        :is-drag-over="dragOverUrl === site.url"
+        :is-dragging="dragSourceUrl === site.url"
+        draggable="true"
         @edit="handleEdit"
         @delete="handleDelete"
+        @dragstart="handleDragStart(site)"
+        @dragover="handleDragOver(site, $event)"
+        @dragleave="handleDragLeave"
+        @drop="handleDrop(site)"
+        @dragend="handleDragEnd"
       />
     </main>
 

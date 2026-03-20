@@ -882,3 +882,133 @@
   background: var(--border-light, #4b5563);
 }
 
+/* ========================================
+   图标选择器暗色模式
+   ======================================== */
+
+:root.dark .btn-icon-action {
+  background: var(--bg-secondary, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .btn-icon-action:hover:not(:disabled) {
+  border-color: var(--accent-color, #3b82f6);
+  color: var(--accent-color, #3b82f6);
+  background: #1e3a5f;
+}
+
+:root.dark .btn-icon-clear {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .btn-icon-clear:hover {
+  color: var(--color-error, #ef4444);
+  background: #3f1414;
+}
+
+:root.dark .btn-suggestion {
+  background: #1e3a5f;
+  border-color: var(--accent-color, #3b82f6);
+  color: #60a5fa;
+}
+
+:root.dark .btn-suggestion:hover {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+}
+
+:root.dark .icon-picker-panel {
+  background: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .icon-search-input,
+:root.dark .icon-url-input {
+  background: var(--input-bg, #374151);
+  border-color: var(--border-color, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .icon-search-input:focus,
+:root.dark .icon-url-input:focus {
+  border-color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .icon-grid-item {
+  background: var(--bg-primary, #111827);
+  border-color: transparent;
+}
+
+:root.dark .icon-grid-item:hover {
+  border-color: var(--accent-color, #3b82f6);
+  background: #1e3a5f;
+}
+
+:root.dark .icon-grid-item.active {
+  border-color: var(--accent-color, #3b82f6);
+  background: #1e3a5f;
+}
+
+:root.dark .icon-preview {
+  background: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .icon-preview-empty {
+  background: var(--bg-secondary, #1f2937);
+  color: var(--text-muted, #9ca3af);
+}
+
+/* ========================================
+   断链检测暗色样式
+   ======================================== */
+
+/* TagFilter 只看无效按钮 */
+:root.dark .invalid-toggle {
+  background-color: #451a03;
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+:root.dark .invalid-toggle:hover {
+  background-color: #78350f;
+  border-color: #f59e0b;
+}
+
+:root.dark .invalid-toggle.active {
+  background-color: #f59e0b;
+  border-color: #f59e0b;
+  color: white;
+}
+
+/* SiteCard 无效警告标记 */
+:root.dark .invalid-badge {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* HomeView 检测按钮 */
+:root.dark .btn-action:has(.invalid-count) {
+  background-color: #fffbeb;
+  color: #d97706;
+  border-color: #f59e0b;
+}
+
+:root.dark .btn-checking {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-color) !important;
+  cursor: not-allowed;
+}
+
+/* 空状态暗色 */
+:root.dark .empty-state {
+  color: var(--text-muted);
+}
+
+:root.dark .empty-state p {
+  color: var(--text-muted);
+}
+

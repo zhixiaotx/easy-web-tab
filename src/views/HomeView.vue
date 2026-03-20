@@ -166,6 +166,10 @@ const triggerImport = () => {
           <button class="btn-action" @click="triggerImport">导入</button>
           <button class="btn-action" @click="store.exportToMarkdown">导出</button>
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
+          <button class="btn-action" @click="store.checkDeadLinks">
+            <span v-if="store.isCheckingLinks">⏳ 检测中 ({{ store.linkCheckProgress?.current }}/{{ store.linkCheckProgress?.total }})</span>
+            <span v-else>🔗 检测断链<span v-if="store.invalidCount > 0" class="invalid-count">({{ store.invalidCount }})</span></span>
+          </button>
           <button class="btn-action" @click="showEngineManager = true">🔍 引擎管理</button>
           <SettingsButton />
         </div>
@@ -190,7 +194,8 @@ const triggerImport = () => {
     <Pagination />
 
     <div v-if="store.filteredSites.length === 0" class="empty-state">
-      <p>没有找到匹配的网站</p>
+      <p v-if="store.showOnlyInvalid">没有检测到无效链接 ✓</p>
+      <p v-else>没有找到匹配的网站</p>
     </div>
 
     <SiteModal

@@ -5,6 +5,12 @@ import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
+import {
+  checkDeadLinks,
+  saveCheckResults,
+  loadCheckResults,
+  type CheckProgress
+} from '../composables/useDeadLinkChecker'
 
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<Site[]>([])
@@ -14,6 +20,64 @@ export const useSitesStore = defineStore('sites', () => {
   const isLoading = ref(false)
   const currentPage = ref(1)
   const pageSize = 9
+
+  // 断链检测
+  const isCheckingLinks = ref(false)
+  const linkCheckProgress = ref<CheckProgress | null>(null)
+  const showOnlyInvalid = ref(false)
+
+  // 加载保存的检测结果
+  function applySavedCheckResults() {
+    const saved = loadCheckResults()
+    if (Object.keys(saved).length === 0) return
+    sites.value = sites.value.map(site => ({
+      ...site,
+      isValid: saved[site.url] ?? undefined
+    }))
+  }
+
+  // 开始断链检测
+  let checkAbortController: AbortController | null = null
+
+  async function checkDeadLinksAction() {
+    if (isCheckingLinks.value) {
+      // 取消正在进行的检测
+      checkAbortController?.abort()
+      isCheckingLinks.value = false
+      return
+    }
+
+    isCheckingLinks.value = true
+    checkAbortController = new AbortController()
+    linkCheckProgress.value = null
+
+    const urls = sites.value.map(s => s.url)
+
+    const results = await checkDeadLinks(
+      urls,
+      (progress, result) => {
+        linkCheckProgress.value = progress
+        // 实时更新 site 的 isValid
+        const idx = sites.value.findIndex(s => s.url === result.url)
+        if (idx !== -1) {
+          sites.value[idx] = { ...sites.value[idx], isValid: result.isValid }
+        }
+      },
+      checkAbortController.signal
+    )
+
+    // 保存结果
+    saveCheckResults(results)
+
+    isCheckingLinks.value = false
+    linkCheckProgress.value = null
+    checkAbortController = null
+  }
+
+  // 获取无效站点数量
+  const invalidCount = computed(() =>
+    sites.value.filter(s => s.isValid === false).length
+  )
 
   const { parseSitesFromMarkdown } = useMarkdown()
 
@@ -98,6 +162,17 @@ export const useSitesStore = defineStore('sites', () => {
       return true
     })
 
+    // 断链过滤：只看无效站点
+    if (showOnlyInvalid.value) {
+      return filtered
+        .filter(site => site.isValid === false)
+        .sort((a, b) => {
+          const sortA = a.sort ?? 999
+          const sortB = b.sort ?? 999
+          return sortA - sortB
+        })
+    }
+
     // 按 sort 字段排序（从小到大，0 或 undefined 排后面）
     return filtered.sort((a, b) => {
       const sortA = a.sort ?? 999
@@ -146,6 +221,9 @@ export const useSitesStore = defineStore('sites', () => {
 
       // 转换为数组
       sites.value = Array.from(sitesMap.values())
+
+      // 应用保存的断链检测结果
+      applySavedCheckResults()
     } catch (error) {
       console.error('Failed to load sites:', error)
       sites.value = []
@@ -339,6 +417,12 @@ ${sitesList}
     setPage,
     clearFilters,
     exportToMarkdown,
-    importFromMarkdown
+    importFromMarkdown,
+    // 断链检测
+    isCheckingLinks,
+    linkCheckProgress,
+    showOnlyInvalid,
+    invalidCount,
+    checkDeadLinks: checkDeadLinksAction
   }
 })

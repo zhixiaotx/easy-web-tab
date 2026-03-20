@@ -8,6 +8,7 @@ export interface Site {
   sort?: number
   createdAt?: string
   updatedAt?: string
+  isValid?: boolean  // 断链检测结果，undefined=未检测
 }
 
 export interface SitesData {

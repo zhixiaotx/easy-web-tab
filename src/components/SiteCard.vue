@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Site } from '../types'
+import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
 
 const props = defineProps<{
   site: Site
@@ -14,25 +15,15 @@ const emit = defineEmits<{
 
 const isHovered = ref(false)
 
-const getFavicon = (url: string) => {
-  try {
-    const domain = new URL(url).hostname
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-  } catch {
-    return ''
-  }
-}
-
-// 三层降级：自定义 icon → Google Favicon → 默认 SVG
+// 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
 const handleIconError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  const fallbackUrl = (img.closest('.site-card') as HTMLElement)?.dataset.siteUrl || ''
+  const siteUrl = (img.closest('.site-card') as HTMLElement)?.dataset.siteUrl || ''
+  const googleUrl = getIconUrl(siteUrl)
 
-  if (img.src !== getFavicon(fallbackUrl) && img.src !== '/default-icon.svg') {
-    // 第一步：降级到 Google Favicon
-    img.src = getFavicon(fallbackUrl)
+  if (img.src !== googleUrl && img.src !== '/default-icon.svg') {
+    img.src = googleUrl
   } else if (img.src !== '/default-icon.svg') {
-    // 第二步：降级到本地默认 SVG
     img.src = '/default-icon.svg'
   }
 }
@@ -52,12 +43,15 @@ const handleClick = () => {
   >
     <div class="card-header">
       <img
-        :src="site.icon || getFavicon(site.url)"
+        :src="getFaviconImgSrc(site.url, site.icon)"
         :alt="site.name"
         class="favicon"
         loading="lazy"
         @error="handleIconError"
       />
+      <div v-if="site.isValid === false" class="invalid-badge" title="链接已失效">
+        ⚠️
+      </div>
       <div v-if="isHovered && !props.readonly" class="card-actions">
         <button class="action-btn edit" @click.stop="emit('edit', site)" title="编辑">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -88,6 +82,7 @@ const handleClick = () => {
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  position: relative;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 0.25s ease,
               border-color 0.25s ease;
@@ -118,6 +113,20 @@ const handleClick = () => {
 
 .site-card:hover .favicon {
   transform: scale(1.05);
+}
+
+.invalid-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .card-actions {

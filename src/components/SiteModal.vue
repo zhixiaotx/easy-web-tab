@@ -4,6 +4,8 @@ import type { Site } from '../types'
 import { useUrlMetadata } from '../composables/useUrlMetadata'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
+import { PRESET_ICONS, findPresetIconByUrl } from '../composables/presetIcons'
+import { getIconUrl } from '../composables/useIconCache'
 
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
@@ -30,6 +32,89 @@ const form = ref({
 const isEditing = computed(() => !!props.site)
 const errors = ref<Record<string, string>>({})
 const isLoading = ref(false)
+
+// ===== 图标选择器状态 =====
+const showIconPicker = ref(false)
+const iconSearchQuery = ref('')
+const iconManualInput = ref('')
+
+// 过滤后的预置图标
+const filteredPresetIcons = computed(() => {
+  const query = iconSearchQuery.value.toLowerCase().trim()
+  if (!query) return PRESET_ICONS
+  return PRESET_ICONS.filter(icon =>
+    icon.label.toLowerCase().includes(query) ||
+    (icon.url && icon.url.toLowerCase().includes(query))
+  )
+})
+
+// 获取图标的显示 URL（优先 form.icon，其次自动检测 URL）
+const iconDisplaySrc = computed(() => {
+  if (form.value.icon) return form.value.icon
+  if (form.value.url) {
+    try {
+      new URL(form.value.url)
+      return getIconUrl(form.value.url)
+    } catch {
+      return ''
+    }
+  }
+  return ''
+})
+
+// 自动获取图标（从已填 URL）
+async function handleAutoFetchIcon() {
+  if (!form.value.url.trim()) {
+    errors.value.icon = '请先输入网址'
+    return
+  }
+  try {
+    new URL(form.value.url)
+  } catch {
+    errors.value.icon = '请输入有效的网址'
+    return
+  }
+  errors.value.icon = ''
+  isLoading.value = true
+  const { fetchMetadata } = useUrlMetadata()
+  const metadata = await fetchMetadata(form.value.url)
+  isLoading.value = false
+  if (metadata?.icon) {
+    form.value.icon = metadata.icon
+    iconManualInput.value = ''
+  } else {
+    errors.value.icon = '未找到图标，请手动选择或输入'
+  }
+}
+
+// 选择预置图标
+function selectPresetIcon(iconName: string) {
+  form.value.icon = `/icons/${iconName}.svg`
+  iconManualInput.value = ''
+  showIconPicker.value = false
+  iconSearchQuery.value = ''
+}
+
+// 手动输入图标 URL
+function applyManualIcon() {
+  if (iconManualInput.value.trim()) {
+    form.value.icon = iconManualInput.value.trim()
+    showIconPicker.value = false
+  }
+}
+
+// 清除图标
+function clearIcon() {
+  form.value.icon = ''
+  iconManualInput.value = ''
+  errors.value.icon = ''
+}
+
+// 根据 URL 自动推荐预置图标
+const suggestedPresetIcon = computed(() => {
+  if (!form.value.url) return null
+  return findPresetIconByUrl(form.value.url)
+})
 
 // 标签自动补全
 const tagInputRef = ref<HTMLInputElement | null>(null)
@@ -287,14 +372,93 @@ const handleSubmit = () => {
         </div>
 
         <div class="form-group">
-          <label>图标地址</label>
-          <div v-if="isLoading && !form.icon" class="skeleton skeleton-icon"></div>
-          <input
-            v-else
-            v-model="form.icon"
-            type="text"
-            placeholder="可选，自定义图标 URL"
-          />
+          <label>网站图标</label>
+
+          <!-- 图标预览 + 操作按钮 -->
+          <div class="icon-picker">
+            <!-- 预览 -->
+            <div class="icon-preview-wrapper">
+              <img
+                v-if="iconDisplaySrc"
+                :src="iconDisplaySrc"
+                class="icon-preview"
+                alt="图标预览"
+                @error="e => (e.target as HTMLImageElement).src = '/default-icon.svg'"
+              />
+              <div v-else class="icon-preview icon-preview-empty">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="icon-actions">
+              <button type="button" class="btn-icon-action" @click="handleAutoFetchIcon" :disabled="isLoading" title="从网址获取">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.86 6.69 2.3"/><path d="M21 3v6h-6"/></svg>
+                自动获取
+              </button>
+              <button type="button" class="btn-icon-action" @click="showIconPicker = !showIconPicker" title="选择图标">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+                {{ showIconPicker ? '收起' : '选择图标' }}
+              </button>
+              <button v-if="form.icon" type="button" class="btn-icon-action btn-icon-clear" @click="clearIcon" title="清除">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <!-- 预置图标推荐 -->
+            <div v-if="suggestedPresetIcon && !form.icon" class="icon-suggestion">
+              <span>检测到：</span>
+              <button type="button" class="btn-suggestion" @click="selectPresetIcon(suggestedPresetIcon.name)">
+                <img :src="`/icons/${suggestedPresetIcon.name}.svg`" class="suggestion-icon" alt="" />
+                {{ suggestedPresetIcon.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 图标选择面板 -->
+          <div v-if="showIconPicker" class="icon-picker-panel">
+            <!-- 搜索框 -->
+            <div class="icon-picker-search">
+              <input
+                v-model="iconSearchQuery"
+                type="text"
+                placeholder="搜索图标..."
+                class="icon-search-input"
+              />
+            </div>
+
+            <!-- 预置图标网格 -->
+            <div class="icon-grid">
+              <button
+                v-for="icon in filteredPresetIcons"
+                :key="icon.name"
+                type="button"
+                class="icon-grid-item"
+                :class="{ active: form.icon === `/icons/${icon.name}.svg` }"
+                :title="icon.label"
+                @click="selectPresetIcon(icon.name)"
+              >
+                <img :src="`/icons/${icon.name}.svg`" :alt="icon.label" class="grid-icon-img" />
+                <span class="grid-icon-label">{{ icon.label }}</span>
+              </button>
+            </div>
+
+            <!-- 手动输入 -->
+            <div class="icon-manual-input">
+              <input
+                v-model="iconManualInput"
+                type="text"
+                placeholder="或输入图标 URL..."
+                class="icon-url-input"
+                @keyup.enter="applyManualIcon"
+              />
+              <button type="button" class="btn-apply-icon" @click="applyManualIcon" :disabled="!iconManualInput.trim()">应用</button>
+            </div>
+
+            <span v-if="errors.icon" class="error-msg">{{ errors.icon }}</span>
+          </div>
+
+          <span v-if="!showIconPicker && !form.icon" class="form-hint">可选，点击「自动获取」或「选择图标」</span>
         </div>
 
         <div class="form-group">
@@ -632,6 +796,251 @@ const handleSubmit = () => {
   to {
     opacity: 0;
     transform: scale(0.95) translateY(8px);
+  }
+}
+
+/* ========================================
+   图标选择器
+   ======================================== */
+
+.icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.icon-preview-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.icon-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.icon-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.icon-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-icon-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: white;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-icon-action:hover:not(:disabled) {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+
+.btn-icon-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon-clear {
+  padding: 6px 8px;
+  color: var(--color-text-muted, #94a3b8);
+  border-color: transparent;
+}
+
+.btn-icon-clear:hover {
+  color: var(--color-error, #ef4444);
+  border-color: transparent;
+  background: #fef2f2;
+}
+
+.icon-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.btn-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-primary, #3b82f6);
+  border-radius: 6px;
+  background: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-suggestion:hover {
+  background: var(--color-primary, #3b82f6);
+  color: white;
+}
+
+.suggestion-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+/* 图标选择面板 */
+.icon-picker-panel {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--color-bg-hover, #f8fafc);
+  margin-top: 4px;
+  animation: dropdownIn 0.15s ease;
+}
+
+.icon-picker-search {
+  margin-bottom: 12px;
+}
+
+.icon-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  background: white;
+}
+
+.icon-search-input:focus {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+/* 图标网格 */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.icon-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.icon-grid-item:hover {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+
+.icon-grid-item.active {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+
+.grid-icon-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.grid-icon-label {
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.icon-grid-item.active .grid-icon-label {
+  color: var(--color-primary, #3b82f6);
+}
+
+/* 手动输入 */
+.icon-manual-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.icon-url-input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  background: white;
+}
+
+.icon-url-input:focus {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.btn-apply-icon {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-apply-icon:hover:not(:disabled) {
+  background: var(--color-primary-hover, #2563eb);
+}
+
+.btn-apply-icon:disabled {
+  background: var(--color-text-muted, #94a3b8);
+  cursor: not-allowed;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

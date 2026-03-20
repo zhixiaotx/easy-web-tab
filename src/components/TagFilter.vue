@@ -17,13 +17,23 @@ const store = useSitesStore()
         {{ tag }}
       </button>
     </div>
-    <button
-      v-if="store.selectedTags.length > 0"
-      class="clear-btn"
-      @click="store.clearFilters"
-    >
-      清除筛选
-    </button>
+    <div class="filter-actions">
+      <button
+        v-if="store.invalidCount > 0"
+        class="invalid-toggle"
+        :class="{ active: store.showOnlyInvalid }"
+        @click="store.showOnlyInvalid = !store.showOnlyInvalid"
+      >
+        ⚠️ 只看无效 ({{ store.invalidCount }})
+      </button>
+      <button
+        v-if="store.selectedTags.length > 0 || store.showOnlyInvalid"
+        class="clear-btn"
+        @click="store.showOnlyInvalid = false; store.clearFilters()"
+      >
+        清除筛选
+      </button>
+    </div>
   </div>
 </template>
 
@@ -60,6 +70,34 @@ const store = useSitesStore()
 .tag.active {
   background-color: #3b82f6;
   border-color: #3b82f6;
+  color: white;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.invalid-toggle {
+  padding: 6px 14px;
+  border: 1px solid #f59e0b;
+  border-radius: 20px;
+  background-color: #fffbeb;
+  color: #d97706;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.invalid-toggle:hover {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.invalid-toggle.active {
+  background-color: #f59e0b;
+  border-color: #f59e0b;
   color: white;
 }
 

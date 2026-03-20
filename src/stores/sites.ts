@@ -19,7 +19,7 @@ export const useSitesStore = defineStore('sites', () => {
   const selectedCategory = ref<string>('')
   const isLoading = ref(false)
   const currentPage = ref(1)
-  const pageSize = 9
+  const pageSize = ref(9)
 
   // 断链检测
   const isCheckingLinks = ref(false)
@@ -83,18 +83,18 @@ export const useSitesStore = defineStore('sites', () => {
 
   // 总页数
   const totalPages = computed(() => {
-    return Math.ceil(filteredSites.value.length / pageSize)
+    return Math.ceil(filteredSites.value.length / pageSize.value)
   })
 
   // 当前页数据
   const paginatedSites = computed(() => {
-    const start = (currentPage.value - 1) * pageSize
-    const end = start + pageSize
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
     return filteredSites.value.slice(start, end)
   })
 
-  // 筛选变化时重置页码
-  watch([searchQuery, selectedTags, selectedCategory], () => {
+  // 筛选变化或分页大小变化时重置页码
+  watch([searchQuery, selectedTags, selectedCategory, pageSize], () => {
     currentPage.value = 1
   })
 
@@ -300,6 +300,10 @@ export const useSitesStore = defineStore('sites', () => {
     currentPage.value = page
   }
 
+  function setPageSize(size: number) {
+    pageSize.value = size
+  }
+
   // 交换两个站点的 sort 值（用于拖拽排序）
   function swapSort(urlA: string, urlB: string) {
     const siteA = sites.value.find(s => s.url === urlA)
@@ -421,6 +425,7 @@ ${sitesList}
     filteredSites,
     sitesByCategory,
     currentPage,
+    pageSize,
     totalPages,
     paginatedSites,
     loadSites,
@@ -432,6 +437,7 @@ ${sitesList}
     toggleTag,
     setCategory,
     setPage,
+    setPageSize,
     clearFilters,
     exportToMarkdown,
     importFromMarkdown,

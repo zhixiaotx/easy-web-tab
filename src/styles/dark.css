@@ -1022,3 +1022,33 @@
   opacity: 0.5;
 }
 
+/* ========================================
+   分页条数选择器暗色
+   ======================================== */
+
+:root.dark .pagination-wrapper {
+  background-color: transparent;
+}
+
+:root.dark .page-size-select {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+  color: var(--text-secondary, #d1d5db);
+  cursor: pointer;
+}
+
+:root.dark .page-size-select:hover {
+  border-color: var(--accent-color, #3b82f6);
+  color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .page-size-select:focus {
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+:root.dark .page-size-select option {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-primary, #f9fafb);
+}
+

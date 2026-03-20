@@ -4,6 +4,12 @@ import { useSitesStore } from '../stores/sites'
 
 const store = useSitesStore()
 
+const pageSizeOptions = [
+  { value: 9, label: '9 条/页' },
+  { value: 18, label: '18 条/页' },
+  { value: 27, label: '27 条/页' }
+]
+
 const pages = computed(() => {
   const total = store.totalPages
   const current = store.currentPage
@@ -47,48 +53,80 @@ const handlePageClick = (page: number | string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
+
+const handleSizeChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  store.setPageSize(Number(target.value))
+}
 </script>
 
 <template>
-  <div v-if="store.totalPages > 1" class="pagination">
-    <button
-      class="page-btn"
-      :disabled="store.currentPage === 1"
-      @click="handlePageClick(store.currentPage - 1)"
-    >
-      ‹ 上一页
-    </button>
-    
-    <template v-for="page in pages" :key="page">
-      <span v-if="page === '...'" class="ellipsis">...</span>
+  <div v-if="store.filteredSites.length > 0" class="pagination-wrapper">
+    <div class="pagination">
       <button
-        v-else
         class="page-btn"
-        :class="{ active: page === store.currentPage }"
-        @click="handlePageClick(page)"
+        :disabled="store.currentPage === 1"
+        @click="handlePageClick(store.currentPage - 1)"
       >
-        {{ page }}
+        ‹ 上一页
       </button>
-    </template>
-    
-    <button
-      class="page-btn"
-      :disabled="store.currentPage === store.totalPages"
-      @click="handlePageClick(store.currentPage + 1)"
-    >
-      下一页 ›
-    </button>
+      
+      <template v-for="page in pages" :key="page">
+        <span v-if="page === '...'" class="ellipsis">...</span>
+        <button
+          v-else
+          class="page-btn"
+          :class="{ active: page === store.currentPage }"
+          @click="handlePageClick(page)"
+        >
+          {{ page }}
+        </button>
+      </template>
+      
+      <button
+        class="page-btn"
+        :disabled="store.currentPage === store.totalPages"
+        @click="handlePageClick(store.currentPage + 1)"
+      >
+        下一页 ›
+      </button>
+    </div>
+
+    <!-- 每页条数选择 -->
+    <div class="page-size-selector">
+      <select
+        :value="store.pageSize"
+        class="page-size-select"
+        @change="handleSizeChange"
+      >
+        <option
+          v-for="opt in pageSizeOptions"
+          :key="opt.value"
+          :value="opt.value"
+        >
+          {{ opt.label }}
+        </option>
+      </select>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 32px;
+  padding: 20px 0;
+  flex-wrap: wrap;
+}
+
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin-top: 32px;
-  padding: 20px 0;
 }
 
 .page-btn {
@@ -121,5 +159,32 @@ const handlePageClick = (page: number | string) => {
 .ellipsis {
   color: #94a3b8;
   padding: 0 4px;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+}
+
+.page-size-select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: white;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.page-size-select:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.page-size-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 </style>

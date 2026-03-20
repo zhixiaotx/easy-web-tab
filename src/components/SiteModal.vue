@@ -206,7 +206,9 @@ const handleSubmit = () => {
       <form class="modal-body" @submit.prevent="handleSubmit">
         <div class="form-group">
           <label>网站名称 *</label>
+          <div v-if="isLoading && !form.name" class="skeleton skeleton-name"></div>
           <input
+            v-else
             v-model="form.name"
             type="text"
             placeholder="例如：GitHub"
@@ -230,6 +232,7 @@ const handleSubmit = () => {
               :disabled="isLoading"
               @click="handleFetchMetadata"
             >
+              <span v-if="isLoading" class="spinner"></span>
               {{ isLoading ? '获取中...' : '获取' }}
             </button>
           </div>
@@ -238,7 +241,9 @@ const handleSubmit = () => {
 
         <div class="form-group">
           <label>网站描述</label>
+          <div v-if="isLoading && !form.description" class="skeleton skeleton-desc"></div>
           <textarea
+            v-else
             v-model="form.description"
             placeholder="简要描述这个网站..."
             rows="3"
@@ -282,7 +287,9 @@ const handleSubmit = () => {
 
         <div class="form-group">
           <label>图标地址</label>
+          <div v-if="isLoading && !form.icon" class="skeleton skeleton-icon"></div>
           <input
+            v-else
             v-model="form.icon"
             type="text"
             placeholder="可选，自定义图标 URL"
@@ -320,6 +327,54 @@ const handleSubmit = () => {
   justify-content: center;
   z-index: 100;
   padding: 20px;
+}
+
+/* 骨架屏动画 */
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.skeleton-name {
+  height: 18px;
+  width: 60%;
+  margin-bottom: 8px;
+}
+
+.skeleton-desc {
+  height: 60px;
+  width: 100%;
+}
+
+.skeleton-icon {
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+/* 按钮 spinner */
+.btn-fetch .spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .modal {

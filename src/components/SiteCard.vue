@@ -23,6 +23,20 @@ const getFavicon = (url: string) => {
   }
 }
 
+// 三层降级：自定义 icon → Google Favicon → 默认 SVG
+const handleIconError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  const fallbackUrl = (img.closest('.site-card') as HTMLElement)?.dataset.siteUrl || ''
+
+  if (img.src !== getFavicon(fallbackUrl) && img.src !== '/default-icon.svg') {
+    // 第一步：降级到 Google Favicon
+    img.src = getFavicon(fallbackUrl)
+  } else if (img.src !== '/default-icon.svg') {
+    // 第二步：降级到本地默认 SVG
+    img.src = '/default-icon.svg'
+  }
+}
+
 const handleClick = () => {
   window.open(props.site.url, '_blank')
 }
@@ -31,6 +45,7 @@ const handleClick = () => {
 <template>
   <div
     class="site-card"
+    :data-site-url="site.url"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
     @click="handleClick"
@@ -40,7 +55,8 @@ const handleClick = () => {
         :src="site.icon || getFavicon(site.url)"
         :alt="site.name"
         class="favicon"
-        @error="($event.target as HTMLImageElement).src = '/default-icon.svg'"
+        loading="lazy"
+        @error="handleIconError"
       />
       <div v-if="isHovered && !props.readonly" class="card-actions">
         <button class="action-btn edit" @click.stop="emit('edit', site)">✏️</button>

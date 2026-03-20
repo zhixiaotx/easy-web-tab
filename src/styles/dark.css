@@ -18,6 +18,19 @@
   --shadow-color: rgba(0, 0, 0, 0.4);
   --hover-bg: #374151;
   --input-bg: #374151;
+
+  /* 暗色阴影覆盖 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  /* 暗色骨架屏 */
+  --skeleton-color-1: #2d3748;
+  --skeleton-color-2: #374151;
 }
 
 /* 全局暗色样式 */
@@ -772,5 +785,43 @@
 :root.dark input::placeholder,
 :root.dark textarea::placeholder {
   color: var(--text-muted) !important;
+}
+
+/* ========================================
+   骨架屏暗色模式
+   ======================================== */
+
+:root.dark .skeleton {
+  background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
+  background-size: 200% 100%;
+  border-color: #4b5563;
+}
+
+:root.dark .skeleton-name,
+:root.dark .skeleton-desc {
+  background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
+  background-size: 200% 100%;
+  border-color: #4b5563;
+}
+
+:root.dark .skeleton-icon {
+  background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
+  background-size: 200% 100%;
+  border-color: #4b5563;
+}
+
+/* 搜索框暗色阴影 */
+:root.dark .global-search {
+  box-shadow: var(--shadow-md);
+}
+
+/* 卡片悬浮阴影暗色 */
+:root.dark .site-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* 分类标签阴影暗色 */
+:root.dark .category-tabs {
+  box-shadow: var(--shadow-sm);
 }
 

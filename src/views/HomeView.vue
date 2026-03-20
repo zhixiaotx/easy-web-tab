@@ -13,6 +13,7 @@ import SearchEngineManager from '../components/SearchEngineManager.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
+import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
@@ -26,6 +27,28 @@ onMounted(() => {
 })
 
 const filteredSites = computed(() => store.paginatedSites)
+
+// 关闭所有弹框
+const closeAllModals = () => {
+  showModal.value = false
+  showEngineManager.value = false
+}
+
+// 切换到前台
+const toggleAdmin = () => {
+  router.push('/display')
+}
+
+// 注册键盘快捷键
+useKeyboardShortcuts({
+  onAddSite: () => {
+    if (!showModal.value && !showEngineManager.value) {
+      handleAdd()
+    }
+  },
+  onCloseModal: closeAllModals,
+  onToggleAdmin: toggleAdmin
+})
 
 const handleAdd = () => {
   editingSite.value = null
@@ -50,10 +73,6 @@ const handleSave = (site: Site) => {
     store.addSite(site)
   }
   showModal.value = false
-}
-
-const goToDisplay = () => {
-  router.push('/display')
 }
 
 // 处理文件导入
@@ -114,6 +133,14 @@ const triggerImport = () => {
     @change="handleImport"
   />
 
+  <!-- 右上角工具栏 -->
+  <div class="top-right-toolbar">
+    <ThemeToggle />
+    <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
+      前台
+    </button>
+  </div>
+
   <div class="container">
     <header class="header">
       <div class="search-section">
@@ -123,11 +150,9 @@ const triggerImport = () => {
         <div class="action-buttons">
           <button class="btn-action" @click="triggerImport">导入</button>
           <button class="btn-action" @click="store.exportToMarkdown">导出</button>
-          <button class="btn-action" @click="goToDisplay">前台</button>
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
           <button class="btn-action" @click="showEngineManager = true">🔍 引擎管理</button>
           <SettingsButton />
-          <ThemeToggle />
         </div>
       </div>
     </header>
@@ -168,10 +193,39 @@ const triggerImport = () => {
 </template>
 
 <style scoped>
+/* 右上角工具栏 */
+.top-right-toolbar {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+
+.btn-front {
+  padding: 8px 14px;
+  background-color: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-front:hover {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
+  padding-top: 70px; /* 为右上角工具栏留出空间 */
 }
 
 .header {
@@ -235,7 +289,29 @@ const triggerImport = () => {
   font-size: 16px;
 }
 
+/* 暗色模式 */
+:root.dark .btn-front {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .btn-front:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
 @media (max-width: 768px) {
+  .top-right-toolbar {
+    top: 8px;
+    right: 8px;
+  }
+
+  .container {
+    padding-top: 60px;
+  }
+
   .actions-row {
     flex-direction: column;
     align-items: stretch;

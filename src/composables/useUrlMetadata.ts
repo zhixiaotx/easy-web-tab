@@ -9,7 +9,7 @@ export function useUrlMetadata() {
   async function fetchViaJina(url: string): Promise<UrlMetadata | null> {
     try {
       const urlObj = new URL(url)
-      const jinaUrl = 'https://r.jina.ai/http://' + urlObj.host + urlObj.pathname
+      const jinaUrl = 'https://r.jina.ai/' + urlObj.protocol.replace(':', '') + '://' + urlObj.host + urlObj.pathname
       const response = await fetch(jinaUrl)
       
       if (!response.ok) {
@@ -108,12 +108,23 @@ export function useUrlMetadata() {
             description = descMatch[1].trim()
           }
         }
-        
+
+        // 解析 icon - 优先 <link rel="icon">，再 fallback 到 /favicon.ico
+        let icon = ''
+        const iconMatch = html.match(/<link[^>]+rel=["'](?:icon|shortcut icon)["'][^>]*href=["']([^"']+)["']/i) ||
+                         html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["'](?:icon|shortcut icon)["']/i)
+        if (iconMatch) {
+          const iconHref = iconMatch[1]
+          icon = iconHref.startsWith('http') ? iconHref : `${urlObj.origin}${iconHref.startsWith('/') ? '' : '/'}${iconHref}`
+        } else {
+          icon = `${urlObj.origin}/favicon.ico`
+        }
+
         if (title) {
           return {
             title,
             description: description.slice(0, 300) || '暂无描述',
-            icon: `${urlObj.origin}/favicon.ico`
+            icon
           }
         }
       } catch {

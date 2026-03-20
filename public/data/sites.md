@@ -89,7 +89,7 @@ sites:
     category: tech
     tags: [问答]
     icon: https://stackoverflow.com/favicon.ico
-    sort: 2
+    sort: 26
     createdAt: 2024-01-02T00:00:00.000Z
 
   - name: MDN Web Docs
@@ -132,7 +132,7 @@ sites:
     url: https://www.npmjs.com
     description: Node.js 包管理器，全球最大的 JavaScript 包仓库
     category: tech
-    tags: [工具, Node.js]
+    tags: [前端, 工具]
     icon: https://www.npmjs.com/favicon.ico
     sort: 7
     createdAt: 2024-01-07T00:00:00.000Z
@@ -168,7 +168,7 @@ sites:
     url: https://deepseek.com
     description: DeepSeek | 深度求索  !  [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线，点击查看详情。](https:/
     category: custom_1773890047269
-    tags: [人工智能]
+    tags: []
     icon: https://deepseek.com/favicon.ico
     sort: 1
     createdAt: 2026-03-19T03:15:33.215Z
@@ -184,9 +184,9 @@ sites:
 
   - name: Halo - 建站工具
     url: https://www.halo.run
-    description: Halo - 强大易用的开源建站工具 
+    description: Halo - 强大易用的开源建站工具  ](https://www.fit2cloud.com/)  了解飞致云旗下开源产品  [MaxKB 强大易用的企业级智能体平台]
     category: tech
-    tags: []
+    tags: [工具]
     icon: https://www.halo.run/favicon.ico
     sort: 17
     createdAt: 2026-03-19T07:48:32.215Z
@@ -260,8 +260,98 @@ sites:
     category: custom_1773890047269
     tags: []
     icon: https://clawhub.ai/favicon.ico
-    sort: 26
+    sort: 2
     createdAt: 2026-03-20T01:08:57.076Z
+
+  - name: Apache SkyWalking
+    url: https://skywalking.apache.org
+    description: End-to-end distributed tracing. Service topology analysis, service-centric observability and APIs dashboards.。Java, .Net Core, PHP, NodeJS, Golang, LUA, Rust, C++, Client JavaScript and Python agents with active development and maintenance.。Rover agent works as a monitor and profiler powered by eBPF...
+    category: tech
+    tags: [开源代码]
+    icon: https://skywalking.apache.org/favicon.ico
+    sort: 27
+    createdAt: 2026-03-20T08:23:14.855Z
+
+  - name: OceanBase
+    url: https://www.oceanbase.com
+    description: OceanBase 是 100% 根自研的原生分布式数据库，基于单机分布式一体化架构，高度兼容 Oracle 和 MySQL，支持事务处理（TP）和实时分析处理（AP）等多工作负载，原生支持向量检索与多模数据混合检索，助力客户构建面向 AI 的一体化数据底座。已广泛应用于金融、运营商、零售、互联网及公共服务等行业，助力 4000+ 客户实现关键业务系统升级。
+    category: tech
+    tags: [工具]
+    icon: https://www.oceanbase.com/favicon.ico
+    sort: 28
+    createdAt: 2026-03-20T08:30:35.101Z
+
+  - name: 高德地图
+    url: https://ditu.amap.com
+    description: 高德地图
+    category: travel
+    tags: []
+    icon: https://ditu.amap.com/favicon.ico
+    sort: 29
+    createdAt: 2026-03-20T08:32:11.573Z
+
+  - name: JetBrains
+    url: https://www.jetbrains.com
+    description: 为每种语言和技术栈量身定制的 IDE
+    category: tech
+    tags: [工具]
+    icon: https://www.jetbrains.com/favicon.ico
+    sort: 30
+    createdAt: 2026-03-20T08:33:42.380Z
+
+  - name: 阿里云
+    url: https://www.aliyun.com
+    description: Models Overview Products Solutions Pricing Resources Partners Support。See all results for ""。Everything You Need in One
+    category: tech
+    tags: []
+    icon: https://www.aliyun.com/favicon.ico
+    sort: 31
+    createdAt: 2026-03-20T08:36:02.069Z
+
+  - name: 抖音
+    url: https://www.douyin.com
+    description: 抖音
+    category: video
+    tags: []
+    icon: https://www.douyin.com/favicon.ico
+    sort: 32
+    createdAt: 2026-03-20T08:37:54.510Z
+
+  - name: 阿里云盘
+    url: https://www.alipan.com
+    description: 阿里云盘是一款速度快、不打扰、够安全、易于分享的网盘，你可以在这里存储、管理和探索内容，尽情打造丰富的数字世界。。通过各类强大的备份能力和独特的数据加密技术，让您的文件安全存在云盘。。各类备份能力，让您的文件丝滑「搬」上云盘
+    category: office
+    tags: [网盘]
+    icon: https://www.alipan.com/favicon.ico
+    sort: 33
+    createdAt: 2026-03-20T08:39:55.352Z
+
+  - name: 智谱
+    url: https://www.zhipuai.cn
+    description: 智谱是由清华大学计算机系技术成果转化而来的公司，致力于打造新一代认知智能通用模型。公司合作研发了双语千亿级超大规模预训练模型GLM-130B，并构建了高精度通用知识图谱，形成数据与知识双轮驱动的认知引擎，基于此模型打造了ChatGLM（chatglm.cn）。此外，智谱还推出了认知大模型平台Bigmodel.ai，包括CodeGeeX和CogView等产品，提供智能API服务，链接物理世界的亿级用户、赋能元宇宙数字人、成为具身机器人的基座，赋予机器像人一样“思考”的能力。
+    category: custom_1773890047269
+    tags: []
+    icon: https://www.zhipuai.cn/assets/images/logo_icon.jpeg
+    sort: 34
+    createdAt: 2026-03-20T08:42:36.444Z
+
+  - name: Trae
+    url: https://www.trae.com.cn
+    description: 国内首款 AI 原生 IDE，专为中国开发者打造，让 AI 深度融入编程，带来比插件更流畅、精准的开发体验。
+    category: tech
+    tags: [工具]
+    icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
+    sort: 35
+    createdAt: 2026-03-20T08:45:12.609Z
+
+  - name: Redis
+    url: https://redis.io
+    description: Build AI apps with more speed, memory, and accuracy.。Trusted by fast companies across the globe。Redis for AI
+    category: tech
+    tags: [工具]
+    icon: https://redis.io/wp-content/themes/wpx/assets/images/favicons/favicon-32x32.png?v=1720078588
+    sort: 36
+    createdAt: 2026-03-20T08:49:07.270Z
 ---
 
 # 我的书签

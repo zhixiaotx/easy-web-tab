@@ -121,14 +121,14 @@ npm run preview
 # 一键构建 + 启动本地服务（生产构建）
 npm start
 # 等同于：npm run build && npm run serve
-# 启动后访问 http://localhost:3000
+# 启动后访问 http://localhost:16718
 
 # 单独启动服务（不重新构建）
 npm run serve
-# 读取 dist/ 目录，监听 3000 端口
+# 读取 dist/ 目录，监听 16718 端口
 ```
 
-> 默认端口为 3000。如需修改，编辑 package.json 中 serve 脚本的 -l 3000 参数。
+> 默认端口为 16718。如需修改，编辑 package.json 中 serve 脚本的 -l 16718 参数。
 
 ---
 

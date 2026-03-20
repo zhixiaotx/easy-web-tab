@@ -196,8 +196,9 @@ const handleSubmit = () => {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal">
+  <Transition name="modal">
+    <div class="modal-overlay" @click.self="emit('close')">
+      <div class="modal">
       <div class="modal-header">
         <h2>{{ isEditing ? '编辑网站' : '添加网站' }}</h2>
         <button class="close-btn" @click="emit('close')">✕</button>
@@ -314,7 +315,8 @@ const handleSubmit = () => {
         </div>
       </form>
     </div>
-  </div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -590,5 +592,46 @@ const handleSubmit = () => {
 
 .btn-submit:hover {
   background-color: #2563eb;
+}
+
+/* === Vue Transition 动画 === */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .modal {
+  animation: modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-leave-active .modal {
+  animation: modal-out 0.2s ease forwards;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
 }
 </style>

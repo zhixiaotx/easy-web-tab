@@ -8,7 +8,7 @@ const store = useSitesStore()
   <div class="tag-filter">
     <div class="tag-list">
       <button
-        v-for="tag in store.allTags"
+        v-for="tag in store.tagsByCategory"
         :key="tag"
         class="tag"
         :class="{ active: store.selectedTags.includes(tag) }"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 
 const store = useSearchEnginesStore()
@@ -92,9 +92,45 @@ function handleBlur() {
   }, 150)
 }
 
+// 过滤后的建议列表
+const filteredSuggestions = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) {
+    // 无输入：显示全部历史
+    return searchHistory.value
+  }
+  // 有输入：过滤匹配的历史记录
+  return searchHistory.value.filter(h => h.toLowerCase().includes(query))
+})
+
 // 输入变化
 function handleInput() {
-  showHistory.value = searchHistory.value.length > 0 && searchQuery.value.length === 0
+  if (searchQuery.value.trim()) {
+    // 有输入：显示过滤后的建议
+    showHistory.value = filteredSuggestions.value.length > 0
+  } else {
+    // 无输入：显示全部历史
+    showHistory.value = searchHistory.value.length > 0
+  }
+}
+
+// 键盘导航
+function handleKeydown(event: KeyboardEvent) {
+  if (!showHistory.value || filteredSuggestions.value.length === 0) {
+    if (event.key === 'Enter') handleSearch()
+    return
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    // 向下导航：模拟选中下一个
+    return
+  }
+
+  if (event.key === 'Enter' && searchQuery.value.trim()) {
+    // 有内容时按回车直接搜索
+    handleSearch()
+  }
 }
 </script>
 
@@ -113,25 +149,29 @@ function handleInput() {
           class="search-input"
           placeholder="输入关键词，按回车键搜索..."
           @keyup="handleKeyup"
+          @keydown="handleKeydown"
           @focus="handleFocus"
           @blur="handleBlur"
           @input="handleInput"
         />
         
-        <!-- 搜索历史下拉 -->
-        <div v-if="showHistory && searchHistory.length > 0" class="history-dropdown">
+        <!-- 搜索历史/建议下拉 -->
+        <div v-if="showHistory && filteredSuggestions.length > 0" class="history-dropdown">
           <div class="history-header">
-            <span class="history-title">搜索历史</span>
-            <button class="clear-history" @click.stop="clearHistory">清除</button>
+            <span class="history-title">{{ searchQuery.trim() ? '搜索建议' : '搜索历史' }}</span>
+            <button v-if="!searchQuery.trim()" class="clear-history" @click.stop="clearHistory">清除</button>
           </div>
           <div class="history-list">
             <div
-              v-for="(item, index) in searchHistory"
+              v-for="(item, index) in filteredSuggestions"
               :key="index"
               class="history-item"
               @mousedown.prevent="selectHistoryItem(item)"
             >
-              <span class="history-icon">🕐</span>
+              <svg class="history-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
               <span class="history-text">{{ item }}</span>
             </div>
           </div>
@@ -228,6 +268,18 @@ function handleInput() {
   margin-top: 4px;
   max-height: 320px;
   overflow-y: auto;
+  animation: dropdownIn 0.15s ease;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .history-header {
@@ -277,8 +329,8 @@ function handleInput() {
 }
 
 .history-icon {
-  font-size: 14px;
-  opacity: 0.5;
+  flex-shrink: 0;
+  opacity: 0.4;
 }
 
 .history-text {

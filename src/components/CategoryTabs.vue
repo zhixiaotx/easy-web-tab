@@ -18,36 +18,42 @@ const handleCategoryClick = (categoryId: string) => {
 </script>
 
 <template>
-  <div class="category-tabs">
-    <button
-      class="category-tab"
-      :class="{ active: store.selectedCategory === '' }"
-      @click="store.setCategory('')"
-    >
-      全部
-    </button>
-    <button
-      v-for="cat in categories"
-      :key="cat.id"
-      class="category-tab"
-      :class="{ active: store.selectedCategory === cat.id }"
-      @click="handleCategoryClick(cat.id)"
-    >
-      {{ cat.icon }} {{ cat.name }}
-    </button>
+  <div class="category-tabs-wrapper">
+    <div class="category-tabs">
+      <button
+        class="category-tab"
+        :class="{ active: store.selectedCategory === '' }"
+        @click="store.setCategory('')"
+      >
+        全部
+      </button>
+      <button
+        v-for="cat in categories"
+        :key="cat.id"
+        class="category-tab"
+        :class="{ active: store.selectedCategory === cat.id }"
+        @click="handleCategoryClick(cat.id)"
+      >
+        {{ cat.icon }} {{ cat.name }}
+      </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.category-tabs-wrapper {
+  margin-bottom: 20px;
+  padding: 12px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
 .category-tabs {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
-  padding: 16px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 4px;
 }
 
 .category-tab {

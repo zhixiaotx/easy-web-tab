@@ -53,6 +53,21 @@ export const useSitesStore = defineStore('sites', () => {
     return Array.from(tagSet).sort()
   })
 
+  // 按分类过滤的标签
+  const tagsByCategory = computed(() => {
+    if (!selectedCategory.value) {
+      // 未选分类 → 返回全部标签
+      return allTags.value
+    }
+    const tagSet = new Set<string>()
+    sites.value.forEach(site => {
+      if (site.category === selectedCategory.value) {
+        site.tags.forEach(tag => tagSet.add(tag))
+      }
+    })
+    return Array.from(tagSet).sort()
+  })
+
   const filteredSites = computed(() => {
     // 先过滤
     const filtered = sites.value.filter(site => {
@@ -307,6 +322,7 @@ ${sitesList}
     isLoading,
     allCategories,
     allTags,
+    tagsByCategory,
     filteredSites,
     sitesByCategory,
     currentPage,

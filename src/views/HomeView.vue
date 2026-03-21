@@ -123,11 +123,6 @@ const toggleAdmin = () => {
 
 // 注册键盘快捷键
 useKeyboardShortcuts({
-  onAddSite: () => {
-    if (!showModal.value && !showEngineManager.value && !showHelp.value) {
-      handleAdd()
-    }
-  },
   onCloseModal: closeAllModals,
   onToggleAdmin: toggleAdmin
 })

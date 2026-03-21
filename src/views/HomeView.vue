@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.vue'
 import SiteModal from '../components/SiteModal.vue'
 import SettingsButton from '../components/SettingsButton.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
+import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
@@ -20,6 +21,7 @@ const enginesStore = useSearchEnginesStore()
 const router = useRouter()
 const showModal = ref(false)
 const showEngineManager = ref(false)
+const showHelp = ref(false)
 const editingSite = ref<Site | null>(null)
 
 // 拖拽排序状态
@@ -64,6 +66,7 @@ const filteredSites = computed(() => store.paginatedSites)
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
+  showHelp.value = false
 }
 
 // 切换到前台
@@ -74,7 +77,7 @@ const toggleAdmin = () => {
 // 注册键盘快捷键
 useKeyboardShortcuts({
   onAddSite: () => {
-    if (!showModal.value && !showEngineManager.value) {
+    if (!showModal.value && !showEngineManager.value && !showHelp.value) {
       handleAdd()
     }
   },
@@ -197,6 +200,7 @@ const triggerImport = () => {
         <div class="action-buttons">
           <button class="btn-action" @click="triggerImport">导入</button>
           <button class="btn-action" @click="store.exportToMarkdown">导出</button>
+          <button class="btn-action" @click="showHelp = true">❓ 帮助</button>
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
           <button class="btn-action" @click="store.checkDeadLinks">
             <span v-if="store.isCheckingLinks">⏳ 检测中 ({{ store.linkCheckProgress?.current }}/{{ store.linkCheckProgress?.total }})</span>
@@ -248,6 +252,11 @@ const triggerImport = () => {
     <SearchEngineManager 
       v-if="showEngineManager" 
       @close="showEngineManager = false" 
+    />
+
+    <HelpModal
+      v-if="showHelp"
+      @close="showHelp = false"
     />
   </div>
 </template>

@@ -1052,3 +1052,101 @@
   color: var(--text-primary, #f9fafb);
 }
 
+/* ========================================
+   帮助弹框暗色模式
+   ======================================== */
+
+:root.dark .help-modal {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .modal-header {
+  border-bottom-color: var(--border-color, #374151);
+}
+
+:root.dark .modal-header h2 {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .close-btn {
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .close-btn:hover {
+  color: var(--text-primary, #f9fafb);
+  background-color: var(--hover-bg, #374151);
+}
+
+:root.dark .modal-body {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .section-title {
+  color: #60a5fa;
+  border-bottom-color: var(--border-color, #374151);
+}
+
+:root.dark .feature-item {
+  background-color: var(--bg-primary, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .feature-content h4 {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .feature-content p {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .shortcut-item {
+  background-color: var(--bg-primary, #111827);
+}
+
+:root.dark .shortcut-key {
+  background-color: var(--hover-bg, #374151);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .shortcut-action {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .mode-item {
+  background-color: var(--bg-primary, #111827);
+}
+
+:root.dark .mode-item p {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .mode-item code {
+  background-color: var(--hover-bg, #374151);
+  color: #60a5fa;
+}
+
+:root.dark .storage-list li {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .storage-list strong {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .storage-list code {
+  background-color: var(--hover-bg, #374151);
+  color: #60a5fa;
+}
+
+:root.dark .modal-footer {
+  border-top-color: var(--border-color, #374151);
+}
+
+:root.dark .btn-primary {
+  background-color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .btn-primary:hover {
+  background-color: var(--accent-hover, #2563eb);
+}
+

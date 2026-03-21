@@ -80,7 +80,7 @@ sites:
     category: tech
     tags: [开源代码, 项目托管, 搜索引擎]
     icon: https://github.com/favicon.ico
-    sort: 10
+    sort: 5
     createdAt: 2024-01-01T00:00:00.000Z
 
   - name: Stack Overflow
@@ -98,7 +98,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://developer.mozilla.org/favicon.ico
-    sort: 3
+    sort: 13
     createdAt: 2024-01-03T00:00:00.000Z
 
   - name: Vite
@@ -107,7 +107,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://vitejs.dev/favicon.ico
-    sort: 4
+    sort: 8
     createdAt: 2024-01-04T00:00:00.000Z
 
   - name: Vue
@@ -115,8 +115,8 @@ sites:
     description: 渐进式 JavaScript 框架，易学易用
     category: tech
     tags: [前端]
-    icon: https://vuejs.org/favicon.ico
-    sort: 5
+    icon: /icons/vue.svg
+    sort: 20
     createdAt: 2024-01-05T00:00:00.000Z
 
   - name: TypeScript
@@ -125,7 +125,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://www.typescriptlang.org/favicon.ico
-    sort: 6
+    sort: 10
     createdAt: 2024-01-06T00:00:00.000Z
 
   - name: npm
@@ -133,8 +133,8 @@ sites:
     description: Node.js 包管理器，全球最大的 JavaScript 包仓库
     category: tech
     tags: [前端, 工具]
-    icon: https://www.npmjs.com/favicon.ico
-    sort: 7
+    icon: /icons/npm.svg
+    sort: 11
     createdAt: 2024-01-07T00:00:00.000Z
 
   - name: CSS-Tricks
@@ -143,7 +143,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://css-tricks.com/favicon.ico
-    sort: 8
+    sort: 10
     createdAt: 2024-01-08T00:00:00.000Z
 
   - name: 掘金
@@ -152,7 +152,7 @@ sites:
     category: social
     tags: [社区]
     icon: 
-    sort: 10
+    sort: 21
     createdAt: 2024-01-10T00:00:00.000Z
 
   - name: 百度一下，你就知道
@@ -161,7 +161,7 @@ sites:
     category: news
     tags: [搜索引擎]
     icon: https://www.baidu.com/favicon.ico
-    sort: 11
+    sort: 4
     createdAt: 2026-03-19T00:32:06.601Z
 
   - name: DeepSeek | 深度求索
@@ -206,7 +206,7 @@ sites:
     category: office
     tags: [网盘]
     icon: https://pan.baidu.com/favicon.ico
-    sort: 21
+    sort: 34
     createdAt: 2026-03-19T08:52:57.850Z
 
   - name: 码云(gitee)
@@ -215,7 +215,7 @@ sites:
     category: tech
     tags: [开源代码, 项目托管, 搜索引擎]
     icon: https://gitee.com/favicon.ico
-    sort: 20
+    sort: 6
     createdAt: 2026-03-19T08:06:02.081Z
 
   - name: JAVA
@@ -260,7 +260,7 @@ sites:
     category: custom_1773890047269
     tags: []
     icon: https://clawhub.ai/favicon.ico
-    sort: 2
+    sort: 3
     createdAt: 2026-03-20T01:08:57.076Z
 
   - name: Apache SkyWalking
@@ -314,7 +314,7 @@ sites:
     category: video
     tags: []
     icon: https://www.douyin.com/favicon.ico
-    sort: 32
+    sort: 7
     createdAt: 2026-03-20T08:37:54.510Z
 
   - name: 阿里云盘
@@ -332,7 +332,7 @@ sites:
     category: custom_1773890047269
     tags: []
     icon: https://www.zhipuai.cn/favicon.ico
-    sort: 34
+    sort: 35
     createdAt: 2026-03-20T08:42:36.444Z
 
   - name: Trae
@@ -341,7 +341,7 @@ sites:
     category: tech
     tags: [工具]
     icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
-    sort: 35
+    sort: 34
     createdAt: 2026-03-20T08:45:12.609Z
 
   - name: Redis
@@ -352,6 +352,15 @@ sites:
     icon: https://redis.io/wp-content/themes/wpx/assets/images/favicons/favicon-32x32.png?v=1720078588
     sort: 36
     createdAt: 2026-03-20T08:49:07.270Z
+
+  - name: Openclaw
+    url: http://127.0.0.1:18789/chat?session=agent%3Amain%3Amain
+    description: 我的私人智能体
+    category: custom_1773890047269
+    tags: []
+    icon: 
+    sort: 2
+    createdAt: 2026-03-20T14:20:56.409Z
 ---
 
 # 我的书签

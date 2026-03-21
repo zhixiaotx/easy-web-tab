@@ -26,7 +26,6 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'vscode', label: 'VS Code', url: 'https://code.visualstudio.com' },
   { name: 'nodejs', label: 'Node.js', url: 'https://nodejs.org' },
   { name: 'npm', label: 'npm', url: 'https://npmjs.com' },
-  { name: 'github', label: 'GitHub', url: 'https://github.com' },
   { name: 'gitlab', label: 'GitLab', url: 'https://gitlab.com' },
   { name: 'csdn', label: 'CSDN', url: 'https://csdn.net' },
   { name: 'juejin', label: '掘金', url: 'https://juejin.cn' },
@@ -70,6 +69,30 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'toutiao', label: '今日头条', url: 'https://toutiao.com' },
   { name: 'dianping', label: '大众点评', url: 'https://dianping.com' },
   { name: 'xianyu', label: '闲鱼', url: 'https://xianyu.com' },
+
+  // 大模型与 AI
+  { name: 'openclaw', label: 'OpenClaw' },
+  { name: 'qwen', label: '通义千问', url: 'https://qwen.ai' },
+  { name: 'wenxin', label: '文心一言', url: 'https://yiyan.baidu.com' },
+  { name: 'kimi', label: 'Kimi', url: 'https://kimi.moonshot.cn' },
+  { name: 'doubao', label: '豆包', url: 'https://doubao.com' },
+  { name: 'xinghuo', label: '讯飞星火', url: 'https://xinghuo.xfyun.cn' },
+  { name: 'hunyuan', label: '腾讯混元', url: 'https://hunyuan.tencent.com' },
+  { name: 'zhipu', label: '智谱AI', url: 'https://zhipuai.cn' },
+  { name: 'coze', label: '扣子 Coze', url: 'https://coze.cn' },
+  { name: 'siliconflow', label: '硅基流动', url: 'https://siliconflow.com' },
+  { name: 'metaso', label: '秘塔AI', url: 'https://metaso.cn' },
+  { name: 'deepseek', label: 'DeepSeek', url: 'https://deepseek.com' },
+  { name: 'minimax', label: 'MiniMax AI', url: 'https://minimax.chat' },
+
+  // 数据库
+  { name: 'mysql', label: 'MySQL', url: 'https://mysql.com' },
+  { name: 'postgresql', label: 'PostgreSQL', url: 'https://postgresql.org' },
+  { name: 'redis', label: 'Redis', url: 'https://redis.io' },
+  { name: 'mongodb', label: 'MongoDB', url: 'https://mongodb.com' },
+  { name: 'elasticsearch', label: 'Elasticsearch', url: 'https://elastic.co' },
+  { name: 'sqlite', label: 'SQLite', url: 'https://sqlite.org' },
+  { name: 'supabase', label: 'Supabase', url: 'https://supabase.com' },
 ]
 
 /**

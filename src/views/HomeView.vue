@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watchEffect } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
 import GlobalSearch from '../components/GlobalSearch.vue'
@@ -19,6 +19,7 @@ import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const router = useRouter()
+const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
 const showHelp = ref(false)
@@ -60,13 +61,59 @@ onMounted(() => {
   store.loadSites()
 })
 
+// 同步 URL query 参数与弹框状态（Ctrl+N / 直接访问 URL 均可打开弹框）
+watchEffect(() => {
+  const modal = route.query.modal as string | undefined
+
+  if (modal === 'add') {
+    editingSite.value = null
+    showModal.value = true
+    showEngineManager.value = false
+    showHelp.value = false
+  } else if (modal === 'edit') {
+    const url = route.query.url as string | undefined
+    if (url) {
+      const site = store.sites.find(s => s.url === decodeURIComponent(url))
+      if (site) {
+        editingSite.value = { ...site }
+        showModal.value = true
+        showEngineManager.value = false
+        showHelp.value = false
+      }
+    } else {
+      // 有 modal=edit 但无 url → 关闭
+      showModal.value = false
+      editingSite.value = null
+    }
+  } else if (modal === 'engines') {
+    showEngineManager.value = true
+    showModal.value = false
+    showHelp.value = false
+  } else if (modal === 'help') {
+    showHelp.value = true
+    showModal.value = false
+    showEngineManager.value = false
+  } else {
+    // 无 modal query → 关闭所有弹框（URL 清除时）
+    showModal.value = false
+    showEngineManager.value = false
+    showHelp.value = false
+    editingSite.value = null
+  }
+})
+
 const filteredSites = computed(() => store.paginatedSites)
 
-// 关闭所有弹框
+// 关闭所有弹框并清除 URL query
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
   showHelp.value = false
+  editingSite.value = null
+  // 清除 URL query 参数（如果存在的话）
+  if (route.query.modal) {
+    router.push({ query: {} })
+  }
 }
 
 // 切换到前台
@@ -87,12 +134,12 @@ useKeyboardShortcuts({
 
 const handleAdd = () => {
   editingSite.value = null
-  showModal.value = true
+  router.push({ query: { modal: 'add' } })
 }
 
 const handleEdit = (site: Site) => {
   editingSite.value = { ...site }
-  showModal.value = true
+  router.push({ query: { modal: 'edit', url: encodeURIComponent(site.url) } })
 }
 
 const handleDelete = (url: string) => {
@@ -105,7 +152,7 @@ const handleSave = (site: Site) => {
   if (editingSite.value) {
     // 编辑模式 - 直接更新
     store.updateSite(editingSite.value.url, site)
-    showModal.value = false
+    closeAllModals()
     return
   }
 
@@ -116,13 +163,13 @@ const handleSave = (site: Site) => {
     if (action) {
       store.updateSite(site.url, site)
     }
-    showModal.value = false
+    closeAllModals()
     return
   }
 
   // 无重复 - 正常添加
   store.addSite(site)
-  showModal.value = false
+  closeAllModals()
 }
 
 // 处理文件导入
@@ -200,13 +247,13 @@ const triggerImport = () => {
         <div class="action-buttons">
           <button class="btn-action" @click="triggerImport">导入</button>
           <button class="btn-action" @click="store.exportToMarkdown">导出</button>
-          <button class="btn-action" @click="showHelp = true">❓ 帮助</button>
+          <button class="btn-action" @click="router.push({ query: { modal: 'help' } })">❓ 帮助</button>
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
           <button class="btn-action" @click="store.checkDeadLinks">
             <span v-if="store.isCheckingLinks">⏳ 检测中 ({{ store.linkCheckProgress?.current }}/{{ store.linkCheckProgress?.total }})</span>
             <span v-else>🔗 检测断链<span v-if="store.invalidCount > 0" class="invalid-count">({{ store.invalidCount }})</span></span>
           </button>
-          <button class="btn-action" @click="showEngineManager = true">🔍 引擎管理</button>
+          <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
           <SettingsButton />
         </div>
       </div>
@@ -246,17 +293,17 @@ const triggerImport = () => {
       v-if="showModal"
       :site="editingSite"
       @save="handleSave"
-      @close="showModal = false"
+      @close="closeAllModals"
     />
 
     <SearchEngineManager 
       v-if="showEngineManager" 
-      @close="showEngineManager = false" 
+      @close="closeAllModals"
     />
 
     <HelpModal
       v-if="showHelp"
-      @close="showHelp = false"
+      @close="closeAllModals"
     />
   </div>
 </template>

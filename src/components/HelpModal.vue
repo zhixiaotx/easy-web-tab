@@ -4,7 +4,7 @@ const emit = defineEmits<{
 }>()
 
 const shortcuts = [
-  { key: 'Ctrl + N', action: '新增网址' },
+  { key: 'Ctrl + N', action: '新增网址（通过 URL ?modal=add 打开）' },
   { key: 'Ctrl + B', action: '切换前台/后台' },
   { key: 'Ctrl + D', action: '切换暗色模式' },
   { key: 'ESC', action: '关闭弹窗' }

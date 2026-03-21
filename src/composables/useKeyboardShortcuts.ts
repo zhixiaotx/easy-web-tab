@@ -13,9 +13,8 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   function handleKeydown(event: KeyboardEvent) {
     const isMod = isMac ? event.metaKey : event.ctrlKey
 
-    // Ctrl/Cmd + N: 新增网址
+    // Ctrl/Cmd + N: 新增网址（通过 router.push 打开，避免被浏览器占用）
     if (isMod && event.key === 'n' && !event.shiftKey) {
-      event.preventDefault()
       options.onAddSite?.()
       return
     }

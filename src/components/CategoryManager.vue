@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
 
@@ -9,6 +9,22 @@ const emit = defineEmits<{
 
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
+
+// ESC 键关闭弹框
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 const newCategoryName = ref('')
 const newCategoryIcon = ref('📂')

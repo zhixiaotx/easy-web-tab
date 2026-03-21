@@ -14,10 +14,12 @@ import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
+import { useThemeStore } from '../stores/theme'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
@@ -124,7 +126,8 @@ const toggleAdmin = () => {
 // 注册键盘快捷键
 useKeyboardShortcuts({
   onCloseModal: closeAllModals,
-  onToggleAdmin: toggleAdmin
+  onToggleAdmin: toggleAdmin,
+  onToggleTheme: () => themeStore.toggleTheme()
 })
 
 const handleAdd = () => {

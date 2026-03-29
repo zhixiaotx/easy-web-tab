@@ -258,7 +258,7 @@ sites:
     url: https://clawhub.ai/
     description: 龙虾光。代理右。上传代理技能包，像npm一样进行版本管理，并通过向量使其可搜索。无需审核，仅凭信号。搜索技能。版本化，随时可回滚。
     category: custom_1773890047269
-    tags: [Skills]
+    tags: [技能平台]
     icon: https://clawhub.ai/favicon.ico
     sort: 35
     createdAt: 2026-03-20T01:08:57.076Z
@@ -357,7 +357,7 @@ sites:
     url: http://127.0.0.1:18789/chat?session=agent%3Amain%3Amain
     description: 我的私人智能体
     category: custom_1773890047269
-    tags: [Agent]
+    tags: [智能体]
     icon: /icons/openclaw.svg
     sort: 2
     createdAt: 2026-03-20T14:20:56.409Z
@@ -366,7 +366,7 @@ sites:
     url: https://docs.openclaw.ai/zh-CN
     description: OpenClaw 🦞。适用于任何操作系统的 AI 智能体 Gateway 网关，支持 WhatsApp、Telegram、Discord、iMessage 等。。发送消息，随时随地获取智能体响应。通过插件可添加 Mattermost 等更多渠道。
     category: custom_1773890047269
-    tags: [Agent]
+    tags: [智能体]
     icon: https://docs.openclaw.ai/favicon.ico
     sort: 3
     createdAt: 2026-03-28T08:07:39.719Z
@@ -674,7 +674,7 @@ sites:
     category: custom_1773890047269
     tags: [开发平台]
     icon: 
-    sort: 73
+    sort: 74
     createdAt: 2026-03-29T09:39:17.693Z
 
   - name: 飞桨AI Studio
@@ -683,7 +683,7 @@ sites:
     category: custom_1773890047269
     tags: [开发平台]
     icon: 
-    sort: 74
+    sort: 80
     createdAt: 2026-03-29T09:40:18.190Z
 
   - name: AIbase
@@ -726,10 +726,19 @@ sites:
     url: https://www.doubao.com
     description: 
     category: custom_1773890047269
-    tags: [大模型, Agent]
+    tags: [大模型, 智能体]
     icon: /icons/doubao.svg
     sort: 78
     createdAt: 2026-03-29T09:51:27.674Z
+
+  - name: 硅基流动
+    url: https://siliconflow.cn
+    description: 
+    category: custom_1773890047269
+    tags: [开发平台]
+    icon: /icons/siliconflow.svg
+    sort: 73
+    createdAt: 2026-03-29T09:59:44.564Z
 ---
 
 # 我的书签

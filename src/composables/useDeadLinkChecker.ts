@@ -1,6 +1,6 @@
 /**
  * 断链检测服务
- * 使用 allorigins.win 代理检测 URL 可访问性
+ * 使用多个代理服务检测 URL 可访问性，支持降级
  */
 
 export interface CheckResult {
@@ -15,17 +15,24 @@ export interface CheckProgress {
   invalidCount: number
 }
 
+// 代理服务列表（按优先级排序）
+const PROXY_SERVICES = [
+  { name: 'allorigins', url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  { name: 'corsproxy', url: (u: string) => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
+]
+
+const REQUEST_TIMEOUT = 8000 // 单次请求超时
+
 /**
- * 检测单个 URL 是否可访问
+ * 使用指定代理检测 URL
  */
-async function checkUrl(url: string): Promise<CheckResult> {
+async function checkWithProxy(proxyUrl: string): Promise<{ status: number; ok: boolean } | null> {
   try {
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
     const response = await fetch(proxyUrl, {
-      method: 'HEAD',
+      method: 'GET',
       signal: controller.signal,
       mode: 'cors'
     })
@@ -33,12 +40,35 @@ async function checkUrl(url: string): Promise<CheckResult> {
 
     const status = response.status
     // 2xx 或 3xx 均视为有效
-    const isValid = status >= 200 && status < 400
-    return { url, isValid, statusCode: status }
+    return { status, ok: status >= 200 && status < 400 }
   } catch {
-    // 网络错误、超时等视为无效
-    return { url, isValid: false }
+    return null
   }
+}
+
+/**
+ * 检测单个 URL 是否可访问（多代理降级）
+ */
+async function checkUrl(url: string): Promise<CheckResult> {
+  // 依次尝试每个代理服务
+  for (const proxy of PROXY_SERVICES) {
+    const proxyUrl = proxy.url(url)
+    const result = await checkWithProxy(proxyUrl)
+    
+    if (result) {
+      // 如果代理返回了结果，使用该结果
+      // 排除代理自身的错误状态码（500, 502, 503 等）
+      if (result.status >= 500 && result.status < 600) {
+        // 代理服务器错误，尝试下一个代理
+        continue
+      }
+      return { url, isValid: result.ok, statusCode: result.status }
+    }
+    // 当前代理失败，尝试下一个
+  }
+  
+  // 所有代理都失败，标记为无效
+  return { url, isValid: false }
 }
 
 /**

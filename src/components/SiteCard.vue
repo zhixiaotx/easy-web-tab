@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [site: Site]
   delete: [url: string]
+  unmark: [url: string]
 }>()
 
 const isHovered = ref(false)
@@ -56,6 +57,12 @@ const handleClick = () => {
         ⚠️
       </div>
       <div v-if="isHovered && !props.readonly" class="card-actions">
+        <button v-if="site.isValid === false" class="action-btn unmark" @click.stop="emit('unmark', site.url)" title="取消失效标记">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </button>
         <button class="action-btn edit" @click.stop="emit('edit', site)" title="编辑">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -186,6 +193,14 @@ const handleClick = () => {
 .action-btn.delete:hover {
   color: #ef4444;
   background-color: #fef2f2;
+}
+
+.action-btn.unmark {
+  color: #10b981;
+}
+
+.action-btn.unmark:hover {
+  background-color: #ecfdf5;
 }
 
 .site-name {

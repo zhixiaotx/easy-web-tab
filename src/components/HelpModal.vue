@@ -4,6 +4,7 @@ const emit = defineEmits<{
 }>()
 
 const shortcuts = [
+  { key: 'Ctrl + N', action: '新增网址' },
   { key: 'Ctrl + B', action: '切换前台/后台' },
   { key: 'Ctrl + D', action: '切换暗色模式' },
   { key: 'ESC', action: '关闭弹窗' }
@@ -18,7 +19,7 @@ const features = [
   {
     icon: '📂',
     title: '分类管理',
-    desc: '内置办公工具、开发技术、视频音乐三大分类，可自定义添加新分类。'
+    desc: '内置办公工具，开发技术、视频音乐三大分类，可自定义添加新分类。'
   },
   {
     icon: '🔖',
@@ -28,7 +29,7 @@ const features = [
   {
     icon: '🔗',
     title: '断链检测',
-    desc: '点击「检测断链」自动检测所有网址可用性，无效链接显示警告标记。'
+    desc: '点击「检测断链」自动检测所有网址可用性，无效链接显示警告标记⚠️，鼠标悬停可手动取消失效标记。'
   },
   {
     icon: '🔍',
@@ -44,6 +45,11 @@ const features = [
     icon: '📥',
     title: '导入/导出',
     desc: '导出为 Markdown 文件备份，上传 .md 文件批量导入，自动按 URL 去重。'
+  },
+  {
+    icon: '💾',
+    title: '数据备份',
+    desc: '自动保存最近10个版本的历史数据，支持一键恢复到任意历史版本。'
   },
   {
     icon: '🌙',

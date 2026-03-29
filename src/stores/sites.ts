@@ -267,6 +267,23 @@ export const useSitesStore = defineStore('sites', () => {
     saveUserSites()
   }
 
+  // 取消失效标志（重新标记为未检测状态）
+  function unmarkInvalid(url: string) {
+    const index = sites.value.findIndex(s => s.url === url)
+    if (index !== -1) {
+      sites.value[index] = {
+        ...sites.value[index],
+        isValid: undefined
+      }
+      // 更新 localStorage 中的检测结果
+      const saved = loadCheckResults()
+      delete saved[url]
+      // 重新保存
+      const results = Object.entries(saved).map(([url, isValid]) => ({ url, isValid }))
+      saveCheckResults(results)
+    }
+  }
+
   // 迁移网站到指定分类
   function migrateSitesToCategory(fromId: string, toId: string) {
     let migrated = 0
@@ -453,6 +470,7 @@ ${sitesList}
     addSite,
     updateSite,
     deleteSite,
+    unmarkInvalid,
     migrateSitesToCategory,
     setSearchQuery,
     toggleTag,

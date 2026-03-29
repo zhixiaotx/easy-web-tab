@@ -146,6 +146,12 @@ const handleDelete = (url: string) => {
   }
 }
 
+const handleUnmark = (url: string) => {
+  if (confirm('确定要取消失效标记吗？')) {
+    store.unmarkInvalid(url)
+  }
+}
+
 const handleSave = (site: Site) => {
   if (editingSite.value) {
     // 编辑模式 - 直接更新
@@ -279,6 +285,7 @@ const triggerImport = () => {
         draggable="true"
         @edit="handleEdit"
         @delete="handleDelete"
+        @unmark="handleUnmark"
         @dragstart="handleDragStart(site)"
         @dragover="handleDragOver(site, $event)"
         @dragleave="handleDragLeave"

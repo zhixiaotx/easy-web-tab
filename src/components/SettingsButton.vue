@@ -1,27 +1,40 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import CategoryManager from './CategoryManager.vue'
+import BackupManager from './BackupManager.vue'
 
-const showManager = ref(false)
-
-const toggleManager = () => {
-  showManager.value = !showManager.value
-}
+const showCategoryManager = ref(false)
+const showBackupManager = ref(false)
 </script>
 
 <template>
   <div class="settings-wrapper">
-    <button class="settings-btn" @click="toggleManager" title="分类管理">
+    <button 
+      class="settings-btn" 
+      @click="showCategoryManager = true" 
+      title="分类管理"
+    >
       ⚙️ 分类管理
     </button>
+    
+    <button 
+      class="settings-btn backup-btn" 
+      @click="showBackupManager = true" 
+      title="数据备份"
+    >
+      📦 备份
+    </button>
 
-    <CategoryManager v-if="showManager" @close="showManager = false" />
+    <CategoryManager v-if="showCategoryManager" @close="showCategoryManager = false" />
+    
+    <BackupManager v-if="showBackupManager" @close="showBackupManager = false" />
   </div>
 </template>
 
 <style scoped>
 .settings-wrapper {
-  display: inline-block;
+  display: inline-flex;
+  gap: 8px;
 }
 
 .settings-btn {
@@ -42,5 +55,15 @@ const toggleManager = () => {
   background-color: #f1f5f9;
   color: #3b82f6;
   border-color: #3b82f6;
+}
+
+.backup-btn {
+  background-color: #f0fdf4;
+}
+
+.backup-btn:hover {
+  background-color: #dcfce7;
+  border-color: #22c55e;
+  color: #16a34a;
 }
 </style>

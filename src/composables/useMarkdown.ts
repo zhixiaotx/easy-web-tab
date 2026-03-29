@@ -27,7 +27,7 @@ export function useMarkdown() {
         searchEngines: searchEnginesData
       }
     } catch (error) {
-      console.error('Failed to parse markdown:', error)
+      console.error('[Import] Parse error:', error)
       return { sites: [] }
     }
   }

@@ -183,6 +183,13 @@ const handleImport = (event: Event) => {
     // 导入网站
     const result = store.importFromMarkdown(content)
     
+    // 如果有错误，直接显示错误信息
+    if (result.error) {
+      alert(`导入失败：${result.error}`)
+      input.value = ''
+      return
+    }
+    
     // 尝试导入搜索引擎
     try {
       const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*/)
@@ -194,16 +201,16 @@ const handleImport = (event: Event) => {
             enginesStore.importEngines(data.searchEngines)
             alert(`导入完成！网站：新增 ${result.added} 条，跳过 ${result.skipped} 条；搜索引擎：已导入 ${data.searchEngines.length} 个`)
           } else {
-            alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条（已存在）`)
+            alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
           }
         } else {
-          alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条（已存在）`)
+          alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
         }
       } else {
-        alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条（已存在）`)
+        alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
       }
     } catch {
-      alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条（已存在）`)
+      alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
     }
     
     input.value = ''

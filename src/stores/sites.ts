@@ -232,9 +232,17 @@ export const useSitesStore = defineStore('sites', () => {
     }
   }
 
+  // 将多行文本处理为单行（用于 description 字段）
+  function normalizeText(text: string | undefined): string | undefined {
+    if (!text) return text
+    // 将换行符、回车符、制表符等替换为空格，然后压缩连续空格
+    return text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim()
+  }
+
   function addSite(site: Site) {
     const newSite = {
       ...site,
+      description: normalizeText(site.description),
       createdAt: new Date().toISOString()
     }
     sites.value.push(newSite)
@@ -247,6 +255,7 @@ export const useSitesStore = defineStore('sites', () => {
       sites.value[index] = {
         ...sites.value[index],
         ...updatedSite,
+        description: normalizeText(updatedSite.description),
         updatedAt: new Date().toISOString()
       }
       saveUserSites()
@@ -372,10 +381,22 @@ ${sitesList}
   }
 
   // 从 Markdown 文本导入到 localStorage（按 URL 去重，保留原来的）
-  function importFromMarkdown(markdownText: string): { added: number; skipped: number } {
+  function importFromMarkdown(markdownText: string): { added: number; skipped: number; error?: string } {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
     const importedSites = parsed.sites
+    
+    // 检查是否解析到站点数据
+    if (!importedSites || importedSites.length === 0) {
+      return { added: 0, skipped: 0, error: '未能在文件中解析到站点数据，请检查文件格式是否正确' }
+    }
+    
+    // 过滤掉无效的 URL
+    const validSites = importedSites.filter(site => site.url && site.url.trim() !== '')
+    if (validSites.length === 0) {
+      console.error('[Import] All sites have empty URLs')
+      return { added: 0, skipped: 0, error: '文件中所有站点都缺少有效的 URL' }
+    }
     
     // 导入自定义分类
     if (parsed.categories && parsed.categories.length > 0) {
@@ -387,14 +408,14 @@ ${sitesList}
     const existingData = localStorage.getItem('user-sites')
     const existingSites: Site[] = existingData ? JSON.parse(existingData) : []
     
-    // 建立 URL 到站点的映射
+    // 建立 URL 到站点的映射（只检查 localStorage 中的用户数据）
     const existingMap = new Map(existingSites.map(s => [s.url, s]))
     
     let added = 0
     let skipped = 0
     
     // 合并数据：新数据中 URL 不存在的才添加
-    for (const site of importedSites) {
+    for (const site of validSites) {
       if (!existingMap.has(site.url)) {
         existingSites.push(site)
         existingMap.set(site.url, site)

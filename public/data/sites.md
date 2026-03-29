@@ -479,7 +479,7 @@ sites:
     url: https://www.feishu.cn
     description: 将团队、工具和工作流程整合于一处——助力高效工作、降低成本、保持同步。
     category: office
-    tags: []
+    tags: [文档]
     icon: https://www.feishu.cn/favicon.ico
     sort: 50
     createdAt: 2026-03-29T03:23:59.609Z
@@ -496,7 +496,7 @@ sites:
   - name: 360官网
     url: https://360.com
     description: 360安全中心 - 360安全软件 - 360智能硬件 - 360智能家居
-    category: office
+    category: custom_1773899482306
     tags: []
     icon: https://360.com/favicon.ico
     sort: 52
@@ -515,9 +515,9 @@ sites:
     url: https://www.wps.cn
     description: 支持多人在线协作编辑Word、Excel和PPT文档_WPS官方网站
     category: office
-    tags: []
+    tags: [文档]
     icon: https://www.wps.cn/favicon.ico
-    sort: 54
+    sort: 97
     createdAt: 2026-03-29T03:31:21.036Z
 
   - name: 智联招聘
@@ -825,6 +825,78 @@ sites:
     icon: 
     sort: 89
     createdAt: 2026-03-29T13:38:22.107Z
+
+  - name: mysql
+    url: https://www.mysql.com
+    description: mysql数据库
+    category: tech
+    tags: [数据库]
+    icon: /icons/mysql.svg
+    sort: 90
+    createdAt: 2026-03-29T13:51:16.040Z
+
+  - name: postgresql
+    url: https://jdbc.postgresql.org
+    description: postgresql
+    category: tech
+    tags: [数据库]
+    icon: https://jdbc.postgresql.org/favicon.ico
+    sort: 91
+    createdAt: 2026-03-29T13:52:40.517Z
+
+  - name: microsoft
+    url: https://www.microsoft.com/zh-cn
+    description: microsoft商城
+    category: shopping
+    tags: [购物]
+    icon: 
+    sort: 92
+    createdAt: 2026-03-29T13:56:27.588Z
+
+  - name: deepin
+    url: https://www.deepin.org/index/zh
+    description: deepin系统
+    category: tech
+    tags: [操作系统]
+    icon: 
+    sort: 93
+    createdAt: 2026-03-29T13:59:05.855Z
+
+  - name: 中国铁路12306
+    url: https://www.12306.cn
+    description: 中国铁路12306
+    category: travel
+    tags: []
+    icon: 
+    sort: 94
+    createdAt: 2026-03-29T14:01:00.658Z
+
+  - name: 迅雷
+    url: https://www.xunlei.com
+    description: 迅雷是一家全球领先的去中心化服务商，以技术构建商业，以服务创造共识，累计用户超4亿。面向个人和企业推出迅雷下载、迅雷云盘、迅雷影音、迅雷直播、迅雷会员、云计算、区块链等产品。
+    category: custom_1773899482306
+    tags: []
+    icon: https://www.xunlei.com/favicon-32x32.png
+    sort: 95
+    createdAt: 2026-03-29T14:03:19.149Z
+
+  - name: motrix
+    url: https://motrix.app/zh-CN
+    description: 一款全能的下载工具，支持下载 HTTP、FTP、BT、磁力链接等资源。
+    category: office
+    tags: [下载]
+    icon: 
+    sort: 96
+    createdAt: 2026-03-29T14:04:57.250Z
+
+  - name: ProcessOn
+    url: https://www.processon.com
+    description: ProcessOn是一款专业在线作图工具和知识分享社区，支持AI一键生成思维导图和流程图。可绘制甘特图、ER图、UML、网络拓扑图、电路图、平面图、鱼骨图、组织结构图、时间轴等多种图形，同时可实现人与人之间的实时协作和共享，提升团队工作效率。
+    category: office
+    tags: [文档]
+    icon: https://www.processon.com/favicon.ico
+    sort: 54
+    createdAt: 2026-03-29T14:06:30.378Z
 ---
 
 # 我的书签

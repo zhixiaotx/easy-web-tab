@@ -8,7 +8,7 @@ categories:
   - id: custom_1773899482306
     name: 其他
     icon: 📂
-    sort: 19
+    sort: 20
 
   - id: custom_1773899614797
     name: 教育培训
@@ -59,6 +59,11 @@ categories:
     name: 高伟达
     icon: 🏛️
     sort: 7
+
+  - id: custom_1774788526323
+    name: 虚拟币（web3）
+    icon: 🌊
+    sort: 19
 
 searchEngines:
   - id: baidu
@@ -739,6 +744,87 @@ sites:
     icon: /icons/siliconflow.svg
     sort: 73
     createdAt: 2026-03-29T09:59:44.564Z
+
+  - name: Core's Bitcoin Staking
+    url: https://stake.coredao.org
+    description: core质押网站
+    category: custom_1774788526323
+    tags: []
+    icon: https://stake.coredao.org/favicon.ico
+    sort: 81
+    createdAt: 2026-03-29T12:50:24.068Z
+
+  - name: arthas
+    url: https://arthas.aliyun.com
+    description: Arthas 是一款线上监控诊断产品，通过全局视角实时查看应用 load、内存、gc、线程的状态信息，并能在不修改应用代码的情况下，对业务问题进行诊断，包括查看方法调用的出入参、异常，监测方法执行耗时，类加载信息等，大大提升线上问题排查效率。
+    category: tech
+    tags: [工具]
+    icon: 
+    sort: 82
+    createdAt: 2026-03-29T12:59:24.984Z
+
+  - name: XXL开源项目
+    url: https://www.xuxueli.com
+    description: 【XXL开源社区】已经发布一系列开源软件产品，涉及分布式、基础中间件、效率工具等多个领域。 包含项目有：任务调度、服务管理(配置中心、注册中心)、RPC服务框架、消息队列、单点登录框架、API管理、爬虫、Java工具类库、快速开发平台……等等。 欢迎体验！
+    category: tech
+    tags: [工具]
+    icon: https://www.xuxueli.com/./favicon.ico
+    sort: 83
+    createdAt: 2026-03-29T13:02:37.615Z
+
+  - name: elastic
+    url: https://www.elastic.co/cn
+    description: 
+    category: tech
+    tags: [数据库]
+    icon: /icons/elasticsearch.svg
+    sort: 84
+    createdAt: 2026-03-29T13:07:08.594Z
+
+  - name: C语言中文网
+    url: https://c.biancheng.net
+    description: C语言中文网是中国领先的C语言程序设计专业网站，提供C语言入门经典教程、C语言编译器、C语言函数手册，C语言编程技巧，C语言考试试题等，是学习、自学C语言程序设计的好帮手。
+    category: custom_1773899614797
+    tags: []
+    icon: https://c.biancheng.net/favicon.ico?v=1.7.21
+    sort: 85
+    createdAt: 2026-03-29T13:18:55.412Z
+
+  - name: dataease
+    url: https://www.fit2cloud.com/dataease/index.html
+    description: 人人可用的开源 BI 工具。数据可视化神器! 只需五分钟，数据变大屏，由飞致云匠心出品。
+    category: tech
+    tags: [工具]
+    icon: 
+    sort: 86
+    createdAt: 2026-03-29T13:23:27.422Z
+
+  - name: QQ邮箱
+    url: https://mail.qq.com
+    description: QQ邮箱
+    category: office
+    tags: []
+    icon: 
+    sort: 87
+    createdAt: 2026-03-29T13:26:52.301Z
+
+  - name: nacos
+    url: https://nacos.io
+    description: 微服务注册中心
+    category: tech
+    tags: [工具]
+    icon: 
+    sort: 88
+    createdAt: 2026-03-29T13:37:08.824Z
+
+  - name: seata
+    url: https://seata.apache.org/zh-cn
+    description: seata
+    category: tech
+    tags: [工具]
+    icon: 
+    sort: 89
+    createdAt: 2026-03-29T13:38:22.107Z
 ---
 
 # 我的书签

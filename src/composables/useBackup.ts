@@ -23,9 +23,9 @@ const BACKUP_KEY = 'easywebtab-backups'
 const METADATA_KEY = 'easywebtab-backup-metadata'
 const MAX_BACKUPS = 10
 
-// 延迟备份防抖（5秒内多次修改只备份一次）
+// 延迟备份防抖（5分钟内多次修改只备份一次）
 let backupTimeout: ReturnType<typeof setTimeout> | null = null
-const DEBOUNCE_DELAY = 5000
+const DEBOUNCE_DELAY = 5 * 60 * 1000  // 5分钟
 
 /**
  * 获取所有备份
@@ -71,7 +71,7 @@ export function getMetadata(): BackupMetadata {
 }
 
 /**
- * 创建新备份
+ * 创建新备份（深拷贝，确保数据独立）
  */
 export function createBackup(
   sites: any[],
@@ -80,9 +80,10 @@ export function createBackup(
 ): BackupData {
   const backup: BackupData = {
     timestamp: new Date().toISOString(),
-    sites: [...sites],
-    categories: [...categories],
-    searchEngines: [...searchEngines]
+    // 使用 JSON 深拷贝，确保备份数据与当前数据完全独立
+    sites: JSON.parse(JSON.stringify(sites)),
+    categories: JSON.parse(JSON.stringify(categories)),
+    searchEngines: JSON.parse(JSON.stringify(searchEngines))
   }
 
   // 获取现有备份
@@ -109,7 +110,8 @@ export function createBackup(
 
 /**
  * 定时自动备份（防抖）
- * 在数据变化后5秒自动创建备份
+ * 在数据变化后5分钟自动创建备份
+ * 5分钟内如有新修改，重新计时
  */
 export function scheduleAutoBackup(
   sites: any[],

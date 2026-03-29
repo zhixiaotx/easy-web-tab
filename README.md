@@ -291,7 +291,7 @@ npm run build  # 构建生产版本（输出到 dist/）
 npm install -g pm2
 
 # 启动服务
-pm2 start pm2.config.js
+pm2 start pm2.config.cjs
 
 # 查看状态
 pm2 list
@@ -303,6 +303,13 @@ pm2 save
 
 # 停止服务
 pm2 stop easywebtab
+
+# 重启启动
+pm2 delete easywebtab
+pm2 start pm2.config.cjs
+pm2 logs easywebtab
+
+pm2 restart easywebtab
 ```
 
 ### 方式三：Docker 容器

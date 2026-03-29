@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+
+# Build output (will be built inside Docker)
+dist
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test files
+coverage
+*.test.js
+*.spec.js
+
+# Documentation
+README.md
+docs
+
+# Sisyphus
+.sisyphus
+
+# Misc
+*.md
+!README.md

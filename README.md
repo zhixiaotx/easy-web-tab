@@ -272,3 +272,64 @@ npm run build  # 构建生产版本（输出到 dist/）
 **添加全局状态**：在 `src/stores/` 创建 store → 在需要的地方 `useXxxStore()`
 
 **修改数据模型**：修改 `src/types/index.ts` 中的 TypeScript 接口 → 更新 `stores/` 中的使用处
+
+---
+
+## 部署方式
+
+### 方式一：双击运行（推荐个人使用）
+
+```bash
+# 直接双击 run.bat 即可启动
+# 首次运行会自动安装依赖
+```
+
+### 方式二：PM2 进程管理（推荐长期运行）
+
+```bash
+# 安装 PM2
+npm install -g pm2
+
+# 启动服务
+pm2 start pm2.config.js
+
+# 查看状态
+pm2 list
+pm2 logs easywebtab
+
+# 开机自启
+pm2 startup
+pm2 save
+
+# 停止服务
+pm2 stop easywebtab
+```
+
+### 方式三：Docker 容器
+
+```bash
+# 构建镜像
+docker build -t easywebtab .
+
+# 运行容器
+docker run -d -p 16718:16718 --name easywebtab easywebtab
+
+# 查看日志
+docker logs easywebtab
+
+# 停止并删除
+docker stop easywebtab && docker rm easywebtab
+```
+
+### 方式四：PM2 + Docker 结合
+
+```bash
+# 使用 PM2 管理 Docker 容器
+pm2 start "docker run -p 16718:16718 easywebtab" --name easywebtab
+```
+
+---
+
+### 端口说明
+
+默认端口为 **16718**。访问地址：http://localhost:16718

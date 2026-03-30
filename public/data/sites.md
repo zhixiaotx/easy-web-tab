@@ -318,7 +318,7 @@ sites:
     description: 抖音
     category: video
     tags: []
-    icon: https://www.douyin.com/favicon.ico
+    icon: /icons/douyin.svg
     sort: 7
     createdAt: 2026-03-20T08:37:54.510Z
 
@@ -327,7 +327,7 @@ sites:
     description: 阿里云盘是一款速度快、不打扰、够安全、易于分享的网盘，你可以在这里存储、管理和探索内容，尽情打造丰富的数字世界。。通过各类强大的备份能力和独特的数据加密技术，让您的文件安全存在云盘。。各类备份能力，让您的文件丝滑「搬」上云盘
     category: office
     tags: [网盘]
-    icon: https://www.alipan.com/favicon.ico
+    icon: /icons/browser.svg
     sort: 33
     createdAt: 2026-03-20T08:39:55.352Z
 
@@ -435,7 +435,7 @@ sites:
     description: 爱奇艺（iQIYI）是中国领先的在线视频平台，提供海量免费正版高清电视剧、短剧、电影、综艺、动漫等视频内容，成功打造了狂飙、新说唱、偶像练习生、我是刑警、迷雾剧场等现象级IP，热门大片、独播剧集实时更新，畅享流畅观影体验。
     category: video
     tags: []
-    icon: https://www.iqiyi.com//www.iqiyi.com/favicon.ico
+    icon: /icons/nodejs.svg
     sort: 45
     createdAt: 2026-03-29T03:17:37.817Z
 
@@ -444,7 +444,7 @@ sites:
     description: 腾讯视频-中国领先的在线视频媒体平台,海量高清视频在线观看
     category: video
     tags: []
-    icon: https://v.qq.com/favicon.ico
+    icon: /icons/bilibili.svg
     sort: 46
     createdAt: 2026-03-29T03:18:37.786Z
 
@@ -552,7 +552,7 @@ sites:
     description: 千万正版音乐海量无损曲库新歌热歌天天畅听的高品质音乐平台！
     category: video
     tags: []
-    icon: https://y.qq.com/favicon.ico
+    icon: /icons/aws.svg
     sort: 58
     createdAt: 2026-03-29T03:35:21.975Z
 
@@ -561,7 +561,7 @@ sites:
     description: 短视频平台
     category: video
     tags: []
-    icon: https://www.kuaishou.com/favicon.ico
+    icon: /icons/kuaishou.svg
     sort: 47
     createdAt: 2026-03-29T03:36:45.406Z
 
@@ -804,7 +804,7 @@ sites:
     description: QQ邮箱
     category: office
     tags: []
-    icon: 
+    icon: /icons/douyin.svg
     sort: 87
     createdAt: 2026-03-29T13:26:52.301Z
 
@@ -885,7 +885,7 @@ sites:
     description: 一款全能的下载工具，支持下载 HTTP、FTP、BT、磁力链接等资源。
     category: office
     tags: [下载]
-    icon: 
+    icon: /icons/shields.svg
     sort: 96
     createdAt: 2026-03-29T14:04:57.250Z
 

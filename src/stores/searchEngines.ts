@@ -7,6 +7,7 @@ export interface SearchEngine {
   url: string
   isDefault: boolean
   sort: number
+  isBuiltIn?: boolean
 }
 
 const STORAGE_KEY = 'user-search-engines'
@@ -14,7 +15,8 @@ const BUILT_IN_OVERRIDES_KEY = 'built-in-engine-overrides'
 
 // 默认内置搜索引擎 (不可删除)
 const BUILT_IN_ENGINES: SearchEngine[] = [
-  { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd=', isDefault: true, sort: 1 },
+  { id: 'local', name: '本地搜索', url: '', isDefault: false, sort: 0, isBuiltIn: true },
+  { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd=', isDefault: true, sort: 1, isBuiltIn: true },
 ]
 
 // 默认搜索引擎 (将被迁移到自定义)
@@ -45,10 +47,14 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
 
   // 获取带覆盖的完整内置引擎列表
   const builtInEngines = computed(() => {
-    return BUILT_IN_ENGINES.map(engine => ({
-      ...engine,
-      url: builtInOverrides.value[engine.id] || engine.url
-    }))
+    return BUILT_IN_ENGINES.map(engine => {
+      // local 引擎不需要 URL 覆盖功能
+      if (engine.id === 'local') return engine
+      return {
+        ...engine,
+        url: builtInOverrides.value[engine.id] || engine.url
+      }
+    })
   })
 
   // 如果没有自定义数据，初始化为默认列表
@@ -107,16 +113,23 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     }
   }
 
-  // 更新内置引擎 URL
+  // 更新内置引擎 URL（local 引擎不可修改）
   function updateBuiltInEngineUrl(id: string, url: string) {
+    // local 引擎不可修改
+    if (id === 'local') return
     if (BUILT_IN_ENGINES.some(e => e.id === id)) {
       builtInOverrides.value[id] = url
       saveBuiltInOverrides()
     }
   }
 
-  // 删除引擎
+  // 删除引擎（内置引擎不可删除）
   function deleteEngine(id: string) {
+    const engine = allEngines.value.find(e => e.id === id)
+    if (engine?.isBuiltIn) {
+      console.warn('Cannot delete built-in engine')
+      return
+    }
     customEngines.value = customEngines.value.filter(e => e.id !== id)
     saveEngines()
   }

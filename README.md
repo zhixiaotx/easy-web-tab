@@ -28,9 +28,17 @@ pm2 start pm2.config.cjs
 pm2 list
 pm2 logs easywebtab
 
-# 开机自启
-pm2 startup
+# 开机自启（Windows）
 pm2 save
+
+# Windows 开机自启动配置：
+# 1. 创建任务计划程序（以管理员身份运行 PowerShell）
+$taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$PWD\start-pm2.ps1`""
+$taskTrigger = New-ScheduledTaskTrigger -AtLogOn
+Register-ScheduledTask -TaskName "EasyWebTab-PM2" -Action $taskAction -Trigger $taskTrigger -RunLevel Highest
+
+# 或者：将 start-pm2.ps1 的快捷方式放入启动文件夹
+# 按 Win+R，输入 shell:startup，回车，将脚本快捷方式拖入
 
 # 停止服务
 pm2 stop easywebtab
@@ -346,9 +354,17 @@ pm2 start pm2.config.cjs
 pm2 list
 pm2 logs easywebtab
 
-# 开机自启
-pm2 startup
+# 开机自启（Windows）
 pm2 save
+
+# Windows 开机自启动配置：
+# 1. 创建任务计划程序（以管理员身份运行 PowerShell）
+$taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$PWD\start-pm2.ps1`""
+$taskTrigger = New-ScheduledTaskTrigger -AtLogOn
+Register-ScheduledTask -TaskName "EasyWebTab-PM2" -Action $taskAction -Trigger $taskTrigger -RunLevel Highest
+
+# 或者：将 start-pm2.ps1 的快捷方式放入启动文件夹
+# 按 Win+R，输入 shell:startup，回车，将脚本快捷方式拖入
 
 # 停止服务
 pm2 stop easywebtab

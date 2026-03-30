@@ -93,6 +93,13 @@ pm2 restart easywebtab
 
 ---
 
+# 使用技巧
+## 将 http://localhost:16718/ 设置在起始页面，打开浏览器直接打开。
+## 多浏览器共享
+ - **导入** 点击「导出」下载 `sites.md`，包含所有分类、搜索引擎和网址
+ - **清除** F12 找到 Application项，在Storage下Local storage找 http://localhost:16718/，选中点击右键，选择清除。
+ - **导入**：上传 `.md` 文件（支持含 YAML frontmatter 的格式），按 URL 去重，保留原有数据
+
 ## 项目结构
 
 ```

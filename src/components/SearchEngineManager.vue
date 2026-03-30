@@ -188,12 +188,17 @@ function truncateUrl(url: string, maxLength = 40) {
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
               <button 
-                v-if="!engine.isDefault" 
+                v-if="!engine.isDefault && engine.id !== 'local'" 
                 class="btn-icon set-default" 
                 @click="handleSetDefault(engine.id)"
                 title="设为默认"
               >⭐</button>
-              <button class="btn-icon" @click="startEditBuiltIn(engine)" title="编辑URL">✏️</button>
+              <button 
+                v-if="engine.id !== 'local'"
+                class="btn-icon" 
+                @click="startEditBuiltIn(engine)" 
+                title="编辑URL"
+              >✏️</button>
             </template>
           </div>
         </div>

@@ -82,11 +82,18 @@ export const useThemeStore = defineStore('theme', () => {
 
   // 预设背景列表
   const presetBackgrounds: CustomBackground[] = [
+    // 渐变预设
     { id: 'preset-1', type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', name: '紫色渐变' },
     { id: 'preset-2', type: 'gradient', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', name: '粉色渐变' },
     { id: 'preset-3', type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', name: '蓝色渐变' },
     { id: 'preset-4', type: 'gradient', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', name: '绿色渐变' },
     { id: 'preset-5', type: 'gradient', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', name: '日落渐变' },
+    // 图片预设 (使用 Unsplash 免费图片)
+    { id: 'image-1', type: 'image', value: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80', name: '山脉日出' },
+    { id: 'image-2', type: 'image', value: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920&q=80', name: '森林晨雾' },
+    { id: 'image-3', type: 'image', value: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1920&q=80', name: '湖光山色' },
+    { id: 'image-4', type: 'image', value: 'https://images.unsplash.com/photo-1518173946687-a4c036bc1e0b?w=1920&q=80', name: '夜空星河' },
+    { id: 'image-5', type: 'image', value: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=1920&q=80', name: '海滩日落' },
   ]
 
   // 初始化背景

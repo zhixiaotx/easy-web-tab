@@ -85,6 +85,11 @@ function selectGradient(id: string) {
   }
 }
 
+// 选择预设图片
+function selectPresetImage(img: CustomBackground) {
+  selectedValue.value = img.value
+}
+
 // 添加自定义图片
 function addCustomImage() {
   if (!imageUrlInput.value.trim()) return
@@ -214,6 +219,22 @@ function clearBackground() {
         <!-- 图片选择 -->
         <div v-if="selectedType === 'image'" class="image-section">
           <h3 class="section-title">选择图片</h3>
+          
+          <!-- 预设图片 -->
+          <div class="preset-section">
+            <h4 class="subsection-title">预设风景</h4>
+            <div class="background-grid">
+              <div
+                v-for="img in themeStore.presetBackgrounds.filter(p => p.type === 'image')"
+                :key="img.id"
+                class="background-option"
+                :class="{ active: selectedValue === img.value }"
+                :style="{ backgroundImage: `url(${img.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
+                :title="img.name"
+                @click="selectPresetImage(img)"
+              ></div>
+            </div>
+          </div>
           
           <!-- 添加自定义图片 -->
           <div class="add-custom-section">

@@ -21,33 +21,11 @@ body.app-has-background.image {
   background-image: var(--app-bg-image) !important;
 }
 
-/* 暗色模式下的背景适配 */
-:root.dark body.app-has-background {
-  /* 背景可能会影响文字可读性，添加适度遮罩 */
-  position: relative;
-}
-
-:root.dark body.app-has-background::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* 确保内容区域有适当的背景，保证可读性 */
-:root.dark body.app-has-background .container,
-:root.dark body.app-has-background .main-content,
-:root.dark body.app-has-background .content-wrapper {
-  background: rgba(17, 24, 39, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
+/* 有背景时内容居中 */
+body.app-has-background .container {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
-  margin: 20px;
 }
 
 /* 纯色背景模式 */

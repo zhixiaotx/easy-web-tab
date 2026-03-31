@@ -77,11 +77,15 @@ body.app-has-background.image .container {
   z-index: 0;
 }
 
-/* 确保内容在遮罩层之上 */
-:root.dark body.app-has-background .container,
-:root.dark body.app-has-background .top-right-toolbar {
+/* 确保内容在遮罩层之上 - 不改变 position */
+:root.dark body.app-has-background .container {
   position: relative;
   z-index: 1;
+}
+
+/* 工具栏保持 fixed 定位，只提升 z-index */
+:root.dark body.app-has-background .top-right-toolbar {
+  z-index: 101 !important;
 }
 
 :root.dark body.app-has-background .container {

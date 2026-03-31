@@ -7,7 +7,7 @@
   --app-bg-image: none;
 }
 
-/* 背景应用样式 - 应用于 html 和 body - 确保覆盖整个视口 */
+/* 背景应用样式 - 应用于 html 和 body */
 html.app-has-background,
 body.app-has-background {
   background: var(--app-bg-value) !important;
@@ -38,19 +38,39 @@ body.app-has-background.image {
   background-image: var(--app-bg-image) !important;
 }
 
-/* 有背景时内容居中 - 移除任何可能阻止背景伸展的限制 */
+/* 有背景时内容居中 - container 样式 */
 body.app-has-background .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  background: transparent;
 }
 
-/* 关键修复：有背景时移除 body 和 #app 的默认背景色 */
-body.app-has-background,
-html.app-has-background,
-#app.app-has-background {
-  background-color: transparent !important;
+/* 暗色模式 + 有背景：添加遮罩层覆盖两侧 */
+:root.dark body.app-has-background::before,
+:root.dark html.app-has-background::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(17, 24, 39, 0.85);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 暗色模式 + 有背景：container 需要有背景保证可读性 */
+:root.dark body.app-has-background .container {
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+}
+
+/* 亮色模式 + 有背景：container 保持亮色 */
+body.app-has-background .container:not(.dark .container) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
 }
 
 /* 预览区域样式 */

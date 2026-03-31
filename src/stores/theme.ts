@@ -132,6 +132,8 @@ export const useThemeStore = defineStore('theme', () => {
       root.style.removeProperty('--app-bg-type')
       root.style.removeProperty('--app-bg-value')
       root.style.removeProperty('--app-bg-image')
+      root.classList.remove('app-has-background')
+      root.classList.remove('image')
       body.classList.remove('app-has-background')
       body.classList.remove('image')
       return
@@ -140,14 +142,17 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--app-bg-type', backgroundType.value)
     root.style.setProperty('--app-bg-value', backgroundValue.value)
 
-    // 添加 body 类
+    // 同时添加到 html 和 body
+    root.classList.add('app-has-background')
     body.classList.add('app-has-background')
     
     if (backgroundType.value === 'image') {
       root.style.setProperty('--app-bg-image', `url(${backgroundValue.value})`)
+      root.classList.add('image')
       body.classList.add('image')
     } else {
       root.style.removeProperty('--app-bg-image')
+      root.classList.remove('image')
       body.classList.remove('image')
     }
   }

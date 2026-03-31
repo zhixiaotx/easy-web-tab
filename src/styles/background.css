@@ -7,7 +7,7 @@
   --app-bg-image: none;
 }
 
-/* 背景应用样式 - 应用于 html 和 body */
+/* 背景应用样式 - 应用于 html 和 body - 确保覆盖整个视口 */
 html.app-has-background,
 body.app-has-background {
   background: var(--app-bg-value) !important;
@@ -16,6 +16,9 @@ body.app-has-background {
   background-attachment: fixed !important;
   min-height: 100vh;
   width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* 图片背景模式 */
@@ -24,32 +27,23 @@ body.app-has-background.image {
   background-image: var(--app-bg-image) !important;
 }
 
-/* 有背景时内容居中 */
+/* 确保 #app 容器也有背景 */
+#app.app-has-background {
+  background: var(--app-bg-value) !important;
+  min-height: 100vh;
+  width: 100%;
+}
+
+#app.app-has-background.image {
+  background-image: var(--app-bg-image) !important;
+}
+
+/* 有背景时内容居中 - 移除任何可能阻止背景伸展的限制 */
 body.app-has-background .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-}
-
-/* 纯色背景模式 */
-html.app-has-background,
-body.app-has-background {
-  background: var(--app-bg-value) !important;
-}
-
-/* 渐变背景模式 */
-html.app-has-background.gradient,
-body.app-has-background.gradient {
-  background: var(--app-bg-value) !important;
-}
-
-/* 图片背景模式 */
-html.app-has-background.image,
-body.app-has-background.image {
-  background-image: var(--app-bg-image) !important;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  background: transparent;
 }
 
 /* 预览区域样式 */

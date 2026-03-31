@@ -127,6 +127,7 @@ export const useThemeStore = defineStore('theme', () => {
   function applyBackground() {
     const root = document.documentElement
     const body = document.body
+    const app = document.getElementById('app')
     
     if (backgroundType.value === 'none' || !backgroundValue.value) {
       root.style.removeProperty('--app-bg-type')
@@ -136,24 +137,37 @@ export const useThemeStore = defineStore('theme', () => {
       root.classList.remove('image')
       body.classList.remove('app-has-background')
       body.classList.remove('image')
+      if (app) {
+        app.classList.remove('app-has-background')
+        app.classList.remove('image')
+      }
       return
     }
 
     root.style.setProperty('--app-bg-type', backgroundType.value)
     root.style.setProperty('--app-bg-value', backgroundValue.value)
 
-    // 同时添加到 html 和 body
+    // 同时添加到 html、body 和 #app
     root.classList.add('app-has-background')
     body.classList.add('app-has-background')
+    if (app) {
+      app.classList.add('app-has-background')
+    }
     
     if (backgroundType.value === 'image') {
       root.style.setProperty('--app-bg-image', `url(${backgroundValue.value})`)
       root.classList.add('image')
       body.classList.add('image')
+      if (app) {
+        app.classList.add('image')
+      }
     } else {
       root.style.removeProperty('--app-bg-image')
       root.classList.remove('image')
       body.classList.remove('image')
+      if (app) {
+        app.classList.remove('image')
+      }
     }
   }
 

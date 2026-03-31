@@ -46,7 +46,7 @@ body.app-has-background.image {
    有背景时 container 样式
    ======================================== */
 
-/* 有背景时 container 居中 */
+/* 有背景时 container 保持原有布局，不偏移 */
 body.app-has-background .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -54,14 +54,14 @@ body.app-has-background .container {
   border-radius: 12px;
 }
 
-/* 亮色模式 - 纯色/渐变背景 */
+/* 纯色/渐变背景时，container 使用与背景相同的颜色 */
 body.app-has-background:not(.image) .container {
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: var(--app-bg-value) !important;
 }
 
-/* 亮色模式 - 图片背景 */
+/* 图片背景时，container 使用半透明 + blur */
 body.app-has-background.image .container {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(10px);
 }
 
@@ -69,28 +69,14 @@ body.app-has-background.image .container {
    暗色模式 + 有背景
    ======================================== */
 
-/* 暗色模式 - 两侧遮罩层 */
-:root.dark body.app-has-background::before,
-:root.dark html.app-has-background::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(17, 24, 39, 0.88);
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* 暗色模式 - 纯色/渐变背景 */
+/* 暗色模式 - 纯色/渐变背景时，container 使用相同背景 */
 :root.dark body.app-has-background:not(.image) .container {
-  background: rgba(17, 24, 39, 0.92) !important;
+  background: var(--app-bg-value) !important;
 }
 
-/* 暗色模式 - 图片背景 */
+/* 暗色模式 - 图片背景时，container 使用半透明 + blur */
 :root.dark body.app-has-background.image .container {
-  background: rgba(17, 24, 39, 0.88) !important;
+  background: rgba(17, 24, 39, 0.85) !important;
   backdrop-filter: blur(10px);
 }
 

@@ -44,16 +44,12 @@ body.app-has-background .container {
   margin: 0 auto;
   padding: 20px;
   border-radius: 12px;
-}
-
-/* 纯色背景时：container 使用半透明白/黑 */
-body.app-has-background:not(.image) .container {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.9) !important;
 }
 
 /* 图片背景时：container 使用更深半透明背景 */
 body.app-has-background.image .container {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(10px);
 }
 
@@ -73,12 +69,12 @@ body.app-has-background.image .container {
 
 /* 暗色模式 + 有背景：纯色/渐变时 container 使用半透明暗色 */
 :root.dark body.app-has-background:not(.image) .container {
-  background: rgba(17, 24, 39, 0.9);
+  background: rgba(17, 24, 39, 0.9) !important;
 }
 
 /* 暗色模式 + 图片背景：container 使用更深半透明暗色 */
 :root.dark body.app-has-background.image .container {
-  background: rgba(17, 24, 39, 0.85);
+  background: rgba(17, 24, 39, 0.85) !important;
   backdrop-filter: blur(10px);
 }
 

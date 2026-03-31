@@ -7,7 +7,11 @@
   --app-bg-image: none;
 }
 
-/* 背景应用样式 - 应用于 html 和 body */
+/* ========================================
+   背景应用样式
+   ======================================== */
+
+/* 应用于 html 和 body */
 html.app-has-background,
 body.app-has-background {
   background: var(--app-bg-value) !important;
@@ -38,22 +42,34 @@ body.app-has-background.image {
   background-image: var(--app-bg-image) !important;
 }
 
-/* 有背景时内容居中 - container 样式 */
+/* ========================================
+   有背景时 container 样式
+   ======================================== */
+
+/* 有背景时 container 居中 */
 body.app-has-background .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9) !important;
 }
 
-/* 图片背景时：container 使用更深半透明背景 */
+/* 亮色模式 - 纯色/渐变背景 */
+body.app-has-background:not(.image) .container {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* 亮色模式 - 图片背景 */
 body.app-has-background.image .container {
-  background: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(10px);
 }
 
-/* 暗色模式 + 有背景：添加遮罩层覆盖两侧 */
+/* ========================================
+   暗色模式 + 有背景
+   ======================================== */
+
+/* 暗色模式 - 两侧遮罩层 */
 :root.dark body.app-has-background::before,
 :root.dark html.app-has-background::before {
   content: '';
@@ -62,89 +78,25 @@ body.app-has-background.image .container {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(17, 24, 39, 0.85);
+  background: rgba(17, 24, 39, 0.88);
   pointer-events: none;
   z-index: -1;
 }
 
-/* 暗色模式 + 有背景：纯色/渐变时 container 使用半透明暗色 */
+/* 暗色模式 - 纯色/渐变背景 */
 :root.dark body.app-has-background:not(.image) .container {
-  background: rgba(17, 24, 39, 0.9) !important;
+  background: rgba(17, 24, 39, 0.92) !important;
 }
 
-/* 暗色模式 + 图片背景：container 使用更深半透明暗色 */
+/* 暗色模式 - 图片背景 */
 :root.dark body.app-has-background.image .container {
-  background: rgba(17, 24, 39, 0.85) !important;
+  background: rgba(17, 24, 39, 0.88) !important;
   backdrop-filter: blur(10px);
 }
 
-/* 背景应用样式 - 应用于 html 和 body */
-html.app-has-background,
-body.app-has-background {
-  background: var(--app-bg-value) !important;
-  background-size: cover !important;
-  background-position: center !important;
-  background-attachment: fixed !important;
-  min-height: 100vh;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-/* 图片背景模式 */
-html.app-has-background.image,
-body.app-has-background.image {
-  background-image: var(--app-bg-image) !important;
-}
-
-/* 确保 #app 容器也有背景 */
-#app.app-has-background {
-  background: var(--app-bg-value) !important;
-  min-height: 100vh;
-  width: 100%;
-}
-
-#app.app-has-background.image {
-  background-image: var(--app-bg-image) !important;
-}
-
-/* 有背景时内容居中 - container 样式 */
-body.app-has-background .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-/* 暗色模式 + 有背景：添加遮罩层覆盖两侧 */
-:root.dark body.app-has-background::before,
-:root.dark html.app-has-background::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(17, 24, 39, 0.85);
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* 暗色模式 + 有背景：container 需要有背景保证可读性 */
-:root.dark body.app-has-background .container {
-  background: rgba(17, 24, 39, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-}
-
-/* 亮色模式 + 有背景：container 保持亮色 */
-body.app-has-background .container:not(.dark .container) {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-}
-
-/* 预览区域样式 */
+/* ========================================
+   预览区域样式
+   ======================================== */
 .background-preview {
   width: 100%;
   height: 120px;

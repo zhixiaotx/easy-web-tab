@@ -55,6 +55,8 @@
   background-color: var(--bg-primary);
 }
 
+/* 有背景时，container 不需要单独设置背景色（由 background.css 处理） */
+
 :root.dark .header {
   background-color: var(--bg-primary);
 }

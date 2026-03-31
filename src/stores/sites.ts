@@ -321,6 +321,8 @@ export const useSitesStore = defineStore('sites', () => {
 
   function setCategory(category: string) {
     selectedCategory.value = category
+    // 切换分类时清除标签，避免旧分类的标签导致过滤结果为空
+    selectedTags.value = []
   }
 
   function setPage(page: number) {

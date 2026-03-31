@@ -3,69 +3,80 @@ categories:
   - id: custom_1773890047269
     name: 人工智能
     icon: 💡
-    sort: 4
+    sort: 6
 
   - id: custom_1773899482306
     name: 其他
     icon: 📂
-    sort: 20
+    sort: 21
 
   - id: custom_1773899614797
     name: 教育培训
     icon: 📚
-    sort: 6
+    sort: 7
 
   - id: news
     name: 新闻资讯
     icon: 📰
-    sort: 9
+    sort: 10
 
   - id: social
     name: 社交娱乐
     icon: 🎮
-    sort: 10
+    sort: 11
 
   - id: shopping
     name: 购物电商
     icon: 🛒
-    sort: 11
+    sort: 12
 
   - id: life
     name: 生活服务
     icon: 🏠
-    sort: 8
+    sort: 9
 
   - id: finance
     name: 金融理财
     icon: 💰
-    sort: 12
+    sort: 13
 
   - id: government
     name: 政府公益
     icon: 🏛️
-    sort: 13
+    sort: 16
 
   - id: travel
     name: 旅游出行
     icon: ✈️
-    sort: 16
+    sort: 17
 
   - id: health
     name: 健康医疗
     icon: 🏥
-    sort: 17
+    sort: 19
 
   - id: custom_1774756924959
     name: 高伟达
     icon: 🏛️
-    sort: 7
+    sort: 4
 
   - id: custom_1774788526323
     name: 虚拟币（web3）
     icon: 🌊
-    sort: 19
+    sort: 20
+
+  - id: custom_1774837729627
+    name: 开源代码
+    icon: 💻
+    sort: 8
 
 searchEngines:
+  - id: local
+    name: 本地搜索
+    url: 
+    isDefault: false
+    sort: 0
+
   - id: baidu
     name: 百度
     url: https://www.baidu.com/s?wd=
@@ -83,7 +94,7 @@ sites:
     url: https://github.com
     description: 全球最大的代码托管平台，提供 Git 仓库托管和协作开发工具
     category: tech
-    tags: [开源代码, 项目托管, 搜索引擎]
+    tags: [项目托管, 搜索引擎]
     icon: https://github.com/favicon.ico
     sort: 6
     createdAt: 2024-01-01T00:00:00.000Z
@@ -218,7 +229,7 @@ sites:
     url: https://gitee.com
     description: 面向企业提供一站式研发管理解决方案
     category: tech
-    tags: [开源代码, 项目托管, 搜索引擎]
+    tags: [项目托管, 搜索引擎]
     icon: https://gitee.com/favicon.ico
     sort: 5
     createdAt: 2026-03-19T08:06:02.081Z
@@ -337,7 +348,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/zhipu.svg
-    sort: 79
+    sort: 78
     createdAt: 2026-03-20T08:42:36.444Z
 
   - name: Trae
@@ -371,7 +382,7 @@ sites:
     url: https://docs.openclaw.ai/zh-CN
     description: OpenClaw 🦞。适用于任何操作系统的 AI 智能体 Gateway 网关，支持 WhatsApp、Telegram、Discord、iMessage 等。。发送消息，随时随地获取智能体响应。通过插件可添加 Mattermost 等更多渠道。
     category: custom_1773890047269
-    tags: [智能体]
+    tags: [智能体, 文档]
     icon: https://docs.openclaw.ai/favicon.ico
     sort: 3
     createdAt: 2026-03-28T08:07:39.719Z
@@ -706,7 +717,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: 
-    sort: 38
+    sort: 76
     createdAt: 2026-03-29T09:47:27.178Z
 
   - name: 文心一言
@@ -715,7 +726,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/baidu.svg
-    sort: 77
+    sort: 79
     createdAt: 2026-03-29T09:48:51.561Z
 
   - name: kimi
@@ -724,7 +735,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/kimi.svg
-    sort: 76
+    sort: 77
     createdAt: 2026-03-29T09:50:19.138Z
 
   - name: 豆包
@@ -733,7 +744,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型, 智能体]
     icon: /icons/doubao.svg
-    sort: 78
+    sort: 38
     createdAt: 2026-03-29T09:51:27.674Z
 
   - name: 硅基流动
@@ -897,6 +908,33 @@ sites:
     icon: https://www.processon.com/favicon.ico
     sort: 54
     createdAt: 2026-03-29T14:06:30.378Z
+
+  - name: acpx
+    url: https://github.com/openclaw/acpx
+    description: Agent Client Protocol 让 OpenClaw 通过结构化的 stdio JSON-RPC 协议调用外部编码代理，支持Claude Code、Codex、Gemini CLI、OpenCode、Pi。
+    category: custom_1774837729627
+    tags: []
+    icon: /icons/github.svg
+    sort: 98
+    createdAt: 2026-03-30T02:35:28.563Z
+
+  - name: oh-my-opencode
+    url: https://github.com/code-yeongyu/oh-my-opencode
+    description: 让Oh-My-OpenCode的智能协作系统为你找到最佳解决方案！
+    category: custom_1774837729627
+    tags: []
+    icon: /icons/github.svg
+    sort: 99
+    createdAt: 2026-03-30T02:44:02.386Z
+
+  - name: opencode
+    url: https://github.com/anomalyco/opencode
+    description: 在AI编程辅助工具快速发展的今天，OpenCode作为一个开源、终端优先的AI编程代理已经吸引了大量开发者。
+    category: custom_1774837729627
+    tags: []
+    icon: /icons/github.svg
+    sort: 100
+    createdAt: 2026-03-30T02:45:04.256Z
 ---
 
 # 我的书签

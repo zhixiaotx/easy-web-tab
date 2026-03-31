@@ -2,13 +2,23 @@
 import { ref } from 'vue'
 import CategoryManager from './CategoryManager.vue'
 import BackupManager from './BackupManager.vue'
+import BackgroundManager from './BackgroundManager.vue'
 
 const showCategoryManager = ref(false)
 const showBackupManager = ref(false)
+const showBackgroundManager = ref(false)
 </script>
 
 <template>
   <div class="settings-wrapper">
+    <button 
+      class="settings-btn background-btn" 
+      @click="showBackgroundManager = true" 
+      title="背景管理"
+    >
+      🖼️ 背景
+    </button>
+    
     <button 
       class="settings-btn" 
       @click="showCategoryManager = true" 
@@ -25,6 +35,8 @@ const showBackupManager = ref(false)
       📦 备份
     </button>
 
+    <BackgroundManager v-if="showBackgroundManager" @close="showBackgroundManager = false" />
+    
     <CategoryManager v-if="showCategoryManager" @close="showCategoryManager = false" />
     
     <BackupManager v-if="showBackupManager" @close="showBackupManager = false" />
@@ -55,6 +67,16 @@ const showBackupManager = ref(false)
   background-color: #f1f5f9;
   color: #3b82f6;
   border-color: #3b82f6;
+}
+
+.background-btn {
+  background-color: #fdf4ff;
+}
+
+.background-btn:hover {
+  background-color: #fae8ff;
+  border-color: #d946ef;
+  color: #d946ef;
 }
 
 .backup-btn {

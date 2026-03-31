@@ -1,13 +1,29 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
-const STORAGE_KEY = 'user-theme'
+const THEME_STORAGE_KEY = 'user-theme'
+const BG_STORAGE_KEY = 'user-background'
+
+// 背景类型
+export type BackgroundType = 'none' | 'solid' | 'gradient' | 'image'
+
+// 自定义背景接口
+export interface CustomBackground {
+  id: string
+  type: BackgroundType
+  value: string // 颜色值/渐变值/图片URL
+  name: string
+}
 
 export const useThemeStore = defineStore('theme', () => {
+  // ========================================
+  // 主题相关
+  // ========================================
+  
   // 初始化主题
   const initTheme = () => {
     // 1. 先从 localStorage 读取
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
     if (saved) {
       theme.value = saved as 'light' | 'dark'
     } else {
@@ -33,7 +49,7 @@ export const useThemeStore = defineStore('theme', () => {
   // 切换主题
   function toggleTheme() {
     theme.value = theme.value === 'light' ? 'dark' : 'light'
-    localStorage.setItem(STORAGE_KEY, theme.value)
+    localStorage.setItem(THEME_STORAGE_KEY, theme.value)
     applyTheme()
   }
 
@@ -46,17 +62,145 @@ export const useThemeStore = defineStore('theme', () => {
   if (typeof window !== 'undefined') {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
       // 只有用户没有手动设置过主题时才跟随系统
-      if (!localStorage.getItem(STORAGE_KEY)) {
+      if (!localStorage.getItem(THEME_STORAGE_KEY)) {
         theme.value = e.matches ? 'dark' : 'light'
         applyTheme()
       }
     })
   }
 
+  // ========================================
+  // 背景相关
+  // ========================================
+
+  // 背景类型
+  const backgroundType = ref<BackgroundType>('none')
+  // 背景值（颜色值/渐变值/图片URL）
+  const backgroundValue = ref<string>('')
+  // 用户自定义背景列表
+  const customBackgrounds = ref<CustomBackground[]>([])
+
+  // 预设背景列表
+  const presetBackgrounds: CustomBackground[] = [
+    { id: 'preset-1', type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', name: '紫色渐变' },
+    { id: 'preset-2', type: 'gradient', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', name: '粉色渐变' },
+    { id: 'preset-3', type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', name: '蓝色渐变' },
+    { id: 'preset-4', type: 'gradient', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', name: '绿色渐变' },
+    { id: 'preset-5', type: 'gradient', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', name: '日落渐变' },
+  ]
+
+  // 初始化背景
+  const initBackground = () => {
+    // 从 localStorage 读取背景设置
+    const saved = localStorage.getItem(BG_STORAGE_KEY)
+    if (saved) {
+      try {
+        const data = JSON.parse(saved)
+        backgroundType.value = data.type || 'none'
+        backgroundValue.value = data.value || ''
+        customBackgrounds.value = data.customs || []
+      } catch (e) {
+        console.error('Failed to parse background settings:', e)
+      }
+    }
+    applyBackground()
+  }
+
+  // 保存背景设置到 localStorage
+  function saveBackgroundSettings() {
+    const data = {
+      type: backgroundType.value,
+      value: backgroundValue.value,
+      customs: customBackgrounds.value
+    }
+    localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(data))
+  }
+
+  // 应用背景到 DOM
+  function applyBackground() {
+    const root = document.documentElement
+    const body = document.body
+    
+    if (backgroundType.value === 'none' || !backgroundValue.value) {
+      root.style.removeProperty('--app-bg-type')
+      root.style.removeProperty('--app-bg-value')
+      root.style.removeProperty('--app-bg-image')
+      body.classList.remove('app-has-background')
+      body.classList.remove('image')
+      return
+    }
+
+    root.style.setProperty('--app-bg-type', backgroundType.value)
+    root.style.setProperty('--app-bg-value', backgroundValue.value)
+
+    // 添加 body 类
+    body.classList.add('app-has-background')
+    
+    if (backgroundType.value === 'image') {
+      root.style.setProperty('--app-bg-image', `url(${backgroundValue.value})`)
+      body.classList.add('image')
+    } else {
+      root.style.removeProperty('--app-bg-image')
+      body.classList.remove('image')
+    }
+  }
+
+  // 设置背景
+  function setBackground(type: BackgroundType, value: string) {
+    backgroundType.value = type
+    backgroundValue.value = value
+    saveBackgroundSettings()
+    applyBackground()
+  }
+
+  // 添加自定义背景
+  function addCustomBackground(background: Omit<CustomBackground, 'id'>) {
+    const newBackground: CustomBackground = {
+      ...background,
+      id: `custom-${Date.now()}`
+    }
+    customBackgrounds.value.push(newBackground)
+    saveBackgroundSettings()
+  }
+
+  // 删除自定义背景
+  function removeCustomBackground(id: string) {
+    const index = customBackgrounds.value.findIndex(b => b.id === id)
+    if (index !== -1) {
+      customBackgrounds.value.splice(index, 1)
+      saveBackgroundSettings()
+    }
+  }
+
+  // 清除背景
+  function clearBackground() {
+    backgroundType.value = 'none'
+    backgroundValue.value = ''
+    saveBackgroundSettings()
+    applyBackground()
+  }
+
+  // 监听背景变化
+  watch([backgroundType, backgroundValue], () => {
+    applyBackground()
+  })
+
   return {
+    // 主题相关
     theme,
     initTheme,
     toggleTheme,
-    applyTheme
+    applyTheme,
+    // 背景相关
+    backgroundType,
+    backgroundValue,
+    customBackgrounds,
+    presetBackgrounds,
+    initBackground,
+    setBackground,
+    addCustomBackground,
+    removeCustomBackground,
+    clearBackground,
+    applyBackground
   }
 })

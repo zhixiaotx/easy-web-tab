@@ -46,17 +46,11 @@ body.app-has-background.image {
    有背景时 container 样式
    ======================================== */
 
-/* 有背景时 container 保持原有布局，不偏移 */
+/* 有背景时 container 保持原有布局，不偏移 - 不覆盖 padding-top */
 body.app-has-background .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
   border-radius: 12px;
-}
-
-/* 纯色/渐变背景时，container 使用与背景相同的颜色 */
-body.app-has-background:not(.image) .container {
-  background: var(--app-bg-value) !important;
+  /* 纯色/渐变背景时 container 透明，让背景色直接显示 */
+  background: transparent !important;
 }
 
 /* 图片背景时，container 使用半透明 + blur */
@@ -69,9 +63,29 @@ body.app-has-background.image .container {
    暗色模式 + 有背景
    ======================================== */
 
-/* 暗色模式 - 纯色/渐变背景时，container 使用相同背景 */
-:root.dark body.app-has-background:not(.image) .container {
-  background: var(--app-bg-value) !important;
+/* 暗色模式 - 纯色/渐变背景时，添加全屏遮罩 */
+:root.dark body.app-has-background:not(.image)::before,
+:root.dark html.app-has-background:not(.image)::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(17, 24, 39, 0.85);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 确保内容在遮罩层之上 */
+:root.dark body.app-has-background .container,
+:root.dark body.app-has-background .top-right-toolbar {
+  position: relative;
+  z-index: 1;
+}
+
+:root.dark body.app-has-background .container {
+  background: transparent !important;
 }
 
 /* 暗色模式 - 图片背景时，container 使用半透明 + blur */

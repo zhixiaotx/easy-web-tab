@@ -46,6 +46,13 @@ body.app-has-background .container {
   background: transparent;
 }
 
+/* 关键修复：有背景时移除 body 和 #app 的默认背景色 */
+body.app-has-background,
+html.app-has-background,
+#app.app-has-background {
+  background-color: transparent !important;
+}
+
 /* 预览区域样式 */
 .background-preview {
   width: 100%;

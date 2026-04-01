@@ -59,7 +59,7 @@ useKeyboardShortcuts({
       />
     </main>
 
-    <Pagination />
+    <Pagination class="bottom-pagination" />
 
     <div v-if="store.filteredSites.length === 0" class="empty-state">
       <p>没有找到匹配的网站</p>
@@ -101,6 +101,7 @@ useKeyboardShortcuts({
   margin: 0 auto;
   padding: 24px;
   padding-top: 70px; /* 为右上角工具栏留出空间 */
+  padding-bottom: 80px; /* 为底部固定分页留出空间 */
 }
 
 .header {
@@ -120,9 +121,9 @@ useKeyboardShortcuts({
 
 .sites-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  margin-top: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .empty-state {
@@ -132,7 +133,26 @@ useKeyboardShortcuts({
   font-size: 16px;
 }
 
+/* 底部固定分页 */
+.bottom-pagination {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 12px 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
 /* 暗色模式 */
+:root.dark .bottom-pagination {
+  background-color: rgba(31, 41, 55, 0.95);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
 :root.dark .btn-admin {
   background-color: var(--bg-secondary, #1f2937);
   color: var(--text-secondary, #d1d5db);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
 
@@ -17,6 +17,34 @@ const emit = defineEmits<{
 }>()
 
 const isHovered = ref(false)
+const showTooltip = ref(false)
+let tooltipTimer: ReturnType<typeof setTimeout> | null = null
+
+// 鼠标进入图标区域
+const handleIconEnter = () => {
+  if (!props.site.description) return
+  // 3 秒后显示弹框
+  tooltipTimer = setTimeout(() => {
+    showTooltip.value = true
+  }, 3000)
+}
+
+// 鼠标离开图标区域
+const handleIconLeave = () => {
+  // 清除定时器
+  if (tooltipTimer) {
+    clearTimeout(tooltipTimer)
+    tooltipTimer = null
+  }
+  showTooltip.value = false
+}
+
+// 组件卸载时清理
+onBeforeUnmount(() => {
+  if (tooltipTimer) {
+    clearTimeout(tooltipTimer)
+  }
+})
 
 // 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
 const handleIconError = (event: Event) => {
@@ -46,13 +74,27 @@ const handleClick = () => {
     @click="handleClick"
   >
     <div class="card-header">
-      <img
-        :src="getFaviconImgSrc(site.url, site.icon)"
-        :alt="site.name"
-        class="favicon"
-        loading="lazy"
-        @error="handleIconError"
-      />
+      <div 
+        class="favicon-wrapper"
+        @mouseenter="handleIconEnter"
+        @mouseleave="handleIconLeave"
+      >
+        <img
+          :src="getFaviconImgSrc(site.url, site.icon)"
+          :alt="site.name"
+          class="favicon"
+          loading="lazy"
+          @error="handleIconError"
+        />
+        <!-- 悬停描述弹框（延迟3秒后显示） -->
+        <div v-if="showTooltip && site.description" class="description-tooltip">
+          <div class="tooltip-arrow"></div>
+          <div class="tooltip-content">
+            <div class="tooltip-name">{{ site.name }}</div>
+            <div class="tooltip-desc">{{ site.description }}</div>
+          </div>
+        </div>
+      </div>
       <div v-if="site.isValid === false" class="invalid-badge" title="链接已失效">
         ⚠️
       </div>
@@ -78,19 +120,15 @@ const handleClick = () => {
       </div>
     </div>
     <h3 class="site-name">{{ site.name }}</h3>
-    <p class="site-desc">{{ site.description || '暂无描述' }}</p>
-    <div class="site-tags">
-      <span v-for="tag in site.tags" :key="tag" class="tag">{{ tag }}</span>
-    </div>
   </div>
 </template>
 
 <style scoped>
 .site-card {
   background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   position: relative;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -100,8 +138,8 @@ const handleClick = () => {
 }
 
 .site-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   border-color: #e2e8f0;
 }
 
@@ -119,22 +157,84 @@ const handleClick = () => {
 
 .card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.favicon-wrapper {
+  position: relative;
+  display: inline-flex;
 }
 
 .favicon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   object-fit: cover;
   background-color: #f8fafc;
   transition: transform 0.2s ease;
 }
 
 .site-card:hover .favicon {
-  transform: scale(1.05);
+  transform: scale(1.08);
+}
+
+/* 悬停描述弹框 */
+.description-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s ease forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #1e293b;
+  margin: 0 auto;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tooltip-content {
+  background-color: #1e293b;
+  color: white;
+  border-radius: 8px;
+  padding: 12px 16px;
+  width: 260px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.tooltip-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.tooltip-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .invalid-badge {
@@ -204,39 +304,83 @@ const handleClick = () => {
 }
 
 .site-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #1e293b;
-  margin-bottom: 8px;
-}
-
-.site-desc {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 12px;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.site-tags {
+.invalid-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 14px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.card-actions {
+  position: absolute;
+  top: -8px;
+  right: -8px;
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 2px;
+  animation: fadeIn 0.15s ease;
 }
 
-.tag {
-  padding: 3px 10px;
-  background-color: #f1f5f9;
-  border-radius: 12px;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.action-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  padding: 3px;
   font-size: 12px;
-  color: #64748b;
-  transition: background-color 0.2s, color 0.2s;
+  opacity: 0.9;
+  transition: opacity 0.2s, color 0.2s, background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.site-card:hover .tag {
-  background-color: #e2e8f0;
+.action-btn:hover {
+  opacity: 1;
+}
+
+.action-btn.edit {
+  color: #3b82f6;
+}
+
+.action-btn.edit:hover {
+  background-color: #eff6ff;
+}
+
+.action-btn.delete:hover {
+  color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.action-btn.unmark {
+  color: #10b981;
+}
+
+.action-btn.unmark:hover {
+  background-color: #ecfdf5;
 }
 </style>

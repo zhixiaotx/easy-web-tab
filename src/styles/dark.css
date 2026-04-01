@@ -1152,3 +1152,33 @@
   background-color: var(--accent-hover, #2563eb);
 }
 
+/* ========================================
+   SiteCard 悬停描述弹框暗色模式
+   ======================================== */
+
+:root.dark .tooltip-content {
+  background-color: var(--bg-secondary, #1f2937);
+  border: 1px solid var(--border-color, #374151);
+}
+
+:root.dark .tooltip-arrow {
+  border-top-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .tooltip-name {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .tooltip-desc {
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .action-btn {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .favicon {
+  background-color: var(--bg-primary, #111827);
+}
+

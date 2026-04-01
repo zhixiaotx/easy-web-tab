@@ -20,7 +20,7 @@ export const useSitesStore = defineStore('sites', () => {
   const selectedCategory = ref<string>('')
   const isLoading = ref(false)
   const currentPage = ref(1)
-  const pageSize = ref(9)
+  const pageSize = ref(18)
 
   // 断链检测
   const isCheckingLinks = ref(false)

@@ -53,10 +53,10 @@ body.app-has-background .container {
   background: transparent !important;
 }
 
-/* 图片背景时，container 使用半透明 + blur */
+/* 图片背景时，container 使用更透明 + blur，让图片可见 */
 body.app-has-background.image .container {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px);
 }
 
 /* ========================================
@@ -92,10 +92,10 @@ body.app-has-background.image .container {
   background: transparent !important;
 }
 
-/* 暗色模式 - 图片背景时，container 使用半透明 + blur */
+/* 暗色模式 - 图片背景时，container 使用更透明 + blur，让图片可见 */
 :root.dark body.app-has-background.image .container {
-  background: rgba(17, 24, 39, 0.85) !important;
-  backdrop-filter: blur(10px);
+  background: rgba(17, 24, 39, 0.7) !important;
+  backdrop-filter: blur(12px);
 }
 
 /* ========================================

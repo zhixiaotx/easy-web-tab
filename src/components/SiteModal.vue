@@ -4,7 +4,7 @@ import type { Site } from '../types'
 import { useUrlMetadata } from '../composables/useUrlMetadata'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
-import { PRESET_ICONS, findPresetIconByUrl } from '../composables/presetIcons'
+import { PRESET_ICONS, findPresetIconByUrl, getIconPath, type PresetIcon } from '../composables/presetIcons'
 import { getIconUrl } from '../composables/useIconCache'
 
 const categoriesStore = useCategoriesStore()
@@ -37,15 +37,45 @@ const isLoading = ref(false)
 const showIconPicker = ref(false)
 const iconSearchQuery = ref('')
 const iconManualInput = ref('')
+const iconCategoryFilter = ref('all')
+
+// 所有分类
+const iconCategories = computed(() => {
+  const cats = new Set(PRESET_ICONS.map(i => i.category))
+  return ['all', ...Array.from(cats)]
+})
+
+// 分类显示名称
+const categoryLabels: Record<string, string> = {
+  all: '全部',
+  '社交与社区': '社交',
+  '国内常用网站': '国内常用',
+  '工具与开发': '开发工具',
+  '前端技术': '前端',
+  '后端与数据库': '后端/数据库',
+  '云服务与平台': '云平台',
+  '大模型与 AI': 'AI',
+  '视频与媒体': '视频',
+  '其他': '其他',
+}
 
 // 过滤后的预置图标
 const filteredPresetIcons = computed(() => {
+  let icons = PRESET_ICONS
+  // 分类过滤
+  if (iconCategoryFilter.value !== 'all') {
+    icons = icons.filter(i => i.category === iconCategoryFilter.value)
+  }
+  // 搜索过滤
   const query = iconSearchQuery.value.toLowerCase().trim()
-  if (!query) return PRESET_ICONS
-  return PRESET_ICONS.filter(icon =>
-    icon.label.toLowerCase().includes(query) ||
-    (icon.url && icon.url.toLowerCase().includes(query))
-  )
+  if (query) {
+    icons = icons.filter(icon =>
+      icon.label.toLowerCase().includes(query) ||
+      icon.name.toLowerCase().includes(query) ||
+      (icon.url && icon.url.toLowerCase().includes(query))
+    )
+  }
+  return icons
 })
 
 // 获取图标的显示 URL（优先 form.icon，其次自动检测 URL）
@@ -88,8 +118,8 @@ async function handleAutoFetchIcon() {
 }
 
 // 选择预置图标
-function selectPresetIcon(iconName: string) {
-  form.value.icon = `/icons/${iconName}.svg`
+function selectPresetIcon(icon: PresetIcon) {
+  form.value.icon = `/icons/${icon.name}.${icon.ext}`
   iconManualInput.value = ''
   showIconPicker.value = false
   iconSearchQuery.value = ''
@@ -408,8 +438,8 @@ const handleSubmit = () => {
             <!-- 预置图标推荐 -->
             <div v-if="suggestedPresetIcon && !form.icon" class="icon-suggestion">
               <span>检测到：</span>
-              <button type="button" class="btn-suggestion" @click="selectPresetIcon(suggestedPresetIcon.name)">
-                <img :src="`/icons/${suggestedPresetIcon.name}.svg`" class="suggestion-icon" alt="" />
+              <button type="button" class="btn-suggestion" @click="selectPresetIcon(suggestedPresetIcon)">
+                <img :src="getIconPath(suggestedPresetIcon)" class="suggestion-icon" alt="" />
                 {{ suggestedPresetIcon.label }}
               </button>
             </div>
@@ -427,6 +457,20 @@ const handleSubmit = () => {
               />
             </div>
 
+            <!-- 分类过滤 -->
+            <div class="icon-category-tabs">
+              <button
+                v-for="cat in iconCategories"
+                :key="cat"
+                type="button"
+                class="icon-category-tab"
+                :class="{ active: iconCategoryFilter === cat }"
+                @click="iconCategoryFilter = cat"
+              >
+                {{ categoryLabels[cat] || cat }}
+              </button>
+            </div>
+
             <!-- 预置图标网格 -->
             <div class="icon-grid">
               <button
@@ -434,11 +478,11 @@ const handleSubmit = () => {
                 :key="icon.name"
                 type="button"
                 class="icon-grid-item"
-                :class="{ active: form.icon === `/icons/${icon.name}.svg` }"
+                :class="{ active: form.icon === `/icons/${icon.name}.${icon.ext}` }"
                 :title="icon.label"
-                @click="selectPresetIcon(icon.name)"
+                @click="selectPresetIcon(icon)"
               >
-                <img :src="`/icons/${icon.name}.svg`" :alt="icon.label" class="grid-icon-img" />
+                <img :src="`/icons/${icon.name}.${icon.ext}`" :alt="icon.label" class="grid-icon-img" />
                 <span class="grid-icon-label">{{ icon.label }}</span>
               </button>
             </div>
@@ -934,6 +978,37 @@ const handleSubmit = () => {
 }
 
 .icon-search-input:focus {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+/* 分类标签 */
+.icon-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.icon-category-tab {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 16px;
+  background: white;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.icon-category-tab:hover {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+}
+
+.icon-category-tab.active {
+  background: var(--color-primary, #3b82f6);
+  color: white;
   border-color: var(--color-primary, #3b82f6);
 }
 

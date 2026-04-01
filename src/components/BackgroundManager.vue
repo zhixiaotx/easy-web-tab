@@ -56,7 +56,7 @@ const previewStyle = computed(() => {
     }
     const preset = themeStore.presetBackgrounds.find(p => p.value === selectedValue.value)
     if (preset) {
-      return { backgroundImage: `url(/backgrounds/${preset.id}.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' }
+      return { backgroundImage: `url(${preset.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     }
     return { backgroundImage: `url(${selectedValue.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
   }
@@ -88,6 +88,11 @@ function selectGradient(id: string) {
 // 选择预设图片
 function selectPresetImage(img: CustomBackground) {
   selectedValue.value = img.value
+}
+
+// 获取缩略图 URL（现在使用本地路径）
+function getThumbnailUrl(img: CustomBackground): string {
+  return img.value
 }
 
 // 添加自定义图片
@@ -229,7 +234,7 @@ function clearBackground() {
                 :key="img.id"
                 class="background-option"
                 :class="{ active: selectedValue === img.value }"
-                :style="{ backgroundImage: `url(${img.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
+                :style="{ backgroundImage: `url(${getThumbnailUrl(img)})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
                 :title="img.name"
                 @click="selectPresetImage(img)"
               ></div>

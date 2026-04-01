@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
 
 const themeStore = useThemeStore()
+const shouldShow = computed(() => themeStore.backgroundType !== 'image')
 </script>
 
 <template>
-  <button class="theme-toggle" @click="themeStore.toggleTheme" title="切换主题">
+  <button v-if="shouldShow" class="theme-toggle" @click="themeStore.toggleTheme" title="切换主题">
     {{ themeStore.theme === 'light' ? '🌙' : '☀️' }}
   </button>
 </template>

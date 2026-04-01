@@ -2,6 +2,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
+import { useSitesStore } from '../stores/sites'
 
 const props = defineProps<{
   site: Site
@@ -15,6 +16,8 @@ const emit = defineEmits<{
   delete: [url: string]
   unmark: [url: string]
 }>()
+
+const sitesStore = useSitesStore()
 
 const isHovered = ref(false)
 const showTooltip = ref(false)
@@ -60,6 +63,8 @@ const handleIconError = (event: Event) => {
 }
 
 const handleClick = () => {
+  // 记录点击次数（使用频率排序）
+  sitesStore.incrementClick(props.site.url)
   window.open(props.site.url, '_blank')
 }
 </script>

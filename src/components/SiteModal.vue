@@ -256,11 +256,10 @@ watch(() => props.site, (newSite) => {
       category: newSite.category || 'other',
       tags: newSite.tags.join(', '),
       icon: newSite.icon || '',
-      sort: newSite.sort || 0
+      sort: newSite.sort || 1
     }
   } else {
-    // 新增时自动计算排序权重
-    const maxSort = sitesStore.sites.reduce((max, s) => Math.max(max, s.sort || 0), 0)
+    // 新增时默认 sort=1，点击后自动增加
     form.value = {
       name: '',
       url: '',
@@ -268,7 +267,7 @@ watch(() => props.site, (newSite) => {
       category: 'other',
       tags: '',
       icon: '',
-      sort: maxSort + 1
+      sort: 1
     }
   }
 }, { immediate: true })
@@ -505,6 +504,8 @@ const handleSubmit = () => {
           <span v-if="!showIconPicker && !form.icon" class="form-hint">可选，点击「自动获取」或「选择图标」</span>
         </div>
 
+        <!-- 排序权重 - 已改为点击频率自动排序，此处隐藏 -->
+        <!-- 
         <div class="form-group">
           <label>排序权重</label>
           <input
@@ -514,6 +515,7 @@ const handleSubmit = () => {
           />
           <span class="form-hint">前台不显示此字段，仅用于排序</span>
         </div>
+        -->
 
         <div class="modal-footer">
           <button type="button" class="btn-cancel" @click="emit('close')">取消</button>

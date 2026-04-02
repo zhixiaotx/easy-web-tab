@@ -18,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const sitesStore = useSitesStore()
+const isHovered = ref(false)
 
 // 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
 const handleIconError = (event: Event) => {

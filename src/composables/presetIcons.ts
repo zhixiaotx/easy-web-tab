@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-04-02T02:38:16.931Z
+ * 生成时间: 2026-04-02T14:18:46.004Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -41,8 +41,8 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: '高德地图', label: '高德地图', ext: 'ico', category: '国内常用网站', url: 'https://ditu.amap.com' },
   { name: '华为商城', label: '华为商城', ext: 'ico', category: '国内常用网站', url: 'https://www.vmall.com' },
   { name: '京东', label: '京东', ext: 'ico', category: '国内常用网站', url: 'https://www.jd.com' },
-  { name: '美团', label: '美团', ext: 'ico', category: '国内常用网站', url: 'https://www.meituan.com' },
-  { name: '人民网', label: '人民网', ext: 'ico', category: '国内常用网站', url: 'https://www.people.com.cn' },
+  { name: '美团', label: '美团', ext: 'svg', category: '国内常用网站', url: 'https://www.meituan.com' },
+  { name: '人民网', label: '人民网', ext: 'svg', category: '国内常用网站', url: 'https://www.people.com.cn' },
   { name: '淘宝闪购', label: '淘宝闪购', ext: 'ico', category: '国内常用网站', url: 'https://www.ele.me' },
   { name: '天气网', label: '天气网', ext: 'ico', category: '国内常用网站', url: 'https://www.weather.com.cn' },
   { name: '网易云音乐', label: '网易云音乐', ext: 'ico', category: '国内常用网站', url: 'https://music.163.com' },
@@ -159,29 +159,42 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: '360 (1)', label: '360 (1)', ext: 'svg', category: '其他' },
   { name: '360急速', label: '360急速', ext: 'svg', category: '其他' },
   { name: '阿里云官方-中文LOGO', label: '阿里云官方-中文LOGO', ext: 'svg', category: '其他' },
+  { name: '百度云盘', label: '百度云盘', ext: 'svg', category: '其他' },
   { name: '抖音', label: '抖音', ext: 'svg', category: '其他' },
   { name: '豆瓣', label: '豆瓣', ext: 'ico', category: '其他' },
   { name: '豆包', label: '豆包', ext: 'svg', category: '其他' },
   { name: '豆包 (1)', label: '豆包 (1)', ext: 'svg', category: '其他' },
   { name: '高伟达LOGO', label: '高伟达LOGO', ext: 'svg', category: '其他' },
+  { name: '硅基流动', label: '硅基流动', ext: 'svg', category: '其他' },
+  { name: '计划生育服务站', label: '计划生育服务站', ext: 'svg', category: '其他' },
   { name: '今日头条', label: '今日头条', ext: 'ico', category: '其他' },
   { name: '快手', label: '快手', ext: 'svg', category: '其他' },
   { name: '龙虾', label: '龙虾', ext: 'svg', category: '其他' },
   { name: '魔搭GPT', label: '魔搭GPT', ext: 'svg', category: '其他' },
   { name: '腾讯视频', label: '腾讯视频', ext: 'svg', category: '其他' },
+  { name: '天猫', label: '天猫', ext: 'svg', category: '其他' },
+  { name: '微信', label: '微信', ext: 'svg', category: '其他' },
   { name: '微信方', label: '微信方', ext: 'svg', category: '其他' },
-  { name: '小红书', label: '小红书', ext: 'ico', category: '其他' },
+  { name: '小红书', label: '小红书', ext: 'svg', category: '其他' },
   { name: '邮箱', label: '邮箱', ext: 'svg', category: '其他' },
+  { name: '智谱', label: '智谱', ext: 'svg', category: '其他' },
+  { name: '中国天气网', label: '中国天气网', ext: 'svg', category: '其他' },
   { name: 'alimail 阿里邮箱', label: 'alimail 阿里邮箱', ext: 'svg', category: '其他' },
   { name: 'database_oceanbase', label: 'Database Oceanbase', ext: 'svg', category: '其他' },
+  { name: 'elastic', label: 'Elastic', ext: 'svg', category: '其他' },
   { name: 'GitCode-logo', label: 'GitCode-logo', ext: 'svg', category: '其他' },
   { name: 'iconfont', label: 'Iconfont', ext: 'svg', category: '其他' },
+  { name: 'logok', label: 'Logok', ext: 'svg', category: '其他' },
+  { name: 'maven', label: 'Maven', ext: 'svg', category: '其他' },
   { name: 'Motrix', label: 'Motrix', ext: 'svg', category: '其他' },
   { name: 'obsidian', label: 'Obsidian', ext: 'svg', category: '其他' },
   { name: 'openclaw', label: 'Openclaw', ext: 'svg', category: '其他' },
+  { name: 'openclaws', label: 'Openclaws', ext: 'svg', category: '其他' },
   { name: 'qq轻聊', label: 'qq轻聊', ext: 'svg', category: '其他' },
+  { name: 'QQ音乐', label: 'QQ音乐', ext: 'svg', category: '其他' },
   { name: 'QQ邮箱', label: 'QQ邮箱', ext: 'svg', category: '其他' },
   { name: 'trvily', label: 'Trvily', ext: 'svg', category: '其他' },
+  { name: 'vite-vite-logo', label: 'Vite-vite-logo', ext: 'svg', category: '其他' },
 
 ]
 

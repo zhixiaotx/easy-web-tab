@@ -50,14 +50,20 @@ const pages = computed(() => {
 const handlePageClick = (page: number | string) => {
   if (typeof page === 'number') {
     store.setPage(page)
-    // 滚动到顶部
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // 滚动到顶部 - 发射事件让父组件处理
+    emit('pageChange')
   }
 }
+
+const emit = defineEmits<{
+  pageChange: []
+}>()
 
 const handleSizeChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
   store.setPageSize(Number(target.value))
+  // 滚动到顶部
+  emit('pageChange')
 }
 </script>
 

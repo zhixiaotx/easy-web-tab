@@ -101,7 +101,7 @@ useKeyboardShortcuts({
   margin: 0 auto;
   padding: 24px;
   padding-top: 70px; /* 为右上角工具栏留出空间 */
-  padding-bottom: 80px; /* 为底部固定分页留出空间 */
+  padding-bottom: 120px; /* 为底部固定分页留出空间 */
 }
 
 .header {
@@ -136,7 +136,7 @@ useKeyboardShortcuts({
 /* 底部固定分页 */
 .bottom-pagination {
   position: fixed;
-  bottom: 24px;
+  bottom: 48px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;

@@ -16,10 +16,12 @@ import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
+import { useToast } from '../composables/useToast'
 
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
+const toast = useToast()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
@@ -191,7 +193,7 @@ const handleImport = (event: Event) => {
     
     // 如果有错误，直接显示错误信息
     if (result.error) {
-      alert(`导入失败：${result.error}`)
+      toast.error(`导入失败：${result.error}`)
       input.value = ''
       return
     }
@@ -205,18 +207,18 @@ const handleImport = (event: Event) => {
           const data = yaml.load(frontmatterMatch[1])
           if (data?.searchEngines && Array.isArray(data.searchEngines)) {
             enginesStore.importEngines(data.searchEngines)
-            alert(`导入完成！网站：新增 ${result.added} 条，跳过 ${result.skipped} 条；搜索引擎：已导入 ${data.searchEngines.length} 个`)
+            toast.success(`导入完成！网站：新增 ${result.added} 条，跳过 ${result.skipped} 条；搜索引擎：已导入 ${data.searchEngines.length} 个`)
           } else {
-            alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+            toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
           }
         } else {
-          alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+          toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
         }
       } else {
-        alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+        toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
       }
     } catch {
-      alert(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+      toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
     }
     
     input.value = ''
@@ -354,7 +356,7 @@ const triggerImport = () => {
   margin: 0 auto;
   padding: 24px;
   padding-top: 70px; /* 为右上角工具栏留出空间 */
-  padding-bottom: 80px; /* 为底部固定分页留出空间 */
+  padding-bottom: 120px; /* 为底部固定分页留出空间 */
 }
 
 .header {
@@ -414,7 +416,7 @@ const triggerImport = () => {
 /* 底部固定分页 */
 .bottom-pagination {
   position: fixed;
-  bottom: 24px;
+  bottom: 48px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;

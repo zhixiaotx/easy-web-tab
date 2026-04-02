@@ -147,9 +147,9 @@ const handleClick = () => {
 
 .invalid-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 16px;
+  top: 6px;
+  left: 6px;
+  font-size: 14px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   animation: pulse 2s infinite;
 }
@@ -160,8 +160,11 @@ const handleClick = () => {
 }
 
 .card-actions {
+  position: absolute;
+  top: -8px;
+  right: -8px;
   display: flex;
-  gap: 4px;
+  gap: 2px;
   animation: fadeIn 0.15s ease;
 }
 
@@ -220,75 +223,5 @@ const handleClick = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.invalid-badge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  font-size: 14px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-.card-actions {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  display: flex;
-  gap: 2px;
-  animation: fadeIn 0.15s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.action-btn {
-  background: white;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  padding: 3px;
-  font-size: 12px;
-  opacity: 0.9;
-  transition: opacity 0.2s, color 0.2s, background-color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.action-btn:hover {
-  opacity: 1;
-}
-
-.action-btn.edit {
-  color: #3b82f6;
-}
-
-.action-btn.edit:hover {
-  background-color: #eff6ff;
-}
-
-.action-btn.delete:hover {
-  color: #ef4444;
-  background-color: #fef2f2;
-}
-
-.action-btn.unmark {
-  color: #10b981;
-}
-
-.action-btn.unmark:hover {
-  background-color: #ecfdf5;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref } from 'vue'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
 import { useSitesStore } from '../stores/sites'
@@ -18,36 +18,6 @@ const emit = defineEmits<{
 }>()
 
 const sitesStore = useSitesStore()
-
-const isHovered = ref(false)
-const showTooltip = ref(false)
-let tooltipTimer: ReturnType<typeof setTimeout> | null = null
-
-// 鼠标进入图标区域
-const handleIconEnter = () => {
-  if (!props.site.description) return
-  // 3 秒后显示弹框
-  tooltipTimer = setTimeout(() => {
-    showTooltip.value = true
-  }, 3000)
-}
-
-// 鼠标离开图标区域
-const handleIconLeave = () => {
-  // 清除定时器
-  if (tooltipTimer) {
-    clearTimeout(tooltipTimer)
-    tooltipTimer = null
-  }
-  showTooltip.value = false
-}
-
-// 组件卸载时清理
-onBeforeUnmount(() => {
-  if (tooltipTimer) {
-    clearTimeout(tooltipTimer)
-  }
-})
 
 // 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
 const handleIconError = (event: Event) => {
@@ -79,11 +49,7 @@ const handleClick = () => {
     @click="handleClick"
   >
     <div class="card-header">
-      <div 
-        class="favicon-wrapper"
-        @mouseenter="handleIconEnter"
-        @mouseleave="handleIconLeave"
-      >
+      <div class="favicon-wrapper">
         <img
           :src="getFaviconImgSrc(site.url, site.icon)"
           :alt="site.name"
@@ -91,14 +57,6 @@ const handleClick = () => {
           loading="lazy"
           @error="handleIconError"
         />
-        <!-- 悬停描述弹框（延迟3秒后显示） -->
-        <div v-if="showTooltip && site.description" class="description-tooltip">
-          <div class="tooltip-arrow"></div>
-          <div class="tooltip-content">
-            <div class="tooltip-name">{{ site.name }}</div>
-            <div class="tooltip-desc">{{ site.description }}</div>
-          </div>
-        </div>
       </div>
       <div v-if="site.isValid === false" class="invalid-badge" title="链接已失效">
         ⚠️
@@ -184,62 +142,6 @@ const handleClick = () => {
 
 .site-card:hover .favicon {
   transform: scale(1.08);
-}
-
-/* 悬停描述弹框 */
-.description-tooltip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  pointer-events: none;
-  animation: tooltipFadeIn 0.2s ease forwards;
-}
-
-@keyframes tooltipFadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-.tooltip-arrow {
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid #1e293b;
-  margin: 0 auto;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.tooltip-content {
-  background-color: #1e293b;
-  color: white;
-  border-radius: 8px;
-  padding: 12px 16px;
-  width: 260px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-}
-
-.tooltip-name {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #f1f5f9;
-  line-height: 1.3;
-}
-
-.tooltip-desc {
-  font-size: 12px;
-  color: #94a3b8;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  word-break: break-word;
 }
 
 .invalid-badge {

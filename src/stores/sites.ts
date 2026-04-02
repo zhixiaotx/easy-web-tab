@@ -394,7 +394,14 @@ export const useSitesStore = defineStore('sites', () => {
     const categoriesStore = useCategoriesStore()
     const enginesStore = useSearchEnginesStore()
     
-    const sitesList = sites.value.map(site => {
+    // sites 降序排序
+    const sortedSites = [...sites.value].sort((a, b) => {
+      const sortA = a.sort ?? 1
+      const sortB = b.sort ?? 1
+      return sortB - sortA
+    })
+    
+    const sitesList = sortedSites.map(site => {
       return `  - name: ${site.name}
     url: ${site.url}
     description: ${site.description || ''}
@@ -405,15 +412,17 @@ export const useSitesStore = defineStore('sites', () => {
     createdAt: ${site.createdAt || ''}`
     }).join('\n\n')
 
-    // 导出自定义分类
+    // 导出自定义分类 - 升序排序
     const customCats = categoriesStore.exportCustomCategories()
-    const categoriesSection = customCats.length > 0
-      ? `categories:\n${customCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
+    const sortedCats = [...customCats].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    const categoriesSection = sortedCats.length > 0
+      ? `categories:\n${sortedCats.map((c: { id: string; name: string; icon: string; sort?: number }) => `  - id: ${c.id}\n    name: ${c.name}\n    icon: ${c.icon}\n    sort: ${c.sort || 0}`).join('\n\n')}\n\n`
       : ''
 
-    // 导出搜索引擎
+    // 导出搜索引擎 - 升序排序
     const engines = enginesStore.exportEngines()
-    const enginesSection = `searchEngines:\n${engines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
+    const sortedEngines = [...engines].sort((a, b) => a.sort - b.sort)
+    const enginesSection = `searchEngines:\n${sortedEngines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
 
     const markdown = `---
 ${categoriesSection}${enginesSection}sites:

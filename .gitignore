@@ -29,6 +29,12 @@ coverage
 *.test.js
 *.spec.js
 
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
 # Misc
 *.md
 !README.md
+
+# Build artifacts
+nul

@@ -1,19 +1,29 @@
 ---
 categories:
+  - id: custom_1774756924959
+    name: 高伟达
+    icon: 🏛️
+    sort: 4
+
   - id: custom_1773890047269
     name: 人工智能
     icon: 💡
     sort: 6
 
-  - id: custom_1773899482306
-    name: 其他
-    icon: 📂
-    sort: 21
-
   - id: custom_1773899614797
     name: 教育培训
     icon: 📚
     sort: 7
+
+  - id: custom_1774837729627
+    name: 开源代码
+    icon: 💻
+    sort: 8
+
+  - id: life
+    name: 生活服务
+    icon: 🏠
+    sort: 9
 
   - id: news
     name: 新闻资讯
@@ -29,11 +39,6 @@ categories:
     name: 购物电商
     icon: 🛒
     sort: 12
-
-  - id: life
-    name: 生活服务
-    icon: 🏠
-    sort: 9
 
   - id: finance
     name: 金融理财
@@ -55,20 +60,15 @@ categories:
     icon: 🏥
     sort: 19
 
-  - id: custom_1774756924959
-    name: 高伟达
-    icon: 🏛️
-    sort: 4
-
   - id: custom_1774788526323
     name: 虚拟币（web3）
     icon: 🌊
     sort: 20
 
-  - id: custom_1774837729627
-    name: 开源代码
-    icon: 💻
-    sort: 8
+  - id: custom_1773899482306
+    name: 其他
+    icon: 📂
+    sort: 21
 
 searchEngines:
   - id: local
@@ -150,8 +150,89 @@ sites:
     category: tech
     tags: [项目托管, 搜索引擎]
     icon: https://github.com/favicon.ico
-    sort: 1
+    sort: 6
     createdAt: 2024-01-01T00:00:00.000Z
+
+  - name: DeepSeek
+    url: https://deepseek.com
+    description: DeepSeek | 深度求索 ! [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线
+    category: custom_1773890047269
+    tags: [大模型]
+    icon: https://deepseek.com/favicon.ico
+    sort: 6
+    createdAt: 2026-03-19T03:15:33.215Z
+
+  - name: 码云(gitee)
+    url: https://gitee.com
+    description: 面向企业提供一站式研发管理解决方案
+    category: tech
+    tags: [项目托管, 搜索引擎]
+    icon: https://gitee.com/favicon.ico
+    sort: 5
+    createdAt: 2026-03-19T08:06:02.081Z
+
+  - name: 哔哩哔哩
+    url: https://www.bilibili.com
+    description: 免费看高清视频 多端同步播放记录 发表弹幕/评论 热门番剧影视看不停 立即登录 首次使用？ 点我注册。不感兴趣 将减少此类内容推荐。不感兴趣 将减少此类内容推荐
+    category: video
+    tags: [教育]
+    icon: https://www.bilibili.com/favicon.ico
+    sort: 4
+    createdAt: 2026-03-19T07:53:05.443Z
+
+  - name: 百度网盘
+    url: https://pan.baidu.com
+    description: 为你电脑/手机中的文件提供云备份、预览、分享等服务，帮你更便捷安全地管理数据。。不止存储，数据管理更便捷。智能搜索，盘中文件一搜即有
+    category: office
+    tags: [网盘]
+    icon: /icons/baidu.svg
+    sort: 4
+    createdAt: 2026-03-19T08:52:57.850Z
+
+  - name: 百度一下，你就知道
+    url: https://www.baidu.com
+    description: 百度一下，你就知道
+    category: news
+    tags: [搜索引擎]
+    icon: https://www.baidu.com/favicon.ico
+    sort: 3
+    createdAt: 2026-03-19T00:32:06.601Z
+
+  - name: Halo - 建站工具
+    url: https://www.halo.run
+    description: Halo - 强大易用的开源建站工具  ](https://www.fit2cloud.com/)  了解飞致云旗下开源产品  [MaxKB 强大易用的企业级智能体平台]
+    category: tech
+    tags: [工具]
+    icon: https://www.halo.run/favicon.ico
+    sort: 3
+    createdAt: 2026-03-19T07:48:32.215Z
+
+  - name: 掘金
+    url: https://juejin.cn
+    description: 开发者社区，为程序员服务的技术社区
+    category: news
+    tags: [社区]
+    icon: 
+    sort: 2
+    createdAt: 2024-01-10T00:00:00.000Z
+
+  - name: 京东
+    url: https://www.jd.com
+    description: 京东购物平台
+    category: shopping
+    tags: [购物]
+    icon: https://www.jd.com/favicon.ico
+    sort: 2
+    createdAt: 2026-03-19T07:42:14.155Z
+
+  - name: 豆包
+    url: https://www.doubao.com
+    description: 
+    category: custom_1773890047269
+    tags: [大模型, 智能体]
+    icon: /icons/豆包.svg
+    sort: 2
+    createdAt: 2026-03-29T09:51:27.674Z
 
   - name: Stack Overflow
     url: https://stackoverflow.com
@@ -215,78 +296,6 @@ sites:
     icon: https://css-tricks.com/favicon.ico
     sort: 1
     createdAt: 2024-01-08T00:00:00.000Z
-
-  - name: 掘金
-    url: https://juejin.cn
-    description: 开发者社区，为程序员服务的技术社区
-    category: news
-    tags: [社区]
-    icon: 
-    sort: 1
-    createdAt: 2024-01-10T00:00:00.000Z
-
-  - name: 百度一下，你就知道
-    url: https://www.baidu.com
-    description: 百度一下，你就知道
-    category: news
-    tags: [搜索引擎]
-    icon: https://www.baidu.com/favicon.ico
-    sort: 1
-    createdAt: 2026-03-19T00:32:06.601Z
-
-  - name: DeepSeek
-    url: https://deepseek.com
-    description: DeepSeek | 深度求索 ! [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线
-    category: custom_1773890047269
-    tags: [大模型]
-    icon: https://deepseek.com/favicon.ico
-    sort: 1
-    createdAt: 2026-03-19T03:15:33.215Z
-
-  - name: 京东
-    url: https://www.jd.com
-    description: 京东购物平台
-    category: shopping
-    tags: [购物]
-    icon: https://www.jd.com/favicon.ico
-    sort: 1
-    createdAt: 2026-03-19T07:42:14.155Z
-
-  - name: Halo - 建站工具
-    url: https://www.halo.run
-    description: Halo - 强大易用的开源建站工具  ](https://www.fit2cloud.com/)  了解飞致云旗下开源产品  [MaxKB 强大易用的企业级智能体平台]
-    category: tech
-    tags: [工具]
-    icon: https://www.halo.run/favicon.ico
-    sort: 1
-    createdAt: 2026-03-19T07:48:32.215Z
-
-  - name: 哔哩哔哩
-    url: https://www.bilibili.com
-    description: 免费看高清视频 多端同步播放记录 发表弹幕/评论 热门番剧影视看不停 立即登录 首次使用？ 点我注册。不感兴趣 将减少此类内容推荐。不感兴趣 将减少此类内容推荐
-    category: video
-    tags: [教育]
-    icon: https://www.bilibili.com/favicon.ico
-    sort: 1
-    createdAt: 2026-03-19T07:53:05.443Z
-
-  - name: 百度网盘
-    url: https://pan.baidu.com
-    description: 为你电脑/手机中的文件提供云备份、预览、分享等服务，帮你更便捷安全地管理数据。。不止存储，数据管理更便捷。智能搜索，盘中文件一搜即有
-    category: office
-    tags: [网盘]
-    icon: /icons/baidu.svg
-    sort: 1
-    createdAt: 2026-03-19T08:52:57.850Z
-
-  - name: 码云(gitee)
-    url: https://gitee.com
-    description: 面向企业提供一站式研发管理解决方案
-    category: tech
-    tags: [项目托管, 搜索引擎]
-    icon: https://gitee.com/favicon.ico
-    sort: 1
-    createdAt: 2026-03-19T08:06:02.081Z
 
   - name: JAVA
     url: https://www.oracle.com/java
@@ -792,15 +801,6 @@ sites:
     sort: 1
     createdAt: 2026-03-29T09:50:19.138Z
 
-  - name: 豆包
-    url: https://www.doubao.com
-    description: 
-    category: custom_1773890047269
-    tags: [大模型, 智能体]
-    icon: /icons/豆包.svg
-    sort: 1
-    createdAt: 2026-03-29T09:51:27.674Z
-
   - name: 硅基流动
     url: https://siliconflow.cn
     description: 
@@ -1007,6 +1007,15 @@ sites:
     icon: /icons/iconfont.svg
     sort: 1
     createdAt: 2026-03-31T06:27:04.403Z
+
+  - name: obsidian
+    url: https://https://obsidian.md/.md
+    description: Obsidian 是一款基于本地 Markdown 文件的知识管理和笔记工具，所有数据存储在本地设备，你可完全掌控自己的数据。
+    category: office
+    tags: []
+    icon: 
+    sort: 1
+    createdAt: 2026-04-02T01:38:42.680Z
 ---
 
 # 我的书签

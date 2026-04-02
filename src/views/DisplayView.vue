@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSitesStore } from '../stores/sites'
 import SiteCard from '../components/SiteCard.vue'
@@ -28,6 +28,15 @@ const toggleAdmin = () => {
 useKeyboardShortcuts({
   onToggleAdmin: toggleAdmin
 })
+
+// 分页切换时只滚动网站区域
+const sitesGridRef = ref<HTMLElement | null>(null)
+const handlePageChange = () => {
+  const grid = sitesGridRef.value
+  if (grid) {
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
 </script>
 
 <template>
@@ -50,7 +59,7 @@ useKeyboardShortcuts({
 
     <TagFilter />
 
-    <main class="sites-grid">
+    <main ref="sitesGridRef" class="sites-grid">
       <SiteCard
         v-for="site in filteredSites"
         :key="site.url"
@@ -59,7 +68,7 @@ useKeyboardShortcuts({
       />
     </main>
 
-    <Pagination class="bottom-pagination" />
+    <Pagination class="bottom-pagination" @pageChange="handlePageChange" />
 
     <div v-if="store.filteredSites.length === 0" class="empty-state">
       <p>没有找到匹配的网站</p>

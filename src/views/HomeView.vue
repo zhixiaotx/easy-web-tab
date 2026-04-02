@@ -231,6 +231,15 @@ const triggerImport = () => {
   const input = document.getElementById('import-file') as HTMLInputElement
   input?.click()
 }
+
+// 分页切换时只滚动网站区域
+const sitesGridRef = ref<HTMLElement | null>(null)
+const handlePageChange = () => {
+  const grid = sitesGridRef.value
+  if (grid) {
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
 </script>
 
 <template>
@@ -276,7 +285,7 @@ const triggerImport = () => {
 
     <TagFilter />
 
-    <main class="sites-grid">
+    <main ref="sitesGridRef" class="sites-grid">
       <SiteCard
         v-for="site in filteredSites"
         :key="site.url"
@@ -296,7 +305,7 @@ const triggerImport = () => {
       />
     </main>
 
-    <Pagination class="bottom-pagination" />
+    <Pagination class="bottom-pagination" @pageChange="handlePageChange" />
 
     <div v-if="store.filteredSites.length === 0" class="empty-state">
       <p v-if="store.showOnlyInvalid">没有检测到无效链接 ✓</p>

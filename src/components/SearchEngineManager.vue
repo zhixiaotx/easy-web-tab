@@ -75,11 +75,6 @@ function handleDelete(id: string) {
   }
 }
 
-// 设置默认
-function handleSetDefault(id: string) {
-  store.setDefault(id)
-}
-
 // 移动排序
 function handleMove(id: string, direction: 'up' | 'down') {
   store.moveEngine(id, direction)
@@ -196,12 +191,6 @@ function truncateUrl(url: string, maxLength = 40) {
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
               <button 
-                v-if="!engine.isDefault && engine.id !== 'local'" 
-                class="btn-icon set-default" 
-                @click="handleSetDefault(engine.id)"
-                title="设为默认"
-              >⭐</button>
-              <button 
                 v-if="engine.id !== 'local'"
                 class="btn-icon" 
                 @click="startEditBuiltIn(engine)" 
@@ -261,12 +250,6 @@ function truncateUrl(url: string, maxLength = 40) {
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
-              <button 
-                v-if="!engine.isDefault" 
-                class="btn-icon set-default" 
-                @click="handleSetDefault(engine.id)"
-                title="设为默认"
-              >⭐</button>
               <button class="btn-icon" @click="startEdit(engine)">✏️</button>
               <button class="btn-icon delete" @click="handleDelete(engine.id)">🗑️</button>
             </template>

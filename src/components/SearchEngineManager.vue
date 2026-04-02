@@ -260,6 +260,7 @@ function truncateUrl(url: string, maxLength = 40) {
                 {{ engine.name }}
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
               </span>
+              <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
               <button 
                 v-if="!engine.isDefault" 
                 class="btn-icon set-default" 

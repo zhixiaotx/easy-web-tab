@@ -206,6 +206,8 @@ function getCategoryName(categoryId: string): string {
 
 // 打开网站
 function openSite(url: string) {
+  // 记录点击次数（使用频率排序）
+  sitesStore.incrementClick(url)
   window.open(url, '_blank')
   addToHistory(searchQuery.value)
   showHistory.value = false

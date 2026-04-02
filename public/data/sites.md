@@ -144,23 +144,23 @@ searchEngines:
     sort: 12
 
 sites:
-  - name: GitHub
-    url: https://github.com
-    description: 全球最大的代码托管平台，提供 Git 仓库托管和协作开发工具
-    category: tech
-    tags: [项目托管, 搜索引擎]
-    icon: https://github.com/favicon.ico
-    sort: 6
-    createdAt: 2024-01-01T00:00:00.000Z
-
   - name: DeepSeek
     url: https://deepseek.com
     description: DeepSeek | 深度求索 ! [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线
     category: custom_1773890047269
     tags: [大模型]
     icon: https://deepseek.com/favicon.ico
-    sort: 6
+    sort: 9
     createdAt: 2026-03-19T03:15:33.215Z
+
+  - name: GitHub
+    url: https://github.com
+    description: 全球最大的代码托管平台，提供 Git 仓库托管和协作开发工具
+    category: tech
+    tags: [项目托管, 搜索引擎]
+    icon: https://github.com/favicon.ico
+    sort: 8
+    createdAt: 2024-01-01T00:00:00.000Z
 
   - name: 码云(gitee)
     url: https://gitee.com
@@ -189,6 +189,15 @@ sites:
     sort: 4
     createdAt: 2026-03-19T08:52:57.850Z
 
+  - name: 豆包
+    url: https://www.doubao.com
+    description: 
+    category: custom_1773890047269
+    tags: [大模型, 智能体]
+    icon: /icons/豆包.svg
+    sort: 4
+    createdAt: 2026-03-29T09:51:27.674Z
+
   - name: 百度一下，你就知道
     url: https://www.baidu.com
     description: 百度一下，你就知道
@@ -207,6 +216,15 @@ sites:
     sort: 3
     createdAt: 2026-03-19T07:48:32.215Z
 
+  - name: Iconfont
+    url: https://www.iconfont.cn/
+    description: 阿里巴巴矢量图标库
+    category: tech
+    tags: [图标]
+    icon: /icons/iconfont.svg
+    sort: 3
+    createdAt: 2026-03-31T06:27:04.403Z
+
   - name: 掘金
     url: https://juejin.cn
     description: 开发者社区，为程序员服务的技术社区
@@ -221,18 +239,9 @@ sites:
     description: 京东购物平台
     category: shopping
     tags: [购物]
-    icon: https://www.jd.com/favicon.ico
+    icon: /icons/jd.svg
     sort: 2
     createdAt: 2026-03-19T07:42:14.155Z
-
-  - name: 豆包
-    url: https://www.doubao.com
-    description: 
-    category: custom_1773890047269
-    tags: [大模型, 智能体]
-    icon: /icons/豆包.svg
-    sort: 2
-    createdAt: 2026-03-29T09:51:27.674Z
 
   - name: Stack Overflow
     url: https://stackoverflow.com
@@ -999,21 +1008,12 @@ sites:
     sort: 1
     createdAt: 2026-03-31T03:13:06.497Z
 
-  - name: Iconfont
-    url: https://www.iconfont.cn/
-    description: 阿里巴巴矢量图标库
-    category: tech
-    tags: [图标]
-    icon: /icons/iconfont.svg
-    sort: 1
-    createdAt: 2026-03-31T06:27:04.403Z
-
   - name: obsidian
     url: https://https://obsidian.md/.md
     description: Obsidian 是一款基于本地 Markdown 文件的知识管理和笔记工具，所有数据存储在本地设备，你可完全掌控自己的数据。
     category: office
     tags: []
-    icon: 
+    icon: /icons/obsidian.svg
     sort: 1
     createdAt: 2026-04-02T01:38:42.680Z
 ---

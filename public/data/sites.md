@@ -89,59 +89,35 @@ searchEngines:
     isDefault: false
     sort: 2
 
-  - id: sogou
-    name: 搜狗
-    url: https://www.sogou.com/web?query=
+  - id: github
+    name: GitHub
+    url: https://github.com/search?q=
     isDefault: false
     sort: 4
-
-  - id: 360
-    name: 360搜索
-    url: https://www.so.com/s?q=
-    isDefault: false
-    sort: 5
-
-  - id: quark
-    name: 夸克
-    url: https://quark.cn/s?query=
-    isDefault: false
-    sort: 6
-
-  - id: zhihu
-    name: 知乎
-    url: https://www.zhihu.com/search?type=content&q=
-    isDefault: false
-    sort: 7
 
   - id: bilibili
     name: 哔哩哔哩
     url: https://search.bilibili.com/all?keyword=
     isDefault: false
+    sort: 5
+
+  - id: zhihu
+    name: 知乎
+    url: https://www.zhihu.com/search?type=content&q=
+    isDefault: false
+    sort: 6
+
+  - id: sogou
+    name: 搜狗
+    url: https://www.sogou.com/web?query=
+    isDefault: false
     sort: 8
 
-  - id: github
-    name: GitHub
-    url: https://github.com/search?q=
+  - id: 360
+    name: 360搜索
+    url: https://www.so.com/s?q=
     isDefault: false
     sort: 9
-
-  - id: translate
-    name: 翻译
-    url: https://translate.google.com/?sl=auto&tl=zh-CN&text=
-    isDefault: false
-    sort: 10
-
-  - id: kimi
-    name: Kimi
-    url: https://kimi.moonshot.cn/?q=
-    isDefault: false
-    sort: 11
-
-  - id: deepseek
-    name: DeepSeek
-    url: https://www.deepseek.com/search?q=
-    isDefault: false
-    sort: 12
 
 sites:
   - name: DeepSeek
@@ -150,8 +126,17 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: https://deepseek.com/favicon.ico
-    sort: 9
+    sort: 15
     createdAt: 2026-03-19T03:15:33.215Z
+
+  - name: MyOpenclaw
+    url: http://127.0.0.1:18789/chat?session=agent%3Amain%3Amain
+    description: 我的私人智能体
+    category: custom_1773890047269
+    tags: [智能体]
+    icon: /icons/openclaws.svg
+    sort: 15
+    createdAt: 2026-03-20T14:20:56.409Z
 
   - name: GitHub
     url: https://github.com
@@ -159,8 +144,17 @@ sites:
     category: tech
     tags: [项目托管, 搜索引擎]
     icon: https://github.com/favicon.ico
-    sort: 8
+    sort: 11
     createdAt: 2024-01-01T00:00:00.000Z
+
+  - name: Iconfont
+    url: https://www.iconfont.cn/
+    description: 阿里巴巴矢量图标库
+    category: tech
+    tags: [图标]
+    icon: /icons/iconfont.svg
+    sort: 9
+    createdAt: 2026-03-31T06:27:04.403Z
 
   - name: 码云(gitee)
     url: https://gitee.com
@@ -168,8 +162,35 @@ sites:
     category: tech
     tags: [项目托管, 搜索引擎]
     icon: https://gitee.com/favicon.ico
-    sort: 5
+    sort: 7
     createdAt: 2026-03-19T08:06:02.081Z
+
+  - name: 豆包
+    url: https://www.doubao.com
+    description: 
+    category: custom_1773890047269
+    tags: [大模型, 智能体]
+    icon: /icons/豆包.svg
+    sort: 5
+    createdAt: 2026-03-29T09:51:27.674Z
+
+  - name: ClawHub
+    url: https://clawhub.ai/
+    description: 龙虾光。代理右。上传代理技能包，像npm一样进行版本管理，并通过向量使其可搜索。无需审核，仅凭信号。搜索技能。版本化，随时可回滚。
+    category: custom_1773890047269
+    tags: [技能]
+    icon: /icons/龙虾.svg
+    sort: 5
+    createdAt: 2026-03-20T01:08:57.076Z
+
+  - name: 飞书
+    url: https://www.feishu.cn
+    description: 将团队、工具和工作流程整合于一处——助力高效工作、降低成本、保持同步。
+    category: office
+    tags: [文档]
+    icon: https://www.feishu.cn/favicon.ico
+    sort: 5
+    createdAt: 2026-03-29T03:23:59.609Z
 
   - name: 哔哩哔哩
     url: https://www.bilibili.com
@@ -180,25 +201,34 @@ sites:
     sort: 4
     createdAt: 2026-03-19T07:53:05.443Z
 
-  - name: 百度网盘
-    url: https://pan.baidu.com
-    description: 为你电脑/手机中的文件提供云备份、预览、分享等服务，帮你更便捷安全地管理数据。。不止存储，数据管理更便捷。智能搜索，盘中文件一搜即有
+  - name: Trae
+    url: https://www.trae.com.cn
+    description: 国内首款 AI 原生 IDE，专为中国开发者打造，让 AI 深度融入编程，带来比插件更流畅、精准的开发体验。
+    category: tech
+    tags: [工具]
+    icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
+    sort: 4
+    createdAt: 2026-03-20T08:45:12.609Z
+
+  - name: obsidian
+    url: https://https://obsidian.md/.md
+    description: Obsidian 是一款基于本地 Markdown 文件的知识管理和笔记工具，所有数据存储在本地设备，你可完全掌控自己的数据。
     category: office
-    tags: [网盘]
-    icon: /icons/baidu.svg
+    tags: []
+    icon: /icons/obsidian.svg
     sort: 4
-    createdAt: 2026-03-19T08:52:57.850Z
+    createdAt: 2026-04-02T01:38:42.680Z
 
-  - name: 豆包
-    url: https://www.doubao.com
-    description: 
+  - name: OpenClaw
+    url: https://openclaw.ai/
+    description: OpenClaw — The AI that actually does things. Your personal assistant on any platform.
     category: custom_1773890047269
-    tags: [大模型, 智能体]
-    icon: /icons/豆包.svg
+    tags: [智能体]
+    icon: /icons/openclaw (1).svg
     sort: 4
-    createdAt: 2026-03-29T09:51:27.674Z
+    createdAt: 2026-04-02T06:03:34.464Z
 
-  - name: 百度一下，你就知道
+  - name: 百度
     url: https://www.baidu.com
     description: 百度一下，你就知道
     category: news
@@ -207,23 +237,68 @@ sites:
     sort: 3
     createdAt: 2026-03-19T00:32:06.601Z
 
-  - name: Halo - 建站工具
+  - name: Halo
     url: https://www.halo.run
-    description: Halo - 强大易用的开源建站工具  ](https://www.fit2cloud.com/)  了解飞致云旗下开源产品  [MaxKB 强大易用的企业级智能体平台]
+    description: Halo - 强大易用的开源建站工具 ](https://www.fit2cloud.com/) 了解飞致云旗下开源产品 [MaxKB 强大易用的企业级智能体平台]
     category: tech
     tags: [工具]
     icon: https://www.halo.run/favicon.ico
     sort: 3
     createdAt: 2026-03-19T07:48:32.215Z
 
-  - name: Iconfont
-    url: https://www.iconfont.cn/
-    description: 阿里巴巴矢量图标库
+  - name: Spring
+    url: https://spring.io
+    description: Spring Framework、Spring Boot、Spring Cloud等生态的官方手册。
     category: tech
-    tags: [图标]
-    icon: /icons/iconfont.svg
+    tags: []
+    icon: /icons/spring.svg
     sort: 3
-    createdAt: 2026-03-31T06:27:04.403Z
+    createdAt: 2026-03-20T00:31:56.464Z
+
+  - name: JetBrains
+    url: https://www.jetbrains.com
+    description: 为每种语言和技术栈量身定制的 IDE
+    category: tech
+    tags: [工具]
+    icon: /icons/jetbrains.ico
+    sort: 3
+    createdAt: 2026-03-20T08:33:42.380Z
+
+  - name: 阿里云
+    url: https://www.aliyun.com
+    description: Models Overview Products Solutions Pricing Resources Partners Support。See all results for ""。Everything You Need in One
+    category: tech
+    tags: []
+    icon: /icons/阿里云官方-中文LOGO.svg
+    sort: 3
+    createdAt: 2026-03-20T08:36:02.069Z
+
+  - name: 抖音
+    url: https://www.douyin.com
+    description: 抖音
+    category: video
+    tags: [购物]
+    icon: /icons/抖音.svg
+    sort: 3
+    createdAt: 2026-03-20T08:37:54.510Z
+
+  - name: 阿里云盘
+    url: https://www.alipan.com
+    description: 阿里云盘是一款速度快、不打扰、够安全、易于分享的网盘，你可以在这里存储、管理和探索内容，尽情打造丰富的数字世界。。通过各类强大的备份能力和独特的数据加密技术，让您的文件安全存在云盘。。各类备份能力，让您的文件丝滑「搬」上云盘
+    category: office
+    tags: [网盘]
+    icon: /icons/browser.svg
+    sort: 3
+    createdAt: 2026-03-20T08:39:55.352Z
+
+  - name: 百度网盘
+    url: https://pan.baidu.com
+    description: 为你电脑/手机中的文件提供云备份、预览、分享等服务，帮你更便捷安全地管理数据。。不止存储，数据管理更便捷。智能搜索，盘中文件一搜即有
+    category: office
+    tags: [网盘]
+    icon: /icons/百度云盘.svg
+    sort: 2
+    createdAt: 2026-03-19T08:52:57.850Z
 
   - name: 掘金
     url: https://juejin.cn
@@ -249,8 +324,44 @@ sites:
     category: tech
     tags: [问答]
     icon: https://stackoverflow.com/favicon.ico
-    sort: 1
+    sort: 2
     createdAt: 2024-01-02T00:00:00.000Z
+
+  - name: Vite
+    url: https://vitejs.dev
+    description: 下一代前端构建工具，快速、简洁、高效
+    category: tech
+    tags: [前端]
+    icon: /icons/vite-vite-logo.svg
+    sort: 2
+    createdAt: 2024-01-04T00:00:00.000Z
+
+  - name: 智谱
+    url: https://www.zhipuai.cn
+    description: 智谱是由清华大学计算机系技术成果转化而来的公司，致力于打造新一代认知智能通用模型。公司合作研发了双语千亿级超大规模预训练模型GLM-130B，并构建了高精度通用知识图谱，形成数据与知识双轮驱动的认知引擎，基于此模型打造了ChatGLM（chatglm.cn）。此外，智谱还推出了认知大模型平台Bigmodel.ai，包括CodeGeeX和CogView等产品，提供智能API服务，链接物理世界的亿级用户、赋能元宇宙数字人、成为具身机器人的基座，赋予机器像人一样“思考”的能力。
+    category: custom_1773890047269
+    tags: [大模型]
+    icon: /icons/智谱.svg
+    sort: 2
+    createdAt: 2026-03-20T08:42:36.444Z
+
+  - name: 贵州生育网上登记服务
+    url: https://sydj.wjw.guizhou.gov.cn
+    description: 贵州生育网上登记服务
+    category: government
+    tags: []
+    icon: /icons/计划生育服务站.svg
+    sort: 2
+    createdAt: 2026-03-29T04:26:23.982Z
+
+  - name: npm
+    url: https://www.npmjs.com
+    description: Node.js 包管理器，全球最大的 JavaScript 包仓库
+    category: tech
+    tags: [前端, 工具]
+    icon: /icons/npm.svg
+    sort: 2
+    createdAt: 2024-01-07T00:00:00.000Z
 
   - name: MDN
     url: https://developer.mozilla.org
@@ -260,15 +371,6 @@ sites:
     icon: https://developer.mozilla.org/favicon.ico
     sort: 1
     createdAt: 2024-01-03T00:00:00.000Z
-
-  - name: Vite
-    url: https://vitejs.dev
-    description: 下一代前端构建工具，快速、简洁、高效
-    category: tech
-    tags: [前端]
-    icon: /icons/vue.svg
-    sort: 1
-    createdAt: 2024-01-04T00:00:00.000Z
 
   - name: Vue
     url: https://vuejs.org
@@ -284,18 +386,9 @@ sites:
     description: JavaScript 的超集，提供类型系统
     category: tech
     tags: [前端]
-    icon: https://www.typescriptlang.org/favicon.ico
+    icon: /icons/typescript.svg
     sort: 1
     createdAt: 2024-01-06T00:00:00.000Z
-
-  - name: npm
-    url: https://www.npmjs.com
-    description: Node.js 包管理器，全球最大的 JavaScript 包仓库
-    category: tech
-    tags: [前端, 工具]
-    icon: /icons/npm.svg
-    sort: 1
-    createdAt: 2024-01-07T00:00:00.000Z
 
   - name: CSS-Tricks
     url: https://css-tricks.com
@@ -311,7 +404,7 @@ sites:
     description: Java Software |Oracle
     category: tech
     tags: []
-    icon: https://www.oracle.com/favicon.ico
+    icon: /icons/java.ico
     sort: 1
     createdAt: 2026-03-20T00:26:10.192Z
 
@@ -324,39 +417,21 @@ sites:
     sort: 1
     createdAt: 2026-03-20T00:30:17.746Z
 
-  - name: Spring
-    url: https://spring.io
-    description: Spring Framework、Spring Boot、Spring Cloud等生态的官方手册。
-    category: tech
-    tags: []
-    icon: https://spring.io/favicon.ico
-    sort: 1
-    createdAt: 2026-03-20T00:31:56.464Z
-
   - name: Maven Central
     url: https://central.sonatype.com
     description: Java最常用的依赖仓库
     category: tech
     tags: []
-    icon: https://central.sonatype.com/favicon.ico
+    icon: /icons/maven.svg
     sort: 1
     createdAt: 2026-03-20T00:33:43.089Z
-
-  - name: ClawHub
-    url: https://clawhub.ai/
-    description: 龙虾光。代理右。上传代理技能包，像npm一样进行版本管理，并通过向量使其可搜索。无需审核，仅凭信号。搜索技能。版本化，随时可回滚。
-    category: custom_1773890047269
-    tags: [技能]
-    icon: /icons/龙虾.svg
-    sort: 1
-    createdAt: 2026-03-20T01:08:57.076Z
 
   - name: Apache SkyWalking
     url: https://skywalking.apache.org
     description: End-to-end distributed tracing. Service topology analysis, service-centric observability and APIs dashboards.。Java, .Net Core, PHP, NodeJS, Golang, LUA, Rust, C++, Client JavaScript and Python agents with active development and maintenance.。Rover agent works as a monitor and profiler powered by eBPF...
     category: tech
     tags: [工具]
-    icon: https://skywalking.apache.org/favicon.ico
+    icon: /icons/apache_skywalking.ico
     sort: 1
     createdAt: 2026-03-20T08:23:14.855Z
 
@@ -378,77 +453,14 @@ sites:
     sort: 1
     createdAt: 2026-03-20T08:32:11.573Z
 
-  - name: JetBrains
-    url: https://www.jetbrains.com
-    description: 为每种语言和技术栈量身定制的 IDE
-    category: tech
-    tags: [工具]
-    icon: https://www.jetbrains.com/favicon.ico
-    sort: 1
-    createdAt: 2026-03-20T08:33:42.380Z
-
-  - name: 阿里云
-    url: https://www.aliyun.com
-    description: Models Overview Products Solutions Pricing Resources Partners Support。See all results for ""。Everything You Need in One
-    category: tech
-    tags: []
-    icon: /icons/阿里云官方-中文LOGO.svg
-    sort: 1
-    createdAt: 2026-03-20T08:36:02.069Z
-
-  - name: 抖音
-    url: https://www.douyin.com
-    description: 抖音
-    category: video
-    tags: [购物]
-    icon: /icons/抖音.svg
-    sort: 1
-    createdAt: 2026-03-20T08:37:54.510Z
-
-  - name: 阿里云盘
-    url: https://www.alipan.com
-    description: 阿里云盘是一款速度快、不打扰、够安全、易于分享的网盘，你可以在这里存储、管理和探索内容，尽情打造丰富的数字世界。。通过各类强大的备份能力和独特的数据加密技术，让您的文件安全存在云盘。。各类备份能力，让您的文件丝滑「搬」上云盘
-    category: office
-    tags: [网盘]
-    icon: /icons/browser.svg
-    sort: 1
-    createdAt: 2026-03-20T08:39:55.352Z
-
-  - name: 智谱
-    url: https://www.zhipuai.cn
-    description: 智谱是由清华大学计算机系技术成果转化而来的公司，致力于打造新一代认知智能通用模型。公司合作研发了双语千亿级超大规模预训练模型GLM-130B，并构建了高精度通用知识图谱，形成数据与知识双轮驱动的认知引擎，基于此模型打造了ChatGLM（chatglm.cn）。此外，智谱还推出了认知大模型平台Bigmodel.ai，包括CodeGeeX和CogView等产品，提供智能API服务，链接物理世界的亿级用户、赋能元宇宙数字人、成为具身机器人的基座，赋予机器像人一样“思考”的能力。
-    category: custom_1773890047269
-    tags: [大模型]
-    icon: /icons/zhipu.svg
-    sort: 1
-    createdAt: 2026-03-20T08:42:36.444Z
-
-  - name: Trae
-    url: https://www.trae.com.cn
-    description: 国内首款 AI 原生 IDE，专为中国开发者打造，让 AI 深度融入编程，带来比插件更流畅、精准的开发体验。
-    category: tech
-    tags: [工具]
-    icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
-    sort: 1
-    createdAt: 2026-03-20T08:45:12.609Z
-
   - name: Redis
     url: https://redis.io
     description: Build AI apps with more speed, memory, and accuracy.。Trusted by fast companies across the globe。Redis for AI
     category: tech
     tags: [数据库]
-    icon: https://redis.io/wp-content/themes/wpx/assets/images/favicons/favicon-32x32.png?v=1720078588
+    icon: /icons/redis.svg
     sort: 1
     createdAt: 2026-03-20T08:49:07.270Z
-
-  - name: Openclaw
-    url: http://127.0.0.1:18789/chat?session=agent%3Amain%3Amain
-    description: 我的私人智能体
-    category: custom_1773890047269
-    tags: [智能体]
-    icon: /icons/龙虾.svg
-    sort: 1
-    createdAt: 2026-03-20T14:20:56.409Z
 
   - name: OpenClaw
     url: https://docs.openclaw.ai/zh-CN
@@ -459,12 +471,12 @@ sites:
     sort: 1
     createdAt: 2026-03-28T08:07:39.719Z
 
-  - name: 微信，是一个生活方式
+  - name: 微信
     url: https://weixin.qq.com
     description: 微信官网
     category: social
     tags: []
-    icon: /icons/wechat.svg
+    icon: /icons/微信.svg
     sort: 1
     createdAt: 2026-03-29T02:35:09.724Z
 
@@ -500,7 +512,7 @@ sites:
     description: Ctrl+V 粘贴图片快速图搜。Ctrl+V 粘贴图片到此处。天猫商城，理想生活的起点，在这里时尚潮流与实用好物齐聚，品质与优惠并行。无论你是追求时尚的弄潮儿，还是注重生活品质的居家达人，天猫都能为你打造专属的理想生活。
     category: shopping
     tags: [购物]
-    icon: https://www.tmall.com/favicon.ico
+    icon: /icons/天猫.svg
     sort: 1
     createdAt: 2026-03-29T02:40:46.059Z
 
@@ -509,7 +521,7 @@ sites:
     description: 美团 - 帮大家吃得更好，生活更好 https://p0.meituan.net/smartvenus/519f64f1d51d8470ecad1f9b5fce83591696.png 帮大家吃得更好，生活更好。。美团以“零售 + 科技”的战略 践行“帮大家吃得更好，生活更好”的公司使命。。自2010年3月成立以来，
     category: shopping
     tags: [购物, 外卖]
-    icon: https://www.meituan.com/favicon.ico
+    icon: /icons/美团.svg
     sort: 1
     createdAt: 2026-03-29T02:41:49.046Z
 
@@ -545,7 +557,7 @@ sites:
     description: 人民日报
     category: government
     tags: []
-    icon: https://www.people.com.cn/favicon.ico
+    icon: /icons/人民网.svg
     sort: 1
     createdAt: 2026-03-29T03:21:22.091Z
 
@@ -554,18 +566,9 @@ sites:
     description: 小红书
     category: video
     tags: []
-    icon: https://www.xiaohongshu.com/favicon.ico
+    icon: /icons/小红书.svg
     sort: 1
     createdAt: 2026-03-29T03:22:02.358Z
-
-  - name: 飞书
-    url: https://www.feishu.cn
-    description: 将团队、工具和工作流程整合于一处——助力高效工作、降低成本、保持同步。
-    category: office
-    tags: [文档]
-    icon: https://www.feishu.cn/favicon.ico
-    sort: 1
-    createdAt: 2026-03-29T03:23:59.609Z
 
   - name: 闲鱼
     url: https://www.goofish.com
@@ -590,7 +593,7 @@ sites:
     description: 酒店预订,机票预订查询,旅游度假,商旅管理
     category: travel
     tags: []
-    icon: https://www.ctrip.com/favicon.ico
+    icon: /icons/携程.svg
     sort: 1
     createdAt: 2026-03-29T03:29:44.959Z
 
@@ -635,7 +638,7 @@ sites:
     description: 千万正版音乐海量无损曲库新歌热歌天天畅听的高品质音乐平台！
     category: video
     tags: [音乐]
-    icon: /icons/aws.svg
+    icon: /icons/QQ音乐.svg
     sort: 1
     createdAt: 2026-03-29T03:35:21.975Z
 
@@ -707,7 +710,7 @@ sites:
     description: 工时系统
     category: custom_1774756924959
     tags: []
-    icon: http://pm.git.com.cn/favicon.ico
+    icon: /icons/高伟达LOGO.svg
     sort: 1
     createdAt: 2026-03-29T04:04:38.374Z
 
@@ -725,18 +728,9 @@ sites:
     description: 项目管理
     category: custom_1774756924959
     tags: []
-    icon: http://gain.git.com.cn/favicon.ico
+    icon: /icons/高伟达LOGO.svg
     sort: 1
     createdAt: 2026-03-29T04:08:08.344Z
-
-  - name: 贵州生育网上登记服务
-    url: https://sydj.wjw.guizhou.gov.cn
-    description: 贵州生育网上登记服务
-    category: government
-    tags: []
-    icon: 
-    sort: 1
-    createdAt: 2026-03-29T04:26:23.982Z
 
   - name: opencode
     url: https://opencode.ai
@@ -806,7 +800,7 @@ sites:
     description: 
     category: custom_1773890047269
     tags: [大模型]
-    icon: /icons/kimi.svg
+    icon: /icons/logok.svg
     sort: 1
     createdAt: 2026-03-29T09:50:19.138Z
 
@@ -815,7 +809,7 @@ sites:
     description: 
     category: custom_1773890047269
     tags: [开发平台]
-    icon: /icons/siliconflow.svg
+    icon: /icons/硅基流动.svg
     sort: 1
     createdAt: 2026-03-29T09:59:44.564Z
 
@@ -842,7 +836,7 @@ sites:
     description: 【XXL开源社区】已经发布一系列开源软件产品，涉及分布式、基础中间件、效率工具等多个领域。 包含项目有：任务调度、服务管理(配置中心、注册中心)、RPC服务框架、消息队列、单点登录框架、API管理、爬虫、Java工具类库、快速开发平台……等等。 欢迎体验！
     category: tech
     tags: [工具]
-    icon: https://www.xuxueli.com/./favicon.ico
+    icon: /icons/xxl-job-copy.svg
     sort: 1
     createdAt: 2026-03-29T13:02:37.615Z
 
@@ -851,7 +845,7 @@ sites:
     description: 
     category: tech
     tags: [数据库]
-    icon: /icons/elasticsearch.svg
+    icon: /icons/elastic.svg
     sort: 1
     createdAt: 2026-03-29T13:07:08.594Z
 
@@ -1009,13 +1003,22 @@ sites:
     createdAt: 2026-03-31T03:13:06.497Z
 
   - name: obsidian
-    url: https://https://obsidian.md/.md
-    description: Obsidian 是一款基于本地 Markdown 文件的知识管理和笔记工具，所有数据存储在本地设备，你可完全掌控自己的数据。
-    category: office
-    tags: []
-    icon: /icons/obsidian.svg
+    url: https://github.com/obsidianmd/obsidian-releases
+    description: Obsidian 社区插件和主题列表的仓库。
+    category: custom_1774837729627
+    tags: [插件]
+    icon: /icons/github.svg
     sort: 1
-    createdAt: 2026-04-02T01:38:42.680Z
+    createdAt: 2026-04-02T02:57:00.769Z
+
+  - name: OpenSpec
+    url: https://github.com/Fission-AI/OpenSpec
+    description: 
+    category: custom_1774837729627
+    tags: []
+    icon: /icons/github.svg
+    sort: 1
+    createdAt: 2026-04-02T03:24:44.093Z
 ---
 
 # 我的书签

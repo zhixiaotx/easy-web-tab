@@ -75,14 +75,16 @@ function handleDelete(id: string) {
   }
 }
 
-// 设置默认
-function handleSetDefault(id: string) {
-  store.setDefault(id)
-}
-
 // 移动排序
 function handleMove(id: string, direction: 'up' | 'down') {
   store.moveEngine(id, direction)
+}
+
+// 恢复默认引擎
+function handleReset() {
+  if (confirm('确定要恢复默认搜索引擎吗？当前自定义引擎将被覆盖。')) {
+    store.resetToDefault()
+  }
 }
 
 // 开始编辑内置引擎 URL
@@ -158,6 +160,7 @@ function truncateUrl(url: string, maxLength = 40) {
         <!-- 内置引擎 -->
         <div class="engine-section">
           <h3>内置引擎 (不可删除)</h3>
+          <button class="btn-reset" @click="handleReset">恢复默认引擎</button>
           <div
             v-for="engine in store.builtInEngines"
             :key="engine.id"
@@ -187,12 +190,6 @@ function truncateUrl(url: string, maxLength = 40) {
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
-              <button 
-                v-if="!engine.isDefault && engine.id !== 'local'" 
-                class="btn-icon set-default" 
-                @click="handleSetDefault(engine.id)"
-                title="设为默认"
-              >⭐</button>
               <button 
                 v-if="engine.id !== 'local'"
                 class="btn-icon" 
@@ -252,12 +249,7 @@ function truncateUrl(url: string, maxLength = 40) {
                 {{ engine.name }}
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
               </span>
-              <button 
-                v-if="!engine.isDefault" 
-                class="btn-icon set-default" 
-                @click="handleSetDefault(engine.id)"
-                title="设为默认"
-              >⭐</button>
+              <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
               <button class="btn-icon" @click="startEdit(engine)">✏️</button>
               <button class="btn-icon delete" @click="handleDelete(engine.id)">🗑️</button>
             </template>
@@ -516,5 +508,20 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-icon.set-default:hover {
   color: #fbbf24;
+}
+
+.btn-reset {
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-reset:hover {
+  background: #2563eb;
 }
 </style>

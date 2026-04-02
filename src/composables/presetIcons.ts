@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-04-01T07:04:46.289Z
+ * 生成时间: 2026-04-02T02:38:16.931Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -177,6 +177,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'GitCode-logo', label: 'GitCode-logo', ext: 'svg', category: '其他' },
   { name: 'iconfont', label: 'Iconfont', ext: 'svg', category: '其他' },
   { name: 'Motrix', label: 'Motrix', ext: 'svg', category: '其他' },
+  { name: 'obsidian', label: 'Obsidian', ext: 'svg', category: '其他' },
   { name: 'openclaw', label: 'Openclaw', ext: 'svg', category: '其他' },
   { name: 'qq轻聊', label: 'qq轻聊', ext: 'svg', category: '其他' },
   { name: 'QQ邮箱', label: 'QQ邮箱', ext: 'svg', category: '其他' },

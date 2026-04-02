@@ -12,26 +12,27 @@ export interface SearchEngine {
 
 const STORAGE_KEY = 'user-search-engines'
 const BUILT_IN_OVERRIDES_KEY = 'built-in-engine-overrides'
+const BUILT_IN_OVERRIDES_STORAGE_KEY = 'built-in-engine-default'
 
 // 默认内置搜索引擎 (不可删除)
 const BUILT_IN_ENGINES: SearchEngine[] = [
   { id: 'local', name: '本地搜索', url: '', isDefault: false, sort: 0, isBuiltIn: true },
   { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd=', isDefault: true, sort: 1, isBuiltIn: true },
+  { id: 'bing', name: '必应', url: 'https://www.bing.com/search?q=', isDefault: false, sort: 2, isBuiltIn: true },
 ]
 
-// 默认搜索引擎 (将被迁移到自定义)
+// 默认自定义搜索引擎
 const DEFAULT_ENGINES: SearchEngine[] = [
-  { id: 'bing', name: '必应', url: 'https://www.bing.com/search?q=', isDefault: false, sort: 3 },
-  { id: 'google', name: 'Google', url: 'https://www.google.com/search?q=', isDefault: false, sort: 4 },
-  { id: 'sogou', name: '搜狗', url: 'https://www.sogou.com/web?query=', isDefault: false, sort: 5 },
-  { id: '360', name: '360搜索', url: 'https://www.so.com/s?q=', isDefault: false, sort: 6 },
-  { id: 'quark', name: '夸克', url: 'https://quark.cn/s?query=', isDefault: false, sort: 7 },
-  { id: 'zhihu', name: '知乎', url: 'https://www.zhihu.com/search?type=content&q=', isDefault: false, sort: 8 },
-  { id: 'bilibili', name: '哔哩哔哩', url: 'https://search.bilibili.com/all?keyword=', isDefault: false, sort: 9 },
-  { id: 'github', name: 'GitHub', url: 'https://github.com/search?q=', isDefault: false, sort: 10 },
-  { id: 'translate', name: '翻译', url: 'https://translate.google.com/?sl=auto&tl=zh-CN&text=', isDefault: false, sort: 11 },
-  { id: 'kimi', name: 'Kimi', url: 'https://kimi.moonshot.cn/?q=', isDefault: false, sort: 12 },
-  { id: 'deepseek', name: 'DeepSeek', url: 'https://www.deepseek.com/search?q=', isDefault: false, sort: 13 },
+  { id: 'google', name: 'Google', url: 'https://www.google.com/search?q=', isDefault: false, sort: 3 },
+  { id: 'sogou', name: '搜狗', url: 'https://www.sogou.com/web?query=', isDefault: false, sort: 4 },
+  { id: '360', name: '360搜索', url: 'https://www.so.com/s?q=', isDefault: false, sort: 5 },
+  { id: 'quark', name: '夸克', url: 'https://quark.cn/s?query=', isDefault: false, sort: 6 },
+  { id: 'zhihu', name: '知乎', url: 'https://www.zhihu.com/search?type=content&q=', isDefault: false, sort: 7 },
+  { id: 'bilibili', name: '哔哩哔哩', url: 'https://search.bilibili.com/all?keyword=', isDefault: false, sort: 8 },
+  { id: 'github', name: 'GitHub', url: 'https://github.com/search?q=', isDefault: false, sort: 9 },
+  { id: 'translate', name: '翻译', url: 'https://translate.google.com/?sl=auto&tl=zh-CN&text=', isDefault: false, sort: 10 },
+  { id: 'kimi', name: 'Kimi', url: 'https://kimi.moonshot.cn/?q=', isDefault: false, sort: 11 },
+  { id: 'deepseek', name: 'DeepSeek', url: 'https://www.deepseek.com/search?q=', isDefault: false, sort: 12 },
 ]
 
 export const useSearchEnginesStore = defineStore('searchEngines', () => {
@@ -45,6 +46,11 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     JSON.parse(localStorage.getItem(BUILT_IN_OVERRIDES_KEY) || '{}')
   )
 
+  // 内置引擎默认设置
+  const builtInDefault = ref<string>(
+    localStorage.getItem(BUILT_IN_OVERRIDES_STORAGE_KEY) || 'baidu'
+  )
+
   // 获取带覆盖的完整内置引擎列表
   const builtInEngines = computed(() => {
     return BUILT_IN_ENGINES.map(engine => {
@@ -52,7 +58,8 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
       if (engine.id === 'local') return engine
       return {
         ...engine,
-        url: builtInOverrides.value[engine.id] || engine.url
+        url: builtInOverrides.value[engine.id] || engine.url,
+        isDefault: engine.id === builtInDefault.value
       }
     })
   })
@@ -136,6 +143,14 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
 
   // 设置默认
   function setDefault(id: string) {
+    // 检查是否为内置引擎
+    if (BUILT_IN_ENGINES.some(e => e.id === id)) {
+      // 设置内置引擎为默认
+      builtInDefault.value = id
+      localStorage.setItem(BUILT_IN_OVERRIDES_STORAGE_KEY, id)
+      return
+    }
+    // 设置自定义引擎为默认
     customEngines.value.forEach(e => {
       e.isDefault = e.id === id
     })

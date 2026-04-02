@@ -26,10 +26,10 @@ let tooltipTimer: ReturnType<typeof setTimeout> | null = null
 // 鼠标进入图标区域
 const handleIconEnter = () => {
   if (!props.site.description) return
-  // 3 秒后显示弹框
+  // 5 秒后显示弹框
   tooltipTimer = setTimeout(() => {
     showTooltip.value = true
-  }, 3000)
+  }, 5000)
 }
 
 // 鼠标离开图标区域
@@ -91,7 +91,7 @@ const handleClick = () => {
           loading="lazy"
           @error="handleIconError"
         />
-        <!-- 悬停描述弹框（延迟3秒后显示） -->
+        <!-- 悬停描述弹框（延迟5秒后显示） -->
         <div v-if="showTooltip && site.description" class="description-tooltip">
           <div class="tooltip-arrow"></div>
           <div class="tooltip-content">

@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-04-02T14:18:46.004Z
+ * 生成时间: 2026-04-02T23:01:38.324Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -49,7 +49,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: '小米商城', label: '小米商城', ext: 'ico', category: '国内常用网站', url: 'https://www.mi.com' },
   { name: '携程', label: '携程', ext: 'svg', category: '国内常用网站', url: 'https://www.ctrip.com' },
   { name: '迅雷', label: '迅雷', ext: 'ico', category: '国内常用网站', url: 'https://www.xunlei.com' },
-  { name: '支付宝', label: '支付宝', ext: 'ico', category: '国内常用网站', url: 'https://www.alipay.com' },
+  { name: '支付宝', label: '支付宝', ext: 'svg', category: '国内常用网站', url: 'https://www.alipay.com' },
   { name: 'alipay', label: 'Alipay', ext: 'svg', category: '国内常用网站', url: 'https://alipay.com' },
   { name: 'baidu', label: 'Baidu', ext: 'svg', category: '国内常用网站', url: 'https://baidu.com' },
   { name: 'bilibili', label: 'Bilibili', ext: 'svg', category: '国内常用网站', url: 'https://bilibili.com' },
@@ -159,9 +159,10 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: '360 (1)', label: '360 (1)', ext: 'svg', category: '其他' },
   { name: '360急速', label: '360急速', ext: 'svg', category: '其他' },
   { name: '阿里云官方-中文LOGO', label: '阿里云官方-中文LOGO', ext: 'svg', category: '其他' },
+  { name: '阿里云盘', label: '阿里云盘', ext: 'svg', category: '其他' },
   { name: '百度云盘', label: '百度云盘', ext: 'svg', category: '其他' },
   { name: '抖音', label: '抖音', ext: 'svg', category: '其他' },
-  { name: '豆瓣', label: '豆瓣', ext: 'ico', category: '其他' },
+  { name: '豆瓣', label: '豆瓣', ext: 'svg', category: '其他' },
   { name: '豆包', label: '豆包', ext: 'svg', category: '其他' },
   { name: '豆包 (1)', label: '豆包 (1)', ext: 'svg', category: '其他' },
   { name: '高伟达LOGO', label: '高伟达LOGO', ext: 'svg', category: '其他' },

@@ -143,7 +143,7 @@ sites:
     description: 全球最大的代码托管平台，提供 Git 仓库托管和协作开发工具
     category: tech
     tags: [项目托管, 搜索引擎]
-    icon: https://github.com/favicon.ico
+    icon: /icons/github.svg
     sort: 11
     createdAt: 2024-01-01T00:00:00.000Z
 
@@ -162,7 +162,7 @@ sites:
     category: tech
     tags: [项目托管, 搜索引擎]
     icon: https://gitee.com/favicon.ico
-    sort: 7
+    sort: 8
     createdAt: 2026-03-19T08:06:02.081Z
 
   - name: 豆包
@@ -363,6 +363,24 @@ sites:
     sort: 2
     createdAt: 2024-01-07T00:00:00.000Z
 
+  - name: WPS
+    url: https://www.wps.cn
+    description: 支持多人在线协作编辑Word、Excel和PPT文档_WPS官方网站
+    category: office
+    tags: [文档]
+    icon: https://www.wps.cn/favicon.ico
+    sort: 2
+    createdAt: 2026-03-29T03:31:21.036Z
+
+  - name: QQ邮箱
+    url: https://mail.qq.com
+    description: QQ邮箱
+    category: office
+    tags: []
+    icon: /icons/QQ邮箱.svg
+    sort: 2
+    createdAt: 2026-03-29T13:26:52.301Z
+
   - name: MDN
     url: https://developer.mozilla.org
     description: Mozilla 开发的 Web 技术文档，是前端开发者的必备参考
@@ -494,7 +512,7 @@ sites:
     description: 支付宝账户快速登录
     category: finance
     tags: [支付]
-    icon: https://www.alipay.com/favicon.ico
+    icon: /icons/支付宝.svg
     sort: 1
     createdAt: 2026-03-29T02:37:43.702Z
 
@@ -548,7 +566,7 @@ sites:
     description: 前言 亲自试验半年，自己编写《洗脑宝典》给自己洗脑有奇效！帮助了我改变了自己的核心信念，实现很多重要的转变。（有的转变已完全实现，有的还在过程中。）例如： 1.改变消极思维和灾难化想象。现在即便是抑郁发作，我也不会有绝望的感受了，不会觉得人生完蛋了...。恰逢春分，我来分享一波上周天气晴朗拍的郁金香呀！！ 每年春天都回去拍郁金香，可惜今年天气不好，拍摄次数大大减少，希望可以扛住春雨，我会在天气好的时候再冲一波的！！
     category: custom_1773899614797
     tags: []
-    icon: https://www.douban.com/favicon.ico
+    icon: /icons/豆瓣.ico
     sort: 1
     createdAt: 2026-03-29T03:20:44.891Z
 
@@ -582,7 +600,7 @@ sites:
   - name: 360官网
     url: https://360.com
     description: 360安全中心 - 360安全软件 - 360智能硬件 - 360智能家居
-    category: custom_1773899482306
+    category: office
     tags: []
     icon: /icons/360.svg
     sort: 1
@@ -596,15 +614,6 @@ sites:
     icon: /icons/携程.svg
     sort: 1
     createdAt: 2026-03-29T03:29:44.959Z
-
-  - name: WPS
-    url: https://www.wps.cn
-    description: 支持多人在线协作编辑Word、Excel和PPT文档_WPS官方网站
-    category: office
-    tags: [文档]
-    icon: https://www.wps.cn/favicon.ico
-    sort: 1
-    createdAt: 2026-03-29T03:31:21.036Z
 
   - name: 智联招聘
     url: https://www.zhaopin.com
@@ -867,15 +876,6 @@ sites:
     sort: 1
     createdAt: 2026-03-29T13:23:27.422Z
 
-  - name: QQ邮箱
-    url: https://mail.qq.com
-    description: QQ邮箱
-    category: office
-    tags: []
-    icon: /icons/QQ邮箱.svg
-    sort: 1
-    createdAt: 2026-03-29T13:26:52.301Z
-
   - name: nacos
     url: https://nacos.io
     description: 微服务注册中心
@@ -943,7 +943,7 @@ sites:
     url: https://www.xunlei.com
     description: 迅雷是一家全球领先的去中心化服务商，以技术构建商业，以服务创造共识，累计用户超4亿。面向个人和企业推出迅雷下载、迅雷云盘、迅雷影音、迅雷直播、迅雷会员、云计算、区块链等产品。
     category: custom_1773899482306
-    tags: []
+    tags: [下载]
     icon: https://www.xunlei.com/favicon-32x32.png
     sort: 1
     createdAt: 2026-03-29T14:03:19.149Z

@@ -20,7 +20,7 @@ export const useSitesStore = defineStore('sites', () => {
   const selectedCategory = ref<string>('')
   const isLoading = ref(false)
   const currentPage = ref(1)
-  const pageSize = ref(9)
+  const pageSize = ref(18)
 
   // 断链检测
   const isCheckingLinks = ref(false)
@@ -168,17 +168,17 @@ export const useSitesStore = defineStore('sites', () => {
       return filtered
         .filter(site => site.isValid === false)
         .sort((a, b) => {
-          const sortA = a.sort ?? 999
-          const sortB = b.sort ?? 999
-          return sortA - sortB
+          const sortA = a.sort ?? 1
+          const sortB = b.sort ?? 1
+          return sortB - sortA
         })
     }
 
-    // 按 sort 字段排序（从小到大，0 或 undefined 排后面）
+    // 按 sort 字段降序排序（点击频率高的在前）
     return filtered.sort((a, b) => {
-      const sortA = a.sort ?? 999
-      const sortB = b.sort ?? 999
-      return sortA - sortB
+      const sortA = a.sort ?? 1
+      const sortB = b.sort ?? 1
+      return sortB - sortA
     })
   })
 
@@ -339,8 +339,8 @@ export const useSitesStore = defineStore('sites', () => {
     const siteB = sites.value.find(s => s.url === urlB)
     if (!siteA || !siteB) return
 
-    const sortA = siteA.sort ?? 999
-    const sortB = siteB.sort ?? 999
+    const sortA = siteA.sort ?? 1
+    const sortB = siteB.sort ?? 1
 
     // 交换 sort 值
     siteA.sort = sortB
@@ -348,6 +348,33 @@ export const useSitesStore = defineStore('sites', () => {
 
     // 持久化到 localStorage
     saveUserSites()
+  }
+
+  // 点击网站时增加 sort 值（使用频率排序）
+  function incrementClick(url: string) {
+    const site = sites.value.find(s => s.url === url)
+    if (!site) return
+
+    // sort 值加 1
+    site.sort = (site.sort ?? 1) + 1
+
+    // 保存点击计数到 localStorage
+    const clickCounts = loadClickCounts()
+    clickCounts[url] = (clickCounts[url] ?? 0) + 1
+    localStorage.setItem('site-click-counts', JSON.stringify(clickCounts))
+
+    // 持久化网站数据
+    saveUserSites()
+  }
+
+  // 加载点击计数
+  function loadClickCounts(): Record<string, number> {
+    try {
+      const data = localStorage.getItem('site-click-counts')
+      return data ? JSON.parse(data) : {}
+    } catch {
+      return {}
+    }
   }
 
   function saveUserSites() {
@@ -499,6 +526,8 @@ ${sitesList}
     invalidCount,
     checkDeadLinks: checkDeadLinksAction,
     // 拖拽排序
-    swapSort
+    swapSort,
+    // 点击频率排序
+    incrementClick
   }
 })

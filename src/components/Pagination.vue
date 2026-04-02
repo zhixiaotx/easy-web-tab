@@ -5,9 +5,10 @@ import { useSitesStore } from '../stores/sites'
 const store = useSitesStore()
 
 const pageSizeOptions = [
-  { value: 9, label: '9 条/页' },
   { value: 18, label: '18 条/页' },
-  { value: 27, label: '27 条/页' }
+  { value: 27, label: '27 条/页' },
+  { value: 36, label: '36 条/页' },
+  { value: 45, label: '45 条/页' }
 ]
 
 const pages = computed(() => {

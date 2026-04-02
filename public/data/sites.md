@@ -89,6 +89,18 @@ searchEngines:
     isDefault: true
     sort: 15
 
+  - id: engine_1774939405780
+    name: 知乎
+    url: https://www.zhihu.com/search?q=
+    isDefault: false
+    sort: 16
+
+  - id: engine_1775024539871
+    name: 阿里图标
+    url: https://www.iconfont.cn/search/index?searchType=icon&page=1&fromCollection=-1&q=
+    isDefault: false
+    sort: 17
+
 sites:
   - name: GitHub
     url: https://github.com
@@ -96,7 +108,7 @@ sites:
     category: tech
     tags: [项目托管, 搜索引擎]
     icon: https://github.com/favicon.ico
-    sort: 6
+    sort: 1
     createdAt: 2024-01-01T00:00:00.000Z
 
   - name: Stack Overflow
@@ -105,7 +117,7 @@ sites:
     category: tech
     tags: [问答]
     icon: https://stackoverflow.com/favicon.ico
-    sort: 64
+    sort: 1
     createdAt: 2024-01-02T00:00:00.000Z
 
   - name: MDN
@@ -114,7 +126,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://developer.mozilla.org/favicon.ico
-    sort: 22
+    sort: 1
     createdAt: 2024-01-03T00:00:00.000Z
 
   - name: Vite
@@ -123,7 +135,7 @@ sites:
     category: tech
     tags: [前端]
     icon: /icons/vue.svg
-    sort: 18
+    sort: 1
     createdAt: 2024-01-04T00:00:00.000Z
 
   - name: Vue
@@ -132,7 +144,7 @@ sites:
     category: tech
     tags: [前端]
     icon: /icons/vue.svg
-    sort: 10
+    sort: 1
     createdAt: 2024-01-05T00:00:00.000Z
 
   - name: TypeScript
@@ -141,7 +153,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://www.typescriptlang.org/favicon.ico
-    sort: 20
+    sort: 1
     createdAt: 2024-01-06T00:00:00.000Z
 
   - name: npm
@@ -150,7 +162,7 @@ sites:
     category: tech
     tags: [前端, 工具]
     icon: /icons/npm.svg
-    sort: 26
+    sort: 1
     createdAt: 2024-01-07T00:00:00.000Z
 
   - name: CSS-Tricks
@@ -159,7 +171,7 @@ sites:
     category: tech
     tags: [前端]
     icon: https://css-tricks.com/favicon.ico
-    sort: 31
+    sort: 1
     createdAt: 2024-01-08T00:00:00.000Z
 
   - name: 掘金
@@ -168,7 +180,7 @@ sites:
     category: news
     tags: [社区]
     icon: 
-    sort: 21
+    sort: 1
     createdAt: 2024-01-10T00:00:00.000Z
 
   - name: 百度一下，你就知道
@@ -177,12 +189,12 @@ sites:
     category: news
     tags: [搜索引擎]
     icon: https://www.baidu.com/favicon.ico
-    sort: 4
+    sort: 1
     createdAt: 2026-03-19T00:32:06.601Z
 
-  - name: DeepSeek | 深度求索
+  - name: DeepSeek
     url: https://deepseek.com
-    description: DeepSeek | 深度求索 ! [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线，点击查看详情。](https:/
+    description: DeepSeek | 深度求索 ! [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线
     category: custom_1773890047269
     tags: [大模型]
     icon: https://deepseek.com/favicon.ico
@@ -195,7 +207,7 @@ sites:
     category: shopping
     tags: [购物]
     icon: https://www.jd.com/favicon.ico
-    sort: 11
+    sort: 1
     createdAt: 2026-03-19T07:42:14.155Z
 
   - name: Halo - 建站工具
@@ -204,16 +216,16 @@ sites:
     category: tech
     tags: [工具]
     icon: https://www.halo.run/favicon.ico
-    sort: 34
+    sort: 1
     createdAt: 2026-03-19T07:48:32.215Z
 
   - name: 哔哩哔哩
     url: https://www.bilibili.com
-    description: 免费看高清视频 多端同步播放记录 发表弹幕/评论 热门番剧影视看不停  立即登录  首次使用？  点我注册。不感兴趣 将减少此类内容推荐。不感兴趣 将减少此类内容推荐
+    description: 免费看高清视频 多端同步播放记录 发表弹幕/评论 热门番剧影视看不停 立即登录 首次使用？ 点我注册。不感兴趣 将减少此类内容推荐。不感兴趣 将减少此类内容推荐
     category: video
-    tags: []
+    tags: [教育]
     icon: https://www.bilibili.com/favicon.ico
-    sort: 8
+    sort: 1
     createdAt: 2026-03-19T07:53:05.443Z
 
   - name: 百度网盘
@@ -222,7 +234,7 @@ sites:
     category: office
     tags: [网盘]
     icon: /icons/baidu.svg
-    sort: 34
+    sort: 1
     createdAt: 2026-03-19T08:52:57.850Z
 
   - name: 码云(gitee)
@@ -231,7 +243,7 @@ sites:
     category: tech
     tags: [项目托管, 搜索引擎]
     icon: https://gitee.com/favicon.ico
-    sort: 5
+    sort: 1
     createdAt: 2026-03-19T08:06:02.081Z
 
   - name: JAVA
@@ -240,7 +252,7 @@ sites:
     category: tech
     tags: []
     icon: https://www.oracle.com/favicon.ico
-    sort: 23
+    sort: 1
     createdAt: 2026-03-20T00:26:10.192Z
 
   - name: Apache Tomcat
@@ -249,7 +261,7 @@ sites:
     category: tech
     tags: []
     icon: https://tomcat.apache.org/favicon.ico
-    sort: 17
+    sort: 1
     createdAt: 2026-03-20T00:30:17.746Z
 
   - name: Spring
@@ -258,7 +270,7 @@ sites:
     category: tech
     tags: []
     icon: https://spring.io/favicon.ico
-    sort: 28
+    sort: 1
     createdAt: 2026-03-20T00:31:56.464Z
 
   - name: Maven Central
@@ -267,16 +279,16 @@ sites:
     category: tech
     tags: []
     icon: https://central.sonatype.com/favicon.ico
-    sort: 25
+    sort: 1
     createdAt: 2026-03-20T00:33:43.089Z
 
   - name: ClawHub
     url: https://clawhub.ai/
     description: 龙虾光。代理右。上传代理技能包，像npm一样进行版本管理，并通过向量使其可搜索。无需审核，仅凭信号。搜索技能。版本化，随时可回滚。
     category: custom_1773890047269
-    tags: [技能平台]
-    icon: https://clawhub.ai/favicon.ico
-    sort: 35
+    tags: [技能]
+    icon: /icons/龙虾.svg
+    sort: 1
     createdAt: 2026-03-20T01:08:57.076Z
 
   - name: Apache SkyWalking
@@ -285,7 +297,7 @@ sites:
     category: tech
     tags: [工具]
     icon: https://skywalking.apache.org/favicon.ico
-    sort: 24
+    sort: 1
     createdAt: 2026-03-20T08:23:14.855Z
 
   - name: OceanBase
@@ -293,8 +305,8 @@ sites:
     description: OceanBase 是 100% 根自研的原生分布式数据库，基于单机分布式一体化架构，高度兼容 Oracle 和 MySQL，支持事务处理（TP）和实时分析处理（AP）等多工作负载，原生支持向量检索与多模数据混合检索，助力客户构建面向 AI 的一体化数据底座。已广泛应用于金融、运营商、零售、互联网及公共服务等行业，助力 4000+ 客户实现关键业务系统升级。
     category: tech
     tags: [数据库]
-    icon: https://www.oceanbase.com/favicon.ico
-    sort: 71
+    icon: /icons/database_oceanbase.svg
+    sort: 1
     createdAt: 2026-03-20T08:30:35.101Z
 
   - name: 高德地图
@@ -303,7 +315,7 @@ sites:
     category: travel
     tags: []
     icon: https://ditu.amap.com/favicon.ico
-    sort: 29
+    sort: 1
     createdAt: 2026-03-20T08:32:11.573Z
 
   - name: JetBrains
@@ -312,7 +324,7 @@ sites:
     category: tech
     tags: [工具]
     icon: https://www.jetbrains.com/favicon.ico
-    sort: 13
+    sort: 1
     createdAt: 2026-03-20T08:33:42.380Z
 
   - name: 阿里云
@@ -320,17 +332,17 @@ sites:
     description: Models Overview Products Solutions Pricing Resources Partners Support。See all results for ""。Everything You Need in One
     category: tech
     tags: []
-    icon: https://www.aliyun.com/favicon.ico
-    sort: 27
+    icon: /icons/阿里云官方-中文LOGO.svg
+    sort: 1
     createdAt: 2026-03-20T08:36:02.069Z
 
   - name: 抖音
     url: https://www.douyin.com
     description: 抖音
     category: video
-    tags: []
-    icon: /icons/douyin.svg
-    sort: 7
+    tags: [购物]
+    icon: /icons/抖音.svg
+    sort: 1
     createdAt: 2026-03-20T08:37:54.510Z
 
   - name: 阿里云盘
@@ -339,7 +351,7 @@ sites:
     category: office
     tags: [网盘]
     icon: /icons/browser.svg
-    sort: 33
+    sort: 1
     createdAt: 2026-03-20T08:39:55.352Z
 
   - name: 智谱
@@ -348,7 +360,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/zhipu.svg
-    sort: 78
+    sort: 1
     createdAt: 2026-03-20T08:42:36.444Z
 
   - name: Trae
@@ -357,7 +369,7 @@ sites:
     category: tech
     tags: [工具]
     icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
-    sort: 10
+    sort: 1
     createdAt: 2026-03-20T08:45:12.609Z
 
   - name: Redis
@@ -366,7 +378,7 @@ sites:
     category: tech
     tags: [数据库]
     icon: https://redis.io/wp-content/themes/wpx/assets/images/favicons/favicon-32x32.png?v=1720078588
-    sort: 30
+    sort: 1
     createdAt: 2026-03-20T08:49:07.270Z
 
   - name: Openclaw
@@ -374,8 +386,8 @@ sites:
     description: 我的私人智能体
     category: custom_1773890047269
     tags: [智能体]
-    icon: /icons/openclaw.svg
-    sort: 2
+    icon: /icons/龙虾.svg
+    sort: 1
     createdAt: 2026-03-20T14:20:56.409Z
 
   - name: OpenClaw
@@ -383,8 +395,8 @@ sites:
     description: OpenClaw 🦞。适用于任何操作系统的 AI 智能体 Gateway 网关，支持 WhatsApp、Telegram、Discord、iMessage 等。。发送消息，随时随地获取智能体响应。通过插件可添加 Mattermost 等更多渠道。
     category: custom_1773890047269
     tags: [智能体, 文档]
-    icon: https://docs.openclaw.ai/favicon.ico
-    sort: 3
+    icon: /icons/OpenClaw_icon-logo.svg
+    sort: 1
     createdAt: 2026-03-28T08:07:39.719Z
 
   - name: 微信，是一个生活方式
@@ -393,7 +405,7 @@ sites:
     category: social
     tags: []
     icon: /icons/wechat.svg
-    sort: 39
+    sort: 1
     createdAt: 2026-03-29T02:35:09.724Z
 
   - name: 淘宝
@@ -402,7 +414,7 @@ sites:
     category: shopping
     tags: [购物]
     icon: https://www.taobao.com/favicon.ico
-    sort: 44
+    sort: 1
     createdAt: 2026-03-29T02:36:05.250Z
 
   - name: 支付宝
@@ -411,7 +423,7 @@ sites:
     category: finance
     tags: [支付]
     icon: https://www.alipay.com/favicon.ico
-    sort: 41
+    sort: 1
     createdAt: 2026-03-29T02:37:43.702Z
 
   - name: 拼多多
@@ -419,8 +431,8 @@ sites:
     description: 拼多多
     category: shopping
     tags: [购物]
-    icon: https://pinduoduo.com/favicon.ico
-    sort: 42
+    icon: /icons/pinduoduo.ico
+    sort: 1
     createdAt: 2026-03-29T02:39:55.899Z
 
   - name: 天猫
@@ -429,7 +441,7 @@ sites:
     category: shopping
     tags: [购物]
     icon: https://www.tmall.com/favicon.ico
-    sort: 43
+    sort: 1
     createdAt: 2026-03-29T02:40:46.059Z
 
   - name: 美团
@@ -438,7 +450,7 @@ sites:
     category: shopping
     tags: [购物, 外卖]
     icon: https://www.meituan.com/favicon.ico
-    sort: 66
+    sort: 1
     createdAt: 2026-03-29T02:41:49.046Z
 
   - name: 爱奇艺
@@ -447,7 +459,7 @@ sites:
     category: video
     tags: []
     icon: /icons/nodejs.svg
-    sort: 45
+    sort: 1
     createdAt: 2026-03-29T03:17:37.817Z
 
   - name: 腾讯视频
@@ -455,8 +467,8 @@ sites:
     description: 腾讯视频-中国领先的在线视频媒体平台,海量高清视频在线观看
     category: video
     tags: []
-    icon: /icons/bilibili.svg
-    sort: 46
+    icon: /icons/腾讯视频.svg
+    sort: 1
     createdAt: 2026-03-29T03:18:37.786Z
 
   - name: 豆瓣
@@ -465,7 +477,7 @@ sites:
     category: custom_1773899614797
     tags: []
     icon: https://www.douban.com/favicon.ico
-    sort: 59
+    sort: 1
     createdAt: 2026-03-29T03:20:44.891Z
 
   - name: 人民网
@@ -474,7 +486,7 @@ sites:
     category: government
     tags: []
     icon: https://www.people.com.cn/favicon.ico
-    sort: 48
+    sort: 1
     createdAt: 2026-03-29T03:21:22.091Z
 
   - name: 小红书
@@ -483,7 +495,7 @@ sites:
     category: video
     tags: []
     icon: https://www.xiaohongshu.com/favicon.ico
-    sort: 49
+    sort: 1
     createdAt: 2026-03-29T03:22:02.358Z
 
   - name: 飞书
@@ -492,7 +504,7 @@ sites:
     category: office
     tags: [文档]
     icon: https://www.feishu.cn/favicon.ico
-    sort: 50
+    sort: 1
     createdAt: 2026-03-29T03:23:59.609Z
 
   - name: 闲鱼
@@ -501,7 +513,7 @@ sites:
     category: shopping
     tags: [购物]
     icon: https://www.goofish.com/favicon.ico
-    sort: 56
+    sort: 1
     createdAt: 2026-03-29T03:25:37.817Z
 
   - name: 360官网
@@ -509,8 +521,8 @@ sites:
     description: 360安全中心 - 360安全软件 - 360智能硬件 - 360智能家居
     category: custom_1773899482306
     tags: []
-    icon: https://360.com/favicon.ico
-    sort: 52
+    icon: /icons/360.svg
+    sort: 1
     createdAt: 2026-03-29T03:28:23.322Z
 
   - name: 携程
@@ -519,7 +531,7 @@ sites:
     category: travel
     tags: []
     icon: https://www.ctrip.com/favicon.ico
-    sort: 53
+    sort: 1
     createdAt: 2026-03-29T03:29:44.959Z
 
   - name: WPS
@@ -528,7 +540,7 @@ sites:
     category: office
     tags: [文档]
     icon: https://www.wps.cn/favicon.ico
-    sort: 97
+    sort: 1
     createdAt: 2026-03-29T03:31:21.036Z
 
   - name: 智联招聘
@@ -537,7 +549,7 @@ sites:
     category: life
     tags: []
     icon: https://www.zhaopin.com/favicon.ico
-    sort: 55
+    sort: 1
     createdAt: 2026-03-29T03:32:43.685Z
 
   - name: 淘宝闪购
@@ -546,34 +558,34 @@ sites:
     category: shopping
     tags: [购物]
     icon: https://www.ele.me/favicon.ico
-    sort: 51
+    sort: 1
     createdAt: 2026-03-29T03:33:43.239Z
 
   - name: 网易云音乐
     url: https://music.163.com
     description: 音乐/视频/电台/用户。打开客户端播放，享受高清音质。
     category: video
-    tags: []
+    tags: [音乐]
     icon: https://music.163.com/favicon.ico
-    sort: 57
+    sort: 1
     createdAt: 2026-03-29T03:34:36.044Z
 
   - name: QQ音乐
     url: https://y.qq.com
     description: 千万正版音乐海量无损曲库新歌热歌天天畅听的高品质音乐平台！
     category: video
-    tags: []
+    tags: [音乐]
     icon: /icons/aws.svg
-    sort: 58
+    sort: 1
     createdAt: 2026-03-29T03:35:21.975Z
 
   - name: 快手
     url: https://www.kuaishou.com
     description: 短视频平台
     category: video
-    tags: []
-    icon: /icons/kuaishou.svg
-    sort: 47
+    tags: [购物]
+    icon: /icons/快手.svg
+    sort: 1
     createdAt: 2026-03-29T03:36:45.406Z
 
   - name: 今日头条
@@ -582,7 +594,7 @@ sites:
     category: news
     tags: []
     icon: https://www.toutiao.com/favicon.ico
-    sort: 60
+    sort: 1
     createdAt: 2026-03-29T03:38:49.263Z
 
   - name: 链家
@@ -591,7 +603,7 @@ sites:
     category: life
     tags: []
     icon: https://bj.lianjia.com/favicon.ico
-    sort: 61
+    sort: 1
     createdAt: 2026-03-29T03:39:49.301Z
 
   - name: 天气网
@@ -600,7 +612,7 @@ sites:
     category: life
     tags: []
     icon: https://www.weather.com.cn/favicon.ico
-    sort: 62
+    sort: 1
     createdAt: 2026-03-29T03:40:48.147Z
 
   - name: 开源中国
@@ -609,7 +621,7 @@ sites:
     category: tech
     tags: [问答]
     icon: https://www.oschina.net/favicon.ico
-    sort: 36
+    sort: 1
     createdAt: 2026-03-29T03:43:54.384Z
 
   - name: 小米商城
@@ -618,7 +630,7 @@ sites:
     category: shopping
     tags: []
     icon: https://www.mi.com/favicon.ico
-    sort: 65
+    sort: 1
     createdAt: 2026-03-29T03:44:51.053Z
 
   - name: 华为商城
@@ -627,7 +639,7 @@ sites:
     category: shopping
     tags: [购物]
     icon: https://www.vmall.com/favicon.ico
-    sort: 40
+    sort: 1
     createdAt: 2026-03-29T03:46:10.556Z
 
   - name: 高伟达工时系统
@@ -636,7 +648,7 @@ sites:
     category: custom_1774756924959
     tags: []
     icon: http://pm.git.com.cn/favicon.ico
-    sort: 67
+    sort: 1
     createdAt: 2026-03-29T04:04:38.374Z
 
   - name: 高伟达邮箱
@@ -644,8 +656,8 @@ sites:
     description: 高伟达邮箱
     category: custom_1774756924959
     tags: []
-    icon: http://mail.git.com.cn/favicon.ico
-    sort: 68
+    icon: /icons/高伟达LOGO.svg
+    sort: 1
     createdAt: 2026-03-29T04:06:09.137Z
 
   - name: 8thManage
@@ -654,7 +666,7 @@ sites:
     category: custom_1774756924959
     tags: []
     icon: http://gain.git.com.cn/favicon.ico
-    sort: 69
+    sort: 1
     createdAt: 2026-03-29T04:08:08.344Z
 
   - name: 贵州生育网上登记服务
@@ -663,7 +675,7 @@ sites:
     category: government
     tags: []
     icon: 
-    sort: 70
+    sort: 1
     createdAt: 2026-03-29T04:26:23.982Z
 
   - name: opencode
@@ -671,8 +683,8 @@ sites:
     description: OpenCode 是一个开源代理，可帮助您在终端、集成开发环境或桌面端编写代码。
     category: tech
     tags: [工具]
-    icon: https://opencode.ai/favicon.ico
-    sort: 15
+    icon: /icons/opencode.ico
+    sort: 1
     createdAt: 2026-03-29T04:30:15.015Z
 
   - name: Tavily
@@ -680,8 +692,8 @@ sites:
     description: 通过单一安全 API 实现实时搜索、信息提取、研究分析与网络爬取。全球超过 100 万名开发者信赖使用。实时检索网络数据，提取相关内容，并以结构化分块形式返回给模型，使智能体能够基于事实进行推理，避免产生幻觉。
     category: custom_1773890047269
     tags: [搜索引擎]
-    icon: https://auth.tavily.com/favicon.ico
-    sort: 72
+    icon: /icons/trvily.svg
+    sort: 1
     createdAt: 2026-03-29T04:33:46.620Z
 
   - name: 魔搭社区
@@ -689,8 +701,8 @@ sites:
     description: 国内最大的开源模型社区，下载速度快，模型种类丰富。
     category: custom_1773890047269
     tags: [开发平台]
-    icon: 
-    sort: 74
+    icon: /icons/魔搭GPT.svg
+    sort: 1
     createdAt: 2026-03-29T09:39:17.693Z
 
   - name: 飞桨AI Studio
@@ -698,8 +710,8 @@ sites:
     description: 提供在线编程环境、免费算力及丰富的预训练模型。
     category: custom_1773890047269
     tags: [开发平台]
-    icon: 
-    sort: 80
+    icon: /icons/aistudio.ico
+    sort: 1
     createdAt: 2026-03-29T09:40:18.190Z
 
   - name: AIbase
@@ -707,8 +719,8 @@ sites:
     description: 聚合全球优质AI模型 赋能下一代应用开发。
     category: custom_1773890047269
     tags: [开发平台]
-    icon: 
-    sort: 75
+    icon: /icons/aibase.ico
+    sort: 1
     createdAt: 2026-03-29T09:42:17.220Z
 
   - name: 通义千问
@@ -717,7 +729,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: 
-    sort: 76
+    sort: 1
     createdAt: 2026-03-29T09:47:27.178Z
 
   - name: 文心一言
@@ -726,7 +738,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/baidu.svg
-    sort: 79
+    sort: 1
     createdAt: 2026-03-29T09:48:51.561Z
 
   - name: kimi
@@ -735,7 +747,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/kimi.svg
-    sort: 77
+    sort: 1
     createdAt: 2026-03-29T09:50:19.138Z
 
   - name: 豆包
@@ -743,8 +755,8 @@ sites:
     description: 
     category: custom_1773890047269
     tags: [大模型, 智能体]
-    icon: /icons/doubao.svg
-    sort: 38
+    icon: /icons/豆包.svg
+    sort: 1
     createdAt: 2026-03-29T09:51:27.674Z
 
   - name: 硅基流动
@@ -753,7 +765,7 @@ sites:
     category: custom_1773890047269
     tags: [开发平台]
     icon: /icons/siliconflow.svg
-    sort: 73
+    sort: 1
     createdAt: 2026-03-29T09:59:44.564Z
 
   - name: Core's Bitcoin Staking
@@ -762,7 +774,7 @@ sites:
     category: custom_1774788526323
     tags: []
     icon: https://stake.coredao.org/favicon.ico
-    sort: 81
+    sort: 1
     createdAt: 2026-03-29T12:50:24.068Z
 
   - name: arthas
@@ -770,8 +782,8 @@ sites:
     description: Arthas 是一款线上监控诊断产品，通过全局视角实时查看应用 load、内存、gc、线程的状态信息，并能在不修改应用代码的情况下，对业务问题进行诊断，包括查看方法调用的出入参、异常，监测方法执行耗时，类加载信息等，大大提升线上问题排查效率。
     category: tech
     tags: [工具]
-    icon: 
-    sort: 82
+    icon: /icons/arthas.ico
+    sort: 1
     createdAt: 2026-03-29T12:59:24.984Z
 
   - name: XXL开源项目
@@ -780,7 +792,7 @@ sites:
     category: tech
     tags: [工具]
     icon: https://www.xuxueli.com/./favicon.ico
-    sort: 83
+    sort: 1
     createdAt: 2026-03-29T13:02:37.615Z
 
   - name: elastic
@@ -789,7 +801,7 @@ sites:
     category: tech
     tags: [数据库]
     icon: /icons/elasticsearch.svg
-    sort: 84
+    sort: 1
     createdAt: 2026-03-29T13:07:08.594Z
 
   - name: C语言中文网
@@ -798,7 +810,7 @@ sites:
     category: custom_1773899614797
     tags: []
     icon: https://c.biancheng.net/favicon.ico?v=1.7.21
-    sort: 85
+    sort: 1
     createdAt: 2026-03-29T13:18:55.412Z
 
   - name: dataease
@@ -806,8 +818,8 @@ sites:
     description: 人人可用的开源 BI 工具。数据可视化神器! 只需五分钟，数据变大屏，由飞致云匠心出品。
     category: tech
     tags: [工具]
-    icon: 
-    sort: 86
+    icon: /icons/dataease.ico
+    sort: 1
     createdAt: 2026-03-29T13:23:27.422Z
 
   - name: QQ邮箱
@@ -815,8 +827,8 @@ sites:
     description: QQ邮箱
     category: office
     tags: []
-    icon: /icons/douyin.svg
-    sort: 87
+    icon: /icons/QQ邮箱.svg
+    sort: 1
     createdAt: 2026-03-29T13:26:52.301Z
 
   - name: nacos
@@ -825,7 +837,7 @@ sites:
     category: tech
     tags: [工具]
     icon: 
-    sort: 88
+    sort: 1
     createdAt: 2026-03-29T13:37:08.824Z
 
   - name: seata
@@ -834,7 +846,7 @@ sites:
     category: tech
     tags: [工具]
     icon: 
-    sort: 89
+    sort: 1
     createdAt: 2026-03-29T13:38:22.107Z
 
   - name: mysql
@@ -843,7 +855,7 @@ sites:
     category: tech
     tags: [数据库]
     icon: /icons/mysql.svg
-    sort: 90
+    sort: 1
     createdAt: 2026-03-29T13:51:16.040Z
 
   - name: postgresql
@@ -852,16 +864,16 @@ sites:
     category: tech
     tags: [数据库]
     icon: https://jdbc.postgresql.org/favicon.ico
-    sort: 91
+    sort: 1
     createdAt: 2026-03-29T13:52:40.517Z
 
-  - name: microsoft
+  - name: Microsoft
     url: https://www.microsoft.com/zh-cn
-    description: microsoft商城
+    description: Microsoft商城
     category: shopping
     tags: [购物]
     icon: 
-    sort: 92
+    sort: 1
     createdAt: 2026-03-29T13:56:27.588Z
 
   - name: deepin
@@ -869,8 +881,8 @@ sites:
     description: deepin系统
     category: tech
     tags: [操作系统]
-    icon: 
-    sort: 93
+    icon: /icons/deepin.ico
+    sort: 1
     createdAt: 2026-03-29T13:59:05.855Z
 
   - name: 中国铁路12306
@@ -878,8 +890,8 @@ sites:
     description: 中国铁路12306
     category: travel
     tags: []
-    icon: 
-    sort: 94
+    icon: /icons/12306.svg
+    sort: 1
     createdAt: 2026-03-29T14:01:00.658Z
 
   - name: 迅雷
@@ -888,7 +900,7 @@ sites:
     category: custom_1773899482306
     tags: []
     icon: https://www.xunlei.com/favicon-32x32.png
-    sort: 95
+    sort: 1
     createdAt: 2026-03-29T14:03:19.149Z
 
   - name: motrix
@@ -896,8 +908,8 @@ sites:
     description: 一款全能的下载工具，支持下载 HTTP、FTP、BT、磁力链接等资源。
     category: office
     tags: [下载]
-    icon: /icons/shields.svg
-    sort: 96
+    icon: /icons/Motrix.svg
+    sort: 1
     createdAt: 2026-03-29T14:04:57.250Z
 
   - name: ProcessOn
@@ -906,35 +918,53 @@ sites:
     category: office
     tags: [文档]
     icon: https://www.processon.com/favicon.ico
-    sort: 54
+    sort: 1
     createdAt: 2026-03-29T14:06:30.378Z
 
   - name: acpx
     url: https://github.com/openclaw/acpx
     description: Agent Client Protocol 让 OpenClaw 通过结构化的 stdio JSON-RPC 协议调用外部编码代理，支持Claude Code、Codex、Gemini CLI、OpenCode、Pi。
     category: custom_1774837729627
-    tags: []
+    tags: [插件]
     icon: /icons/github.svg
-    sort: 98
+    sort: 1
     createdAt: 2026-03-30T02:35:28.563Z
 
   - name: oh-my-opencode
     url: https://github.com/code-yeongyu/oh-my-opencode
     description: 让Oh-My-OpenCode的智能协作系统为你找到最佳解决方案！
     category: custom_1774837729627
-    tags: []
+    tags: [插件]
     icon: /icons/github.svg
-    sort: 99
+    sort: 1
     createdAt: 2026-03-30T02:44:02.386Z
 
   - name: opencode
     url: https://github.com/anomalyco/opencode
     description: 在AI编程辅助工具快速发展的今天，OpenCode作为一个开源、终端优先的AI编程代理已经吸引了大量开发者。
     category: custom_1774837729627
-    tags: []
+    tags: [开发平台]
     icon: /icons/github.svg
-    sort: 100
+    sort: 1
     createdAt: 2026-03-30T02:45:04.256Z
+
+  - name: GitCode
+    url: https://gitcode.com
+    description: GitCode 是由重庆开源共创科技有限公司运营，CSDN 与华为云 CodeArts 联合开发的新一代 AI 驱动开源开发者平台，集代码托管、协作研发、项目管理等功能于一体，支持多语言、WebIDE、CI/CD 等，有高可靠与数据安全保障，提供本地化服务，账户可与 AtomGit 通用。
+    category: tech
+    tags: [项目托管]
+    icon: /icons/GitCode-logo.svg
+    sort: 1
+    createdAt: 2026-03-31T03:13:06.497Z
+
+  - name: Iconfont
+    url: https://www.iconfont.cn/
+    description: 阿里巴巴矢量图标库
+    category: tech
+    tags: [图标]
+    icon: /icons/iconfont.svg
+    sort: 1
+    createdAt: 2026-03-31T06:27:04.403Z
 ---
 
 # 我的书签

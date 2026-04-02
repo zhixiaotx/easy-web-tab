@@ -1,0 +1,203 @@
+/* 背景样式 */
+
+/* CSS 变量定义 - 由 JS 动态设置 */
+:root {
+  --app-bg-type: none;
+  --app-bg-value: '';
+  --app-bg-image: none;
+}
+
+/* ========================================
+   背景应用样式
+   ======================================== */
+
+/* 应用于 html 和 body */
+html.app-has-background,
+body.app-has-background {
+  background: var(--app-bg-value) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 图片背景模式 */
+html.app-has-background.image,
+body.app-has-background.image {
+  background-image: var(--app-bg-image) !important;
+}
+
+/* 确保 #app 容器也有背景 */
+#app.app-has-background {
+  background: var(--app-bg-value) !important;
+  min-height: 100vh;
+  width: 100%;
+}
+
+#app.app-has-background.image {
+  background-image: var(--app-bg-image) !important;
+}
+
+/* ========================================
+   有背景时 container 样式
+   ======================================== */
+
+/* 有背景时 container 保持原有布局，不偏移 - 不覆盖 padding-top */
+body.app-has-background .container {
+  border-radius: 12px;
+  /* 纯色/渐变背景时 container 透明，让背景色直接显示 */
+  background: transparent !important;
+}
+
+/* 图片背景时，container 完全透明，让图片完全可见 */
+body.app-has-background.image .container {
+  background: transparent !important;
+  backdrop-filter: none;
+}
+
+/* ========================================
+   暗色模式 + 有背景
+   ======================================== */
+
+/* 暗色模式 - 纯色/渐变背景时，添加全屏遮罩 */
+:root.dark body.app-has-background:not(.image)::before,
+:root.dark html.app-has-background:not(.image)::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(17, 24, 39, 0.85);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 确保内容在遮罩层之上 - 不改变 position */
+:root.dark body.app-has-background .container {
+  position: relative;
+  z-index: 1;
+}
+
+/* 工具栏保持 fixed 定位，只提升 z-index */
+:root.dark body.app-has-background .top-right-toolbar {
+  z-index: 101 !important;
+}
+
+:root.dark body.app-has-background .container {
+  background: transparent !important;
+}
+
+/* 暗色模式 - 图片背景时，container 完全透明 */
+:root.dark body.app-has-background.image .container {
+  background: transparent !important;
+  backdrop-filter: none;
+}
+
+/* ========================================
+   预览区域样式
+   ======================================== */
+.background-preview {
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+  border: 2px solid var(--border-color, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.background-preview.none {
+  background: var(--bg-primary, #f8fafc);
+}
+
+.background-preview.solid {
+  background: var(--preview-color, #667eea);
+}
+
+.background-preview.gradient {
+  background: var(--preview-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+}
+
+.background-preview.image {
+  background-image: var(--preview-image, url('/backgrounds/preset-1.jpg'));
+  background-size: cover;
+  background-position: center;
+}
+
+/* 背景选项卡片 */
+.background-option {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  border: 2px solid var(--border-color, #e2e8f0);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.background-option:hover {
+  border-color: var(--accent-color, #3b82f6);
+  transform: scale(1.05);
+}
+
+.background-option.active {
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* 背景选择器网格 */
+.background-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  padding: 12px 0;
+}
+
+/* 自定义背景项 */
+.custom-background-item {
+  position: relative;
+  group: hover;
+}
+
+.custom-background-item .delete-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--error-color, #ef4444);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.custom-background-item:hover .delete-btn {
+  opacity: 1;
+}
+
+/* 暗色模式下的背景管理弹窗 */
+:root.dark .background-manager {
+  background: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .background-option {
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .background-preview {
+  border-color: var(--border-color, #374151);
+}

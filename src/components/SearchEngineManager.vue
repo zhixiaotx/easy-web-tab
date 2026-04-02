@@ -85,6 +85,13 @@ function handleMove(id: string, direction: 'up' | 'down') {
   store.moveEngine(id, direction)
 }
 
+// 恢复默认引擎
+function handleReset() {
+  if (confirm('确定要恢复默认搜索引擎吗？当前自定义引擎将被覆盖。')) {
+    store.resetToDefault()
+  }
+}
+
 // 开始编辑内置引擎 URL
 function startEditBuiltIn(engine: SearchEngine) {
   builtInEditingId.value = engine.id
@@ -158,6 +165,7 @@ function truncateUrl(url: string, maxLength = 40) {
         <!-- 内置引擎 -->
         <div class="engine-section">
           <h3>内置引擎 (不可删除)</h3>
+          <button class="btn-reset" @click="handleReset">恢复默认引擎</button>
           <div
             v-for="engine in store.builtInEngines"
             :key="engine.id"
@@ -516,5 +524,20 @@ function truncateUrl(url: string, maxLength = 40) {
 
 .btn-icon.set-default:hover {
   color: #fbbf24;
+}
+
+.btn-reset {
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-reset:hover {
+  background: #2563eb;
 }
 </style>

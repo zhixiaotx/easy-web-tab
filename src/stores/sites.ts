@@ -333,18 +333,16 @@ export const useSitesStore = defineStore('sites', () => {
     pageSize.value = size
   }
 
-  // 交换两个站点的 sort 值（用于拖拽排序）
+  // 调整站点 A 的 sort 值：设置为站点 B 的 sort+1（排在 B 前面）
   function swapSort(urlA: string, urlB: string) {
     const siteA = sites.value.find(s => s.url === urlA)
     const siteB = sites.value.find(s => s.url === urlB)
     if (!siteA || !siteB) return
 
-    const sortA = siteA.sort ?? 1
     const sortB = siteB.sort ?? 1
 
-    // 交换 sort 值
-    siteA.sort = sortB
-    siteB.sort = sortA
+    // 将 A 的 sort 设置为 B 的 sort+1（排在 B 前面）
+    siteA.sort = sortB + 1
 
     // 持久化到 localStorage
     saveUserSites()

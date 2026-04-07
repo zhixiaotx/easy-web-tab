@@ -101,23 +101,29 @@ searchEngines:
     isDefault: false
     sort: 5
 
+  - id: engine_1775199775237
+    name: iconfont
+    url: https://www.iconfont.cn/?/search/index?searchType=icon&q=
+    isDefault: false
+    sort: 6
+
   - id: zhihu
     name: 知乎
     url: https://www.zhihu.com/search?type=content&q=
     isDefault: false
-    sort: 6
+    sort: 8
 
   - id: sogou
     name: 搜狗
     url: https://www.sogou.com/web?query=
     isDefault: false
-    sort: 8
+    sort: 9
 
   - id: 360
     name: 360搜索
     url: https://www.so.com/s?q=
     isDefault: false
-    sort: 9
+    sort: 14
 
 sites:
   - name: DeepSeek
@@ -125,8 +131,8 @@ sites:
     description: DeepSeek | 深度求索 ! [🎉 DeepSeek-V3.2 正式版发布，强化 Agent 能力，融入思考推理，在网页端、APP 和 API 全面上线
     category: custom_1773890047269
     tags: [大模型]
-    icon: https://deepseek.com/favicon.ico
-    sort: 15
+    icon: /icons/deepseek.svg
+    sort: 17
     createdAt: 2026-03-19T03:15:33.215Z
 
   - name: MyOpenclaw
@@ -135,8 +141,17 @@ sites:
     category: custom_1773890047269
     tags: [智能体]
     icon: /icons/openclaws.svg
-    sort: 15
+    sort: 16
     createdAt: 2026-03-20T14:20:56.409Z
+
+  - name: Iconfont
+    url: https://www.iconfont.cn/
+    description: 阿里巴巴矢量图标库
+    category: tech
+    tags: [图标]
+    icon: /icons/iconfont.svg
+    sort: 12
+    createdAt: 2026-03-31T06:27:04.403Z
 
   - name: GitHub
     url: https://github.com
@@ -147,21 +162,12 @@ sites:
     sort: 11
     createdAt: 2024-01-01T00:00:00.000Z
 
-  - name: Iconfont
-    url: https://www.iconfont.cn/
-    description: 阿里巴巴矢量图标库
-    category: tech
-    tags: [图标]
-    icon: /icons/iconfont.svg
-    sort: 9
-    createdAt: 2026-03-31T06:27:04.403Z
-
   - name: 码云(gitee)
     url: https://gitee.com
     description: 面向企业提供一站式研发管理解决方案
     category: tech
     tags: [项目托管, 搜索引擎]
-    icon: https://gitee.com/favicon.ico
+    icon: /icons/码云_gitee_.ico
     sort: 8
     createdAt: 2026-03-19T08:06:02.081Z
 
@@ -192,6 +198,15 @@ sites:
     sort: 5
     createdAt: 2026-03-29T03:23:59.609Z
 
+  - name: Trae
+    url: https://www.trae.com.cn
+    description: 国内首款 AI 原生 IDE，专为中国开发者打造，让 AI 深度融入编程，带来比插件更流畅、精准的开发体验。
+    category: tech
+    tags: [工具]
+    icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
+    sort: 5
+    createdAt: 2026-03-20T08:45:12.609Z
+
   - name: 哔哩哔哩
     url: https://www.bilibili.com
     description: 免费看高清视频 多端同步播放记录 发表弹幕/评论 热门番剧影视看不停 立即登录 首次使用？ 点我注册。不感兴趣 将减少此类内容推荐。不感兴趣 将减少此类内容推荐
@@ -200,15 +215,6 @@ sites:
     icon: https://www.bilibili.com/favicon.ico
     sort: 4
     createdAt: 2026-03-19T07:53:05.443Z
-
-  - name: Trae
-    url: https://www.trae.com.cn
-    description: 国内首款 AI 原生 IDE，专为中国开发者打造，让 AI 深度融入编程，带来比插件更流畅、精准的开发体验。
-    category: tech
-    tags: [工具]
-    icon: https://lf-cdn.trae.com.cn/obj/trae-com-cn/trae_website_prod_cn/favicon.ico
-    sort: 4
-    createdAt: 2026-03-20T08:45:12.609Z
 
   - name: obsidian
     url: https://https://obsidian.md/.md
@@ -233,7 +239,7 @@ sites:
     description: 百度一下，你就知道
     category: news
     tags: [搜索引擎]
-    icon: https://www.baidu.com/favicon.ico
+    icon: /icons/百度一下_你就知道.ico
     sort: 3
     createdAt: 2026-03-19T00:32:06.601Z
 
@@ -287,7 +293,7 @@ sites:
     description: 阿里云盘是一款速度快、不打扰、够安全、易于分享的网盘，你可以在这里存储、管理和探索内容，尽情打造丰富的数字世界。。通过各类强大的备份能力和独特的数据加密技术，让您的文件安全存在云盘。。各类备份能力，让您的文件丝滑「搬」上云盘
     category: office
     tags: [网盘]
-    icon: /icons/browser.svg
+    icon: /icons/阿里云盘.svg
     sort: 3
     createdAt: 2026-03-20T08:39:55.352Z
 
@@ -368,7 +374,7 @@ sites:
     description: 支持多人在线协作编辑Word、Excel和PPT文档_WPS官方网站
     category: office
     tags: [文档]
-    icon: https://www.wps.cn/favicon.ico
+    icon: /icons/WPS账号.svg
     sort: 2
     createdAt: 2026-03-29T03:31:21.036Z
 
@@ -380,6 +386,15 @@ sites:
     icon: /icons/QQ邮箱.svg
     sort: 2
     createdAt: 2026-03-29T13:26:52.301Z
+
+  - name: AIbase
+    url: https://model.aibase.cn
+    description: 聚合全球优质AI模型 赋能下一代应用开发。
+    category: custom_1773890047269
+    tags: [开发平台]
+    icon: /icons/aibase.ico
+    sort: 2
+    createdAt: 2026-03-29T09:42:17.220Z
 
   - name: MDN
     url: https://developer.mozilla.org
@@ -431,7 +446,7 @@ sites:
     description: Apache Tomcat® 软件是 Jakarta Servlet、Jakarta Pages、Jakarta Expression Language、Jakarta WebSocket、Jakarta Annotations 和 Jakarta Authentication 规范的开源实现。这些规范属于 Jakarta EE 平台的一部分。Jakarta EE 平台是。
     category: tech
     tags: []
-    icon: https://tomcat.apache.org/favicon.ico
+    icon: /icons/apache_tomcat.ico
     sort: 1
     createdAt: 2026-03-20T00:30:17.746Z
 
@@ -467,7 +482,7 @@ sites:
     description: 高德地图
     category: travel
     tags: []
-    icon: https://ditu.amap.com/favicon.ico
+    icon: /icons/高德地图.ico
     sort: 1
     createdAt: 2026-03-20T08:32:11.573Z
 
@@ -503,7 +518,7 @@ sites:
     description: Taobao | 淘宝。淘宝网是阿里巴巴集团旗下的国际化网络购物平台，淘宝网为消费者提供互动化、个性化的购物体验。消费者能够从天猫品牌旗舰店、淘宝直播间实物展示、网红主播评论区真实的买家秀获取相关度高的商品信息，也能通过淘宝百科学习生活知识，畅享美好购物生活。。除了购物以外，淘宝网贴心的为您提供了产品翻译/阅读/DingTalk等生活娱乐工具，让你购物娱乐两不误！淘宝网不仅是您的购物平台，更是您的生活好伙伴！
     category: shopping
     tags: [购物]
-    icon: https://www.taobao.com/favicon.ico
+    icon: /icons/淘宝闪购.ico
     sort: 1
     createdAt: 2026-03-29T02:36:05.250Z
 
@@ -593,7 +608,7 @@ sites:
     description: -闲不住？上闲鱼！二手交易平台。统一社会信用代码：91330110MA2H1CFF2D。增值电信业务经营许可证：浙B2-20201551。增值电信业务经营许可证（跨地区）：B2-20241485
     category: shopping
     tags: [购物]
-    icon: https://www.goofish.com/favicon.ico
+    icon: /icons/咸鱼.svg
     sort: 1
     createdAt: 2026-03-29T03:25:37.817Z
 
@@ -620,7 +635,7 @@ sites:
     description: 求职_找工作_招聘_房产销售
     category: life
     tags: []
-    icon: https://www.zhaopin.com/favicon.ico
+    icon: /icons/智联招聘.ico
     sort: 1
     createdAt: 2026-03-29T03:32:43.685Z
 
@@ -629,7 +644,7 @@ sites:
     description: 淘宝闪购
     category: shopping
     tags: [购物]
-    icon: https://www.ele.me/favicon.ico
+    icon: /icons/淘宝闪购.ico
     sort: 1
     createdAt: 2026-03-29T03:33:43.239Z
 
@@ -638,7 +653,7 @@ sites:
     description: 音乐/视频/电台/用户。打开客户端播放，享受高清音质。
     category: video
     tags: [音乐]
-    icon: https://music.163.com/favicon.ico
+    icon: /icons/网易云音乐.ico
     sort: 1
     createdAt: 2026-03-29T03:34:36.044Z
 
@@ -665,7 +680,7 @@ sites:
     description: 今日头条
     category: news
     tags: []
-    icon: https://www.toutiao.com/favicon.ico
+    icon: /icons/今日头条.ico
     sort: 1
     createdAt: 2026-03-29T03:38:49.263Z
 
@@ -674,7 +689,7 @@ sites:
     description: 北京链家网是提供北京二手房买卖、北京新房、北京租房、北京房价查询等业务的专业房产网站，可为您买卖北京二手房提供帮助,链家网北京站同时具有北京二手房、北京租房及购房问答和百科等频道,还可以在线查询北京二手房价格.买房卖房上北京链家网,让房产交易不再难.
     category: life
     tags: []
-    icon: https://bj.lianjia.com/favicon.ico
+    icon: /icons/链家.ico
     sort: 1
     createdAt: 2026-03-29T03:39:49.301Z
 
@@ -683,7 +698,7 @@ sites:
     description: 全国天气预报
     category: life
     tags: []
-    icon: https://www.weather.com.cn/favicon.ico
+    icon: /icons/中国天气网.svg
     sort: 1
     createdAt: 2026-03-29T03:40:48.147Z
 
@@ -692,7 +707,7 @@ sites:
     description: 开源中国
     category: tech
     tags: [问答]
-    icon: https://www.oschina.net/favicon.ico
+    icon: /icons/开源中国.ico
     sort: 1
     createdAt: 2026-03-29T03:43:54.384Z
 
@@ -701,7 +716,7 @@ sites:
     description: 小米商城
     category: shopping
     tags: []
-    icon: https://www.mi.com/favicon.ico
+    icon: /icons/小米商城.ico
     sort: 1
     createdAt: 2026-03-29T03:44:51.053Z
 
@@ -777,15 +792,6 @@ sites:
     sort: 1
     createdAt: 2026-03-29T09:40:18.190Z
 
-  - name: AIbase
-    url: https://model.aibase.cn
-    description: 聚合全球优质AI模型 赋能下一代应用开发。
-    category: custom_1773890047269
-    tags: [开发平台]
-    icon: /icons/aibase.ico
-    sort: 1
-    createdAt: 2026-03-29T09:42:17.220Z
-
   - name: 通义千问
     url: https://tongyi.aliyun.com
     description: 
@@ -827,7 +833,7 @@ sites:
     description: core质押网站
     category: custom_1774788526323
     tags: []
-    icon: https://stake.coredao.org/favicon.ico
+    icon: /icons/core_s_bitcoin_staking.ico
     sort: 1
     createdAt: 2026-03-29T12:50:24.068Z
 
@@ -863,7 +869,7 @@ sites:
     description: C语言中文网是中国领先的C语言程序设计专业网站，提供C语言入门经典教程、C语言编译器、C语言函数手册，C语言编程技巧，C语言考试试题等，是学习、自学C语言程序设计的好帮手。
     category: custom_1773899614797
     tags: []
-    icon: https://c.biancheng.net/favicon.ico?v=1.7.21
+    icon: /icons/c语言中文网.ico
     sort: 1
     createdAt: 2026-03-29T13:18:55.412Z
 
@@ -908,7 +914,7 @@ sites:
     description: postgresql
     category: tech
     tags: [数据库]
-    icon: https://jdbc.postgresql.org/favicon.ico
+    icon: /icons/postgresql.svg
     sort: 1
     createdAt: 2026-03-29T13:52:40.517Z
 
@@ -944,7 +950,7 @@ sites:
     description: 迅雷是一家全球领先的去中心化服务商，以技术构建商业，以服务创造共识，累计用户超4亿。面向个人和企业推出迅雷下载、迅雷云盘、迅雷影音、迅雷直播、迅雷会员、云计算、区块链等产品。
     category: custom_1773899482306
     tags: [下载]
-    icon: https://www.xunlei.com/favicon-32x32.png
+    icon: /icons/迅雷.ico
     sort: 1
     createdAt: 2026-03-29T14:03:19.149Z
 
@@ -962,7 +968,7 @@ sites:
     description: ProcessOn是一款专业在线作图工具和知识分享社区，支持AI一键生成思维导图和流程图。可绘制甘特图、ER图、UML、网络拓扑图、电路图、平面图、鱼骨图、组织结构图、时间轴等多种图形，同时可实现人与人之间的实时协作和共享，提升团队工作效率。
     category: office
     tags: [文档]
-    icon: https://www.processon.com/favicon.ico
+    icon: /icons/processon.ico
     sort: 1
     createdAt: 2026-03-29T14:06:30.378Z
 

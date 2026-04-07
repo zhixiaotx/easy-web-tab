@@ -1,11 +1,15 @@
-# Easy Web Tab - PM2 开机自启动脚本 (Windows)
-# 此脚本用于 Windows 开机自动启动 PM2 进程
-
-# 获取脚本所在目录
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Easy Web Tab - PM2 开机自启动脚本 (PowerShell)
+# 用于任务计划程序，开机时自动启动 PM2 服务
 
 # 切换到项目目录
-Set-Location $ScriptDir
+Set-Location -Path "D:\IDEA\easyWebTab"
 
-# 恢复 PM2 保存的进程列表
+# 检查并启动 PM2 守护进程
+$pm2Exists = Get-Command pm2 -ErrorAction SilentlyContinue
+if (-not $pm2Exists) {
+    Write-Host "PM2 未安装，正在安装..."
+    npm install -g pm2
+}
+
+# 恢复保存的 PM2 进程列表
 pm2 resurrect

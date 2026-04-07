@@ -8,8 +8,12 @@ const pageSizeOptions = [
   { value: 18, label: '18 条/页' },
   { value: 27, label: '27 条/页' },
   { value: 36, label: '36 条/页' },
-  { value: 45, label: '45 条/页' }
+  { value: 45, label: '45 条/页' },
+  { value: 99999, label: '全部' }
 ]
+
+// 判断是否处于"全部"模式
+const isAllMode = computed(() => store.pageSize === 99999)
 
 const pages = computed(() => {
   const total = store.totalPages
@@ -61,7 +65,8 @@ const emit = defineEmits<{
 
 const handleSizeChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
-  store.setPageSize(Number(target.value))
+  const newSize = Number(target.value)
+  store.setPageSize(newSize)
   // 滚动到顶部
   emit('pageChange')
 }
@@ -69,7 +74,8 @@ const handleSizeChange = (event: Event) => {
 
 <template>
   <div v-if="store.filteredSites.length > 0" class="pagination-wrapper">
-    <div class="pagination">
+    <!-- 分页按钮（非全部模式时显示） -->
+    <div v-if="!isAllMode" class="pagination">
       <button
         class="page-btn"
         :disabled="store.currentPage === 1"
@@ -114,6 +120,11 @@ const handleSizeChange = (event: Event) => {
           {{ opt.label }}
         </option>
       </select>
+    </div>
+
+    <!-- 全部时显示总数 -->
+    <div v-if="isAllMode" class="page-info">
+      共 {{ store.filteredSites.length }} 条
     </div>
   </div>
 </template>
@@ -193,5 +204,27 @@ const handleSizeChange = (event: Event) => {
 .page-size-select:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.page-info {
+  color: #64748b;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+:global(.dark) .page-btn {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+  color: var(--text-secondary, #d1d5db);
+}
+
+:global(.dark) .page-size-select {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+  color: var(--text-secondary, #d1d5db);
+}
+
+:global(.dark) .page-info {
+  color: var(--text-secondary, #d1d5db);
 }
 </style>

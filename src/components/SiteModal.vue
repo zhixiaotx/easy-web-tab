@@ -472,7 +472,7 @@ const handleSubmit = () => {
               <div v-else class="icon-preview icon-preview-empty">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               </div>
-              <div v-if="form.icon" class="icon-path">{{ form.icon }}</div>
+              <div v-if="form.icon" class="icon-path" :title="form.icon">{{ form.icon }}</div>
             </div>
 
             <!-- 操作按钮 -->

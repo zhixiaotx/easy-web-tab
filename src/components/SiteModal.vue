@@ -240,6 +240,12 @@ const handleFetchMetadata = async () => {
     return
   }
 
+  // 本地路径不需要获取元数据
+  if (form.value.url.startsWith('/')) {
+    errors.value.url = '本地路径无需获取元数据'
+    return
+  }
+
   // 重复检测（新增模式才检测，编辑模式跳过）
   const duplicate = !isEditing.value ? sitesStore.sites.find(s => s.url === form.value.url) : null
 
@@ -250,20 +256,40 @@ const handleFetchMetadata = async () => {
     errors.value.url = `⚠️ 该网址已存在（${duplicate.name}），继续获取将覆盖现有条目`
   }
 
-  const metadata = await fetchMetadata(form.value.url)
+  // 优先尝试匹配预置图标（不调用外部 API）
+  const presetIcon = findPresetIconByUrl(form.value.url)
+  if (presetIcon) {
+    const iconPath = getIconPath(presetIcon)
+    // 填充图标
+    if (!form.value.icon) {
+      form.value.icon = iconPath
+    }
+    // 填充标题（如果用户已手动选择图标，也填充标题）
+    const metadata = await fetchMetadata(form.value.url)
+    if (metadata) {
+      if (!form.value.name && metadata.title) {
+        form.value.name = metadata.title
+      }
+      if (!form.value.description && metadata.description) {
+        form.value.description = metadata.description
+      }
+    }
+    isLoading.value = false
+    return
+  }
 
+  // 没有匹配的预置图标，提示用户手动选择
+  errors.value.icon = '未找到匹配的预置图标，请从列表中选择或手动输入图标 URL'
+  // 仍然获取标题和描述
+  const metadata = await fetchMetadata(form.value.url)
   if (metadata) {
-    // 只有为空时才填充
     if (!form.value.name && metadata.title) {
       form.value.name = metadata.title
     }
     if (!form.value.description && metadata.description) {
       form.value.description = metadata.description
     }
-    if (!form.value.icon && metadata.icon) {
-      form.value.icon = metadata.icon
-    }
-  } else {
+  } else if (!form.value.name) {
     errors.value.url = '无法获取网址信息，请手动填写'
   }
 

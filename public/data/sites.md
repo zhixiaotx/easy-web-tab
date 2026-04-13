@@ -89,21 +89,27 @@ searchEngines:
     isDefault: false
     sort: 2
 
-  - id: github
-    name: GitHub
-    url: https://github.com/search?q=
+  - id: google
+    name: Google
+    url: https://www.google.com/search?q=
+    isDefault: false
+    sort: 3
+
+  - id: sogou
+    name: 搜狗
+    url: https://www.sogou.com/web?query=
     isDefault: false
     sort: 4
 
-  - id: bilibili
-    name: 哔哩哔哩
-    url: https://search.bilibili.com/all?keyword=
+  - id: 360
+    name: 360搜索
+    url: https://www.so.com/s?q=
     isDefault: false
     sort: 5
 
-  - id: engine_1775199775237
-    name: iconfont
-    url: https://www.iconfont.cn/?/search/index?searchType=icon&q=
+  - id: quark
+    name: 夸克
+    url: https://quark.cn/s?query=
     isDefault: false
     sort: 6
 
@@ -111,19 +117,37 @@ searchEngines:
     name: 知乎
     url: https://www.zhihu.com/search?type=content&q=
     isDefault: false
+    sort: 7
+
+  - id: bilibili
+    name: 哔哩哔哩
+    url: https://search.bilibili.com/all?keyword=
+    isDefault: false
     sort: 8
 
-  - id: sogou
-    name: 搜狗
-    url: https://www.sogou.com/web?query=
+  - id: github
+    name: GitHub
+    url: https://github.com/search?q=
     isDefault: false
     sort: 9
 
-  - id: 360
-    name: 360搜索
-    url: https://www.so.com/s?q=
+  - id: translate
+    name: 翻译
+    url: https://translate.google.com/?sl=auto&tl=zh-CN&text=
     isDefault: false
-    sort: 14
+    sort: 10
+
+  - id: kimi
+    name: Kimi
+    url: https://kimi.moonshot.cn/?q=
+    isDefault: false
+    sort: 11
+
+  - id: deepseek
+    name: DeepSeek
+    url: https://www.deepseek.com/search?q=
+    isDefault: false
+    sort: 12
 
 sites:
   - name: DeepSeek
@@ -150,7 +174,7 @@ sites:
     category: tech
     tags: [图标]
     icon: /icons/iconfont.svg
-    sort: 12
+    sort: 13
     createdAt: 2026-03-31T06:27:04.403Z
 
   - name: GitHub
@@ -167,7 +191,7 @@ sites:
     description: 面向企业提供一站式研发管理解决方案
     category: tech
     tags: [项目托管, 搜索引擎]
-    icon: /icons/码云_gitee_.ico
+    icon: /icons/gitee.ico
     sort: 8
     createdAt: 2026-03-19T08:06:02.081Z
 
@@ -176,7 +200,7 @@ sites:
     description: 
     category: custom_1773890047269
     tags: [大模型, 智能体]
-    icon: /icons/豆包.svg
+    icon: /icons/doubao.svg
     sort: 5
     createdAt: 2026-03-29T09:51:27.674Z
 
@@ -185,7 +209,7 @@ sites:
     description: 龙虾光。代理右。上传代理技能包，像npm一样进行版本管理，并通过向量使其可搜索。无需审核，仅凭信号。搜索技能。版本化，随时可回滚。
     category: custom_1773890047269
     tags: [技能]
-    icon: /icons/龙虾.svg
+    icon: /icons/OpenClaw_icon-logo.svg
     sort: 5
     createdAt: 2026-03-20T01:08:57.076Z
 
@@ -239,7 +263,7 @@ sites:
     description: 百度一下，你就知道
     category: news
     tags: [搜索引擎]
-    icon: /icons/百度一下_你就知道.ico
+    icon: /icons/baidu.svg
     sort: 3
     createdAt: 2026-03-19T00:32:06.601Z
 
@@ -275,7 +299,7 @@ sites:
     description: Models Overview Products Solutions Pricing Resources Partners Support。See all results for ""。Everything You Need in One
     category: tech
     tags: []
-    icon: /icons/阿里云官方-中文LOGO.svg
+    icon: /icons/aliyun-logo.svg
     sort: 3
     createdAt: 2026-03-20T08:36:02.069Z
 
@@ -284,7 +308,7 @@ sites:
     description: 抖音
     category: video
     tags: [购物]
-    icon: /icons/抖音.svg
+    icon: /icons/douyin.svg
     sort: 3
     createdAt: 2026-03-20T08:37:54.510Z
 
@@ -293,7 +317,7 @@ sites:
     description: 阿里云盘是一款速度快、不打扰、够安全、易于分享的网盘，你可以在这里存储、管理和探索内容，尽情打造丰富的数字世界。。通过各类强大的备份能力和独特的数据加密技术，让您的文件安全存在云盘。。各类备份能力，让您的文件丝滑「搬」上云盘
     category: office
     tags: [网盘]
-    icon: /icons/阿里云盘.svg
+    icon: /icons/aliyun-drive.svg
     sort: 3
     createdAt: 2026-03-20T08:39:55.352Z
 
@@ -302,7 +326,7 @@ sites:
     description: 为你电脑/手机中的文件提供云备份、预览、分享等服务，帮你更便捷安全地管理数据。。不止存储，数据管理更便捷。智能搜索，盘中文件一搜即有
     category: office
     tags: [网盘]
-    icon: /icons/百度云盘.svg
+    icon: /icons/baidu-cloud.svg
     sort: 2
     createdAt: 2026-03-19T08:52:57.850Z
 
@@ -311,7 +335,7 @@ sites:
     description: 开发者社区，为程序员服务的技术社区
     category: news
     tags: [社区]
-    icon: 
+    icon: /icons/juejin.svg
     sort: 2
     createdAt: 2024-01-10T00:00:00.000Z
 
@@ -347,7 +371,7 @@ sites:
     description: 智谱是由清华大学计算机系技术成果转化而来的公司，致力于打造新一代认知智能通用模型。公司合作研发了双语千亿级超大规模预训练模型GLM-130B，并构建了高精度通用知识图谱，形成数据与知识双轮驱动的认知引擎，基于此模型打造了ChatGLM（chatglm.cn）。此外，智谱还推出了认知大模型平台Bigmodel.ai，包括CodeGeeX和CogView等产品，提供智能API服务，链接物理世界的亿级用户、赋能元宇宙数字人、成为具身机器人的基座，赋予机器像人一样“思考”的能力。
     category: custom_1773890047269
     tags: [大模型]
-    icon: /icons/智谱.svg
+    icon: /icons/zhipu.svg
     sort: 2
     createdAt: 2026-03-20T08:42:36.444Z
 
@@ -356,7 +380,7 @@ sites:
     description: 贵州生育网上登记服务
     category: government
     tags: []
-    icon: /icons/计划生育服务站.svg
+    icon: /icons/family-planning.svg
     sort: 2
     createdAt: 2026-03-29T04:26:23.982Z
 
@@ -374,7 +398,7 @@ sites:
     description: 支持多人在线协作编辑Word、Excel和PPT文档_WPS官方网站
     category: office
     tags: [文档]
-    icon: /icons/WPS账号.svg
+    icon: /icons/wps-account.svg
     sort: 2
     createdAt: 2026-03-29T03:31:21.036Z
 
@@ -383,7 +407,7 @@ sites:
     description: QQ邮箱
     category: office
     tags: []
-    icon: /icons/QQ邮箱.svg
+    icon: /icons/qq-mail.svg
     sort: 2
     createdAt: 2026-03-29T13:26:52.301Z
 
@@ -482,7 +506,7 @@ sites:
     description: 高德地图
     category: travel
     tags: []
-    icon: /icons/高德地图.ico
+    icon: /icons/amap.ico
     sort: 1
     createdAt: 2026-03-20T08:32:11.573Z
 
@@ -509,7 +533,7 @@ sites:
     description: 微信官网
     category: social
     tags: []
-    icon: /icons/微信.svg
+    icon: /icons/wechat.svg
     sort: 1
     createdAt: 2026-03-29T02:35:09.724Z
 
@@ -518,7 +542,7 @@ sites:
     description: Taobao | 淘宝。淘宝网是阿里巴巴集团旗下的国际化网络购物平台，淘宝网为消费者提供互动化、个性化的购物体验。消费者能够从天猫品牌旗舰店、淘宝直播间实物展示、网红主播评论区真实的买家秀获取相关度高的商品信息，也能通过淘宝百科学习生活知识，畅享美好购物生活。。除了购物以外，淘宝网贴心的为您提供了产品翻译/阅读/DingTalk等生活娱乐工具，让你购物娱乐两不误！淘宝网不仅是您的购物平台，更是您的生活好伙伴！
     category: shopping
     tags: [购物]
-    icon: /icons/淘宝闪购.ico
+    icon: /icons/eleme.ico
     sort: 1
     createdAt: 2026-03-29T02:36:05.250Z
 
@@ -527,7 +551,7 @@ sites:
     description: 支付宝账户快速登录
     category: finance
     tags: [支付]
-    icon: /icons/支付宝.svg
+    icon: /icons/zhifubao.svg
     sort: 1
     createdAt: 2026-03-29T02:37:43.702Z
 
@@ -545,7 +569,7 @@ sites:
     description: Ctrl+V 粘贴图片快速图搜。Ctrl+V 粘贴图片到此处。天猫商城，理想生活的起点，在这里时尚潮流与实用好物齐聚，品质与优惠并行。无论你是追求时尚的弄潮儿，还是注重生活品质的居家达人，天猫都能为你打造专属的理想生活。
     category: shopping
     tags: [购物]
-    icon: /icons/天猫.svg
+    icon: /icons/tmall.svg
     sort: 1
     createdAt: 2026-03-29T02:40:46.059Z
 
@@ -554,7 +578,7 @@ sites:
     description: 美团 - 帮大家吃得更好，生活更好 https://p0.meituan.net/smartvenus/519f64f1d51d8470ecad1f9b5fce83591696.png 帮大家吃得更好，生活更好。。美团以“零售 + 科技”的战略 践行“帮大家吃得更好，生活更好”的公司使命。。自2010年3月成立以来，
     category: shopping
     tags: [购物, 外卖]
-    icon: /icons/美团.svg
+    icon: /icons/meituan.svg
     sort: 1
     createdAt: 2026-03-29T02:41:49.046Z
 
@@ -572,7 +596,7 @@ sites:
     description: 腾讯视频-中国领先的在线视频媒体平台,海量高清视频在线观看
     category: video
     tags: []
-    icon: /icons/腾讯视频.svg
+    icon: /icons/tencent-video.svg
     sort: 1
     createdAt: 2026-03-29T03:18:37.786Z
 
@@ -581,7 +605,7 @@ sites:
     description: 前言 亲自试验半年，自己编写《洗脑宝典》给自己洗脑有奇效！帮助了我改变了自己的核心信念，实现很多重要的转变。（有的转变已完全实现，有的还在过程中。）例如： 1.改变消极思维和灾难化想象。现在即便是抑郁发作，我也不会有绝望的感受了，不会觉得人生完蛋了...。恰逢春分，我来分享一波上周天气晴朗拍的郁金香呀！！ 每年春天都回去拍郁金香，可惜今年天气不好，拍摄次数大大减少，希望可以扛住春雨，我会在天气好的时候再冲一波的！！
     category: custom_1773899614797
     tags: []
-    icon: /icons/豆瓣.ico
+    icon: /icons/douban.ico
     sort: 1
     createdAt: 2026-03-29T03:20:44.891Z
 
@@ -590,7 +614,7 @@ sites:
     description: 人民日报
     category: government
     tags: []
-    icon: /icons/人民网.svg
+    icon: /icons/people-com-cn.svg
     sort: 1
     createdAt: 2026-03-29T03:21:22.091Z
 
@@ -599,7 +623,7 @@ sites:
     description: 小红书
     category: video
     tags: []
-    icon: /icons/小红书.svg
+    icon: /icons/xiaohongshu.svg
     sort: 1
     createdAt: 2026-03-29T03:22:02.358Z
 
@@ -608,7 +632,7 @@ sites:
     description: -闲不住？上闲鱼！二手交易平台。统一社会信用代码：91330110MA2H1CFF2D。增值电信业务经营许可证：浙B2-20201551。增值电信业务经营许可证（跨地区）：B2-20241485
     category: shopping
     tags: [购物]
-    icon: /icons/咸鱼.svg
+    icon: /icons/xianyu.svg
     sort: 1
     createdAt: 2026-03-29T03:25:37.817Z
 
@@ -626,7 +650,7 @@ sites:
     description: 酒店预订,机票预订查询,旅游度假,商旅管理
     category: travel
     tags: []
-    icon: /icons/携程.svg
+    icon: /icons/ctrip.svg
     sort: 1
     createdAt: 2026-03-29T03:29:44.959Z
 
@@ -635,7 +659,7 @@ sites:
     description: 求职_找工作_招聘_房产销售
     category: life
     tags: []
-    icon: /icons/智联招聘.ico
+    icon: /icons/zhaopin.ico
     sort: 1
     createdAt: 2026-03-29T03:32:43.685Z
 
@@ -644,7 +668,7 @@ sites:
     description: 淘宝闪购
     category: shopping
     tags: [购物]
-    icon: /icons/淘宝闪购.ico
+    icon: /icons/eleme.ico
     sort: 1
     createdAt: 2026-03-29T03:33:43.239Z
 
@@ -653,7 +677,7 @@ sites:
     description: 音乐/视频/电台/用户。打开客户端播放，享受高清音质。
     category: video
     tags: [音乐]
-    icon: /icons/网易云音乐.ico
+    icon: /icons/163-music.ico
     sort: 1
     createdAt: 2026-03-29T03:34:36.044Z
 
@@ -662,7 +686,7 @@ sites:
     description: 千万正版音乐海量无损曲库新歌热歌天天畅听的高品质音乐平台！
     category: video
     tags: [音乐]
-    icon: /icons/QQ音乐.svg
+    icon: /icons/qq-music.svg
     sort: 1
     createdAt: 2026-03-29T03:35:21.975Z
 
@@ -671,7 +695,7 @@ sites:
     description: 短视频平台
     category: video
     tags: [购物]
-    icon: /icons/快手.svg
+    icon: /icons/kuaishou.svg
     sort: 1
     createdAt: 2026-03-29T03:36:45.406Z
 
@@ -680,7 +704,7 @@ sites:
     description: 今日头条
     category: news
     tags: []
-    icon: /icons/今日头条.ico
+    icon: /icons/toutiao.ico
     sort: 1
     createdAt: 2026-03-29T03:38:49.263Z
 
@@ -689,7 +713,7 @@ sites:
     description: 北京链家网是提供北京二手房买卖、北京新房、北京租房、北京房价查询等业务的专业房产网站，可为您买卖北京二手房提供帮助,链家网北京站同时具有北京二手房、北京租房及购房问答和百科等频道,还可以在线查询北京二手房价格.买房卖房上北京链家网,让房产交易不再难.
     category: life
     tags: []
-    icon: /icons/链家.ico
+    icon: /icons/lianjia.ico
     sort: 1
     createdAt: 2026-03-29T03:39:49.301Z
 
@@ -698,7 +722,7 @@ sites:
     description: 全国天气预报
     category: life
     tags: []
-    icon: /icons/中国天气网.svg
+    icon: /icons/weather-china.svg
     sort: 1
     createdAt: 2026-03-29T03:40:48.147Z
 
@@ -707,7 +731,7 @@ sites:
     description: 开源中国
     category: tech
     tags: [问答]
-    icon: /icons/开源中国.ico
+    icon: /icons/oschina.ico
     sort: 1
     createdAt: 2026-03-29T03:43:54.384Z
 
@@ -716,7 +740,7 @@ sites:
     description: 小米商城
     category: shopping
     tags: []
-    icon: /icons/小米商城.ico
+    icon: /icons/mi-mall.ico
     sort: 1
     createdAt: 2026-03-29T03:44:51.053Z
 
@@ -734,7 +758,7 @@ sites:
     description: 工时系统
     category: custom_1774756924959
     tags: []
-    icon: /icons/高伟达LOGO.svg
+    icon: /icons/git-logo.svg
     sort: 1
     createdAt: 2026-03-29T04:04:38.374Z
 
@@ -743,7 +767,7 @@ sites:
     description: 高伟达邮箱
     category: custom_1774756924959
     tags: []
-    icon: /icons/高伟达LOGO.svg
+    icon: /icons/git-logo.svg
     sort: 1
     createdAt: 2026-03-29T04:06:09.137Z
 
@@ -752,7 +776,7 @@ sites:
     description: 项目管理
     category: custom_1774756924959
     tags: []
-    icon: /icons/高伟达LOGO.svg
+    icon: /icons/git-logo.svg
     sort: 1
     createdAt: 2026-03-29T04:08:08.344Z
 
@@ -824,7 +848,7 @@ sites:
     description: 
     category: custom_1773890047269
     tags: [开发平台]
-    icon: /icons/硅基流动.svg
+    icon: /icons/siliconflow.svg
     sort: 1
     createdAt: 2026-03-29T09:59:44.564Z
 
@@ -851,7 +875,7 @@ sites:
     description: 【XXL开源社区】已经发布一系列开源软件产品，涉及分布式、基础中间件、效率工具等多个领域。 包含项目有：任务调度、服务管理(配置中心、注册中心)、RPC服务框架、消息队列、单点登录框架、API管理、爬虫、Java工具类库、快速开发平台……等等。 欢迎体验！
     category: tech
     tags: [工具]
-    icon: /icons/xxl-job-copy.svg
+    icon: /icons/xxl-job.ico
     sort: 1
     createdAt: 2026-03-29T13:02:37.615Z
 
@@ -869,7 +893,7 @@ sites:
     description: C语言中文网是中国领先的C语言程序设计专业网站，提供C语言入门经典教程、C语言编译器、C语言函数手册，C语言编程技巧，C语言考试试题等，是学习、自学C语言程序设计的好帮手。
     category: custom_1773899614797
     tags: []
-    icon: /icons/c语言中文网.ico
+    icon: /icons/biancheng.ico
     sort: 1
     createdAt: 2026-03-29T13:18:55.412Z
 
@@ -896,7 +920,7 @@ sites:
     description: seata
     category: tech
     tags: [工具]
-    icon: 
+    icon: /icons/seata.ico
     sort: 1
     createdAt: 2026-03-29T13:38:22.107Z
 
@@ -950,7 +974,7 @@ sites:
     description: 迅雷是一家全球领先的去中心化服务商，以技术构建商业，以服务创造共识，累计用户超4亿。面向个人和企业推出迅雷下载、迅雷云盘、迅雷影音、迅雷直播、迅雷会员、云计算、区块链等产品。
     category: custom_1773899482306
     tags: [下载]
-    icon: /icons/迅雷.ico
+    icon: /icons/xunlei.ico
     sort: 1
     createdAt: 2026-03-29T14:03:19.149Z
 

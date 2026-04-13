@@ -13,6 +13,62 @@ const path = require('path')
 const ICONS_DIR = path.resolve(__dirname, '..', 'public', 'icons')
 const OUTPUT_FILE = path.resolve(__dirname, '..', 'src', 'composables', 'presetIcons.ts')
 
+// 中文名称到英文名称的映射
+const NAME_TRANSLATIONS = {
+  '美团': 'meituan',
+  '携程': 'ctrip',
+  '支付宝': 'alipay',
+  '宝马': 'bmw',
+  '本田': 'honda',
+  '抖音': 'douyin',
+  '豆瓣': 'douban',
+  '豆包': 'doubao',
+  '硅基流动': 'siliconflow',
+  '快手': 'kuaishou',
+  '龙虾': 'lobster',
+  '淘宝': 'taobao',
+  '天猫': 'tmall',
+  '微信': 'wechat',
+  '咸鱼': 'xianyu',
+  '小红书': 'xiaohongshu',
+  '智谱': 'zhipu',
+  '飞书': 'feishu',
+  '高伟达LOGO': 'git-logo',
+  '高伟达邮箱': 'git-mail',
+  '高德地图': 'amap',
+  '阿里云官方-中文LOGO': 'aliyun-logo',
+  '阿里云': 'aliyun',
+  '阿里云盘': 'aliyun-drive',
+  '链家': 'lianjia',
+  '邮箱': 'email',
+  '智联招聘': 'zhaopin',
+  '华为商城': 'vmall',
+  '小米': 'xiaomi',
+  '小米商城': 'mi-mall',
+  'c语言中文网': 'biancheng',
+  'xxl开源项目': 'xxl-job',
+  '人民网': 'people-com-cn',
+  '中国天气网': 'weather-china',
+  '计划生育服务站': 'family-planning',
+  '魔搭GPT': 'modelscope',
+  '百度一下_你就知道': 'baidu',
+  '百度云盘': 'baidu-cloud',
+  '码云_gitee_': 'gitee',
+  '开源中国': 'oschina',
+  '天气网': 'weather-com-cn',
+  '哔哩哔哩': 'bilibili',
+  '腾讯视频': 'tencent-video',
+  '网易云音乐': '163-music',
+  '今日头条': 'toutiao',
+  '淘宝闪购': 'eleme',
+  'WPS账号': 'wps-account',
+  'QQ邮箱': 'qq-mail',
+  'QQ音乐': 'qq-music',
+  '百度云盘': 'baidu-cloud',
+  '百度一下_你就知道': 'baidu',
+  'alimail 阿里邮箱': 'alimail',
+}
+
 // 已知图标 URL 映射（用于自动关联）
 const KNOWN_URLS = {
   github: 'https://github.com',
@@ -158,8 +214,6 @@ function getCategory(name) {
 
 // 生成显示名称（label）
 function getLabel(name) {
-  // 中文名称直接使用
-  if (/[\u4e00-\u9fa5]/.test(name)) return name
   // 特殊映射
   const labelMap = {
     stack_overflow: 'Stack Overflow',
@@ -176,6 +230,44 @@ function getLabel(name) {
     maven_central: 'Maven Central',
     css_tricks: 'CSS-Tricks',
     openclaw_icon_logo: 'OpenClaw Logo',
+    // 英文名称映射
+    meituan: 'Meituan',
+    ctrip: 'Ctrip',
+    alipay: 'Alipay',
+    baidu: 'Baidu',
+    tmall: 'Tmall',
+    jd: 'Jd',
+    bilibili: 'Bilibili',
+    douyin: 'Douyin',
+    douban: 'Douban',
+    xiaohongshu: 'Xiaohongshu',
+    wechat: 'Wechat',
+    zhipu: 'Zhipu',
+    siliconflow: 'Siliconflow',
+    modelscope: 'Modelscope',
+    feishu: 'Feishu',
+    gitee: 'Gitee',
+    oschina: 'Oschina',
+    amap: 'Amap',
+    aliyun: 'Aliyun',
+    eleme: 'Eleme',
+    vmall: 'Vmall',
+    xiaomi: 'Xiaomi',
+    zhaopin: 'Zhaopin',
+    lobsters: 'Lobster',
+    family_planning: 'Family Planning',
+    weather_china: 'Weather China',
+    weather_com_cn: 'Weather.com',
+    biancheng: 'Biancheng',
+    xxl_job: 'XXL-Job',
+    people_com_cn: 'People.com.cn',
+    qq_mail: 'QQ Mail',
+    qq_music: 'QQ Music',
+    toutiao: 'Toutiao',
+    tencent_video: 'Tencent Video',
+    netease_music: '163 Music',
+    wps_account: 'WPS Account',
+    alimail: 'Alimail',
   }
   if (labelMap[name]) return labelMap[name]
   // 英文转友好名称：下划线变空格，首字母大写
@@ -194,7 +286,13 @@ function main() {
   const iconFiles = files.map(f => {
     const ext = path.extname(f).toLowerCase()
     if (ext !== '.svg' && ext !== '.ico') return null
-    const base = path.basename(f, ext)
+    let base = path.basename(f, ext)
+    
+    // 转换为英文名称
+    if (NAME_TRANSLATIONS[base]) {
+      base = NAME_TRANSLATIONS[base]
+    }
+    
     return { file: f, name: base, ext: ext.slice(1) }
   }).filter(Boolean)
 

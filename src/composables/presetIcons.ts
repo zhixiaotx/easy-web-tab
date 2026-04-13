@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-04-07T02:07:58.350Z
+ * 生成时间: 2026-04-13T00:18:50.999Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -155,6 +155,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'youtube', label: 'Youtube', ext: 'svg', category: '视频与媒体', url: 'https://youtube.com' },
 
   // 其他
+  { name: '113-俄罗斯方块', label: '113-俄罗斯方块', ext: 'svg', category: '其他' },
   { name: '360 (1)', label: '360 (1)', ext: 'svg', category: '其他' },
   { name: '360急速', label: '360急速', ext: 'svg', category: '其他' },
   { name: '阿里云官方-中文LOGO', label: '阿里云官方-中文LOGO', ext: 'svg', category: '其他' },
@@ -189,6 +190,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: '微信方', label: '微信方', ext: 'svg', category: '其他' },
   { name: '咸鱼', label: '咸鱼', ext: 'svg', category: '其他' },
   { name: '小红书', label: '小红书', ext: 'svg', category: '其他' },
+  { name: '小米', label: '小米', ext: 'svg', category: '其他' },
   { name: '邮箱', label: '邮箱', ext: 'svg', category: '其他' },
   { name: '智谱', label: '智谱', ext: 'svg', category: '其他' },
   { name: '中国天气网', label: '中国天气网', ext: 'svg', category: '其他' },
@@ -199,16 +201,19 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'amazon-old', label: 'Amazon-old', ext: 'svg', category: '其他' },
   { name: 'amex', label: 'Amex', ext: 'svg', category: '其他' },
   { name: 'bmw', label: 'Bmw', ext: 'svg', category: '其他' },
+  { name: 'Claude', label: 'Claude', ext: 'svg', category: '其他' },
   { name: 'core', label: 'Core', ext: 'svg', category: '其他' },
   { name: 'database_oceanbase', label: 'Database Oceanbase', ext: 'svg', category: '其他' },
   { name: 'elastic', label: 'Elastic', ext: 'svg', category: '其他' },
   { name: 'facebook', label: 'Facebook', ext: 'svg', category: '其他' },
   { name: 'GitCode-logo', label: 'GitCode-logo', ext: 'svg', category: '其他' },
+  { name: 'Grok', label: 'Grok', ext: 'svg', category: '其他' },
   { name: 'honda', label: 'Honda', ext: 'svg', category: '其他' },
   { name: 'iconfont', label: 'Iconfont', ext: 'svg', category: '其他' },
   { name: 'ikea', label: 'Ikea', ext: 'svg', category: '其他' },
   { name: 'instagram', label: 'Instagram', ext: 'svg', category: '其他' },
   { name: 'jordan', label: 'Jordan', ext: 'svg', category: '其他' },
+  { name: 'keywords', label: 'Keywords', ext: 'svg', category: '其他' },
   { name: 'linkedin', label: 'Linkedin', ext: 'svg', category: '其他' },
   { name: 'logok', label: 'Logok', ext: 'svg', category: '其他' },
   { name: 'mastercard', label: 'Mastercard', ext: 'svg', category: '其他' },

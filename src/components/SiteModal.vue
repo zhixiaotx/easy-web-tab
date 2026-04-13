@@ -39,6 +39,29 @@ const iconSearchQuery = ref('')
 const iconManualInput = ref('')
 const iconCategoryFilter = ref('all')
 
+// ===== 游戏选择器状态 =====
+const showGamePicker = ref(false)
+const availableGames = ref<{ name: string; path: string; icon?: string }[]>([])
+
+// 加载可用的游戏
+async function loadAvailableGames() {
+  // 游戏文件列表（手动维护或从接口获取）
+  // 注意：路径末尾不要加 .html，serve 会重定向导致内容丢失
+  const games = [
+    { name: 'Tetris', path: '/games/tetris', icon: '🎮' },
+    { name: '舒尔特方格', path: '/games/schulte-grid', icon: '🧩' }
+  ]
+  availableGames.value = games
+}
+
+// 选择游戏
+function selectGame(game: { name: string; path: string; icon?: string }) {
+  form.value.name = game.name
+  form.value.url = game.path
+  form.value.icon = game.icon || ''
+  showGamePicker.value = false
+}
+
 // 所有分类
 const iconCategories = computed(() => {
   const cats = new Set(PRESET_ICONS.map(i => i.category))
@@ -272,6 +295,21 @@ watch(() => props.site, (newSite) => {
   }
 }, { immediate: true })
 
+// 检查是否为有效的 URL（支持 http/https 或本地路径）
+const isValidUrl = (url: string): boolean => {
+  if (!url.trim()) return false
+  // 支持 http://, https:// 或 /games/ 等本地路径
+  if (url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://')) {
+    return true
+  }
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
 const validate = () => {
   errors.value = {}
 
@@ -281,12 +319,8 @@ const validate = () => {
 
   if (!form.value.url.trim()) {
     errors.value.url = '请输入网站地址'
-  } else {
-    try {
-      new URL(form.value.url)
-    } catch {
-      errors.value.url = '请输入有效的网址'
-    }
+  } else if (!isValidUrl(form.value.url)) {
+    errors.value.url = '请输入有效的网址'
   }
 
   return Object.keys(errors.value).length === 0
@@ -338,7 +372,7 @@ const handleSubmit = () => {
             <input
               v-model="form.url"
               type="text"
-              placeholder="例如：https://github.com"
+              placeholder="例如：https://github.com 或 /games/tetris.html"
               :class="{ error: errors.url }"
             />
             <button
@@ -350,6 +384,27 @@ const handleSubmit = () => {
               <span v-if="isLoading" class="spinner"></span>
               {{ isLoading ? '获取中...' : '获取' }}
             </button>
+            <button
+              type="button"
+              class="btn-game-picker"
+              @click="showGamePicker = !showGamePicker; loadAvailableGames()"
+            >
+              🎮 选择游戏
+            </button>
+          </div>
+          <div v-if="showGamePicker" class="game-picker">
+            <div class="game-list">
+              <button
+                v-for="game in availableGames"
+                :key="game.path"
+                type="button"
+                class="game-item"
+                @click="selectGame(game)"
+              >
+                <span class="game-icon">{{ game.icon }}</span>
+                <span class="game-name">{{ game.name }}</span>
+              </button>
+            </div>
           </div>
           <span v-if="errors.url" class="error-msg">{{ errors.url }}</span>
         </div>
@@ -703,6 +758,63 @@ const handleSubmit = () => {
 .btn-fetch:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
+}
+
+.btn-game-picker {
+  padding: 10px 16px;
+  background-color: #8b5cf6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-game-picker:hover {
+  background-color: #7c3aed;
+}
+
+/* 游戏选择器 */
+.game-picker {
+  margin-top: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.game-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.game-item:hover {
+  background: #f0f9ff;
+  border-color: #8b5cf6;
+}
+
+.game-icon {
+  font-size: 16px;
+}
+
+.game-name {
+  font-size: 14px;
+  color: #1e293b;
 }
 
 /* 标签输入组 */

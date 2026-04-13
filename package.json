@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node scripts/generate-preset-icons.cjs && vue-tsc -b && vite build",
     "preview": "vite preview",
-    "serve": "serve -s dist -l 16718",
+    "serve": "node scripts/serve-with-rewrites.cjs",
     "start": "npm run build && npm run serve"
   },
   "dependencies": {

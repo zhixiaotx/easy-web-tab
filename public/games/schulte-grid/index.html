@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舒尔特方格 - 注意力训练</title>
+    <link rel="stylesheet" href="/games/schulte-grid/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎯 舒尔特方格</h1>
+        </header>
+
+        <div class="main-layout">
+            <div class="sidebar-left">
+                <div class="controls-vertical">
+                    <div class="control-group">
+                        <label>方格规格</label>
+                        <select id="gridSize">
+                            <option value="3">3 × 3</option>
+                            <option value="4">4 × 4</option>
+                            <option value="5" selected>5 × 5</option>
+                            <option value="6">6 × 6</option>
+                            <option value="7">7 × 7</option>
+                            <option value="10">10 × 10</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>训练模式</label>
+                        <select id="gameMode">
+                            <option value="number" selected>数字模式</option>
+                            <option value="letter">字母模式</option>
+                            <option value="reverse">反向模式</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="guide">
+                    <h3>📖 使用说明</h3>
+                    <p class="intro">注意力训练利器</p>
+                    <ol>
+                        <li>选择方格规格和训练模式</li>
+                        <li>点击"开始训练"按钮</li>
+                        <li>按顺序点击数字（1→2→3...），尽量用余光观察</li>
+                        <li>保持目光固定在方格中心</li>
+                        <li>完成后查看成绩和历史记录</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="center-area">
+                <div class="game-area">
+                    <div class="grid-container" id="gridContainer">
+                        <!-- Grid will be generated here -->
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="startBtn" class="btn btn-primary">开始训练</button>
+                        <button id="resetBtn" class="btn btn-secondary">重置</button>
+                    </div>
+
+                    <div class="info-bar" id="infoBar" style="display: none;">
+                        <div class="stat">
+                            <span class="label">时间</span>
+                            <span class="value" id="timer">00:00.000</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">当前</span>
+                            <span class="value" id="currentNum">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">错误</span>
+                            <span class="value" id="errors">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-right">
+                <div class="results-section" id="resultsSection">
+                    <h2>🏆 本次成绩</h2>
+                    <div class="result-cards">
+                        <div class="result-card">
+                            <span class="result-label">用时</span>
+                            <span class="result-value" id="resultTime">--</span>
+                        </div>
+                        <div class="result-card">
+                            <span class="result-label">错误</span>
+                            <span class="result-value" id="resultErrors">--</span>
+                        </div>
+                        <div class="result-card">
+                            <span class="result-label">评级</span>
+                            <span class="result-value" id="resultRating">--</span>
+                        </div>
+                    </div>
+                    <div class="badge" id="resultBadge" style="display: none;"></div>
+                </div>
+
+                <div class="history-section">
+                    <h2>📊 历史记录</h2>
+                    <div class="history-list" id="historyList">
+                        <!-- History items will be inserted here -->
+                    </div>
+                    <button id="clearHistory" class="btn btn-small">清空记录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/games/schulte-grid/app.js"></script>
+</body>
+</html>

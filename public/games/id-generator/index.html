@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>号码生成器 - 开发测试工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🔢 号码生成器</h1>
+            <p class="subtitle">开发和测试人员专用工具</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="sidebar-left">
+                <div class="controls-vertical">
+                    <div class="control-group">
+                        <label>生成数量</label>
+                        <input type="number" id="generateCount" value="1" min="1" max="1000">
+                    </div>
+                </div>
+
+                <div class="guide">
+                    <h3>📖 使用说明</h3>
+                    <ol>
+                        <li>选择号码类型（Tab选项卡）</li>
+                        <li>设置生成数量</li>
+                        <li>点击"生成"按钮</li>
+                        <li>验证、复制或导出结果</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="center-area">
+                <!-- Tab导航 -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="idcard">身份证</button>
+                    <button class="tab-btn" data-tab="orgcode">组织机构代码</button>
+                    <button class="tab-btn" data-tab="creditcode">统一社会信用代码</button>
+                    <button class="tab-btn" data-tab="bankcard">银行卡</button>
+                    <button class="tab-btn" data-tab="phone">手机号</button>
+                    <button class="tab-btn" data-tab="email">邮箱</button>
+                    <button class="tab-btn" data-tab="ip">IP地址</button>
+                    <button class="tab-btn" data-tab="uuid">UUID</button>
+                </div>
+
+                <!-- 内容区域 -->
+                <div class="tab-content">
+                    <!-- 身份证号 -->
+                    <div class="tab-panel active" id="panel-idcard">
+                        <div class="panel-header">
+                            <h2>身份证号生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <!-- 地区选择 -->
+                            <div class="idcard-options">
+                                <div class="option-group">
+                                    <label>省份</label>
+                                    <select id="idcard-province" onchange="onProvinceChange()">
+                                        <option value="">随机</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label>城市</label>
+                                    <select id="idcard-city" disabled>
+                                        <option value="">请先选择省份</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label>性别</label>
+                                    <select id="idcard-gender">
+                                        <option value="">随机</option>
+                                        <option value="1">男</option>
+                                        <option value="0">女</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label>年龄</label>
+                                    <select id="idcard-age">
+                                        <option value="">随机</option>
+                                        <option value="18-25">18-25岁</option>
+                                        <option value="26-35">26-35岁</option>
+                                        <option value="36-45">36-45岁</option>
+                                        <option value="46-55">46-55岁</option>
+                                        <option value="56-65">56-65岁</option>
+                                        <option value="65+">65岁以上</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="result-display" id="result-idcard">
+                                <span class="placeholder">点击生成按钮获取号码</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateIdCard()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('idcard')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('idcard')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-idcard" style="display: none;">
+                                <input type="text" id="validate-idcard-input" placeholder="输入身份证号验证" oninput="updateCharCount('idcard')">
+                                <span class="char-count" id="char-count-idcard">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('idcard')">验证</button>
+                                <div class="validation-result" id="validate-result-idcard"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 组织机构代码 -->
+                    <div class="tab-panel" id="panel-orgcode">
+                        <div class="panel-header">
+                            <h2>组织机构代码生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <!-- 格式选择 -->
+                            <div class="orgcode-options">
+                                <label class="toggle-label">
+                                    <input type="checkbox" id="orgcode-with-hyphen" checked>
+                                    <span>带分隔符（如：77702317-2）</span>
+                                </label>
+                            </div>
+                            <div class="result-display" id="result-orgcode">
+                                <span class="placeholder">点击生成按钮获取号码</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateOrgCode()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('orgcode')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('orgcode')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-orgcode" style="display: none;">
+                                <input type="text" id="validate-orgcode-input" placeholder="输入组织机构代码验证（支持带/不带分隔符）" oninput="updateCharCount('orgcode')">
+                                <span class="char-count" id="char-count-orgcode">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('orgcode')">验证</button>
+                                <div class="validation-result" id="validate-result-orgcode"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 统一社会信用代码 -->
+                    <div class="tab-panel" id="panel-creditcode">
+                        <div class="panel-header">
+                            <h2>统一社会信用代码生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="result-display" id="result-creditcode">
+                                <span class="placeholder">点击生成按钮获取号码</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateCreditCode()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('creditcode')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('creditcode')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-creditcode" style="display: none;">
+                                <input type="text" id="validate-creditcode-input" placeholder="输入统一社会信用代码验证" oninput="updateCharCount('creditcode')">
+                                <span class="char-count" id="char-count-creditcode">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('creditcode')">验证</button>
+                                <div class="validation-result" id="validate-result-creditcode"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 银行卡号 -->
+                    <div class="tab-panel" id="panel-bankcard">
+                        <div class="panel-header">
+                            <h2>银行卡号生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="result-display" id="result-bankcard">
+                                <span class="placeholder">点击生成按钮获取号码</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateBankCard()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('bankcard')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('bankcard')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-bankcard" style="display: none;">
+                                <input type="text" id="validate-bankcard-input" placeholder="输入银行卡号验证" oninput="updateCharCount('bankcard')">
+                                <span class="char-count" id="char-count-bankcard">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('bankcard')">验证</button>
+                                <div class="validation-result" id="validate-result-bankcard"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 手机号 -->
+                    <div class="tab-panel" id="panel-phone">
+                        <div class="panel-header">
+                            <h2>手机号码生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="result-display" id="result-phone">
+                                <span class="placeholder">点击生成按钮获取号码</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGeneratePhone()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('phone')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('phone')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-phone" style="display: none;">
+                                <input type="text" id="validate-phone-input" placeholder="输入手机号验证" oninput="updateCharCount('phone')">
+                                <span class="char-count" id="char-count-phone">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('phone')">验证</button>
+                                <div class="validation-result" id="validate-result-phone"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 邮箱 -->
+                    <div class="tab-panel" id="panel-email">
+                        <div class="panel-header">
+                            <h2>邮箱生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="email-options">
+                                <div class="option-group">
+                                    <label>邮箱类型</label>
+                                    <select id="email-type">
+                                        <option value="">随机</option>
+                                        <option value="qq.com">QQ邮箱</option>
+                                        <option value="163.com">163邮箱</option>
+                                        <option value="126.com">126邮箱</option>
+                                        <option value="gmail.com">Gmail</option>
+                                        <option value="outlook.com">Outlook</option>
+                                        <option value="hotmail.com">Hotmail</option>
+                                        <option value="sina.com">新浪邮箱</option>
+                                        <option value="sohu.com">搜狐邮箱</option>
+                                        <option value="foxmail.com">Foxmail</option>
+                                        <option value="aliyun.com">阿里邮箱</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="result-display" id="result-email">
+                                <span class="placeholder">点击生成按钮获取邮箱</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateEmail()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('email')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('email')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-email" style="display: none;">
+                                <input type="text" id="validate-email-input" placeholder="输入邮箱验证" oninput="updateCharCount('email')">
+                                <span class="char-count" id="char-count-email">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('email')">验证</button>
+                                <div class="validation-result" id="validate-result-email"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IP地址 -->
+                    <div class="tab-panel" id="panel-ip">
+                        <div class="panel-header">
+                            <h2>IP地址生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="result-display" id="result-ip">
+                                <span class="placeholder">点击生成按钮获取IP地址</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateIP()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('ip')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('ip')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-ip" style="display: none;">
+                                <input type="text" id="validate-ip-input" placeholder="输入IP地址验证" oninput="updateCharCount('ip')">
+                                <span class="char-count" id="char-count-ip">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('ip')">验证</button>
+                                <div class="validation-result" id="validate-result-ip"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UUID -->
+                    <div class="tab-panel" id="panel-uuid">
+                        <div class="panel-header">
+                            <h2>UUID生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="result-display" id="result-uuid">
+                                <span class="placeholder">点击生成按钮获取UUID</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateUUID()">生成</button>
+                                <button class="btn btn-outline" onclick="validateInput('uuid')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-uuid" style="display: none;">
+                                <input type="text" id="validate-uuid-input" placeholder="输入UUID验证" oninput="updateCharCount('uuid')">
+                                <span class="char-count" id="char-count-uuid">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('uuid')">验证</button>
+                                <div class="validation-result" id="validate-result-uuid"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 批量生成结果区 -->
+                <div class="batch-result-section" id="batchResultSection" style="display: none;">
+                    <div class="batch-header">
+                        <h2>批量生成结果</h2>
+                        <div class="batch-actions">
+                            <button class="btn btn-small" onclick="selectAll()">全选</button>
+                            <button class="btn btn-small" onclick="selectInverse()">反选</button>
+                            <button class="btn btn-small btn-primary" onclick="copySelected()">复制选中</button>
+                            <button class="btn btn-small btn-secondary" onclick="exportTxt()">导出TXT</button>
+                        </div>
+                    </div>
+                    <div class="batch-list" id="batchList">
+                        <!-- 批量结果将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-right">
+                <div class="info-section">
+                    <h3>ℹ️ 当前信息</h3>
+                    <div id="currentInfo">
+                        <p>生成数量: <span id="infoCount">1</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" style="display: none;"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

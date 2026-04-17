@@ -44,6 +44,7 @@
                     <button class="tab-btn" data-tab="email">邮箱</button>
                     <button class="tab-btn" data-tab="ip">IP地址</button>
                     <button class="tab-btn" data-tab="uuid">UUID</button>
+                    <button class="tab-btn" data-tab="timestamp">时间戳</button>
                 </div>
 
                 <!-- 内容区域 -->
@@ -252,6 +253,12 @@
                             <h2>IP地址生成</h2>
                         </div>
                         <div class="panel-body">
+                            <div class="ip-options">
+                                <div class="option-group" style="flex: 2;">
+                                    <label>IP前缀（可选）</label>
+                                    <input type="text" id="ip-prefix" placeholder="如：10.5 或 10.5.106">
+                                </div>
+                            </div>
                             <div class="result-display" id="result-ip">
                                 <span class="placeholder">点击生成按钮获取IP地址</span>
                             </div>
@@ -287,6 +294,34 @@
                                 <span class="char-count" id="char-count-uuid">0字符</span>
                                 <button class="btn btn-small" onclick="doValidate('uuid')">验证</button>
                                 <div class="validation-result" id="validate-result-uuid"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 时间戳 -->
+                    <div class="tab-panel" id="panel-timestamp">
+                        <div class="panel-header">
+                            <h2>时间戳生成</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="timestamp-options">
+                                <div class="ts-input-group">
+                                    <input type="datetime-local" id="ts-datetime" value="2024-01-01T00:00">
+                                </div>
+                            </div>
+                            <div class="result-display" id="result-timestamp">
+                                <span class="placeholder">点击生成按钮获取时间戳</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="handleGenerateTimestamp()">生成</button>
+                                <button class="btn btn-secondary" onclick="copyResult('timestamp')">复制</button>
+                                <button class="btn btn-outline" onclick="validateInput('timestamp')">验证</button>
+                            </div>
+                            <div class="validation-area" id="validation-timestamp" style="display: none;">
+                                <input type="text" id="validate-timestamp-input" placeholder="输入时间戳（秒）或日期时间进行转换" oninput="updateCharCount('timestamp')">
+                                <span class="char-count" id="char-count-timestamp">0字符</span>
+                                <button class="btn btn-small" onclick="doValidate('timestamp')">转换</button>
+                                <div class="validation-result" id="validate-result-timestamp"></div>
                             </div>
                         </div>
                     </div>

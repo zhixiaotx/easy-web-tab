@@ -297,6 +297,7 @@ const orgCodeChars = '0123456789ABCDEFGHJKMNPQRSTUWXYZ';
 
 /**
  * GB/T 11714 校验码计算
+ * 校验码为 10 时用 X 表示
  */
 function gb11714Check(code8) {
     const weights = [3, 7, 9, 10, 5, 8, 4, 2];
@@ -314,7 +315,7 @@ function gb11714Check(code8) {
     }
     
     const remainder = (11 - (sum % 11)) % 11;
-    return remainder === 10 ? '-' : remainder.toString();
+    return remainder === 10 ? 'X' : remainder.toString();
 }
 
 /**
@@ -638,22 +639,65 @@ function validateEmail(email) {
 // ==================== IP地址生成 ====================
 
 /**
- * 生成IP地址（A/B/C类私网地址）
+ * 生成IP地址（支持指定前缀）
+ * @param {string} prefix - 可选的IP前缀，如 "10.5" 或 "10.5.106"
  */
-function generateIP() {
-    const range = randomInt(1, 3);
-    let ip;
+function generateIP(prefix) {
+    // 如果没有前缀，则随机选择私网地址段
+    if (!prefix || prefix.trim() === '') {
+        const range = randomInt(1, 3);
+        let ip;
+        
+        switch (range) {
+            case 1: // 10.0.0.0 - 10.255.255.255
+                ip = `10.${randomInt(0, 255)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+                break;
+            case 2: // 172.16.0.0 - 172.31.255.255
+                ip = `172.${randomInt(16, 31)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+                break;
+            case 3: // 192.168.0.0 - 192.168.255.255
+                ip = `192.168.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+                break;
+        }
+        
+        return ip;
+    }
     
-    switch (range) {
-        case 1: // 10.0.0.0 - 10.255.255.255
-            ip = `10.${randomInt(0, 255)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+    // 解析前缀
+    const parts = prefix.trim().split('.').filter(p => p !== '');
+    
+    if (parts.length === 0) {
+        return generateIP('');
+    }
+    
+    // 验证前缀格式（只能包含数字，且0-255）
+    for (const part of parts) {
+        if (!/^\d+$/.test(part) || parseInt(part) < 0 || parseInt(part) > 255) {
+            // 前缀格式无效，回退到随机生成
+            return generateIP('');
+        }
+    }
+    
+    // 根据前缀长度生成IP
+    const prefixLen = parts.length;
+    let ip = parts.join('.');
+    
+    switch (prefixLen) {
+        case 1:
+            // 如 "10" -> 10.x.x.x
+            ip += `.${randomInt(0, 255)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
             break;
-        case 2: // 172.16.0.0 - 172.31.255.255
-            ip = `172.${randomInt(16, 31)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+        case 2:
+            // 如 "10.5" -> 10.5.x.x
+            ip += `.${randomInt(0, 255)}.${randomInt(1, 254)}`;
             break;
-        case 3: // 192.168.0.0 - 192.168.255.255
-            ip = `192.168.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+        case 3:
+            // 如 "10.5.106" -> 10.5.106.x
+            ip += `.${randomInt(1, 254)}`;
             break;
+        default:
+            // 超过3段，回退到随机生成
+            return generateIP('');
     }
     
     return ip;
@@ -749,6 +793,14 @@ let currentBatchResults = [];
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化省份选择框
     initProvinceSelect();
+    
+    // 初始化时间戳默认为当前时间
+    const tsDatetime = document.getElementById('ts-datetime');
+    if (tsDatetime) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        tsDatetime.value = now.toISOString().slice(0, 16);
+    }
     
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -891,12 +943,17 @@ function handleGenerateEmail() {
 
 function handleGenerateIP() {
     const count = parseInt(document.getElementById('generateCount').value) || 1;
+    const prefixInput = document.getElementById('ip-prefix');
+    const prefix = prefixInput ? prefixInput.value.trim() : '';
     
     if (count === 1) {
-        const value = generateIP();
+        const value = generateIP(prefix);
         displayResult(value);
     } else {
-        currentBatchResults = batchGenerate('ip', count);
+        currentBatchResults = [];
+        for (let i = 0; i < count; i++) {
+            currentBatchResults.push(generateIP(prefix));
+        }
         showBatchResults(currentBatchResults);
     }
 }
@@ -1065,6 +1122,7 @@ function doValidate(type) {
         case 'email': result = validateEmail(value); break;
         case 'ip': result = validateIP(value); break;
         case 'uuid': result = validateUUID(value); break;
+        case 'timestamp': result = convertTimestamp(value); break;
     }
     
     if (result) {
@@ -1092,4 +1150,60 @@ function showToast(message, type) {
     setTimeout(function() {
         toast.style.display = 'none';
     }, 2000);
+}
+
+// ==================== 时间戳生成 ====================
+
+/**
+ * 生成Unix时间戳（秒）
+ */
+function generateTimestamp() {
+    const datetimeInput = document.getElementById('ts-datetime');
+    if (datetimeInput && datetimeInput.value) {
+        const date = new Date(datetimeInput.value);
+        return Math.floor(date.getTime() / 1000);
+    }
+    // 默认返回当前时间戳
+    return Math.floor(Date.now() / 1000);
+}
+
+/**
+ * 转换时间戳或日期时间
+ */
+function convertTimestamp(value) {
+    const trimmed = value.trim();
+    
+    // 尝试解析为时间戳（纯数字）
+    if (/^\d+$/.test(trimmed)) {
+        const ts = parseInt(trimmed);
+        // 判断是秒还是毫秒
+        const ms = ts > 9999999999 ? ts : ts * 1000;
+        const date = new Date(ms);
+        if (!isNaN(date.getTime())) {
+            return { 
+                valid: true, 
+                message: date.toLocaleString('zh-CN') + ' (UTC ' + date.toUTCString() + ')' 
+            };
+        }
+    }
+    
+    // 尝试解析为日期时间字符串
+    const date = new Date(trimmed);
+    if (!isNaN(date.getTime())) {
+        const ts = Math.floor(date.getTime() / 1000);
+        return { 
+            valid: true, 
+            message: 'Unix时间戳: ' + ts + ' (秒)' 
+        };
+    }
+    
+    return { valid: false, message: '无法解析，请输入有效的时间戳（数字）或日期时间字符串' };
+}
+
+/**
+ * 处理时间戳生成按钮点击
+ */
+function handleGenerateTimestamp() {
+    const value = generateTimestamp();
+    displayResult(value);
 }

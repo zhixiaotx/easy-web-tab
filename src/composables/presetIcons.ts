@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-04-13T07:52:56.280Z
+ * 生成时间: 2026-04-17T00:35:05.121Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -153,6 +153,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'database_oceanbase', label: 'Database Oceanbase', ext: 'svg', category: '其他' },
   { name: 'doubao-1', label: 'Doubao-1', ext: 'svg', category: '其他' },
   { name: 'elastic', label: 'Elastic', ext: 'svg', category: '其他' },
+  { name: 'element', label: 'Element', ext: 'svg', category: '其他' },
   { name: 'email', label: 'Email', ext: 'svg', category: '其他' },
   { name: 'facebook', label: 'Facebook', ext: 'svg', category: '其他' },
   { name: 'family-planning', label: 'Family-planning', ext: 'svg', category: '其他' },

@@ -61,7 +61,7 @@ categories:
     sort: 19
 
   - id: custom_1774788526323
-    name: 虚拟币（web3）
+    name: web3
     icon: 🌊
     sort: 20
 
@@ -156,7 +156,7 @@ sites:
     category: custom_1773890047269
     tags: [大模型]
     icon: /icons/deepseek.svg
-    sort: 17
+    sort: 20
     createdAt: 2026-03-19T03:15:33.215Z
 
   - name: MyOpenclaw
@@ -174,7 +174,7 @@ sites:
     category: tech
     tags: [图标]
     icon: /icons/iconfont.svg
-    sort: 13
+    sort: 14
     createdAt: 2026-03-31T06:27:04.403Z
 
   - name: GitHub
@@ -194,6 +194,15 @@ sites:
     icon: /icons/gitee.ico
     sort: 8
     createdAt: 2026-03-19T08:06:02.081Z
+
+  - name: 俄罗斯方块
+    url: /games/tetris
+    description: 俄罗斯方块
+    category: social
+    tags: [游戏]
+    icon: /icons/keywords.svg
+    sort: 8
+    createdAt: 2026-04-13T06:43:35.631Z
 
   - name: 豆包
     url: https://www.doubao.com
@@ -257,6 +266,15 @@ sites:
     icon: /icons/openclaw (1).svg
     sort: 4
     createdAt: 2026-04-02T06:03:34.464Z
+
+  - name: 号码生成器
+    url: /games/id-generator
+    description: 各种号码生成器
+    category: tech
+    tags: [工具]
+    icon: 
+    sort: 4
+    createdAt: 2026-04-13T07:37:21.042Z
 
   - name: 百度
     url: https://www.baidu.com
@@ -419,6 +437,24 @@ sites:
     icon: /icons/aibase.ico
     sort: 2
     createdAt: 2026-03-29T09:42:17.220Z
+
+  - name: 舒尔特方格
+    url: /games/schulte-grid
+    description: 舒尔特方格，锻炼注意力。
+    category: custom_1773899614797
+    tags: []
+    icon: /icons/keywords.svg
+    sort: 2
+    createdAt: 2026-04-13T06:51:25.747Z
+
+  - name: Element
+    url: https://element.eleme.cn
+    description: Element，一套为开发者、设计师和产品经理准备的基于 Vue 2.0 的桌面端组件库
+    category: tech
+    tags: [前端]
+    icon: 
+    sort: 2
+    createdAt: 2026-04-17T00:38:05.573Z
 
   - name: MDN
     url: https://developer.mozilla.org
@@ -1049,6 +1085,15 @@ sites:
     icon: /icons/github.svg
     sort: 1
     createdAt: 2026-04-02T03:24:44.093Z
+
+  - name: Element
+    url: https://element.eleme.cn/#/zh-CN
+    description: Element，一套为开发者、设计师和产品经理准备的基于 Vue 2.0 的桌面端组件库。
+    category: tech
+    tags: [前端]
+    icon: /icons/eleme.svg
+    sort: 1
+    createdAt: 2026-04-17T00:36:19.028Z
 ---
 
 # 我的书签

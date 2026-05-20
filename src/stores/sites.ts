@@ -95,9 +95,9 @@ export const useSitesStore = defineStore('sites', () => {
   })
 
   // 筛选变化或分页大小变化时重置页码
-  watch([searchQuery, selectedTags, selectedCategory, pageSize], () => {
+  watch([searchQuery, selectedTags, selectedCategory, pageSize, showOnlyInvalid], () => {
     currentPage.value = 1
-  })
+  }, { deep: true })
 
   // 获取所有分类（基于已有数据）
   const allCategories = computed(() => {

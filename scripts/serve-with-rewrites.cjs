@@ -42,6 +42,14 @@ if (filePath === '/games/tetris') {
 } else if (filePath === '/games/id-generator/') {
   // Already has trailing slash, serve the index.html
   filePath = '/games/id-generator/index.html'
+} else if (filePath === '/games/cron-generator') {
+  // Redirect to index.html with trailing slash
+  res.writeHead(302, { 'Location': '/games/cron-generator/' })
+  res.end()
+  return
+} else if (filePath === '/games/cron-generator/') {
+  // Already has trailing slash, serve the index.html
+  filePath = '/games/cron-generator/index.html'
 }
 
   // Security: prevent directory traversal

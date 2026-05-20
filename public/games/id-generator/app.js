@@ -1024,9 +1024,20 @@ function showBatchResults(results) {
 // 复制功能
 function copyResult(type) {
     const resultDisplay = document.getElementById(`result-${type}`);
-    const value = resultDisplay ? resultDisplay.textContent.trim() : '';
     
-    if (value && value !== '点击生成按钮获取号码') {
+    if (!resultDisplay) return;
+    
+    let value;
+    
+    // Cron 类型特殊处理：只复制表达式
+    if (type === 'cron') {
+        const exprEl = resultDisplay.querySelector('.cron-expression');
+        value = exprEl ? exprEl.textContent.trim() : '';
+    } else {
+        value = resultDisplay.textContent.trim();
+    }
+    
+    if (value && value !== '点击生成按钮获取号码' && value !== '点击生成按钮获取Cron表达式') {
         copyToClipboard(value);
     }
 }
@@ -1123,11 +1134,30 @@ function doValidate(type) {
         case 'ip': result = validateIP(value); break;
         case 'uuid': result = validateUUID(value); break;
         case 'timestamp': result = convertTimestamp(value); break;
+        case 'cron': result = validateCron(value); break;
     }
     
     if (result) {
-        resultDiv.className = `validation-result ${result.valid ? 'valid' : 'invalid'}`;
-        resultDiv.textContent = result.message;
+        // Cron 类型特殊处理：显示更详细的信息
+        if (type === 'cron' && result.valid && result.expression) {
+            let html = `<div class="cron-validation-result">`;
+            html += `<div class="validation-message valid">${result.message}</div>`;
+            html += `<div class="cron-expression-display">${result.expression}</div>`;
+            html += `<div class="cron-description-display">${result.description || ''}</div>`;
+            if (result.nextRuns && result.nextRuns.length > 0) {
+                html += `<div class="next-runs-preview"><h4>未来执行时间：</h4><ul>`;
+                result.nextRuns.slice(0, 5).forEach((run, i) => {
+                    html += `<li>${i + 1}. ${run}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            html += `</div>`;
+            resultDiv.innerHTML = html;
+            resultDiv.className = `validation-result valid`;
+        } else {
+            resultDiv.className = `validation-result ${result.valid ? 'valid' : 'invalid'}`;
+            resultDiv.textContent = result.message;
+        }
     }
 }
 
@@ -1206,4 +1236,293 @@ function convertTimestamp(value) {
 function handleGenerateTimestamp() {
     const value = generateTimestamp();
     displayResult(value);
+}
+
+// ==================== Cron 表达式生成 ====================
+
+/**
+ * 获取 Cron 字段值（处理下拉选择和自定义输入）
+ */
+function getCronFieldValue(field) {
+    const select = document.getElementById(`cron-${field}`);
+    const customInput = document.getElementById(`cron-${field}-custom`);
+    
+    if (!select) return '*';
+    
+    const value = select.value;
+    
+    if (value === 'custom' && customInput) {
+        const customValue = customInput.value.trim();
+        return customValue || '*';
+    }
+    
+    return value;
+}
+
+/**
+ * 处理 Cron 字段变化（显示/隐藏自定义输入框）
+ */
+function onCronFieldChange(field) {
+    const select = document.getElementById(`cron-${field}`);
+    const customInput = document.getElementById(`cron-${field}-custom`);
+    
+    if (!select || !customInput) return;
+    
+    if (select.value === 'custom') {
+        customInput.classList.add('visible');
+        customInput.focus();
+    } else {
+        customInput.classList.remove('visible');
+        customInput.value = '';
+    }
+}
+
+/**
+ * 生成 Cron 表达式
+ */
+function generateCron() {
+    const minute = getCronFieldValue('minute');
+    const hour = getCronFieldValue('hour');
+    const day = getCronFieldValue('day');
+    const month = getCronFieldValue('month');
+    const weekday = getCronFieldValue('weekday');
+    
+    return `${minute} ${hour} ${day} ${month} ${weekday}`;
+}
+
+/**
+ * 验证 Cron 表达式
+ */
+function validateCron(expression) {
+    if (!expression || !expression.trim()) {
+        return { valid: false, message: 'Cron表达式不能为空' };
+    }
+    
+    const trimmed = expression.trim();
+    
+    // 语法检查：5个字段
+    const parts = trimmed.split(/\s+/);
+    if (parts.length !== 5) {
+        return { valid: false, message: 'Cron表达式应有5个字段（分钟 小时 日期 月份 星期）' };
+    }
+    
+    // 使用 cron-parser 验证
+    try {
+        if (typeof cronParser !== 'undefined') {
+            const interval = cronParser.parseExpression(trimmed);
+            const next = interval.next();
+            
+            // 验证通过，生成描述
+            const description = getCronDescription(trimmed);
+            
+            return {
+                valid: true,
+                message: '验证通过',
+                expression: trimmed,
+                description: description,
+                nextRuns: getNextRuns(trimmed, 10)
+            };
+        } else {
+            // 如果 cron-parser 未加载，进行基本验证
+            return basicCronValidation(trimmed);
+        }
+    } catch (error) {
+        return { valid: false, message: 'Cron表达式无效: ' + error.message };
+    }
+}
+
+/**
+ * 基本 Cron 验证（当 cron-parser 不可用时）
+ */
+function basicCronValidation(expression) {
+    const parts = expression.split(/\s+/);
+    if (parts.length !== 5) {
+        return { valid: false, message: '应有5个字段' };
+    }
+    
+    const patterns = [
+        /^(\*|(\*\/[1-9]\d*)|(\d+(-\d+)?(,\d+(-\d+)?)*))$/, // 分钟: 0-59
+        /^(\*|(\*\/[1-9]\d*)|(\d+(-\d+)?(,\d+(-\d+)?)*))$/, // 小时: 0-23
+        /^(\*|(\*\/[1-9]\d*)|(\d+(-\d+)?(,\d+(-\d+)?)*))$/, // 日期: 1-31
+        /^(\*|(\*\/[1-9]\d*)|(\d+(-\d+)?(,\d+(-\d+)?)*))$/, // 月份: 1-12
+        /^(\*|(\*\/[1-9]\d*)|(\d+(-\d+)?(,\d+(-\d+)?)*))$/  // 星期: 0-6
+    ];
+    
+    const fieldNames = ['分钟', '小时', '日期', '月份', '星期'];
+    
+    for (let i = 0; i < 5; i++) {
+        if (!patterns[i].test(parts[i])) {
+            return { valid: false, message: `${fieldNames[i]}字段格式不正确` };
+        }
+    }
+    
+    return {
+        valid: true,
+        message: '基本验证通过（详细解析需要加载cron-parser）',
+        expression: expression,
+        description: getCronDescription(expression)
+    };
+}
+
+/**
+ * 将 Cron 表达式转换为人类可读描述
+ */
+function getCronDescription(expression) {
+    const parts = expression.split(/\s+/);
+    if (parts.length !== 5) return '无效的Cron表达式';
+    
+    const [minute, hour, day, month, weekday] = parts;
+    
+    const descriptions = [];
+    
+    // 月份描述
+    if (month === '*') {
+        descriptions.push('每月');
+    } else if (month.includes(',')) {
+        const monthNames = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        const months = month.split(',').map(m => monthNames[parseInt(m)] || m + '月');
+        descriptions.push(`在${months.join('、')}`);
+    } else if (month.includes('-')) {
+        const [start, end] = month.split('-');
+        const monthNames = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        descriptions.push(`在${monthNames[parseInt(start)]}至${monthNames[parseInt(end)]}`);
+    } else if (month.startsWith('*/')) {
+        descriptions.push(`每${month.slice(2)}个月`);
+    } else {
+        const monthNames = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        descriptions.push(`在${monthNames[parseInt(month)]}`);
+    }
+    
+    // 日期描述
+    if (day === '*') {
+        descriptions.push('每天');
+    } else if (day.includes(',')) {
+        descriptions.push(`在第${day.split(',').join('日和第')}日`);
+    } else if (day.includes('-')) {
+        const [start, end] = day.split('-');
+        descriptions.push(`在第${start}至${end}日`);
+    } else if (day.startsWith('*/')) {
+        descriptions.push(`每${day.slice(2)}天`);
+    } else {
+        descriptions.push(`在第${day}日`);
+    }
+    
+    // 星期描述
+    if (weekday !== '*') {
+        const weekNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        if (weekday === '1-5') {
+            descriptions.push('工作日');
+        } else if (weekday === '0,6') {
+            descriptions.push('周末');
+        } else if (weekday.includes(',')) {
+            const days = weekday.split(',').map(d => weekNames[parseInt(d)] || d);
+            descriptions.push(days.join('和'));
+        } else if (weekday.includes('-')) {
+            const [start, end] = weekday.split('-');
+            descriptions.push(`${weekNames[parseInt(start)]}至${weekNames[parseInt(end)]}`);
+        } else {
+            descriptions.push(weekNames[parseInt(weekday)]);
+        }
+    }
+    
+    // 时间描述
+    let timeDesc = '';
+    if (hour === '*' && minute === '*') {
+        timeDesc = '每分钟';
+    } else if (hour === '*') {
+        timeDesc = `在${minute}分`;
+    } else if (minute === '*') {
+        timeDesc = `${hour}点的每分钟`;
+    } else if (minute.startsWith('*/')) {
+        timeDesc = `每${minute.slice(2)}分钟`;
+    } else if (hour.startsWith('*/')) {
+        timeDesc = `每${hour.slice(2)}小时`;
+    } else {
+        timeDesc = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+    }
+    
+    // 组合最终描述
+    let result = '';
+    if (timeDesc.includes(':')) {
+        result = `在${timeDesc}`;
+    } else {
+        result = timeDesc;
+    }
+    
+    // 插入时间描述到合适位置
+    if (descriptions.length > 0) {
+        result = descriptions.join('的') + '的' + timeDesc;
+    }
+    
+    return result || expression;
+}
+
+/**
+ * 获取 Cron 表达式的未来执行时间
+ */
+function getNextRuns(expression, count) {
+    const results = [];
+    
+    try {
+        if (typeof cronParser !== 'undefined') {
+            const interval = cronParser.parseExpression(expression);
+            
+            for (let i = 0; i < count; i++) {
+                const next = interval.next();
+                results.push(formatDateTime(next));
+            }
+        } else {
+            // 如果 cron-parser 未加载，返回提示
+            results.push('（需要加载 cron-parser 库）');
+        }
+    } catch (error) {
+        results.push('计算失败: ' + error.message);
+    }
+    
+    return results;
+}
+
+/**
+ * 格式化日期时间
+ */
+function formatDateTime(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * 处理 Cron 生成按钮点击
+ */
+function handleGenerateCron() {
+    const expression = generateCron();
+    
+    // 构建结果 HTML
+    let resultHtml = `<div class="cron-result-info">
+        <div class="cron-expression">${expression}</div>
+        <div class="cron-description">${getCronDescription(expression)}</div>
+        <div class="next-runs">
+            <h4>未来10次执行时间：</h4>
+            <ul>`;
+    
+    const nextRuns = getNextRuns(expression, 10);
+    nextRuns.forEach((run, index) => {
+        resultHtml += `<li>${index + 1}. ${run}</li>`;
+    });
+    
+    resultHtml += `</ul>
+        </div>
+    </div>`;
+    
+    const type = 'cron';
+    const resultDisplay = document.getElementById(`result-${type}`);
+    if (resultDisplay) {
+        resultDisplay.innerHTML = resultHtml;
+        document.getElementById('batchResultSection').style.display = 'none';
+    }
 }

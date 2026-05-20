@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-04-17T00:35:05.121Z
+ * 生成时间: 2026-05-19T09:22:26.269Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -199,7 +199,6 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'shopify2', label: 'Shopify2', ext: 'svg', category: '其他' },
   { name: 'slack', label: 'Slack', ext: 'svg', category: '其他' },
   { name: 'snapchat', label: 'Snapchat', ext: 'svg', category: '其他' },
-  { name: 'spring_', label: 'Spring ', ext: 'svg', category: '其他' },
   { name: 'stripe', label: 'Stripe', ext: 'svg', category: '其他' },
   { name: 'telegram', label: 'Telegram', ext: 'svg', category: '其他' },
   { name: 'tencent-video', label: 'Tencent-video', ext: 'svg', category: '其他' },

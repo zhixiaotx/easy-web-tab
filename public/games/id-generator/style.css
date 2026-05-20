@@ -705,3 +705,156 @@ body {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
+
+/* Cron 选项样式 */
+.cron-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.cron-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cron-field label {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.cron-field select,
+.cron-field input {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    background-color: var(--color-bg-card);
+    color: var(--color-text);
+    transition: var(--transition);
+}
+
+.cron-field select:focus,
+.cron-field input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cron-custom-input {
+    width: 100%;
+}
+
+.cron-custom-input.visible {
+    display: block !important;
+}
+
+/* Cron 结果区域 */
+.cron-result-info {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.cron-result-info .cron-expression {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-primary);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.cron-result-info .cron-description {
+    font-size: 14px;
+    color: var(--color-text);
+    margin-bottom: 16px;
+    padding: 8px;
+    background-color: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+}
+
+.cron-result-info .next-runs {
+    font-size: 13px;
+}
+
+.cron-result-info .next-runs h4 {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+}
+
+.cron-result-info .next-runs ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cron-result-info .next-runs li {
+    padding: 4px 0;
+    color: var(--color-text);
+    font-family: 'Courier New', monospace;
+}
+
+.cron-result-info .next-runs li:nth-child(odd) {
+    background-color: var(--color-bg-card);
+}
+
+/* Cron 验证结果样式 */
+.cron-validation-result {
+    margin-top: 8px;
+}
+
+.cron-validation-result .validation-message {
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.cron-validation-result .cron-expression-display {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-primary);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.cron-validation-result .cron-description-display {
+    font-size: 13px;
+    color: var(--color-text);
+    padding: 8px;
+    background-color: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+}
+
+.cron-validation-result .next-runs-preview {
+    font-size: 12px;
+}
+
+.cron-validation-result .next-runs-preview h4 {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+}
+
+.cron-validation-result .next-runs-preview ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cron-validation-result .next-runs-preview li {
+    padding: 3px 0;
+    color: var(--color-text);
+    font-family: 'Courier New', monospace;
+}

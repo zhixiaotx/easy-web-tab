@@ -19,7 +19,7 @@ const features = [
   {
     icon: '📂',
     title: '分类管理',
-    desc: '内置办公工具，开发技术、视频音乐三大分类，可自定义添加新分类。'
+    desc: '内置视频音乐分类，可自定义添加新分类。历史分类自动迁移，不会丢失数据。'
   },
   {
     icon: '🔖',
@@ -75,6 +75,11 @@ const features = [
     icon: '🔎',
     title: '搜索引擎管理',
     desc: '添加/删除自定义搜索引擎，支持设置默认搜索，可在搜索栏快速切换。提供恢复默认按钮。'
+  },
+  {
+    icon: '🔒',
+    title: '密码管理',
+    desc: 'AES-GCM 加密存储账号密码，支持主密码保护、一键复制、搜索筛选。导入/导出时密码自动加密解密，跨设备安全同步。'
   }
 ]
 </script>
@@ -146,7 +151,8 @@ const features = [
           <h3 class="section-title">💾 数据存储</h3>
           <ul class="storage-list">
             <li><strong>内置数据</strong>：构建进包，不可动态修改</li>
-            <li><strong>用户数据</strong>：存储于浏览器 <code>localStorage</code>，包括用户添加的网址、自定义分类、自定义搜索引擎</li>
+            <li><strong>用户数据</strong>：存储于浏览器 <code>localStorage</code>，包括网址、分类、搜索引擎、密码</li>
+            <li><strong>密码数据</strong>：AES-GCM 加密后存储，需主密码解锁才能查看</li>
             <li><strong>断链检测结果</strong>：存储于 <code>localStorage</code>，关闭页面后保留</li>
           </ul>
         </section>

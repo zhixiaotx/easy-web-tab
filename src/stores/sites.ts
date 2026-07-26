@@ -5,6 +5,7 @@ import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
+import { usePasswordsStore } from './passwords'
 import {
   checkDeadLinks,
   saveCheckResults,
@@ -390,9 +391,10 @@ export const useSitesStore = defineStore('sites', () => {
   }
 
   // 导出为 Markdown 文件
-  function exportToMarkdown() {
+  async function exportToMarkdown() {
     const categoriesStore = useCategoriesStore()
     const enginesStore = useSearchEnginesStore()
+    const passwordsStore = usePasswordsStore()
     
     // sites 降序排序
     const sortedSites = [...sites.value].sort((a, b) => {
@@ -424,8 +426,17 @@ export const useSitesStore = defineStore('sites', () => {
     const sortedEngines = [...engines].sort((a, b) => a.sort - b.sort)
     const enginesSection = `searchEngines:\n${sortedEngines.map((e: { id: string; name: string; url: string; isDefault: boolean; sort: number }) => `  - id: ${e.id}\n    name: ${e.name}\n    url: ${e.url}\n    isDefault: ${e.isDefault}\n    sort: ${e.sort}`).join('\n\n')}\n\n`
 
+    // 导出密码 - 加密存储
+    let passwordsSection = ''
+    if (passwordsStore.isUnlocked) {
+      const encryptedPasswords = await passwordsStore.exportEncryptedPasswords()
+      if (encryptedPasswords.length > 0) {
+        passwordsSection = `passwords:\n${encryptedPasswords.map(p => `  - id: ${p.id}\n    siteName: ${p.siteName}\n    url: ${p.url}\n    username: ${p.username}\n    password: ${p.password}\n    createdAt: ${p.createdAt}\n    updatedAt: ${p.updatedAt}`).join('\n\n')}\n\n`
+      }
+    }
+
     const markdown = `---
-${categoriesSection}${enginesSection}sites:
+${categoriesSection}${enginesSection}${passwordsSection}sites:
 ${sitesList}
 ---
 
@@ -444,7 +455,7 @@ ${sitesList}
   }
 
   // 从 Markdown 文本导入到 localStorage（按 URL 去重，保留原来的）
-  function importFromMarkdown(markdownText: string): { added: number; skipped: number; error?: string } {
+  function importFromMarkdown(markdownText: string): { added: number; skipped: number; passwordsImported?: number; error?: string } {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
     const importedSites = parsed.sites
@@ -497,6 +508,18 @@ ${sitesList}
     return { added, skipped }
   }
 
+  // 异步导入密码（从 sites.md，需要主密码解密）
+  async function importPasswordsFromMarkdown(markdownText: string): Promise<number> {
+    const { parseSitesFromMarkdown } = useMarkdown()
+    const parsed = parseSitesFromMarkdown(markdownText)
+    if (!parsed.passwords || parsed.passwords.length === 0) return 0
+    
+    const passwordsStore = usePasswordsStore()
+    if (!passwordsStore.isUnlocked) return 0
+    
+    return await passwordsStore.importPasswords(parsed.passwords)
+  }
+
   return {
     sites,
     searchQuery,
@@ -526,6 +549,7 @@ ${sitesList}
     clearFilters,
     exportToMarkdown,
     importFromMarkdown,
+    importPasswordsFromMarkdown,
     // 断链检测
     isCheckingLinks,
     linkCheckProgress,

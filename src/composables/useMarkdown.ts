@@ -1,9 +1,9 @@
-import type { Site, SitesData, Category } from '../types'
+import type { Site, SitesData, Category, PasswordEntry } from '../types'
 import type { SearchEngine } from '../stores/searchEngines'
 import yaml from 'js-yaml'
 
 export function useMarkdown() {
-  function parseSitesFromMarkdown(content: string): SitesData & { categories?: Category[]; searchEngines?: SearchEngine[] } {
+  function parseSitesFromMarkdown(content: string): SitesData & { categories?: Category[]; searchEngines?: SearchEngine[]; passwords?: PasswordEntry[] } {
     try {
       // 提取 frontmatter (--- 之间的内容)
       const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*/
@@ -19,12 +19,14 @@ export function useMarkdown() {
       const sitesData = data.sites as Site[] | undefined
       const categoriesData = data.categories as Category[] | undefined
       const searchEnginesData = data.searchEngines as SearchEngine[] | undefined
+      const passwordsData = data.passwords as PasswordEntry[] | undefined
 
       return {
         sites: sitesData || [],
         lastUpdated: data.lastUpdated as string | undefined,
         categories: categoriesData,
-        searchEngines: searchEnginesData
+        searchEngines: searchEnginesData,
+        passwords: passwordsData
       }
     } catch (error) {
       console.error('[Import] Parse error:', error)

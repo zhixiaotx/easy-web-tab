@@ -25,14 +25,21 @@ export interface Category {
   sort?: number
 }
 
-// 预定义分类 (不可删除) - 仅保留 3 个
+// 预定义分类 (不可删除) - 仅保留 video
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'office', name: '办公工具', icon: '💼', isBuiltIn: true, sort: 1 },
-  { id: 'tech', name: '开发技术', icon: '💻', isBuiltIn: true, sort: 2 },
-  { id: 'video', name: '视频音乐', icon: '🎬', isBuiltIn: true, sort: 3 }
+  { id: 'video', name: '视频音乐', icon: '🎬', isBuiltIn: true, sort: 1 }
 ]
-
-export type CategoryId = typeof DEFAULT_CATEGORIES[number]['id']
 
 // 向后兼容
 export const CATEGORIES = DEFAULT_CATEGORIES
+
+// 密码管理接口
+export interface PasswordEntry {
+  id: string
+  siteName: string
+  url: string
+  username: string
+  password: string // 加密存储 (base64)
+  createdAt: string
+  updatedAt: string
+}

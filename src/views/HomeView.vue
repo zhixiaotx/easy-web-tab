@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination.vue'
 import SiteModal from '../components/SiteModal.vue'
 import SettingsButton from '../components/SettingsButton.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
+import PasswordManager from '../components/PasswordManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import { useSitesStore } from '../stores/sites'
@@ -26,6 +27,7 @@ const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
+const showPasswordManager = ref(false)
 const showHelp = ref(false)
 const editingSite = ref<Site | null>(null)
 
@@ -93,6 +95,12 @@ watchEffect(() => {
     showEngineManager.value = true
     showModal.value = false
     showHelp.value = false
+    showPasswordManager.value = false
+  } else if (modal === 'passwords') {
+    showPasswordManager.value = true
+    showModal.value = false
+    showEngineManager.value = false
+    showHelp.value = false
   } else if (modal === 'help') {
     showHelp.value = true
     showModal.value = false
@@ -101,6 +109,7 @@ watchEffect(() => {
     // 无 modal query → 关闭所有弹框（URL 清除时）
     showModal.value = false
     showEngineManager.value = false
+    showPasswordManager.value = false
     showHelp.value = false
     editingSite.value = null
   }
@@ -112,6 +121,7 @@ const filteredSites = computed(() => store.paginatedSites)
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
+  showPasswordManager.value = false
   showHelp.value = false
   editingSite.value = null
   // 清除 URL query 参数（如果存在的话）
@@ -185,7 +195,7 @@ const handleImport = (event: Event) => {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     const content = e.target?.result as string
     
     // 导入网站
@@ -198,7 +208,8 @@ const handleImport = (event: Event) => {
       return
     }
     
-    // 尝试导入搜索引擎
+    // 尝试导入搜索引擎和密码
+    let msg = `导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`
     try {
       const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*/)
       if (frontmatterMatch) {
@@ -207,20 +218,24 @@ const handleImport = (event: Event) => {
           const data = yaml.load(frontmatterMatch[1])
           if (data?.searchEngines && Array.isArray(data.searchEngines)) {
             enginesStore.importEngines(data.searchEngines)
-            toast.success(`导入完成！网站：新增 ${result.added} 条，跳过 ${result.skipped} 条；搜索引擎：已导入 ${data.searchEngines.length} 个`)
-          } else {
-            toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+            msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
           }
-        } else {
-          toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+          // 尝试导入密码（需要主密码解锁状态）
+          if (data?.passwords && Array.isArray(data.passwords)) {
+            const passwordsImported = await store.importPasswordsFromMarkdown(content)
+            if (passwordsImported > 0) {
+              msg += `；密码：已导入 ${passwordsImported} 条`
+            } else if (passwordsImported === 0 && data.passwords.length > 0) {
+              msg += '；密码：未导入（请先解锁密码管理器）'
+            }
+          }
         }
-      } else {
-        toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
       }
     } catch {
-      toast.success(`导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`)
+      // 忽略搜索引擎/密码导入错误
     }
     
+    toast.success(msg)
     input.value = ''
   }
   reader.readAsText(file)
@@ -268,7 +283,7 @@ const handlePageChange = () => {
       <div class="actions-row">
         <div class="action-buttons">
           <button class="btn-action" @click="triggerImport">导入</button>
-          <button class="btn-action" @click="store.exportToMarkdown">导出</button>
+          <button class="btn-action" @click="store.exportToMarkdown()">导出</button>
           <button class="btn-action" @click="router.push({ query: { modal: 'help' } })">❓ 帮助</button>
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
           <button class="btn-action" @click="store.checkDeadLinks">
@@ -276,6 +291,7 @@ const handlePageChange = () => {
             <span v-else>🔗 检测断链<span v-if="store.invalidCount > 0" class="invalid-count">({{ store.invalidCount }})</span></span>
           </button>
           <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
+          <button class="btn-action" @click="router.push({ query: { modal: 'passwords' } })">🔑 密码管理</button>
           <SettingsButton />
         </div>
       </div>
@@ -321,6 +337,11 @@ const handlePageChange = () => {
 
     <SearchEngineManager 
       v-if="showEngineManager" 
+      @close="closeAllModals"
+    />
+
+    <PasswordManager
+      v-if="showPasswordManager"
       @close="closeAllModals"
     />
 

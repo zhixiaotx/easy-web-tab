@@ -3,6 +3,23 @@ const emit = defineEmits<{
   close: []
 }>()
 
+async function downloadExample() {
+  try {
+    const resp = await fetch('/data/myself-sites.md')
+    if (!resp.ok) throw new Error('下载失败')
+    const text = await resp.text()
+    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'site.md'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert('示例文件下载失败，请稍后重试')
+  }
+}
+
 const shortcuts = [
   { key: 'Ctrl + N', action: '新增网址' },
   { key: 'Ctrl + B', action: '切换前台/后台' },
@@ -98,6 +115,27 @@ const features = [
       </div>
 
       <div class="modal-body">
+        <!-- 示例数据下载 -->
+        <section class="help-section download-section">
+          <div class="download-card">
+            <div class="download-info">
+              <span class="download-icon">📦</span>
+              <div>
+                <h4>下载示例数据</h4>
+                <p>下载预置的网址导航示例文件 <code>site.md</code>，包含常用网站分类和链接。下载后在管理后台点击「导入」上传该文件，即可快速初始化导航页。</p>
+              </div>
+            </div>
+            <button class="btn-download" @click="downloadExample">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              下载 site.md
+            </button>
+          </div>
+        </section>
+
         <!-- 功能介绍 -->
         <section class="help-section">
           <h3 class="section-title">🎯 功能介绍</h3>
@@ -418,6 +456,75 @@ const features = [
   background-color: #2563eb;
 }
 
+/* 示例数据下载 */
+.download-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+}
+
+.download-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.download-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.download-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.download-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.download-info code {
+  background-color: #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #3b82f6;
+}
+
+.btn-download {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.btn-download:hover {
+  background-color: #2563eb;
+}
+
 /* 响应式 */
 @media (max-width: 600px) {
   .features-grid {
@@ -430,6 +537,15 @@ const features = [
 
   .help-modal {
     max-height: 90vh;
+  }
+
+  .download-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-download {
+    justify-content: center;
   }
 }
 </style>

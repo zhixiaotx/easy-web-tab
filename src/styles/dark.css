@@ -441,6 +441,19 @@
   border-color: var(--accent-color);
 }
 
+/* 右上角帮助按钮 */
+:root.dark .btn-help {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root.dark .btn-help:hover {
+  background-color: var(--hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
 /* 分类管理面板 */
 :root.dark .category-manager-overlay {
   background-color: rgba(0, 0, 0, 0.7);

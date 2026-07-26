@@ -18,17 +18,18 @@ import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useToast } from '../composables/useToast'
+import { useHelpModal } from '../composables/useHelpModal'
 
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
 const toast = useToast()
+const { showHelp, openHelp, closeHelp } = useHelpModal()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
 const showPasswordManager = ref(false)
-const showHelp = ref(false)
 const editingSite = ref<Site | null>(null)
 
 // 拖拽排序状态
@@ -75,7 +76,7 @@ watchEffect(() => {
     editingSite.value = null
     showModal.value = true
     showEngineManager.value = false
-    showHelp.value = false
+    closeHelp()
   } else if (modal === 'edit') {
     const url = route.query.url as string | undefined
     if (url) {
@@ -84,7 +85,7 @@ watchEffect(() => {
         editingSite.value = { ...site }
         showModal.value = true
         showEngineManager.value = false
-        showHelp.value = false
+        closeHelp()
       }
     } else {
       // 有 modal=edit 但无 url → 关闭
@@ -94,15 +95,15 @@ watchEffect(() => {
   } else if (modal === 'engines') {
     showEngineManager.value = true
     showModal.value = false
-    showHelp.value = false
+    closeHelp()
     showPasswordManager.value = false
   } else if (modal === 'passwords') {
     showPasswordManager.value = true
     showModal.value = false
     showEngineManager.value = false
-    showHelp.value = false
+    closeHelp()
   } else if (modal === 'help') {
-    showHelp.value = true
+    openHelp()
     showModal.value = false
     showEngineManager.value = false
   } else {
@@ -110,7 +111,7 @@ watchEffect(() => {
     showModal.value = false
     showEngineManager.value = false
     showPasswordManager.value = false
-    showHelp.value = false
+    closeHelp()
     editingSite.value = null
   }
 })
@@ -122,7 +123,7 @@ const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
   showPasswordManager.value = false
-  showHelp.value = false
+  closeHelp()
   editingSite.value = null
   // 清除 URL query 参数（如果存在的话）
   if (route.query.modal) {
@@ -270,6 +271,7 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
+    <button class="btn-help" @click="openHelp" title="帮助">❓</button>
     <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
       前台
     </button>
@@ -284,7 +286,6 @@ const handlePageChange = () => {
         <div class="action-buttons">
           <button class="btn-action" @click="triggerImport">导入</button>
           <button class="btn-action" @click="store.exportToMarkdown()">导出</button>
-          <button class="btn-action" @click="router.push({ query: { modal: 'help' } })">❓ 帮助</button>
           <button class="btn-action" @click="handleAdd">+ 添加网址</button>
           <button class="btn-action" @click="store.checkDeadLinks">
             <span v-if="store.isCheckingLinks">⏳ 检测中 ({{ store.linkCheckProgress?.current }}/{{ store.linkCheckProgress?.total }})</span>
@@ -376,6 +377,24 @@ const handlePageChange = () => {
 }
 
 .btn-front:hover {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-help {
+  padding: 8px 12px;
+  background-color: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-help:hover {
   background-color: #f1f5f9;
   color: #3b82f6;
   border-color: #3b82f6;

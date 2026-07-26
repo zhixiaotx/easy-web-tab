@@ -8,10 +8,13 @@ import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import HelpModal from '../components/HelpModal.vue'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
+import { useHelpModal } from '../composables/useHelpModal'
 
 const store = useSitesStore()
 const router = useRouter()
+const { showHelp, openHelp, closeHelp } = useHelpModal()
 
 onMounted(() => {
   store.loadSites()
@@ -43,6 +46,7 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
+    <button class="btn-help" @click="openHelp" title="帮助">❓</button>
     <button class="btn-admin" @click="toggleAdmin" title="切换到管理后台 (Ctrl+B)">
       管理
     </button>
@@ -73,6 +77,11 @@ const handlePageChange = () => {
     <div v-if="store.filteredSites.length === 0" class="empty-state">
       <p>没有找到匹配的网站</p>
     </div>
+
+    <HelpModal
+      v-if="showHelp"
+      @close="closeHelp"
+    />
   </div>
 </template>
 
@@ -100,6 +109,24 @@ const handlePageChange = () => {
 }
 
 .btn-admin:hover {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-help {
+  padding: 8px 12px;
+  background-color: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-help:hover {
   background-color: #f1f5f9;
   color: #3b82f6;
   border-color: #3b82f6;

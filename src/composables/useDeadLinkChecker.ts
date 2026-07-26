@@ -1,6 +1,6 @@
 /**
  * 断链检测服务
- * 使用多个代理服务检测 URL 可访问性，支持降级
+ * 直连目标 URL 检测可访问性
  */
 
 export interface CheckResult {
@@ -15,60 +15,55 @@ export interface CheckProgress {
   invalidCount: number
 }
 
-// 代理服务列表（按优先级排序）
-const PROXY_SERVICES = [
-  { name: 'allorigins', url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
-  { name: 'corsproxy', url: (u: string) => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
-]
-
 const REQUEST_TIMEOUT = 8000 // 单次请求超时
 
 /**
- * 使用指定代理检测 URL
+ * 直连检测 URL 是否可访问
+ * 先尝试 HEAD 请求（轻量），失败后降级为 GET
  */
-async function checkWithProxy(proxyUrl: string): Promise<{ status: number; ok: boolean } | null> {
+async function checkUrl(url: string): Promise<CheckResult> {
+  // 尝试 HEAD 请求
+  const headResult = await fetchWithTimeout(url, 'HEAD')
+  if (headResult) {
+    return { url, isValid: headResult.ok, statusCode: headResult.status }
+  }
+
+  // HEAD 失败（可能服务器不支持），降级为 GET
+  const getResult = await fetchWithTimeout(url, 'GET')
+  if (getResult) {
+    return { url, isValid: getResult.ok, statusCode: getResult.status }
+  }
+
+  // 两种方法都失败，标记为无效
+  return { url, isValid: false }
+}
+
+/**
+ * 带超时的 fetch 请求
+ */
+async function fetchWithTimeout(url: string, method: 'HEAD' | 'GET'): Promise<{ status: number; ok: boolean } | null> {
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
-    const response = await fetch(proxyUrl, {
-      method: 'GET',
+    const response = await fetch(url, {
+      method,
       signal: controller.signal,
-      mode: 'cors'
+      mode: 'no-cors' // 允许跨域请求，opaque response 也算可达
     })
     clearTimeout(timeout)
 
     const status = response.status
+    // no-cors 模式下 response.type === 'opaque' 表示请求已发出（无法读取状态）
+    // opaque response 视为可达（至少服务器有响应）
+    if (response.type === 'opaque') {
+      return { status: 0, ok: true }
+    }
     // 2xx 或 3xx 均视为有效
     return { status, ok: status >= 200 && status < 400 }
   } catch {
     return null
   }
-}
-
-/**
- * 检测单个 URL 是否可访问（多代理降级）
- */
-async function checkUrl(url: string): Promise<CheckResult> {
-  // 依次尝试每个代理服务
-  for (const proxy of PROXY_SERVICES) {
-    const proxyUrl = proxy.url(url)
-    const result = await checkWithProxy(proxyUrl)
-    
-    if (result) {
-      // 如果代理返回了结果，使用该结果
-      // 排除代理自身的错误状态码（500, 502, 503 等）
-      if (result.status >= 500 && result.status < 600) {
-        // 代理服务器错误，尝试下一个代理
-        continue
-      }
-      return { url, isValid: result.ok, statusCode: result.status }
-    }
-    // 当前代理失败，尝试下一个
-  }
-  
-  // 所有代理都失败，标记为无效
-  return { url, isValid: false }
 }
 
 /**

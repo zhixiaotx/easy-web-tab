@@ -7,6 +7,8 @@ const STORAGE_KEY = 'user-categories'
 
 // 需要迁移到自定义分类的原预定义分类
 const LEGACY_CATEGORIES: Category[] = [
+  { id: 'office', name: '办公工具', icon: '💼', isBuiltIn: false, sort: 1 },
+  { id: 'tech', name: '开发技术', icon: '💻', isBuiltIn: false, sort: 2 },
   { id: 'news', name: '新闻资讯', icon: '📰', isBuiltIn: false, sort: 4 },
   { id: 'social', name: '社交娱乐', icon: '🎮', isBuiltIn: false, sort: 5 },
   { id: 'shopping', name: '购物电商', icon: '🛒', isBuiltIn: false, sort: 6 },
@@ -27,11 +29,19 @@ export const useCategoriesStore = defineStore('categories', () => {
     JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   )
 
-  // Migration: if no custom categories exist, initialize with legacy ones
+  // Migration: ensure legacy categories exist for all users
   if (customCategories.value.length === 0) {
+    // 首次使用：用所有遗留分类初始化
     customCategories.value = [...LEGACY_CATEGORIES]
-    saveCustomCategories()
+  } else {
+    // 已有用户：合并缺失的遗留分类
+    const existingIds = new Set(customCategories.value.map(c => c.id))
+    const missing = LEGACY_CATEGORIES.filter(c => !existingIds.has(c.id))
+    if (missing.length > 0) {
+      customCategories.value.push(...missing)
+    }
   }
+  saveCustomCategories()
 
   // Persist to localStorage
   function saveCustomCategories() {

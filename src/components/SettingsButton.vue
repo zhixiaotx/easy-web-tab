@@ -3,10 +3,12 @@ import { ref } from 'vue'
 import CategoryManager from './CategoryManager.vue'
 import BackupManager from './BackupManager.vue'
 import BackgroundManager from './BackgroundManager.vue'
+import IconManager from './IconManager.vue'
 
 const showCategoryManager = ref(false)
 const showBackupManager = ref(false)
 const showBackgroundManager = ref(false)
+const showIconManager = ref(false)
 </script>
 
 <template>
@@ -35,11 +37,21 @@ const showBackgroundManager = ref(false)
       📦 备份
     </button>
 
+    <button 
+      class="settings-btn icon-manager-btn" 
+      @click="showIconManager = true" 
+      title="图标管理"
+    >
+      🖼️ 图标管理
+    </button>
+
     <BackgroundManager v-if="showBackgroundManager" @close="showBackgroundManager = false" />
     
     <CategoryManager v-if="showCategoryManager" @close="showCategoryManager = false" />
     
     <BackupManager v-if="showBackupManager" @close="showBackupManager = false" />
+    
+    <IconManager v-if="showIconManager" @close="showIconManager = false" />
   </div>
 </template>
 
@@ -87,5 +99,15 @@ const showBackgroundManager = ref(false)
   background-color: #dcfce7;
   border-color: #22c55e;
   color: #16a34a;
+}
+
+.icon-manager-btn {
+  background-color: #eff6ff;
+}
+
+.icon-manager-btn:hover {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #2563eb;
 }
 </style>

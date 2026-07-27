@@ -1224,3 +1224,84 @@
   background-color: var(--bg-primary, #111827);
 }
 
+/* ========================================
+   IconManager 暗色模式
+   ======================================== */
+
+:root.dark .icon-manager-grid {
+  background-color: transparent;
+}
+
+:root.dark .icon-manager-item {
+  background-color: var(--bg-primary, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .icon-manager-item.built-in {
+  background-color: #422006;
+  border-color: #b45309;
+  opacity: 0.8;
+}
+
+:root.dark .icon-manager-item.custom {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .icon-manager-item:hover {
+  border-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .icon-manager-preview {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .icon-manager-label {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .icon-manager-category {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .icon-manager-size {
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .icon-manager-actions {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .add-form-row {
+  background-color: transparent;
+}
+
+:root.dark .upload-hint {
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .filter-bar {
+  background-color: transparent;
+}
+
+:root.dark .btn-secondary {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .btn-secondary:hover {
+  background-color: var(--hover-bg, #374151);
+  border-color: var(--border-light, #4b5563);
+}
+
+:root.dark .import-export-bar {
+  border-top-color: var(--border-color, #374151);
+}
+
+:root.dark .import-export-hint {
+  color: var(--text-muted, #9ca3af);
+}
+

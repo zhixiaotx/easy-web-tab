@@ -6,9 +6,11 @@ import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
 import { PRESET_ICONS, findPresetIconByUrl, getIconPath, type PresetIcon } from '../composables/presetIcons'
 import { getIconUrl } from '../composables/useIconCache'
+import { useIconsStore, type MergedIcon } from '@/stores/icons'
 
 const categoriesStore = useCategoriesStore()
 const sitesStore = useSitesStore()
+const iconsStore = useIconsStore()
 
 const props = defineProps<{
   site: Site | null
@@ -65,6 +67,7 @@ function selectGame(game: { name: string; path: string; icon?: string }) {
 // 所有分类
 const iconCategories = computed(() => {
   const cats = new Set(PRESET_ICONS.map(i => i.category))
+  if (iconsStore.customIcons.length > 0) cats.add('自定义')
   return ['all', ...Array.from(cats)]
 })
 
@@ -80,11 +83,13 @@ const categoryLabels: Record<string, string> = {
   '大模型与 AI': 'AI',
   '视频与媒体': '视频',
   '其他': '其他',
+  '自定义': '自定义',
 }
 
 // 过滤后的预置图标
 const filteredPresetIcons = computed(() => {
-  let icons = PRESET_ICONS
+  const customMapped = iconsStore.customIcons.map(c => ({ ...c, isCustom: true as const }))
+  let icons: MergedIcon[] = [...PRESET_ICONS, ...customMapped]
   // 分类过滤
   if (iconCategoryFilter.value !== 'all') {
     icons = icons.filter(i => i.category === iconCategoryFilter.value)
@@ -95,7 +100,7 @@ const filteredPresetIcons = computed(() => {
     icons = icons.filter(icon =>
       icon.label.toLowerCase().includes(query) ||
       icon.name.toLowerCase().includes(query) ||
-      (icon.url && icon.url.toLowerCase().includes(query))
+      (icon as PresetIcon).url?.toLowerCase()?.includes(query)
     )
   }
   return icons
@@ -140,9 +145,19 @@ async function handleAutoFetchIcon() {
   }
 }
 
+// 获取图标 src
+function getIconSrc(icon: MergedIcon): string {
+  if ('isCustom' in icon) return icon.dataUrl
+  return `/icons/${icon.name}.${icon.ext}`
+}
+
 // 选择预置图标
-function selectPresetIcon(icon: PresetIcon) {
-  form.value.icon = `/icons/${icon.name}.${icon.ext}`
+function selectPresetIcon(icon: MergedIcon) {
+  if ('isCustom' in icon) {
+    form.value.icon = icon.dataUrl
+  } else {
+    form.value.icon = `/icons/${icon.name}.${icon.ext}`
+  }
   iconManualInput.value = ''
   showIconPicker.value = false
   iconSearchQuery.value = ''
@@ -556,14 +571,14 @@ const handleSubmit = () => {
             <div class="icon-grid">
               <button
                 v-for="icon in filteredPresetIcons"
-                :key="icon.name"
+                :key="getIconSrc(icon)"
                 type="button"
                 class="icon-grid-item"
-                :class="{ active: form.icon === `/icons/${icon.name}.${icon.ext}` }"
+                :class="{ active: form.icon === getIconSrc(icon) }"
                 :title="icon.label"
                 @click="selectPresetIcon(icon)"
               >
-                <img :src="`/icons/${icon.name}.${icon.ext}`" :alt="icon.label" class="grid-icon-img" />
+                <img :src="getIconSrc(icon)" :alt="icon.label" class="grid-icon-img" />
                 <span class="grid-icon-label">{{ icon.label }}</span>
               </button>
             </div>

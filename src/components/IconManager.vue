@@ -66,7 +66,7 @@ const searchQuery = ref('')
 // 分类过滤
 const CATEGORIES = computed(() => {
   const presetCategories = [...new Set(PRESET_ICONS.map(icon => icon.category))]
-  return ['全部', ...presetCategories]
+  return ['全部', '自定义图标', ...presetCategories]
 })
 
 const activeCategory = ref('全部')
@@ -77,6 +77,8 @@ const filteredIcons = computed(() => {
 
   if (searchQuery.value.trim()) {
     icons = store.searchIcons(searchQuery.value.trim())
+  } else if (activeCategory.value === '自定义图标') {
+    icons = store.customIcons.map(icon => ({ ...icon, isCustom: true as const }))
   } else if (activeCategory.value !== '全部') {
     icons = store.getIconsByCategory(activeCategory.value)
   } else {
@@ -182,6 +184,26 @@ function getIconId(icon: MergedIcon): string {
       </div>
 
       <div class="manager-body">
+        <!-- 导入/导出 -->
+        <div class="import-export-bar">
+          <input
+            ref="importInput"
+            type="file"
+            accept=".json"
+            class="hidden-file-input"
+            @change="handleImport"
+          />
+          <button class="btn-secondary" @click="importInput?.click()">
+            📥 导入
+          </button>
+          <button class="btn-secondary" @click="handleExport">
+            📤 导出
+          </button>
+          <span class="import-export-hint">
+            自定义图标: {{ store.customIcons.length }} 个
+          </span>
+        </div>
+
         <!-- 上传区域 -->
         <div class="add-form">
           <h3>上传图标</h3>
@@ -273,26 +295,6 @@ function getIconId(icon: MergedIcon): string {
 
         <div v-if="filteredIcons.length === 0" class="empty-custom">
           {{ searchQuery ? '未找到匹配的图标' : '暂无图标' }}
-        </div>
-
-        <!-- 导入/导出 -->
-        <div class="import-export-bar">
-          <input
-            ref="importInput"
-            type="file"
-            accept=".json"
-            class="hidden-file-input"
-            @change="handleImport"
-          />
-          <button class="btn-secondary" @click="importInput?.click()">
-            📥 导入
-          </button>
-          <button class="btn-secondary" @click="handleExport">
-            📤 导出
-          </button>
-          <span class="import-export-hint">
-            自定义图标: {{ store.customIcons.length }} 个
-          </span>
         </div>
       </div>
     </div>

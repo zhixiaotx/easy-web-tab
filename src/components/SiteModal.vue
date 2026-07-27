@@ -120,30 +120,6 @@ const iconDisplaySrc = computed(() => {
   return ''
 })
 
-// 自动获取图标（从已填 URL）
-async function handleAutoFetchIcon() {
-  if (!form.value.url.trim()) {
-    errors.value.icon = '请先输入网址'
-    return
-  }
-  try {
-    new URL(form.value.url)
-  } catch {
-    errors.value.icon = '请输入有效的网址'
-    return
-  }
-  errors.value.icon = ''
-  isLoading.value = true
-  const { fetchMetadata } = useUrlMetadata()
-  const metadata = await fetchMetadata(form.value.url)
-  isLoading.value = false
-  if (metadata?.icon) {
-    form.value.icon = metadata.icon
-    iconManualInput.value = ''
-  } else {
-    errors.value.icon = '未找到图标，请手动选择或输入'
-  }
-}
 
 // 获取图标 src
 function getIconSrc(icon: MergedIcon): string {
@@ -177,6 +153,21 @@ function clearIcon() {
   iconManualInput.value = ''
   errors.value.icon = ''
 }
+
+// 获取图标的显示文本（隐藏长 data URL）
+const iconDisplayText = computed(() => {
+  if (!form.value.icon) return ''
+  // 如果是 data URL，显示简短提示
+  if (form.value.icon.startsWith('data:')) {
+    return '自定义图标 (base64)'
+  }
+  // 如果是预置图标路径，显示文件名
+  if (form.value.icon.startsWith('/icons/')) {
+    return form.value.icon.split('/').pop() || form.value.icon
+  }
+  // 其他 URL 显示原始值（可能较长，但不是 data URL）
+  return form.value.icon
+})
 
 // 根据 URL 自动推荐预置图标
 const suggestedPresetIcon = computed(() => {
@@ -294,7 +285,7 @@ const handleFetchMetadata = async () => {
   }
 
   // 没有匹配的预置图标，提示用户手动选择
-  errors.value.icon = '未找到匹配的预置图标，请从列表中选择或手动输入图标 URL'
+  errors.value.icon = '未找到匹配的预置图标，可在图标管理中上传自定义图标'
   // 仍然获取标题和描述
   const metadata = await fetchMetadata(form.value.url)
   if (metadata) {
@@ -513,15 +504,16 @@ const handleSubmit = () => {
               <div v-else class="icon-preview icon-preview-empty">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               </div>
-              <div v-if="form.icon" class="icon-path" :title="form.icon">{{ form.icon }}</div>
+              <div v-if="form.icon" class="icon-path" :title="form.icon">{{ iconDisplayText }}</div>
             </div>
 
             <!-- 操作按钮 -->
             <div class="icon-actions">
-              <button type="button" class="btn-icon-action" @click="handleAutoFetchIcon" :disabled="isLoading" title="从网址获取">
+              <!-- 自动获取按钮已隐藏 -->
+              <!-- <button type="button" class="btn-icon-action" @click="handleAutoFetchIcon" :disabled="isLoading" title="从网址获取">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.86 6.69 2.3"/><path d="M21 3v6h-6"/></svg>
                 自动获取
-              </button>
+              </button> -->
               <button type="button" class="btn-icon-action" @click="showIconPicker = !showIconPicker" title="选择图标">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
                 {{ showIconPicker ? '收起' : '选择图标' }}

@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-05-20T02:07:09.865Z
+ * 生成时间: 2026-07-27T15:30:22.666Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -40,7 +40,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'bilibili', label: 'Bilibili', ext: 'svg', category: '国内常用网站', url: 'https://bilibili.com' },
   { name: 'ctrip', label: 'Ctrip', ext: 'svg', category: '国内常用网站', url: 'https://ctrip.com' },
   { name: 'douyin', label: 'Douyin', ext: 'svg', category: '国内常用网站', url: 'https://douyin.com' },
-  { name: 'eleme', label: 'Eleme', ext: 'svg', category: '国内常用网站', url: 'https://ele.me' },
+  { name: 'eleme', label: 'Eleme', ext: 'ico', category: '国内常用网站', url: 'https://ele.me' },
   { name: 'jd', label: 'Jd', ext: 'svg', category: '国内常用网站', url: 'https://jd.com' },
   { name: 'meituan', label: 'Meituan', ext: 'svg', category: '国内常用网站', url: 'https://meituan.com' },
   { name: 'OpenClaw_icon-logo', label: 'OpenClaw Icon-logo', ext: 'svg', category: '国内常用网站' },
@@ -80,7 +80,6 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'apache_tomcat', label: 'Tomcat', ext: 'ico', category: '后端与数据库', url: 'https://tomcat.apache.org' },
   { name: 'arthas', label: 'Arthas', ext: 'ico', category: '后端与数据库', url: 'https://arthas.aliyun.com' },
   { name: 'dataease', label: 'Dataease', ext: 'ico', category: '后端与数据库', url: 'https://www.fit2cloud.com/dataease' },
-  { name: 'elasticsearch', label: 'Elasticsearch', ext: 'svg', category: '后端与数据库', url: 'https://elastic.co' },
   { name: 'java', label: 'Java', ext: 'ico', category: '后端与数据库', url: 'https://www.oracle.com/java' },
   { name: 'mongodb', label: 'Mongodb', ext: 'svg', category: '后端与数据库', url: 'https://mongodb.com' },
   { name: 'mysql', label: 'Mysql', ext: 'svg', category: '后端与数据库', url: 'https://mysql.com' },

@@ -95,16 +95,6 @@ sites:
     sort: 2
     createdAt: 2026-03-29T13:26:52.301Z
 
-  - name: 爱奇艺
-    url: https://www.iqiyi.com
-    description: 爱奇艺（iQIYI）是中国领先的在线视频平台，提供海量免费正版高清电视剧、短剧、电影、综艺、动漫等视频内容，成功打造了狂飙、新说唱、偶像练习生、我是刑警、迷雾剧场等现象级IP，热门大片、独播剧集实时更新，畅享流畅观影体验。
-    category: video
-    tags: []
-    icon: /icons/nodejs.svg
-    sort: 1
-    createdAt: 2026-03-29T03:17:37.817Z
-
-
   - name: 网易云音乐
     url: https://music.163.com
     description: 音乐/视频/电台/用户。打开客户端播放，享受高清音质。

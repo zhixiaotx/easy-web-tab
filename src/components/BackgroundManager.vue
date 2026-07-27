@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 
 const emit = defineEmits<{
@@ -7,6 +7,22 @@ const emit = defineEmits<{
 }>()
 
 const themeStore = useThemeStore()
+
+// ESC 键关闭弹框
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 // 当前选中的类型
 const selectedType = ref<BackgroundType>(themeStore.backgroundType)
@@ -39,6 +55,70 @@ const showImageInput = ref(false)
 
 // 自定义图片列表
 const customImages = ref<CustomBackground[]>([])
+
+// 上传背景图片
+const fileInput = ref<HTMLInputElement | null>(null)
+const MAX_BG_SIZE = 5 * 1024 * 1024 // 5MB for backgrounds
+
+function handleUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (file.size > MAX_BG_SIZE) {
+    alert('背景图片文件不能超过 5MB')
+    input.value = ''
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    const dataUrl = reader.result as string
+    const name = prompt('请输入背景名称', file.name.replace(/\.[^.]+$/, ''))
+    if (!name || !name.trim()) {
+      input.value = ''
+      return
+    }
+
+    const newImg: CustomBackground = {
+      id: `custom-${Date.now()}`,
+      type: 'image',
+      value: dataUrl,
+      name: name.trim()
+    }
+    customImages.value.push(newImg)
+    themeStore.addCustomBackground(newImg)
+    selectedValue.value = newImg.value
+    input.value = ''
+  }
+  reader.readAsDataURL(file)
+}
+
+// 自定义渐变
+const showGradientCreator = ref(false)
+const customGradientStart = ref('#667eea')
+const customGradientEnd = ref('#764ba2')
+const customGradientAngle = ref(135)
+
+// 生成渐变值
+function generateGradientValue(): string {
+  return `linear-gradient(${customGradientAngle.value}deg, ${customGradientStart.value} 0%, ${customGradientEnd.value} 100%)`
+}
+
+// 预览自定义渐变
+const customGradientPreview = computed(() => {
+  return { background: generateGradientValue() }
+})
+
+// 保存自定义渐变（直接修改第一个渐变）
+function saveCustomGradient() {
+  // 直接修改第一个渐变预设
+  gradientPresets[0].value = generateGradientValue()
+  gradientPresets[0].name = '自定义渐变'
+  selectedGradient.value = 'g1'
+  selectedValue.value = generateGradientValue()
+  showGradientCreator.value = false
+}
 
 // 预览样式
 const previewStyle = computed(() => {
@@ -219,12 +299,75 @@ function clearBackground() {
               @click="selectGradient(gradient.id)"
             ></div>
           </div>
+
+          <!-- 自定义渐变创建器 -->
+          <div class="custom-gradient-section">
+            <button v-if="!showGradientCreator" class="add-gradient-btn" @click="showGradientCreator = true">
+              ✏️ 修改渐变
+            </button>
+            
+            <div v-else class="gradient-creator">
+              <h4 class="subsection-title">自定义渐变</h4>
+              <div class="gradient-creator-row">
+                <div class="color-picker-group">
+                  <label>起始颜色</label>
+                  <input type="color" v-model="customGradientStart" />
+                </div>
+                <div class="color-picker-group">
+                  <label>结束颜色</label>
+                  <input type="color" v-model="customGradientEnd" />
+                </div>
+                <div class="angle-picker-group">
+                  <label>角度: {{ customGradientAngle }}°</label>
+                  <input type="range" v-model.number="customGradientAngle" min="0" max="360" step="1" />
+                </div>
+              </div>
+              <div class="gradient-preview-box" :style="customGradientPreview"></div>
+              <div class="gradient-creator-actions">
+                <button class="confirm-btn" @click="saveCustomGradient">应用到第一个渐变</button>
+                <button class="cancel-btn" @click="showGradientCreator = false">取消</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 图片选择 -->
         <div v-if="selectedType === 'image'" class="image-section">
           <h3 class="section-title">选择图片</h3>
           
+          <!-- 上传本地图片 -->
+          <div class="upload-section">
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              class="hidden-file-input"
+              @change="handleUpload"
+            />
+            <button class="upload-btn" @click="fileInput?.click()">
+              📁 上传本地图片
+            </button>
+            <span class="upload-hint">支持 JPG/PNG/GIF/WebP，最大 5MB</span>
+          </div>
+
+          <!-- 自定义图片列表 -->
+          <div v-if="themeStore.customBackgrounds.length > 0" class="custom-section">
+            <h4 class="subsection-title">自定义</h4>
+            <div class="background-grid">
+              <div
+                v-for="img in themeStore.customBackgrounds"
+                :key="img.id"
+                class="background-option custom-background-item"
+                :class="{ active: selectedValue === img.value }"
+                :style="{ backgroundImage: `url(${img.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
+                :title="img.name"
+                @click="selectCustomImage(img)"
+              >
+                <button class="delete-btn" @click.stop="deleteCustomImage(img.id)">×</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 预设图片 -->
           <div class="preset-section">
             <h4 class="subsection-title">预设风景</h4>
@@ -255,24 +398,6 @@ function clearBackground() {
               />
               <button class="confirm-btn" @click="addCustomImage">添加</button>
               <button class="cancel-btn" @click="showImageInput = false">取消</button>
-            </div>
-          </div>
-
-          <!-- 自定义图片列表 -->
-          <div v-if="themeStore.customBackgrounds.length > 0" class="custom-section">
-            <h4 class="subsection-title">自定义</h4>
-            <div class="background-grid">
-              <div
-                v-for="img in themeStore.customBackgrounds"
-                :key="img.id"
-                class="background-option custom-background-item"
-                :class="{ active: selectedValue === img.value }"
-                :style="{ backgroundImage: `url(${img.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
-                :title="img.name"
-                @click="selectCustomImage(img)"
-              >
-                <button class="delete-btn" @click.stop="deleteCustomImage(img.id)">×</button>
-              </div>
             </div>
           </div>
         </div>
@@ -309,7 +434,7 @@ function clearBackground() {
   background-color: white;
   border-radius: 16px;
   width: 100%;
-  max-width: 540px;
+  max-width: 800px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -626,6 +751,114 @@ function clearBackground() {
 
 .btn-primary:hover {
   background-color: #2563eb;
+}
+
+/* 上传背景图片 */
+.hidden-file-input {
+  display: none;
+}
+
+.upload-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.upload-btn {
+  padding: 10px 16px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.upload-btn:hover {
+  background-color: #059669;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 自定义渐变 */
+.custom-gradient-section {
+  margin-top: 16px;
+}
+
+.add-gradient-btn {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-gradient-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f8fafc;
+}
+
+.gradient-creator {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.gradient-creator-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.color-picker-group, .angle-picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.color-picker-group label, .angle-picker-group label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.color-picker-group input[type="color"] {
+  width: 50px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.angle-picker-group input[type="range"] {
+  width: 120px;
+  cursor: pointer;
+}
+
+.gradient-preview-box {
+  width: 100%;
+  height: 60px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.gradient-creator-actions {
+  display: flex;
+  gap: 8px;
 }
 
 /* 响应式 */

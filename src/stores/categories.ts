@@ -4,6 +4,7 @@ import type { Category } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
 
 const STORAGE_KEY = 'user-categories'
+const DELETED_LEGACY_KEY = 'user-deleted-legacy-ids'
 
 // 需要迁移到自定义分类的原预定义分类
 const LEGACY_CATEGORIES: Category[] = [
@@ -23,20 +24,35 @@ const LEGACY_CATEGORIES: Category[] = [
   { id: 'other', name: '其他', icon: '📁', isBuiltIn: false, sort: 15 }
 ]
 
+// 加载用户已删除的遗留分类 ID 集合
+function loadDeletedLegacyIds(): Set<string> {
+  const raw = localStorage.getItem(DELETED_LEGACY_KEY)
+  return raw ? new Set(JSON.parse(raw)) : new Set()
+}
+
+function saveDeletedLegacyIds(ids: Set<string>) {
+  localStorage.setItem(DELETED_LEGACY_KEY, JSON.stringify([...ids]))
+}
+
 export const useCategoriesStore = defineStore('categories', () => {
   // Load custom categories from localStorage
   const customCategories = ref<Category[]>(
     JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   )
 
-  // Migration: ensure legacy categories exist for all users
+  // 已删除的遗留分类 ID（防止迁移重新添加）
+  const deletedLegacyIds = loadDeletedLegacyIds()
+
+  // Migration: ensure legacy categories exist for all users (respecting deletions)
+  const activeLegacyCategories = LEGACY_CATEGORIES.filter(c => !deletedLegacyIds.has(c.id))
+
   if (customCategories.value.length === 0) {
-    // 首次使用：用所有遗留分类初始化
-    customCategories.value = [...LEGACY_CATEGORIES]
+    // 首次使用：用所有活跃遗留分类初始化
+    customCategories.value = [...activeLegacyCategories]
   } else {
-    // 已有用户：合并缺失的遗留分类
+    // 已有用户：合并缺失的活跃遗留分类
     const existingIds = new Set(customCategories.value.map(c => c.id))
-    const missing = LEGACY_CATEGORIES.filter(c => !existingIds.has(c.id))
+    const missing = activeLegacyCategories.filter(c => !existingIds.has(c.id))
     if (missing.length > 0) {
       customCategories.value.push(...missing)
     }
@@ -88,6 +104,14 @@ export const useCategoriesStore = defineStore('categories', () => {
   function deleteCategory(id: string): string {
     customCategories.value = customCategories.value.filter(c => c.id !== id)
     saveCustomCategories()
+
+    // 如果删除的是遗留分类，记录下来防止迁移重新添加
+    const isLegacy = LEGACY_CATEGORIES.some(c => c.id === id)
+    if (isLegacy && !deletedLegacyIds.has(id)) {
+      deletedLegacyIds.add(id)
+      saveDeletedLegacyIds(deletedLegacyIds)
+    }
+
     return 'other' // Migration target
   }
 
@@ -142,7 +166,8 @@ export const useCategoriesStore = defineStore('categories', () => {
   // Import custom categories (for import/export)
   function importCategories(categories: Category[]) {
     for (const cat of categories) {
-      if (!cat.isBuiltIn && !customCategories.value.find(c => c.id === cat.id)) {
+      // 跳过内置分类、已存在的分类、以及用户已删除的遗留分类
+      if (!cat.isBuiltIn && !customCategories.value.find(c => c.id === cat.id) && !deletedLegacyIds.has(cat.id)) {
         customCategories.value.push(cat)
       }
     }

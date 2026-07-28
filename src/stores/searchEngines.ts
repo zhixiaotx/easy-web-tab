@@ -41,6 +41,19 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || []
   )
 
+  // 首次加载：将默认引擎迁移到 customEngines（使其可删除/修改）
+  if (customEngines.value.length === 0) {
+    customEngines.value = [...DEFAULT_ENGINES]
+  } else {
+    // 已有用户：合并缺失的默认引擎
+    const existingIds = new Set(customEngines.value.map(e => e.id))
+    const missing = DEFAULT_ENGINES.filter(e => !existingIds.has(e.id))
+    if (missing.length > 0) {
+      customEngines.value.push(...missing)
+    }
+  }
+  saveEngines()
+
   // 从 localStorage 加载内置引擎 URL 覆盖
   const builtInOverrides = ref<Record<string, string>>(
     JSON.parse(localStorage.getItem(BUILT_IN_OVERRIDES_KEY) || '{}')
@@ -64,13 +77,9 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     })
   })
 
-  // 如果没有自定义数据，初始化为默认列表
+  // 合并视图：内置 + 自定义，按 sort 排序
   const allEngines = computed(() => {
     const builtIn = builtInEngines.value
-    if (customEngines.value.length === 0) {
-      // 首次加载，将其他引擎迁移到自定义
-      return [...builtIn, ...DEFAULT_ENGINES]
-    }
     return [...builtIn, ...customEngines.value].sort((a, b) => a.sort - b.sort)
   })
 

@@ -131,6 +131,11 @@ const closeAllModals = () => {
   }
 }
 
+// 游戏管理帮助
+const openGameHelp = () => {
+  toast.info('游戏管理：编辑 public/games/manifest.json 文件添加新游戏')
+}
+
 // 切换到前台
 const toggleAdmin = () => {
   router.push('/display')
@@ -293,6 +298,7 @@ const handlePageChange = () => {
           </button>
           <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
           <button class="btn-action" @click="router.push({ query: { modal: 'passwords' } })">🔑 密码管理</button>
+          <button class="btn-action" @click="openGameHelp">🎮 游戏管理</button>
           <SettingsButton />
         </div>
       </div>

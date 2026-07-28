@@ -1,0 +1,42 @@
+[
+  {
+    "id": "schulte-grid",
+    "name": "舒尔特方格",
+    "path": "/games/schulte-grid/index.html",
+    "description": "注意力训练游戏",
+    "icon": "/icons/fangge.svg",
+    "category": "game"
+  },
+  {
+    "id": "tetris",
+    "name": "俄罗斯方块",
+    "path": "/games/tetris/indxe.html",
+    "description": "经典俄罗斯方块游戏",
+    "icon": "/icons/elsfk.svg",
+    "category": "game"
+  },
+  {
+    "id": "gushi",
+    "name": "小中高古诗",
+    "path": "/games/gushi/index.html",
+    "description": "小中高必备古诗词",
+    "icon": "/icons/gushi.svg",
+    "category": "game"
+  },
+  {
+    "id": "cron-generator",
+    "name": "Cron表达式生成器",
+    "path": "/games/cron-generator/index.html",
+    "description": "Cron定时任务表达式生成工具",
+    "icon": "/icons/cron.svg",
+    "category": "tech"
+  },
+  {
+    "id": "id-generator",
+    "name": "号码生成器",
+    "path": "/games/id-generator/index.html",
+    "description": "身份证、手机号等号码生成工具",
+    "icon": "/icons/haoma.svg",
+    "category": "tech"
+  }
+]

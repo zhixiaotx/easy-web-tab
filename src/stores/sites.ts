@@ -196,6 +196,33 @@ export const useSitesStore = defineStore('sites', () => {
     return grouped
   })
 
+  // 加载游戏清单
+  async function loadGames() {
+    try {
+      const response = await fetch('/games/manifest.json')
+      if (response.ok) {
+        const gameEntries = await response.json()
+        const gameSites: Site[] = gameEntries.map((game: any) => ({
+          name: game.name,
+          url: game.path,
+          description: game.description,
+          category: game.category || 'game',
+          tags: ['游戏', '工具'],
+          icon: game.icon || '',
+          sort: 1,
+          createdAt: new Date().toISOString()
+        }))
+        
+        // 合并游戏到sites（避免重复）
+        const existingUrls = new Set(sites.value.map(s => s.url))
+        const newGames = gameSites.filter(g => !existingUrls.has(g.url))
+        sites.value.push(...newGames)
+      }
+    } catch (e) {
+      console.warn('Failed to load games manifest:', e)
+    }
+  }
+
   async function loadSites() {
     isLoading.value = true
     try {
@@ -223,6 +250,9 @@ export const useSitesStore = defineStore('sites', () => {
 
       // 转换为数组
       sites.value = Array.from(sitesMap.values())
+
+      // 加载游戏清单
+      await loadGames()
 
       // 应用保存的断链检测结果
       applySavedCheckResults()

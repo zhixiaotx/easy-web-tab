@@ -22,7 +22,7 @@ const builtInEditingUrl = ref('')
 
 // 按排序显示
 const sortedEngines = computed(() => 
-  [...store.customEngines].sort((a, b) => a.sort - b.sort)
+  [...store.allEngines].filter(e => !e.isBuiltIn).sort((a, b) => a.sort - b.sort)
 )
 
 // 添加引擎
@@ -202,11 +202,7 @@ function truncateUrl(url: string, maxLength = 40) {
 
         <!-- 自定义引擎 -->
         <div class="engine-section">
-          <h3>自定义引擎 ({{ store.customEngines.length }})</h3>
-          
-          <div v-if="store.customEngines.length === 0" class="empty-state">
-            暂无自定义引擎
-          </div>
+          <h3>自定义引擎 ({{ sortedEngines.length }})</h3>
 
           <div
             v-for="engine in sortedEngines"

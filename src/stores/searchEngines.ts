@@ -13,6 +13,17 @@ export interface SearchEngine {
 const STORAGE_KEY = 'user-search-engines'
 const BUILT_IN_OVERRIDES_KEY = 'built-in-engine-overrides'
 const BUILT_IN_OVERRIDES_STORAGE_KEY = 'built-in-engine-default'
+const DELETED_ENGINE_IDS_KEY = 'user-deleted-engine-ids'
+
+// 加载用户已删除的默认引擎 ID 集合
+function loadDeletedEngineIds(): Set<string> {
+  const raw = localStorage.getItem(DELETED_ENGINE_IDS_KEY)
+  return raw ? new Set(JSON.parse(raw)) : new Set()
+}
+
+function saveDeletedEngineIds(ids: Set<string>) {
+  localStorage.setItem(DELETED_ENGINE_IDS_KEY, JSON.stringify([...ids]))
+}
 
 // 默认内置搜索引擎 (不可删除)
 const BUILT_IN_ENGINES: SearchEngine[] = [
@@ -41,13 +52,32 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || []
   )
 
-  // 首次加载：将默认引擎迁移到 customEngines（使其可删除/修改）
-  if (customEngines.value.length === 0) {
-    customEngines.value = [...DEFAULT_ENGINES]
-  } else {
-    // 已有用户：合并缺失的默认引擎
+  // 已删除的默认引擎 ID（防止迁移重新添加）
+  const deletedEngineIds = loadDeletedEngineIds()
+
+  // 迁移：对于已有用户，检测哪些 DEFAULT_ENGINES 不在 customEngines 中
+  // 这些是之前版本中被删除但未记录的引擎（仅首次执行一次）
+  if (deletedEngineIds.size === 0 && customEngines.value.length > 0) {
     const existingIds = new Set(customEngines.value.map(e => e.id))
-    const missing = DEFAULT_ENGINES.filter(e => !existingIds.has(e.id))
+    const trulyDeleted = DEFAULT_ENGINES.filter(e => !existingIds.has(e.id))
+    if (trulyDeleted.length > 0) {
+      for (const engine of trulyDeleted) {
+        deletedEngineIds.add(engine.id)
+      }
+      saveDeletedEngineIds(deletedEngineIds)
+    }
+  }
+
+  // 活跃的默认引擎（排除已删除的）
+  const activeDefaultEngines = DEFAULT_ENGINES.filter(e => !deletedEngineIds.has(e.id))
+
+  // 首次加载：将活跃默认引擎迁移到 customEngines（使其可删除/修改）
+  if (customEngines.value.length === 0) {
+    customEngines.value = [...activeDefaultEngines]
+  } else {
+    // 已有用户：合并缺失的活跃默认引擎
+    const existingIds = new Set(customEngines.value.map(e => e.id))
+    const missing = activeDefaultEngines.filter(e => !existingIds.has(e.id))
     if (missing.length > 0) {
       customEngines.value.push(...missing)
     }
@@ -148,6 +178,13 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     }
     customEngines.value = customEngines.value.filter(e => e.id !== id)
     saveEngines()
+
+    // 追踪已删除的默认引擎，防止刷新后重新添加
+    const isDefault = DEFAULT_ENGINES.some(e => e.id === id)
+    if (isDefault && !deletedEngineIds.has(id)) {
+      deletedEngineIds.add(id)
+      saveDeletedEngineIds(deletedEngineIds)
+    }
   }
 
   // 设置默认
@@ -205,12 +242,23 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
   // 重置为默认
   function resetToDefault() {
     customEngines.value = [...DEFAULT_ENGINES]
+    deletedEngineIds.clear()
+    saveDeletedEngineIds(deletedEngineIds)
     saveEngines()
   }
 
   // 导入引擎
   function importEngines(engines: SearchEngine[]) {
     customEngines.value = [...engines]
+    // 移除被导入引擎的删除标记（用户显式导入说明希望保留它们）
+    let changed = false
+    for (const engine of engines) {
+      if (deletedEngineIds.has(engine.id)) {
+        deletedEngineIds.delete(engine.id)
+        changed = true
+      }
+    }
+    if (changed) saveDeletedEngineIds(deletedEngineIds)
     saveEngines()
   }
 
@@ -228,6 +276,7 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     allEngines,
     builtInEngines,
     defaultEngine,
+    deletedEngineIds,
     addEngine,
     updateEngine,
     updateBuiltInEngineUrl,

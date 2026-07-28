@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - button "🌙" [ref=e4] [cursor=pointer]
+    - button "❓" [ref=e5] [cursor=pointer]
+    - button "前台" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - banner [ref=e8]:
+      - generic [ref=e11]:
+        - combobox [ref=e12] [cursor=pointer]:
+          - option "本地搜索"
+          - option "百度" [selected]
+          - option "必应"
+          - option "Google"
+          - option "搜狗"
+          - option "360搜索"
+          - option "夸克"
+          - option "知乎"
+          - option "哔哩哔哩"
+          - option "GitHub"
+          - option "翻译"
+          - option "Kimi"
+          - option "DeepSeek"
+        - textbox "输入关键词，按回车键搜索..." [ref=e14]
+        - button "🔍" [ref=e15] [cursor=pointer]
+      - generic [ref=e17]:
+        - button "导入" [ref=e18] [cursor=pointer]
+        - button "导出" [ref=e19] [cursor=pointer]
+        - button "+ 添加网址" [ref=e20] [cursor=pointer]
+        - button "🔗 检测断链" [ref=e21] [cursor=pointer]
+        - button "🔍 引擎管理" [ref=e23] [cursor=pointer]
+        - button "🔑 密码管理" [ref=e24] [cursor=pointer]
+        - button "🎮 游戏管理" [ref=e25] [cursor=pointer]
+        - generic [ref=e26]:
+          - button "🖼️ 背景" [ref=e27] [cursor=pointer]
+          - button "⚙️ 分类管理" [ref=e28] [cursor=pointer]
+          - button "📦 备份" [ref=e29] [cursor=pointer]
+          - button "🖼️ 图标管理" [ref=e30] [cursor=pointer]
+    - generic [ref=e32]:
+      - button "全部" [ref=e33] [cursor=pointer]
+      - button "🎬 视频音乐" [ref=e34] [cursor=pointer]
+      - button "💼 办公工具" [ref=e35] [cursor=pointer]
+      - button "💻 开发技术" [ref=e36] [cursor=pointer]
+      - button "📰 新闻资讯" [ref=e37] [cursor=pointer]
+      - button "🎮 社交娱乐" [ref=e38] [cursor=pointer]
+      - button "🛒 购物电商" [ref=e39] [cursor=pointer]
+      - button "🏠 生活服务" [ref=e40] [cursor=pointer]
+      - button "📚 教育培训" [ref=e41] [cursor=pointer]
+      - button "💰 金融理财" [ref=e42] [cursor=pointer]
+      - button "🏛️ 政府公益" [ref=e43] [cursor=pointer]
+      - button "✈️ 旅游出行" [ref=e44] [cursor=pointer]
+      - button "🏥 健康医疗" [ref=e45] [cursor=pointer]
+      - button "🎮 游戏动漫" [ref=e46] [cursor=pointer]
+      - button "🎨 设计创意" [ref=e47] [cursor=pointer]
+      - button "📁 其他" [ref=e48] [cursor=pointer]
+    - generic [ref=e50]:
+      - button "大模型" [ref=e51] [cursor=pointer]
+      - button "工具" [ref=e52] [cursor=pointer]
+      - button "搜索引擎" [ref=e53] [cursor=pointer]
+      - button "教育" [ref=e54] [cursor=pointer]
+      - button "游戏" [ref=e55] [cursor=pointer]
+      - button "网盘" [ref=e56] [cursor=pointer]
+      - button "购物" [ref=e57] [cursor=pointer]
+      - button "音乐" [ref=e58] [cursor=pointer]
+    - main [ref=e59]:
+      - generic [ref=e60] [cursor=pointer]:
+        - img "DeepSeek" [ref=e63]
+        - heading "DeepSeek" [level=3] [ref=e64]
+      - generic [ref=e65] [cursor=pointer]:
+        - img "哔哩哔哩" [ref=e68]
+        - heading "哔哩哔哩" [level=3] [ref=e69]
+      - generic [ref=e70] [cursor=pointer]:
+        - img "百度" [ref=e73]
+        - heading "百度" [level=3] [ref=e74]
+      - generic [ref=e75] [cursor=pointer]:
+        - img "抖音" [ref=e78]
+        - heading "抖音" [level=3] [ref=e79]
+      - generic [ref=e80] [cursor=pointer]:
+        - img "阿里云盘" [ref=e83]
+        - heading "阿里云盘" [level=3] [ref=e84]
+      - generic [ref=e85] [cursor=pointer]:
+        - img "京东" [ref=e88]
+        - heading "京东" [level=3] [ref=e89]
+      - generic [ref=e90] [cursor=pointer]:
+        - img "QQ邮箱" [ref=e93]
+        - heading "QQ邮箱" [level=3] [ref=e94]
+      - generic [ref=e95] [cursor=pointer]:
+        - img "舒尔特方格" [ref=e98]
+        - heading "舒尔特方格" [level=3] [ref=e99]
+      - generic [ref=e100] [cursor=pointer]:
+        - img "网易云音乐" [ref=e103]
+        - heading "网易云音乐" [level=3] [ref=e104]
+      - generic [ref=e105] [cursor=pointer]:
+        - img "中国铁路12306" [ref=e108]
+        - heading "中国铁路12306" [level=3] [ref=e109]
+      - generic [ref=e110] [cursor=pointer]:
+        - img "俄罗斯方块" [ref=e113]
+        - heading "俄罗斯方块" [level=3] [ref=e114]
+      - generic [ref=e115] [cursor=pointer]:
+        - img "古诗词学习" [ref=e118]
+        - heading "古诗词学习" [level=3] [ref=e119]
+      - generic [ref=e120] [cursor=pointer]:
+        - img "Cron表达式生成器" [ref=e123]
+        - heading "Cron表达式生成器" [level=3] [ref=e124]
+      - generic [ref=e125] [cursor=pointer]:
+        - img "号码生成器" [ref=e128]
+        - heading "号码生成器" [level=3] [ref=e129]
+    - generic [ref=e130]:
+      - generic [ref=e131]:
+        - button "‹ 上一页" [disabled] [ref=e132]
+        - button "1" [ref=e133] [cursor=pointer]
+        - button "下一页 ›" [disabled] [ref=e134]
+      - combobox [ref=e136] [cursor=pointer]:
+        - option "18 条/页" [selected]
+        - option "27 条/页"
+        - option "36 条/页"
+        - option "45 条/页"
+        - option "全部"

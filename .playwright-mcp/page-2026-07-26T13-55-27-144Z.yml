@@ -1,0 +1,221 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - button "🌙" [ref=e4] [cursor=pointer]
+    - button "❓" [active] [ref=e5] [cursor=pointer]
+    - button "前台" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - banner [ref=e8]:
+      - generic [ref=e11]:
+        - combobox [ref=e12] [cursor=pointer]:
+          - option "本地搜索"
+          - option "百度" [selected]
+          - option "必应"
+          - option "Google"
+          - option "搜狗"
+          - option "360搜索"
+          - option "夸克"
+          - option "知乎"
+          - option "哔哩哔哩"
+          - option "GitHub"
+          - option "翻译"
+          - option "Kimi"
+          - option "DeepSeek"
+        - textbox "输入关键词，按回车键搜索..." [ref=e14]
+        - button "🔍" [ref=e15] [cursor=pointer]
+      - generic [ref=e17]:
+        - button "导入" [ref=e18] [cursor=pointer]
+        - button "导出" [ref=e19] [cursor=pointer]
+        - button "+ 添加网址" [ref=e20] [cursor=pointer]
+        - button "🔗 检测断链" [ref=e21] [cursor=pointer]
+        - button "🔍 引擎管理" [ref=e23] [cursor=pointer]
+        - button "🔑 密码管理" [ref=e24] [cursor=pointer]
+        - generic [ref=e25]:
+          - button "🖼️ 背景" [ref=e26] [cursor=pointer]
+          - button "⚙️ 分类管理" [ref=e27] [cursor=pointer]
+          - button "📦 备份" [ref=e28] [cursor=pointer]
+    - generic [ref=e30]:
+      - button "全部" [ref=e31] [cursor=pointer]
+      - button "🎬 视频音乐" [ref=e32] [cursor=pointer]
+      - button "💼 办公工具" [ref=e33] [cursor=pointer]
+      - button "💻 开发技术" [ref=e34] [cursor=pointer]
+      - button "📰 新闻资讯" [ref=e35] [cursor=pointer]
+      - button "🎮 社交娱乐" [ref=e36] [cursor=pointer]
+      - button "🛒 购物电商" [ref=e37] [cursor=pointer]
+      - button "🏠 生活服务" [ref=e38] [cursor=pointer]
+      - button "📚 教育培训" [ref=e39] [cursor=pointer]
+      - button "💰 金融理财" [ref=e40] [cursor=pointer]
+      - button "🏛️ 政府公益" [ref=e41] [cursor=pointer]
+      - button "✈️ 旅游出行" [ref=e42] [cursor=pointer]
+      - button "🏥 健康医疗" [ref=e43] [cursor=pointer]
+      - button "🎮 游戏动漫" [ref=e44] [cursor=pointer]
+      - button "🎨 设计创意" [ref=e45] [cursor=pointer]
+      - button "📁 其他" [ref=e46] [cursor=pointer]
+    - generic [ref=e48]:
+      - button "大模型" [ref=e49] [cursor=pointer]
+      - button "搜索引擎" [ref=e50] [cursor=pointer]
+      - button "教育" [ref=e51] [cursor=pointer]
+      - button "网盘" [ref=e52] [cursor=pointer]
+      - button "购物" [ref=e53] [cursor=pointer]
+      - button "音乐" [ref=e54] [cursor=pointer]
+    - main [ref=e55]:
+      - generic [ref=e56] [cursor=pointer]:
+        - img "DeepSeek" [ref=e59]
+        - heading "DeepSeek" [level=3] [ref=e60]
+      - generic [ref=e61] [cursor=pointer]:
+        - img "哔哩哔哩" [ref=e64]
+        - heading "哔哩哔哩" [level=3] [ref=e65]
+      - generic [ref=e66] [cursor=pointer]:
+        - img "百度" [ref=e69]
+        - heading "百度" [level=3] [ref=e70]
+      - generic [ref=e71] [cursor=pointer]:
+        - img "抖音" [ref=e74]
+        - heading "抖音" [level=3] [ref=e75]
+      - generic [ref=e76] [cursor=pointer]:
+        - img "阿里云盘" [ref=e79]
+        - heading "阿里云盘" [level=3] [ref=e80]
+      - generic [ref=e81] [cursor=pointer]:
+        - img "京东" [ref=e84]
+        - heading "京东" [level=3] [ref=e85]
+      - generic [ref=e86] [cursor=pointer]:
+        - img "QQ邮箱" [ref=e89]
+        - heading "QQ邮箱" [level=3] [ref=e90]
+      - generic [ref=e91] [cursor=pointer]:
+        - img "爱奇艺" [ref=e94]
+        - heading "爱奇艺" [level=3] [ref=e95]
+      - generic [ref=e96] [cursor=pointer]:
+        - img "网易云音乐" [ref=e99]
+        - heading "网易云音乐" [level=3] [ref=e100]
+      - generic [ref=e101] [cursor=pointer]:
+        - img "中国铁路12306" [ref=e104]
+        - heading "中国铁路12306" [level=3] [ref=e105]
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - button "‹ 上一页" [disabled] [ref=e108]
+        - button "1" [ref=e109] [cursor=pointer]
+        - button "下一页 ›" [disabled] [ref=e110]
+      - combobox [ref=e112] [cursor=pointer]:
+        - option "18 条/页" [selected]
+        - option "27 条/页"
+        - option "36 条/页"
+        - option "45 条/页"
+        - option "全部"
+    - generic [ref=e114]:
+      - generic [ref=e115]:
+        - heading "💡 使用帮助" [level=2] [ref=e116]
+        - button "关闭" [ref=e117] [cursor=pointer]
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - heading "🎯 功能介绍" [level=3] [ref=e123]
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - generic [ref=e126]: 🔗
+              - generic [ref=e127]:
+                - heading "网址管理" [level=4] [ref=e128]
+                - paragraph [ref=e129]: 添加、编辑、删除网址。支持自动获取网站标题、描述和图标。
+            - generic [ref=e130]:
+              - generic [ref=e131]: 📂
+              - generic [ref=e132]:
+                - heading "分类管理" [level=4] [ref=e133]
+                - paragraph [ref=e134]: 内置办公工具，开发技术、视频音乐三大分类，可自定义添加新分类。
+            - generic [ref=e135]:
+              - generic [ref=e136]: 🔖
+              - generic [ref=e137]:
+                - heading "标签筛选" [level=4] [ref=e138]
+                - paragraph [ref=e139]: 每个网址可打多个标签，标签根据当前分类动态显示，方便精准筛选。
+            - generic [ref=e140]:
+              - generic [ref=e141]: 🔗
+              - generic [ref=e142]:
+                - heading "断链检测" [level=4] [ref=e143]
+                - paragraph [ref=e144]: 点击「检测断链」自动检测所有网址可用性，无效链接显示警告标记⚠️，鼠标悬停可手动取消失效标记。
+            - generic [ref=e145]:
+              - generic [ref=e146]: 🔍
+              - generic [ref=e147]:
+                - heading "全文搜索" [level=4] [ref=e148]
+                - paragraph [ref=e149]: 支持按名称、描述、标签搜索，输入即显示结果。
+            - generic [ref=e150]:
+              - generic [ref=e151]: 🔄
+              - generic [ref=e152]:
+                - heading "拖拽排序" [level=4] [ref=e153]
+                - paragraph [ref=e154]: 拖拽网址卡片交换位置，自动保存排序结果。
+            - generic [ref=e155]:
+              - generic [ref=e156]: 📥
+              - generic [ref=e157]:
+                - heading "导入/导出" [level=4] [ref=e158]
+                - paragraph [ref=e159]: 导出为 Markdown 文件备份，支持按分类/搜索引擎/网址排序导出，上传 .md 文件批量导入，自动按 URL 去重。
+            - generic [ref=e160]:
+              - generic [ref=e161]: 💾
+              - generic [ref=e162]:
+                - heading "数据备份" [level=4] [ref=e163]
+                - paragraph [ref=e164]: 自动保存最近10个版本的历史数据，支持一键恢复到任意历史版本。
+            - generic [ref=e165]:
+              - generic [ref=e166]: 🌙
+              - generic [ref=e167]:
+                - heading "暗色模式" [level=4] [ref=e168]
+                - paragraph [ref=e169]: 点击右上角月亮图标切换深色主题，适合夜间使用。图片背景模式下自动隐藏。
+            - generic [ref=e170]:
+              - generic [ref=e171]: 🖼️
+              - generic [ref=e172]:
+                - heading "背景图片" [level=4] [ref=e173]
+                - paragraph [ref=e174]: 支持上传本地图片作为背景，图片背景模式下自动隐藏主题切换按钮。
+            - generic [ref=e175]:
+              - generic [ref=e176]: 📈
+              - generic [ref=e177]:
+                - heading "点击频率排序" [level=4] [ref=e178]
+                - paragraph [ref=e179]: 网址按点击频率自动排序，常用网址置顶，方便快速访问。
+            - generic [ref=e180]:
+              - generic [ref=e181]: 🏷️
+              - generic [ref=e182]:
+                - heading "图标本地化" [level=4] [ref=e183]
+                - paragraph [ref=e184]: 网站图标自动缓存到本地，无网络时也能正常显示，同时提供预设图标可选。
+            - generic [ref=e185]:
+              - generic [ref=e186]: 🔎
+              - generic [ref=e187]:
+                - heading "搜索引擎管理" [level=4] [ref=e188]
+                - paragraph [ref=e189]: 添加/删除自定义搜索引擎，支持设置默认搜索，可在搜索栏快速切换。提供恢复默认按钮。
+        - generic [ref=e190]:
+          - heading "⌨️ 键盘快捷键" [level=3] [ref=e191]
+          - generic [ref=e192]:
+            - generic [ref=e193]:
+              - generic [ref=e194]: Ctrl + N
+              - generic [ref=e195]: 新增网址
+            - generic [ref=e196]:
+              - generic [ref=e197]: Ctrl + B
+              - generic [ref=e198]: 切换前台/后台
+            - generic [ref=e199]:
+              - generic [ref=e200]: Ctrl + D
+              - generic [ref=e201]: 切换暗色模式
+            - generic [ref=e202]:
+              - generic [ref=e203]: ESC
+              - generic [ref=e204]: 关闭弹窗
+        - generic [ref=e205]:
+          - heading "📄 页面模式" [level=3] [ref=e206]
+          - generic [ref=e207]:
+            - generic [ref=e208]:
+              - generic [ref=e209]: 管理后台
+              - paragraph [ref=e210]:
+                - text: 路由
+                - code [ref=e211]: /
+                - text: ，默认页面，可添加/编辑/删除网址，管理分类和搜索引擎。
+            - generic [ref=e212]:
+              - generic [ref=e213]: 前台展示
+              - paragraph [ref=e214]:
+                - text: 路由
+                - code [ref=e215]: /display
+                - text: ，纯展示模式，隐藏管理功能，适合设为浏览器新标签页。
+        - generic [ref=e216]:
+          - heading "💾 数据存储" [level=3] [ref=e217]
+          - list [ref=e218]:
+            - listitem [ref=e219]:
+              - strong [ref=e220]: 内置数据
+              - text: ：构建进包，不可动态修改
+            - listitem [ref=e221]:
+              - strong [ref=e222]: 用户数据
+              - text: ：存储于浏览器
+              - code [ref=e223]: localStorage
+              - text: ，包括用户添加的网址、自定义分类、自定义搜索引擎
+            - listitem [ref=e224]:
+              - strong [ref=e225]: 断链检测结果
+              - text: ：存储于
+              - code [ref=e226]: localStorage
+              - text: ，关闭页面后保留
+      - button "知道了" [ref=e228] [cursor=pointer]

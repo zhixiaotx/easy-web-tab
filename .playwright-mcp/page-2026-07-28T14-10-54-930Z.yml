@@ -1,0 +1,229 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - button "🌙" [ref=e4] [cursor=pointer]
+    - button "❓" [ref=e5] [cursor=pointer]
+    - button "前台" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - banner [ref=e8]:
+      - generic [ref=e11]:
+        - combobox [ref=e12] [cursor=pointer]:
+          - option "本地搜索"
+          - option "百度" [selected]
+          - option "必应"
+          - option "Google"
+          - option "搜狗"
+          - option "360搜索"
+          - option "夸克"
+          - option "知乎"
+          - option "哔哩哔哩"
+          - option "GitHub"
+          - option "翻译"
+          - option "Kimi"
+          - option "DeepSeek"
+        - textbox "输入关键词，按回车键搜索..." [ref=e14]
+        - button "🔍" [ref=e15] [cursor=pointer]
+      - generic [ref=e17]:
+        - button "导入" [ref=e18] [cursor=pointer]
+        - button "导出" [ref=e19] [cursor=pointer]
+        - button "+ 添加网址" [ref=e20] [cursor=pointer]
+        - button "🔗 检测断链" [ref=e21] [cursor=pointer]
+        - button "🔍 引擎管理" [active] [ref=e23] [cursor=pointer]
+        - button "🔑 密码管理" [ref=e24] [cursor=pointer]
+        - button "🎮 游戏管理" [ref=e25] [cursor=pointer]
+        - generic [ref=e26]:
+          - button "🖼️ 背景" [ref=e27] [cursor=pointer]
+          - button "⚙️ 分类管理" [ref=e28] [cursor=pointer]
+          - button "📦 备份" [ref=e29] [cursor=pointer]
+          - button "🖼️ 图标管理" [ref=e30] [cursor=pointer]
+    - generic [ref=e32]:
+      - button "全部" [ref=e33] [cursor=pointer]
+      - button "🎬 视频音乐" [ref=e34] [cursor=pointer]
+      - button "💼 办公助手" [ref=e35] [cursor=pointer]
+      - button "💻 开发技术" [ref=e36] [cursor=pointer]
+      - button "📰 新闻资讯" [ref=e37] [cursor=pointer]
+      - button "🛒 购物电商" [ref=e38] [cursor=pointer]
+      - button "🏠 生活服务" [ref=e39] [cursor=pointer]
+      - button "📚 教育培训" [ref=e40] [cursor=pointer]
+      - button "💰 金融理财" [ref=e41] [cursor=pointer]
+      - button "🏛️ 政府公益" [ref=e42] [cursor=pointer]
+      - button "✈️ 旅游出行" [ref=e43] [cursor=pointer]
+      - button "🏥 健康医疗" [ref=e44] [cursor=pointer]
+      - button "🎮 游戏动漫" [ref=e45] [cursor=pointer]
+      - button "🎨 设计创意" [ref=e46] [cursor=pointer]
+      - button "📁 其他" [ref=e47] [cursor=pointer]
+    - generic [ref=e49]:
+      - button "大模型" [ref=e50] [cursor=pointer]
+      - button "工具" [ref=e51] [cursor=pointer]
+      - button "搜索引擎" [ref=e52] [cursor=pointer]
+      - button "教育" [ref=e53] [cursor=pointer]
+      - button "游戏" [ref=e54] [cursor=pointer]
+      - button "网盘" [ref=e55] [cursor=pointer]
+      - button "购物" [ref=e56] [cursor=pointer]
+      - button "音乐" [ref=e57] [cursor=pointer]
+    - main [ref=e58]:
+      - generic [ref=e59] [cursor=pointer]:
+        - img "DeepSeek" [ref=e62]
+        - heading "DeepSeek" [level=3] [ref=e63]
+      - generic [ref=e64] [cursor=pointer]:
+        - img "哔哩哔哩" [ref=e67]
+        - heading "哔哩哔哩" [level=3] [ref=e68]
+      - generic [ref=e69] [cursor=pointer]:
+        - img "百度" [ref=e72]
+        - heading "百度" [level=3] [ref=e73]
+      - generic [ref=e74] [cursor=pointer]:
+        - img "抖音" [ref=e77]
+        - heading "抖音" [level=3] [ref=e78]
+      - generic [ref=e79] [cursor=pointer]:
+        - img "阿里云盘" [ref=e82]
+        - heading "阿里云盘" [level=3] [ref=e83]
+      - generic [ref=e84] [cursor=pointer]:
+        - img "京东" [ref=e87]
+        - heading "京东" [level=3] [ref=e96]
+      - generic [ref=e97] [cursor=pointer]:
+        - img "QQ邮箱" [ref=e100]
+        - heading "QQ邮箱" [level=3] [ref=e101]
+      - generic [ref=e102] [cursor=pointer]:
+        - img "舒尔特方格" [ref=e105]
+        - heading "舒尔特方格" [level=3] [ref=e106]
+      - generic [ref=e107] [cursor=pointer]:
+        - img "网易云音乐" [ref=e110]
+        - heading "网易云音乐" [level=3] [ref=e111]
+      - generic [ref=e112] [cursor=pointer]:
+        - img "中国铁路12306" [ref=e115]
+        - heading "中国铁路12306" [level=3] [ref=e116]
+      - generic [ref=e117] [cursor=pointer]:
+        - img "俄罗斯方块" [ref=e120]
+        - heading "俄罗斯方块" [level=3] [ref=e121]
+      - generic [ref=e122] [cursor=pointer]:
+        - img "古诗词学习" [ref=e125]
+        - heading "古诗词学习" [level=3] [ref=e126]
+      - generic [ref=e127] [cursor=pointer]:
+        - img "Cron表达式生成器" [ref=e130]
+        - heading "Cron表达式生成器" [level=3] [ref=e131]
+      - generic [ref=e132] [cursor=pointer]:
+        - img "号码生成器" [ref=e135]
+        - heading "号码生成器" [level=3] [ref=e136]
+    - generic [ref=e137]:
+      - generic [ref=e138]:
+        - button "‹ 上一页" [disabled] [ref=e139]
+        - button "1" [ref=e140] [cursor=pointer]
+        - button "下一页 ›" [disabled] [ref=e141]
+      - combobox [ref=e143] [cursor=pointer]:
+        - option "18 条/页" [selected]
+        - option "27 条/页"
+        - option "36 条/页"
+        - option "45 条/页"
+        - option "全部"
+    - generic [ref=e145]:
+      - generic [ref=e146]:
+        - heading "搜索引擎管理" [level=2] [ref=e147]
+        - button "✕" [ref=e148] [cursor=pointer]
+      - generic [ref=e149]:
+        - generic [ref=e150]:
+          - heading "添加搜索引擎" [level=3] [ref=e151]
+          - generic [ref=e152]:
+            - textbox "名称，如：百度" [ref=e153]
+            - textbox "网址，如：https://baidu.com" [ref=e154]
+          - generic [ref=e155]:
+            - textbox "查询参数，如：wd= (会自动拼接到URL后)" [ref=e156]
+            - button "添加" [disabled] [ref=e157]
+        - generic [ref=e158]:
+          - heading "内置引擎 (不可删除)" [level=3] [ref=e159]
+          - button "恢复默认引擎" [ref=e160] [cursor=pointer]
+          - generic [ref=e161]:
+            - generic [ref=e162]: 🔒
+            - generic [ref=e164]: 本地搜索
+          - generic [ref=e165]:
+            - generic [ref=e166]: 🔒
+            - generic [ref=e168]:
+              - text: 百度
+              - generic [ref=e169]: 默认
+            - generic "https://www.baidu.com/s?wd=" [ref=e170]
+            - button "✏️" [ref=e171] [cursor=pointer]
+          - generic [ref=e172]:
+            - generic [ref=e173]: 🔒
+            - generic [ref=e175]: 必应
+            - generic "https://www.bing.com/search?q=" [ref=e176]
+            - button "✏️" [ref=e177] [cursor=pointer]
+        - generic [ref=e178]:
+          - heading "自定义引擎 (10)" [level=3] [ref=e179]
+          - generic [ref=e180]:
+            - generic [ref=e181]:
+              - button "↑" [disabled] [ref=e182]
+              - button "↓" [ref=e183] [cursor=pointer]
+            - generic [ref=e184]: Google
+            - generic "https://www.google.com/search?q=" [ref=e185]
+            - button "✏️" [ref=e186] [cursor=pointer]
+            - button "🗑️" [ref=e187] [cursor=pointer]
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - button "↑" [ref=e190] [cursor=pointer]
+              - button "↓" [ref=e191] [cursor=pointer]
+            - generic [ref=e192]: 搜狗
+            - generic "https://www.sogou.com/web?query=" [ref=e193]
+            - button "✏️" [ref=e194] [cursor=pointer]
+            - button "🗑️" [ref=e195] [cursor=pointer]
+          - generic [ref=e196]:
+            - generic [ref=e197]:
+              - button "↑" [ref=e198] [cursor=pointer]
+              - button "↓" [ref=e199] [cursor=pointer]
+            - generic [ref=e200]: 360搜索
+            - generic "https://www.so.com/s?q=" [ref=e201]
+            - button "✏️" [ref=e202] [cursor=pointer]
+            - button "🗑️" [ref=e203] [cursor=pointer]
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - button "↑" [ref=e206] [cursor=pointer]
+              - button "↓" [ref=e207] [cursor=pointer]
+            - generic [ref=e208]: 夸克
+            - generic "https://quark.cn/s?query=" [ref=e209]
+            - button "✏️" [ref=e210] [cursor=pointer]
+            - button "🗑️" [ref=e211] [cursor=pointer]
+          - generic [ref=e212]:
+            - generic [ref=e213]:
+              - button "↑" [ref=e214] [cursor=pointer]
+              - button "↓" [ref=e215] [cursor=pointer]
+            - generic [ref=e216]: 知乎
+            - generic "https://www.zhihu.com/search?type=content&q=" [ref=e217]: https://www.zhihu.com/search?type=conten...
+            - button "✏️" [ref=e218] [cursor=pointer]
+            - button "🗑️" [ref=e219] [cursor=pointer]
+          - generic [ref=e220]:
+            - generic [ref=e221]:
+              - button "↑" [ref=e222] [cursor=pointer]
+              - button "↓" [ref=e223] [cursor=pointer]
+            - generic [ref=e224]: 哔哩哔哩
+            - generic "https://search.bilibili.com/all?keyword=" [ref=e225]
+            - button "✏️" [ref=e226] [cursor=pointer]
+            - button "🗑️" [ref=e227] [cursor=pointer]
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - button "↑" [ref=e230] [cursor=pointer]
+              - button "↓" [ref=e231] [cursor=pointer]
+            - generic [ref=e232]: GitHub
+            - generic "https://github.com/search?q=" [ref=e233]
+            - button "✏️" [ref=e234] [cursor=pointer]
+            - button "🗑️" [ref=e235] [cursor=pointer]
+          - generic [ref=e236]:
+            - generic [ref=e237]:
+              - button "↑" [ref=e238] [cursor=pointer]
+              - button "↓" [ref=e239] [cursor=pointer]
+            - generic [ref=e240]: 翻译
+            - generic "https://translate.google.com/?sl=auto&tl=zh-CN&text=" [ref=e241]: https://translate.google.com/?sl=auto&tl...
+            - button "✏️" [ref=e242] [cursor=pointer]
+            - button "🗑️" [ref=e243] [cursor=pointer]
+          - generic [ref=e244]:
+            - generic [ref=e245]:
+              - button "↑" [ref=e246] [cursor=pointer]
+              - button "↓" [ref=e247] [cursor=pointer]
+            - generic [ref=e248]: Kimi
+            - generic "https://kimi.moonshot.cn/?q=" [ref=e249]
+            - button "✏️" [ref=e250] [cursor=pointer]
+            - button "🗑️" [ref=e251] [cursor=pointer]
+          - generic [ref=e252]:
+            - generic [ref=e253]:
+              - button "↑" [ref=e254] [cursor=pointer]
+              - button "↓" [disabled] [ref=e255]
+            - generic [ref=e256]: DeepSeek
+            - generic "https://www.deepseek.com/search?q=" [ref=e257]
+            - button "✏️" [ref=e258] [cursor=pointer]
+            - button "🗑️" [ref=e259] [cursor=pointer]

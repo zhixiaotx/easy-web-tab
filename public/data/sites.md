@@ -1,9 +1,74 @@
 ---
 categories:
-  - id: custom_1773899482306
+  - id: office
+    name: 办公工具
+    icon: 💼
+    sort: 1
+
+  - id: tech
+    name: 开发技术
+    icon: 💻
+    sort: 2
+
+  - id: news
+    name: 新闻资讯
+    icon: 📰
+    sort: 4
+
+  - id: social
+    name: 社交娱乐
+    icon: 🎮
+    sort: 5
+
+  - id: shopping
+    name: 购物电商
+    icon: 🛒
+    sort: 6
+
+  - id: life
+    name: 生活服务
+    icon: 🏠
+    sort: 7
+
+  - id: education
+    name: 教育培训
+    icon: 📚
+    sort: 8
+
+  - id: finance
+    name: 金融理财
+    icon: 💰
+    sort: 9
+
+  - id: government
+    name: 政府公益
+    icon: 🏛️
+    sort: 10
+
+  - id: travel
+    name: 旅游出行
+    icon: ✈️
+    sort: 11
+
+  - id: health
+    name: 健康医疗
+    icon: 🏥
+    sort: 12
+
+  - id: game
+    name: 游戏动漫
+    icon: 🎮
+    sort: 13
+
+  - id: design
+    name: 设计创意
+    icon: 🎨
+    sort: 14
+
+  - id: other
     name: 其他
-    icon: 📂
-    sort: 21
+    icon: 📁
+    sort: 15
 
 searchEngines:
   - id: local
@@ -24,12 +89,11 @@ searchEngines:
     isDefault: false
     sort: 2
 
-  - id: bilibili
-    name: 哔哩哔哩
-    url: https://search.bilibili.com/all?keyword=
+  - id: deepseek
+    name: DeepSeek
+    url: https://www.deepseek.com/search?q=
     isDefault: false
-    sort: 8
-
+    sort: 12
 
 sites:
   - name: DeepSeek
@@ -45,7 +109,7 @@ sites:
     url: https://www.bilibili.com
     description: 免费看高清视频 多端同步播放记录 发表弹幕/评论 热门番剧影视看不停 立即登录 首次使用？ 点我注册。不感兴趣 将减少此类内容推荐。不感兴趣 将减少此类内容推荐
     category: video
-    tags: [教育]
+    tags: [视频]
     icon: https://www.bilibili.com/favicon.ico
     sort: 4
     createdAt: 2026-03-19T07:53:05.443Z
@@ -82,7 +146,7 @@ sites:
     description: 京东购物平台
     category: shopping
     tags: [购物]
-    icon: /icons/jd.svg
+    icon: /icons/jingdong.svg
     sort: 2
     createdAt: 2026-03-19T07:42:14.155Z
 
@@ -112,6 +176,7 @@ sites:
     icon: /icons/12306.svg
     sort: 1
     createdAt: 2026-03-29T14:01:00.658Z
+
 ---
 
 # 我的书签

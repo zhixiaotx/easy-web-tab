@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-07-27T15:30:22.666Z
+ * 生成时间: 2026-07-28T14:46:57.257Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -149,13 +149,16 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'byd', label: 'Byd', ext: 'svg', category: '其他' },
   { name: 'Claude', label: 'Claude', ext: 'svg', category: '其他' },
   { name: 'core', label: 'Core', ext: 'svg', category: '其他' },
+  { name: 'cron', label: 'Cron', ext: 'svg', category: '其他' },
   { name: 'database_oceanbase', label: 'Database Oceanbase', ext: 'svg', category: '其他' },
   { name: 'doubao-1', label: 'Doubao-1', ext: 'svg', category: '其他' },
   { name: 'elastic', label: 'Elastic', ext: 'svg', category: '其他' },
   { name: 'element', label: 'Element', ext: 'svg', category: '其他' },
+  { name: 'elsfk', label: 'Elsfk', ext: 'svg', category: '其他' },
   { name: 'email', label: 'Email', ext: 'svg', category: '其他' },
   { name: 'facebook', label: 'Facebook', ext: 'svg', category: '其他' },
   { name: 'family-planning', label: 'Family-planning', ext: 'svg', category: '其他' },
+  { name: 'fangge', label: 'Fangge', ext: 'svg', category: '其他' },
   { name: 'feishu', label: 'Feishu', ext: 'ico', category: '其他' },
   { name: 'ferrari', label: 'Ferrari', ext: 'svg', category: '其他' },
   { name: 'ford', label: 'Ford', ext: 'svg', category: '其他' },
@@ -165,10 +168,13 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'GitCode-logo', label: 'GitCode-logo', ext: 'svg', category: '其他' },
   { name: 'gitee', label: 'Gitee', ext: 'ico', category: '其他' },
   { name: 'Grok', label: 'Grok', ext: 'svg', category: '其他' },
+  { name: 'gushi', label: 'Gushi', ext: 'svg', category: '其他' },
+  { name: 'haoma', label: 'Haoma', ext: 'svg', category: '其他' },
   { name: 'honda', label: 'Honda', ext: 'svg', category: '其他' },
   { name: 'iconfont', label: 'Iconfont', ext: 'svg', category: '其他' },
   { name: 'ikea', label: 'Ikea', ext: 'svg', category: '其他' },
   { name: 'instagram', label: 'Instagram', ext: 'svg', category: '其他' },
+  { name: 'jingdong', label: 'Jingdong', ext: 'svg', category: '其他' },
   { name: 'jordan', label: 'Jordan', ext: 'svg', category: '其他' },
   { name: 'keywords', label: 'Keywords', ext: 'svg', category: '其他' },
   { name: 'lamborghini', label: 'Lamborghini', ext: 'svg', category: '其他' },

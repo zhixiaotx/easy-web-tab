@@ -59,7 +59,7 @@ const handlePageChange = () => {
       </div>
     </header>
 
-    <CategoryTabs />
+    <CategoryTabs :hideEmpty="true" />
 
     <TagFilter />
 

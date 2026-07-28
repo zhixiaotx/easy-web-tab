@@ -6,7 +6,17 @@ import { useCategoriesStore } from '../stores/categories'
 const store = useSitesStore()
 const categoriesStore = useCategoriesStore()
 
-const categories = computed(() => categoriesStore.allCategories)
+const props = withDefaults(defineProps<{
+  hideEmpty?: boolean
+}>(), {
+  hideEmpty: false
+})
+
+const categories = computed(() => {
+  const all = categoriesStore.allCategories
+  if (!props.hideEmpty) return all
+  return all.filter(cat => store.sites.some(site => site.category === cat.id))
+})
 
 const handleCategoryClick = (categoryId: string) => {
   if (store.selectedCategory === categoryId) {

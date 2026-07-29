@@ -22,10 +22,13 @@ const server = http.createServer((req, res) => {
 
 // Game rewrites - with trailing slash for proper relative path resolution
 if (filePath === '/games/tetris') {
-  // Redirect to .html version
-  res.writeHead(302, { 'Location': '/games/tetris.html' })
+  // Redirect to index.html with trailing slash for proper relative path resolution
+  res.writeHead(302, { 'Location': '/games/tetris/' })
   res.end()
   return
+} else if (filePath === '/games/tetris/') {
+  // Already has trailing slash, serve the index.html
+  filePath = '/games/tetris/index.html'
 } else if (filePath === '/games/schulte-grid') {
   // Redirect to index.html with trailing slash for proper relative path resolution
   res.writeHead(302, { 'Location': '/games/schulte-grid/' })

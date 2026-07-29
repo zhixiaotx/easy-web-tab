@@ -10,7 +10,7 @@
   {
     "id": "tetris",
     "name": "俄罗斯方块",
-    "path": "/games/tetris/indxe.html",
+    "path": "/games/tetris/index.html",
     "description": "经典俄罗斯方块游戏",
     "icon": "/icons/elsfk.svg",
     "category": "game"

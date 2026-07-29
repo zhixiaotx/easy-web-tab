@@ -363,7 +363,8 @@
             S: '#32cd32',
             Z: '#ff4444',
             J: '#4169e1',
-            L: '#ff8c00'
+            L: '#ff8c00',
+            BOMB: '#ff4500'
         };
 
         const SHAPES = {
@@ -544,8 +545,52 @@
             }
         }
 
+        function drawBomb(ctx, x, y, size) {
+            const cx = x * size + size / 2;
+            const cy = y * size + size / 2;
+            const r = size / 2 - 4;
+
+            // Glow
+            ctx.save();
+            ctx.shadowColor = 'rgba(255, 69, 0, 0.6)';
+            ctx.shadowBlur = 10;
+            // Dark body
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = '#2d2d2d';
+            ctx.fill();
+            ctx.restore();
+
+            // Inner orange glow
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2);
+            ctx.fillStyle = COLORS.BOMB;
+            ctx.fill();
+
+            // Fuse line
+            ctx.beginPath();
+            ctx.moveTo(cx + 2, cy - r + 2);
+            ctx.quadraticCurveTo(cx + 6, cy - r - 4, cx + 8, cy - r - 8);
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Spark
+            ctx.beginPath();
+            ctx.arc(cx + 8, cy - r - 8, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffd700';
+            ctx.shadowColor = '#ff4500';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
         function drawPiece() {
             if (!currentPiece) return;
+            if (currentPiece.type === 'BOMB') {
+                drawBomb(ctx, currentPiece.x, currentPiece.y, BLOCK_SIZE);
+                return;
+            }
             currentPiece.shape.forEach((row, y) => {
                 row.forEach((cell, x) => {
                     if (cell) {
@@ -591,6 +636,11 @@
 
             if (!nextPiece) return;
 
+            if (nextPiece.type === 'BOMB') {
+                drawBomb(nextCtx, 1.9, 1.9, 25);
+                return;
+            }
+
             const shape = nextPiece.shape;
             const blockSize = 25;
             const offsetX = (nextCanvas.width - shape[0].length * blockSize) / 2 / blockSize;
@@ -605,7 +655,20 @@
             });
         }
 
+        function createBombPiece() {
+            return {
+                type: 'BOMB',
+                shape: [[1]],
+                color: COLORS.BOMB,
+                x: Math.floor(COLS / 2),
+                y: 0
+            };
+        }
+
         function randomPiece() {
+            if (Math.random() < 0.1) {
+                return createBombPiece();
+            }
             const types = Object.keys(SHAPES);
             const type = types[Math.floor(Math.random() * types.length)];
             return {
@@ -640,6 +703,12 @@
         }
 
         function lockPiece() {
+            if (currentPiece.type === 'BOMB') {
+                const destroyed = explodeBomb(currentPiece.x, currentPiece.y);
+                score += destroyed;
+                updateScore();
+                return true;
+            }
             currentPiece.shape.forEach((row, y) => {
                 row.forEach((cell, x) => {
                     if (cell) {
@@ -651,6 +720,7 @@
                     }
                 });
             });
+            return false;
         }
 
         function loadHighScore() {
@@ -660,6 +730,60 @@
 
         function saveHighScore(score) {
             localStorage.setItem('tetris-highscore', score.toString());
+        }
+
+        function explodeBomb(gx, gy) {
+            const radius = 1;
+            let destroyed = 0;
+            const colors = new Set();
+
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const row = gy + dy;
+                    const col = gx + dx;
+                    if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+                        const val = board[row][col];
+                        if (val) {
+                            colors.add(val);
+                            board[row][col] = null;
+                            destroyed++;
+                        }
+                    }
+                }
+            }
+
+            // Explosion particles
+            const cx = gx * BLOCK_SIZE + BLOCK_SIZE / 2;
+            const cy = gy * BLOCK_SIZE + BLOCK_SIZE / 2;
+            const pColors = ['#ff4500', '#ff6347', '#ffd700', '#ff8c00', '#ff0000'];
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: cx, y: cy,
+                    vx: Math.random() * 7 - 3.5,
+                    vy: Math.random() * 7 - 5,
+                    color: pColors[Math.floor(Math.random() * pColors.length)],
+                    life: 25 + Math.floor(Math.random() * 16),
+                    maxLife: 40
+                });
+            }
+
+            // Also spawn debris from destroyed blocks
+            if (destroyed > 0) {
+                const debrisColors = [...colors, ...pColors];
+                for (let i = 0; i < destroyed * 3; i++) {
+                    particles.push({
+                        x: cx + (Math.random() - 0.5) * BLOCK_SIZE,
+                        y: cy + (Math.random() - 0.5) * BLOCK_SIZE,
+                        vx: Math.random() * 5 - 2.5,
+                        vy: Math.random() * 5 - 4,
+                        color: debrisColors[Math.floor(Math.random() * debrisColors.length)],
+                        life: 15 + Math.floor(Math.random() * 11),
+                        maxLife: 25
+                    });
+                }
+            }
+
+            return destroyed;
         }
 
         function clearLines() {
@@ -759,10 +883,14 @@
                 currentPiece.x += dx;
                 currentPiece.y += dy;
             } else if (dy > 0) {
-                lockPiece();
-                clearLines();
-                if (!isClearing) {
+                const bomb = lockPiece();
+                if (bomb) {
                     spawnPiece();
+                } else {
+                    clearLines();
+                    if (!isClearing) {
+                        spawnPiece();
+                    }
                 }
             }
         }
@@ -798,10 +926,14 @@
                 currentPiece.y++;
             }
             currentTrail = trailSnapshots;
-            lockPiece();
-            clearLines();
-            if (!isClearing) {
+            const bomb = lockPiece();
+            if (bomb) {
                 spawnPiece();
+            } else {
+                clearLines();
+                if (!isClearing) {
+                    spawnPiece();
+                }
             }
         }
 

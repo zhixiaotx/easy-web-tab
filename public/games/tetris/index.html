@@ -609,7 +609,7 @@
             while (isValidPosition({ ...ghost, y: ghost.y + 1 })) {
                 ghost.y++;
             }
-            ctx.globalAlpha = 0.02;
+            ctx.globalAlpha = 0.03;
             ghost.shape.forEach((row, y) => {
                 row.forEach((cell, x) => {
                     if (cell) {

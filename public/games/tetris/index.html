@@ -704,8 +704,7 @@
 
         function lockPiece() {
             if (currentPiece.type === 'BOMB') {
-                const destroyed = explodeBomb(currentPiece.x, currentPiece.y);
-                score += destroyed;
+                explodeBomb(currentPiece.x, currentPiece.y);
                 updateScore();
                 return true;
             }

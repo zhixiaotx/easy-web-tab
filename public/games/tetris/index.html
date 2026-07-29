@@ -719,9 +719,8 @@
             }
 
             if (linesCleared > 0) {
-                const points = [0, 100, 300, 500, 800];
-                const earnedPoints = points[linesCleared] * (1 + (level - 1) * 0.1);
-                score += Math.floor(earnedPoints);
+                const points = [0, 2, 4, 6, 8];
+                score += points[linesCleared];
                 updateScore();
             }
 

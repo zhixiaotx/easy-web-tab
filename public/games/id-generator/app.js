@@ -42,6 +42,23 @@ function randomDigits(length) {
     return result;
 }
 
+// ==================== 字符集常量 ====================
+// GB 32100-2015 统一社会信用代码字符集（排除 I、O、S、V、Z）
+const CREDIT_CODE_CHARS = '0123456789ABCDEFGHJKLMNPQRTUWXY';
+// GB/T 11714 组织机构代码字符集（排除 I、O、S、V、Z，包含 L）
+const ORG_CODE_CHARS = '0123456789ABCDEFGHJKLMNPQRTUWXY';
+// ISO 7064 Mod 31,31 校验码字符集
+const ISO7064_MOD31_CHARS = '0123456789ABCDEFGHJKLMNPQRTUWXY';
+
+// GB 32100-2015 字符→值映射表（排除 I、O、S、V、Z 后的正确映射）
+const CHAR_VALUE_MAP = {
+    '0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,
+    'A':10,'B':11,'C':12,'D':13,'E':14,'F':15,'G':16,'H':17,
+    'J':18,'K':19,'L':20,'M':21,'N':22,
+    'P':23,'Q':24,'R':25,'T':26,'U':27,
+    'W':28,'X':29,'Y':30
+};
+
 // ==================== 身份证号生成 ====================
 
 // 中国行政区划代码（部分常见省份）
@@ -134,6 +151,44 @@ function onProvinceChange() {
     });
 }
 
+/**
+ * 获取指定年月对应的天数
+ */
+function getDaysInMonth(year, month) {
+    return new Date(year, month, 0).getDate();
+}
+
+/**
+ * 从 idCardAreas 中查找指定省份/城市对应的真实区县代码
+ */
+function getRealDistrict(provinceCode, cityCode) {
+    const prefix = provinceCode + cityCode;
+    const matching = idCardAreas.filter(code => code.startsWith(prefix) && code.length === 6);
+    if (matching.length > 0) {
+        return randomFrom(matching).substring(4, 6);
+    }
+    // 无匹配时随机生成2位数字（仍可满足格式校验）
+    return randomDigits(2);
+}
+
+/**
+ * 从 idCardAreas 中随机选取一个有效的 6 位行政区划代码
+ */
+function getRandomAreaCode() {
+    const validAreas = idCardAreas.filter(code => code.length === 6 && !code.endsWith('0000'));
+    if (validAreas.length > 0) {
+        return randomFrom(validAreas);
+    }
+    // 保底：随机选取省份+城市+区县
+    const provinceCodes = Object.keys(idCardRegions);
+    const randomProvince = randomFrom(provinceCodes);
+    const cities = idCardRegions[randomProvince].cities;
+    const cityCodes = Object.keys(cities);
+    const randomCity = randomFrom(cityCodes);
+    const district = randomDigits(2);
+    return randomProvince + randomCity + district;
+}
+
 // 根据选择生成身份证号
 function getSelectedAreaCode() {
     const provinceSelect = document.getElementById('idcard-province');
@@ -141,52 +196,35 @@ function getSelectedAreaCode() {
     
     // 处理元素不存在的情况
     if (!provinceSelect || !citySelect) {
-        // 默认随机选择
-        const provinceCodes = Object.keys(idCardRegions);
-        const randomProvince = provinceCodes[Math.floor(Math.random() * provinceCodes.length)];
-        const cities = idCardRegions[randomProvince].cities;
-        const cityCodes = Object.keys(cities);
-        const randomCity = cityCodes[Math.floor(Math.random() * cityCodes.length)];
-        // 补充2位区县代码
-        const district = randomDigits(2);
-        return randomProvince + randomCity + district;
+        return getRandomAreaCode();
     }
     
     const provinceCode = provinceSelect.value;
     const cityCode = citySelect.value;
     
     if (!provinceCode) {
-        // 随机选择省份
-        const provinceCodes = Object.keys(idCardRegions);
-        const randomProvince = provinceCodes[Math.floor(Math.random() * provinceCodes.length)];
-        const cities = idCardRegions[randomProvince].cities;
-        const cityCodes = Object.keys(cities);
-        const randomCity = cityCodes[Math.floor(Math.random() * cityCodes.length)];
-        // 补充2位区县代码
-        const district = randomDigits(2);
-        return randomProvince + randomCity + district;
+        return getRandomAreaCode();
     }
     
     if (!cityCode) {
         // 选择了省份但没有选择城市，随机选择城市
         const cities = idCardRegions[provinceCode].cities;
         const cityCodes = Object.keys(cities);
-        const randomCity = cityCodes[Math.floor(Math.random() * cityCodes.length)];
-        // 补充2位区县代码
-        const district = randomDigits(2);
+        const randomCity = randomFrom(cityCodes);
+        const district = getRealDistrict(provinceCode, randomCity);
         return provinceCode + randomCity + district;
     }
     
-    // 补充2位区县代码
-    const district = randomDigits(2);
+    // 使用真实区县代码
+    const district = getRealDistrict(provinceCode, cityCode);
     return provinceCode + cityCode + district;
 }
 
 /**
- * ISO 7064 Mod 11,10 校验码计算（GB 11643-1999标准）
+ * ISO 7064 Mod 11,2 校验码计算（GB 11643-1999标准）
  * 公式：S = Σ(ai * Wi)，校验码 = (11 - (S % 11)) % 11，结果为10时用X表示
  */
-function iso7064Mod1110(body17) {
+function iso7064Mod112(body17) {
     const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
     const checkCodes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'X'];
     
@@ -237,7 +275,8 @@ function generateIdCard(genderPreference, agePreference) {
     
     const year = randomInt(yearMin, yearMax);
     const month = randomInt(1, 12).toString().padStart(2, '0');
-    const day = randomInt(1, 28).toString().padStart(2, '0'); // 简化处理都用28天
+    const maxDay = getDaysInMonth(year, parseInt(month));
+    const day = randomInt(1, maxDay).toString().padStart(2, '0');
     const birthday = `${year}${month}${day}`;
     
     // 顺序码 000-999，第3位（索引16）决定性别：奇数=男，偶数=女
@@ -261,7 +300,7 @@ function generateIdCard(genderPreference, agePreference) {
     const body17 = area + birthday + sequence;
     
     // 计算校验码
-    const checkCode = iso7064Mod1110(body17);
+    const checkCode = iso7064Mod112(body17);
     
     return area + birthday + sequence + checkCode;
 }
@@ -281,7 +320,7 @@ function validateIdCard(idCard) {
     
     const body17 = idCard.substring(0, 17);
     const checkCode = idCard.charAt(17).toUpperCase();
-    const calculatedCode = iso7064Mod1110(body17);
+    const calculatedCode = iso7064Mod112(body17);
     
     if (checkCode !== calculatedCode) {
         return { valid: false, message: '校验码错误' };
@@ -292,9 +331,6 @@ function validateIdCard(idCard) {
 
 // ==================== 组织机构代码生成 ====================
 
-// 组织机构代码本体字符（排除I、O、S、V）
-const orgCodeChars = '0123456789ABCDEFGHJKMNPQRSTUWXYZ';
-
 /**
  * GB/T 11714 校验码计算
  * 校验码为 10 时用 X 表示
@@ -304,14 +340,8 @@ function gb11714Check(code8) {
     let sum = 0;
     
     for (let i = 0; i < 8; i++) {
-        const char = code8[i];
-        let value;
-        if (char >= '0' && char <= '9') {
-            value = parseInt(char);
-        } else {
-            value = char.charCodeAt(0) - 55; // A=10, B=11, ...
-        }
-        sum += value * weights[i];
+        const char = code8[i].toUpperCase();
+        sum += (CHAR_VALUE_MAP[char] || 0) * weights[i];
     }
     
     const remainder = (11 - (sum % 11)) % 11;
@@ -324,7 +354,7 @@ function gb11714Check(code8) {
 function generateOrgCode() {
     let body = '';
     for (let i = 0; i < 8; i++) {
-        body += randomFrom(orgCodeChars.split(''));
+        body += randomFrom(ORG_CODE_CHARS.split(''));
     }
     
     const checkCode = gb11714Check(body);
@@ -354,9 +384,9 @@ function validateOrgCode(code) {
         return { valid: false, message: '组织机构代码应为9位' };
     }
     
-    const pattern = /^[0-9A-HJKMNP-UW-Z]{8}[0-9A-HJKMNP-UW-X]$/;
+    const pattern = /^[0-9A-HJ-NP-RT-UW-Y]{8}[0-9A-HJ-NP-RT-UW-Y]$/;
     if (!pattern.test(cleanCode)) {
-        return { valid: false, message: '格式不正确（只能包含数字和大写字母，不含I、O、S、V）' };
+        return { valid: false, message: '格式不正确（只能包含数字和大写字母，不含I、O、S、V、Z）' };
     }
     
     const body8 = cleanCode.substring(0, 8);
@@ -374,31 +404,22 @@ function validateOrgCode(code) {
 
 // 登记管理部门代码
 const regAdminCodes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-// 机构类别代码（不含I,O,S,V）
-const orgTypeCodes = '0123456789ABCDEFGHJKMNPQRSTUWXYZ';
 
 /**
  * ISO 7064 Mod 31,31 校验码计算
  */
 function iso7064Mod3131(code17) {
     const weights = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28];
-    const checkCodes = '0123456789ABCDEFGHJKLMNPQRTUWXY';
     
     let sum = 0;
     for (let i = 0; i < 17; i++) {
-        let value;
-        const char = code17[i];
-        if (char >= '0' && char <= '9') {
-            value = parseInt(char);
-        } else {
-            value = char.charCodeAt(0) - 55;
-        }
-        sum += value * weights[i];
+        const char = code17[i].toUpperCase();
+        sum += (CHAR_VALUE_MAP[char] || 0) * weights[i];
     }
     
     const remainder = sum % 31;
     const checkIndex = (31 - remainder) % 31;
-    return checkCodes[checkIndex];
+    return ISO7064_MOD31_CHARS[checkIndex];
 }
 
 /**
@@ -406,7 +427,7 @@ function iso7064Mod3131(code17) {
  */
 function generateCreditCode() {
     const regAdmin = randomFrom(regAdminCodes);
-    const orgType = randomFrom(orgTypeCodes.split(''));
+    const orgType = randomFrom(CREDIT_CODE_CHARS.split(''));
     
     // 地区代码（6位，使用身份证地区代码）
     const area = getSelectedAreaCode().substring(0, 6);
@@ -434,7 +455,7 @@ function generateCreditCode() {
 function generateOrgCodeRaw() {
     let body = '';
     for (let i = 0; i < 8; i++) {
-        body += randomFrom(orgCodeChars.split(''));
+        body += randomFrom(ORG_CODE_CHARS.split(''));
     }
     
     const checkCode = gb11714Check(body);
@@ -456,9 +477,9 @@ function validateCreditCode(code) {
     // 主体标识(9位): 数字或字母
     // 校验码(1位): 0-9或X
     
-    const pattern = /^[0-9][0-9A-HJKMNP-UW-Z][0-9]{6}[0-9A-HJKMNP-UW-Z]{9}[0-9A-HJKMNP-UW-X]$/i;
+    const pattern = /^[0-9][0-9A-HJ-NP-RT-UW-Y][0-9]{6}[0-9A-HJ-NP-RT-UW-Y]{9}[0-9A-HJ-NP-RT-UW-Y]$/i;
     if (!pattern.test(code)) {
-        return { valid: false, message: '格式不正确（只能包含数字和大写字母，不含I、O、S、V）' };
+        return { valid: false, message: '格式不正确（只能包含数字和大写字母，不含I、O、S、V、Z）' };
     }
     
     const body17 = code.substring(0, 17).toUpperCase();
@@ -1526,3 +1547,50 @@ function handleGenerateCron() {
         document.getElementById('batchResultSection').style.display = 'none';
     }
 }
+
+// ==================== 自检测试 ====================
+// 生成100个各类型号码并验证自洽性，在控制台输出结果
+(function selfTest() {
+    const testCases = [
+        { name: '身份证号', gen: () => generateIdCard(), validate: validateIdCard },
+        { name: '组织机构代码', gen: () => generateOrgCode(), validate: (v) => validateOrgCode(v) },
+        { name: '统一社会信用代码', gen: () => generateCreditCode(), validate: validateCreditCode },
+        { name: '银行卡号', gen: () => generateBankCard(), validate: validateBankCard },
+        { name: '手机号码', gen: () => generatePhone(), validate: validatePhone },
+        { name: '邮箱', gen: () => generateEmail(), validate: validateEmail },
+        { name: 'IP地址', gen: () => generateIP(), validate: validateIP },
+        { name: 'UUID', gen: () => generateUUID().uuid, validate: validateUUID },
+    ];
+    
+    const SAMPLE_COUNT = 100;
+    let allPassed = true;
+    
+    testCases.forEach(tc => {
+        let passed = 0;
+        let failed = 0;
+        for (let i = 0; i < SAMPLE_COUNT; i++) {
+            try {
+                const value = tc.gen();
+                const result = tc.validate(value);
+                if (result.valid) {
+                    passed++;
+                } else {
+                    failed++;
+                    if (failed <= 3) {
+                        console.error(`[${tc.name}] FAIL: ${value} → ${result.message}`);
+                    }
+                }
+            } catch (e) {
+                failed++;
+                if (failed <= 3) {
+                    console.error(`[${tc.name}] ERROR: ${e.message}`);
+                }
+            }
+        }
+        const status = failed === 0 ? '✅ PASS' : '❌ FAIL';
+        console.log(`${status} [${tc.name}] ${passed}/${SAMPLE_COUNT} 通过, ${failed} 失败`);
+        if (failed > 0) allPassed = false;
+    });
+    
+    console.log(allPassed ? '\n✅ 所有类型全部通过自检！' : '\n❌ 存在未通过的类型！');
+})();

@@ -284,12 +284,12 @@ function generateIdCard(genderPreference, agePreference) {
     if (genderPreference === '1') {
         // 男：确保顺序码第3位为奇数
         const prefix = randomDigits(2);
-        const lastDigit = randomInt(1, 9) * 2 - 1; // 1,3,5,7,9
+        const lastDigit = randomInt(1, 5) * 2 - 1; // 1,3,5,7,9
         sequence = prefix + lastDigit;
     } else if (genderPreference === '0') {
         // 女：确保顺序码第3位为偶数
         const prefix = randomDigits(2);
-        const lastDigit = randomInt(0, 8) * 2; // 0,2,4,6,8
+        const lastDigit = randomInt(0, 4) * 2; // 0,2,4,6,8
         sequence = prefix + lastDigit;
     } else {
         // 随机

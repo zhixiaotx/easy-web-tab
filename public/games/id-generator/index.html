@@ -45,7 +45,6 @@
                     <button class="tab-btn" data-tab="ip">IP地址</button>
                     <button class="tab-btn" data-tab="uuid">UUID</button>
                     <button class="tab-btn" data-tab="timestamp">时间戳</button>
-                    <button class="tab-btn" data-tab="cron">Cron</button>
                 </div>
 
                 <!-- 内容区域 -->
@@ -105,6 +104,87 @@
                                 <button class="btn btn-small" onclick="doValidate('idcard')">验证</button>
                                 <div class="validation-result" id="validate-result-idcard"></div>
                             </div>
+
+                            <!-- 身份证号组成说明 -->
+                            <div class="idcard-structure">
+                                <h3 class="structure-title">📋 身份证号组成说明</h3>
+                                <div class="structure-grid">
+                                    <div class="structure-item">
+                                        <span class="structure-label">地址码</span>
+                                        <span class="structure-codes">110101</span>
+                                        <span class="structure-desc">前6位，表示编码对象常住户口所在县(市、区)的行政区划代码</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">出生日期</span>
+                                        <span class="structure-codes">19900315</span>
+                                        <span class="structure-desc">第7-14位，表示出生年月日（YYYYMMDD格式）</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">顺序码</span>
+                                        <span class="structure-codes">001</span>
+                                        <span class="structure-desc">第15-17位，同一地址码所标识的区域范围内同年同月同日出生的人编定的顺序号；第17位奇数=男，偶数=女</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">校验码</span>
+                                        <span class="structure-codes">X</span>
+                                        <span class="structure-desc">第18位，ISO 7064:1983, Mod 11-2 校验码（GB 11643-1999）；0-9或X（X代表10）<a href="javascript:void(0)" class="detail-toggle" onclick="toggleCheckcodeDetail()">查看计算规则</a></span>
+                                    </div>
+                                </div>
+                                <div class="structure-example">
+                                    <strong>示例：</strong>11010119900315001X = <span class="example-part" style="color:#e74c3c;">110101</span><span class="example-part" style="color:#2980b9;">19900315</span><span class="example-part" style="color:#27ae60;">001</span><span class="example-part" style="color:#8e44ad;">X</span>
+                                </div>
+
+                                <!-- 校验码计算规则详情（可折叠） -->
+                                <div class="checkcode-detail" id="checkcodeDetail" style="display: none;">
+                                    <h4 class="detail-title">🔢 校验码计算规则（GB 11643-1999）</h4>
+
+                                    <div class="detail-section">
+                                        <p class="detail-label">计算步骤：</p>
+                                        <ol class="detail-steps">
+                                            <li>取身份证前17位数字 a<sub>1</sub>~a<sub>17</sub>（第1位为最高位）</li>
+                                            <li>每位乘以对应的<strong>加权因子 W<sub>i</sub></strong>，求和：S = Σ(a<sub>i</sub> × W<sub>i</sub>)</li>
+                                            <li>计算余数：R = S mod 11（结果 0~10）</li>
+                                            <li>根据余数 R 查<strong>校验码映射表</strong>得出第18位</li>
+                                        </ol>
+                                    </div>
+
+                                    <div class="detail-section">
+                                        <p class="detail-label">加权因子表 W<sub>i</sub>（对应前17位）：</p>
+                                        <table class="code-table weight-table">
+                                            <thead>
+                                                <tr><th>位数</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><th>W<sub>i</sub></th><td>7</td><td>9</td><td>10</td><td>5</td><td>8</td><td>4</td><td>2</td><td>1</td><td>6</td><td>3</td><td>7</td><td>9</td><td>10</td><td>5</td><td>8</td><td>4</td><td>2</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="detail-section">
+                                        <p class="detail-label">校验码映射表（余数 R → 校验码）：</p>
+                                        <table class="code-table mapping-table">
+                                            <thead>
+                                                <tr><th>余数 R</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><th>校验码</th><td class="code-val">1</td><td class="code-val">0</td><td class="code-val code-x">X</td><td class="code-val">9</td><td class="code-val">8</td><td class="code-val">7</td><td class="code-val">6</td><td class="code-val">5</td><td class="code-val">4</td><td class="code-val">3</td><td class="code-val">2</td></tr>
+                                            </tbody>
+                                        </table>
+                                        <p class="mapping-note">余数 2 → 校验码为 X（代表 10），其余直接取对应数字</p>
+                                    </div>
+
+                                    <div class="detail-section">
+                                        <p class="detail-label">示例验证：</p>
+                                        <div class="verify-example">
+                                            以 <code>11010119900315001X</code> 为例：<br>
+                                            S = 1×7 + 1×9 + 0×10 + 1×5 + 0×8 + 1×4 + 1×2 + 9×1 + 9×6 + 0×3 + 0×7 + 3×9 + 1×10 + 5×5 + 0×8 + 0×4 + 1×2<br>
+                                            = 7 + 9 + 0 + 5 + 0 + 4 + 2 + 9 + 54 + 0 + 0 + 27 + 10 + 25 + 0 + 0 + 2 = <strong>154</strong><br>
+                                            R = 154 mod 11 = <strong>0</strong> → 查表得校验码 = <strong>1</strong><br>
+                                            完整身份证号：<code>11010119900315001<span class="highlight-code">1</span></code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -135,6 +215,31 @@
                                 <button class="btn btn-small" onclick="doValidate('orgcode')">验证</button>
                                 <div class="validation-result" id="validate-result-orgcode"></div>
                             </div>
+
+                            <!-- 组织机构代码组成说明 -->
+                            <div class="idcard-structure orgcode-structure">
+                                <h3 class="structure-title">📋 组织机构代码组成说明</h3>
+                                <div class="structure-grid">
+                                    <div class="structure-item">
+                                        <span class="structure-label">本体代码</span>
+                                        <span class="structure-codes">77702317</span>
+                                        <span class="structure-desc">前8位，由数字或大写字母组成（不含I、O、S、V、Z）</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">连字符</span>
+                                        <span class="structure-codes">-</span>
+                                        <span class="structure-desc">第9位，可选分隔符，仅用于展示（如：77702317-2）</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">校验码</span>
+                                        <span class="structure-codes">2</span>
+                                        <span class="structure-desc">第10位，根据GB/T 11714标准对前8位本体代码计算得出；校验码为10时用X表示</span>
+                                    </div>
+                                </div>
+                                <div class="structure-example">
+                                    <strong>示例：</strong><span class="example-part" style="color:#e74c3c;">77702317</span><span class="example-part" style="color:#2980b9;">-</span><span class="example-part" style="color:#27ae60;">2</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -157,6 +262,41 @@
                                 <span class="char-count" id="char-count-creditcode">0字符</span>
                                 <button class="btn btn-small" onclick="doValidate('creditcode')">验证</button>
                                 <div class="validation-result" id="validate-result-creditcode"></div>
+                            </div>
+
+                            <!-- 统一社会信用代码组成说明 -->
+                            <div class="idcard-structure creditcode-structure">
+                                <h3 class="structure-title">📋 统一社会信用代码组成说明</h3>
+                                <div class="structure-grid">
+                                    <div class="structure-item">
+                                        <span class="structure-label">登记管理部门代码</span>
+                                        <span class="structure-codes">9</span>
+                                        <span class="structure-desc">第1位，表示登记管理机关（如：1=机构编制, 5=民政, 9=工商, A=中央军委, N=农业, Y=其他）</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">机构类别代码</span>
+                                        <span class="structure-codes">1</span>
+                                        <span class="structure-desc">第2位，表示机构类别（如：1=企业, 2=个体工商户, 3=农民专业合作社）</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">登记管理机关行政区划代码</span>
+                                        <span class="structure-codes">110101</span>
+                                        <span class="structure-desc">第3-8位，表示登记管理机关所在地的行政区划代码</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">主体标识码</span>
+                                        <span class="structure-codes">MA5K3R8P2</span>
+                                        <span class="structure-desc">第9-17位，组织机构代码（9位，按GB/T 11714标准编制，不含I、O、S、V、Z）</span>
+                                    </div>
+                                    <div class="structure-item">
+                                        <span class="structure-label">校验码</span>
+                                        <span class="structure-codes">C</span>
+                                        <span class="structure-desc">第18位，ISO 7064:1983, Mod 31,31 校验码；0-9或A-Y（不含I、O、S、V、Z）</span>
+                                    </div>
+                                </div>
+                                <div class="structure-example">
+                                    <strong>示例：</strong><span class="example-part" style="color:#e74c3c;">9</span><span class="example-part" style="color:#e67e22;">1</span><span class="example-part" style="color:#f1c40f;">110101</span><span class="example-part" style="color:#2980b9;">MA5K3R8P2</span><span class="example-part" style="color:#27ae60;">C</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -327,94 +467,7 @@
                         </div>
                     </div>
 
-                    <!-- Cron 表达式 -->
-                    <div class="tab-panel" id="panel-cron">
-                        <div class="panel-header">
-                            <h2>Cron 表达式生成</h2>
-                        </div>
-                        <div class="panel-body">
-                            <div class="cron-options">
-                                <div class="cron-field">
-                                    <label>分钟 (0-59)</label>
-                                    <select id="cron-minute" onchange="onCronFieldChange('minute')">
-                                        <option value="*">每分钟</option>
-                                        <option value="0">0</option>
-                                        <option value="15">15</option>
-                                        <option value="30">30</option>
-                                        <option value="45">45</option>
-                                        <option value="custom">自定义...</option>
-                                    </select>
-                                    <input type="text" id="cron-minute-custom" class="cron-custom-input" placeholder="如 */5, 1-30, 1,15,30" style="display:none;">
-                                </div>
-                                <div class="cron-field">
-                                    <label>小时 (0-23)</label>
-                                    <select id="cron-hour" onchange="onCronFieldChange('hour')">
-                                        <option value="*">每小时</option>
-                                        <option value="0">0 (午夜)</option>
-                                        <option value="6">6 (清晨)</option>
-                                        <option value="9">9 (上午)</option>
-                                        <option value="12">12 (中午)</option>
-                                        <option value="18">18 (傍晚)</option>
-                                        <option value="custom">自定义...</option>
-                                    </select>
-                                    <input type="text" id="cron-hour-custom" class="cron-custom-input" placeholder="如 */2, 9-17, 1,12,18" style="display:none;">
-                                </div>
-                                <div class="cron-field">
-                                    <label>日期 (1-31)</label>
-                                    <select id="cron-day" onchange="onCronFieldChange('day')">
-                                        <option value="*">每天</option>
-                                        <option value="1">1日</option>
-                                        <option value="15">15日</option>
-                                        <option value="1,15">1日和15日</option>
-                                        <option value="custom">自定义...</option>
-                                    </select>
-                                    <input type="text" id="cron-day-custom" class="cron-custom-input" placeholder="如 */2, 1-15, 1,15,30" style="display:none;">
-                                </div>
-                                <div class="cron-field">
-                                    <label>月份 (1-12)</label>
-                                    <select id="cron-month" onchange="onCronFieldChange('month')">
-                                        <option value="*">每月</option>
-                                        <option value="1">1月</option>
-                                        <option value="6">6月</option>
-                                        <option value="12">12月</option>
-                                        <option value="custom">自定义...</option>
-                                    </select>
-                                    <input type="text" id="cron-month-custom" class="cron-custom-input" placeholder="如 */3, 1-6, 1,6,12" style="display:none;">
-                                </div>
-                                <div class="cron-field">
-                                    <label>星期 (0-6)</label>
-                                    <select id="cron-weekday" onchange="onCronFieldChange('weekday')">
-                                        <option value="*">每天</option>
-                                        <option value="0">周日</option>
-                                        <option value="1">周一</option>
-                                        <option value="2">周二</option>
-                                        <option value="3">周三</option>
-                                        <option value="4">周四</option>
-                                        <option value="5">周五</option>
-                                        <option value="6">周六</option>
-                                        <option value="1-5">工作日</option>
-                                        <option value="0,6">周末</option>
-                                        <option value="custom">自定义...</option>
-                                    </select>
-                                    <input type="text" id="cron-weekday-custom" class="cron-custom-input" placeholder="如 */2, 1-5, 0,6" style="display:none;">
-                                </div>
-                            </div>
-                            <div class="result-display" id="result-cron">
-                                <span class="placeholder">点击生成按钮获取Cron表达式</span>
-                            </div>
-                            <div class="action-buttons">
-                                <button class="btn btn-primary" onclick="handleGenerateCron()">生成</button>
-                                <button class="btn btn-secondary" onclick="copyResult('cron')">复制</button>
-                                <button class="btn btn-outline" onclick="validateInput('cron')">验证</button>
-                            </div>
-                            <div class="validation-area" id="validation-cron" style="display: none;">
-                                <input type="text" id="validate-cron-input" placeholder="输入Cron表达式验证" oninput="updateCharCount('cron')">
-                                <span class="char-count" id="char-count-cron">0字符</span>
-                                <button class="btn btn-small" onclick="doValidate('cron')">验证</button>
-                                <div class="validation-result" id="validate-result-cron"></div>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
 
                 <!-- 批量生成结果区 -->

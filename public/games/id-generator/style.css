@@ -606,6 +606,262 @@ body {
     border-color: var(--color-primary);
 }
 
+/* 身份证号结构说明 */
+.idcard-structure,
+.orgcode-structure,
+.creditcode-structure {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.structure-title {
+    font-size: 14px;
+    color: var(--color-text);
+    margin-bottom: 12px;
+}
+
+.structure-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.structure-item {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 10px;
+    background-color: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+.structure-label {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    min-width: 56px;
+}
+
+.structure-codes {
+    flex-shrink: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    min-width: 48px;
+}
+
+.structure-desc {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+.structure-example {
+    margin-top: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--color-text);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    word-break: break-all;
+}
+
+.structure-example strong {
+    color: var(--color-text-secondary);
+}
+
+.example-part {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+}
+
+/* 校验码计算规则详情 */
+.checkcode-detail {
+    margin-top: 12px;
+    padding: 14px 16px;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.detail-title {
+    font-size: 14px;
+    color: var(--color-text);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.detail-section {
+    margin-bottom: 14px;
+}
+
+.detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-steps {
+    padding-left: 20px;
+    font-size: 13px;
+    color: var(--color-text);
+    line-height: 2;
+}
+
+.detail-steps li strong {
+    color: var(--color-primary);
+}
+
+/* 校验码表格（加权因子表 + 映射表） */
+.code-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: center;
+    margin-top: 4px;
+}
+
+.code-table thead th {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 5px 3px;
+    font-weight: 600;
+    font-size: 11px;
+    border: 1px solid var(--color-primary);
+}
+
+.code-table tbody th {
+    background-color: rgba(59, 130, 246, 0.08);
+    color: var(--color-text-secondary);
+    padding: 5px 3px;
+    font-weight: 600;
+    font-size: 11px;
+    border: 1px solid var(--color-border);
+    min-width: 32px;
+}
+
+.code-table tbody td {
+    padding: 5px 3px;
+    border: 1px solid var(--color-border);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+}
+
+.code-table tbody td.code-val {
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.code-table tbody td.code-x {
+    color: var(--color-error);
+    font-size: 14px;
+}
+
+.mapping-note {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-top: 6px;
+    padding: 6px 10px;
+    background-color: rgba(239, 68, 68, 0.06);
+    border-radius: 4px;
+    border-left: 3px solid var(--color-error);
+}
+
+.verify-example {
+    padding: 10px 12px;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    line-height: 2;
+    color: var(--color-text);
+    font-family: 'Courier New', monospace;
+}
+
+.verify-example code {
+    background-color: rgba(59, 130, 246, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.verify-example .highlight-code {
+    color: var(--color-error);
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.detail-toggle {
+    font-size: 12px;
+    color: var(--color-primary);
+    text-decoration: none;
+    margin-left: 6px;
+    white-space: nowrap;
+    font-weight: 400;
+}
+
+.detail-toggle:hover {
+    text-decoration: underline;
+}
+
+/* 深色模式校验码详情 */
+html.dark .checkcode-detail {
+    background-color: var(--color-bg);
+}
+
+html.dark .code-table tbody td {
+    background-color: var(--color-bg-card);
+}
+
+html.dark .verify-example {
+    background-color: var(--color-bg-card);
+}
+
+html.dark .code-table tbody th {
+    background-color: rgba(59, 130, 246, 0.12);
+}
+
+html.dark .mapping-note {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* 深色模式结构说明 */
+html.dark .idcard-structure,
+html.dark .orgcode-structure,
+html.dark .creditcode-structure {
+    background-color: var(--color-bg);
+    border-color: var(--color-border);
+}
+
+html.dark .structure-item {
+    background-color: var(--color-bg);
+    border-color: var(--color-border);
+}
+
+html.dark .structure-example {
+    background-color: var(--color-bg);
+    border-color: var(--color-border);
+}
+
 /* 邮箱选项 */
 .email-options {
     display: flex;
@@ -706,155 +962,4 @@ body {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-/* Cron 选项样式 */
-.cron-options {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 16px;
-    padding: 16px;
-    background-color: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-}
 
-.cron-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.cron-field label {
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    font-weight: 500;
-}
-
-.cron-field select,
-.cron-field input {
-    padding: 10px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    background-color: var(--color-bg-card);
-    color: var(--color-text);
-    transition: var(--transition);
-}
-
-.cron-field select:focus,
-.cron-field input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.cron-custom-input {
-    width: 100%;
-}
-
-.cron-custom-input.visible {
-    display: block !important;
-}
-
-/* Cron 结果区域 */
-.cron-result-info {
-    margin-top: 12px;
-    padding: 12px;
-    background-color: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-}
-
-.cron-result-info .cron-expression {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--color-primary);
-    font-family: 'Courier New', monospace;
-    margin-bottom: 12px;
-    text-align: center;
-}
-
-.cron-result-info .cron-description {
-    font-size: 14px;
-    color: var(--color-text);
-    margin-bottom: 16px;
-    padding: 8px;
-    background-color: var(--color-bg-card);
-    border-radius: var(--radius-sm);
-}
-
-.cron-result-info .next-runs {
-    font-size: 13px;
-}
-
-.cron-result-info .next-runs h4 {
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    margin-bottom: 8px;
-}
-
-.cron-result-info .next-runs ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.cron-result-info .next-runs li {
-    padding: 4px 0;
-    color: var(--color-text);
-    font-family: 'Courier New', monospace;
-}
-
-.cron-result-info .next-runs li:nth-child(odd) {
-    background-color: var(--color-bg-card);
-}
-
-/* Cron 验证结果样式 */
-.cron-validation-result {
-    margin-top: 8px;
-}
-
-.cron-validation-result .validation-message {
-    font-size: 14px;
-    margin-bottom: 8px;
-}
-
-.cron-validation-result .cron-expression-display {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--color-primary);
-    font-family: 'Courier New', monospace;
-    margin-bottom: 8px;
-    text-align: center;
-}
-
-.cron-validation-result .cron-description-display {
-    font-size: 13px;
-    color: var(--color-text);
-    padding: 8px;
-    background-color: var(--color-bg-card);
-    border-radius: var(--radius-sm);
-    margin-bottom: 12px;
-}
-
-.cron-validation-result .next-runs-preview {
-    font-size: 12px;
-}
-
-.cron-validation-result .next-runs-preview h4 {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    margin-bottom: 6px;
-}
-
-.cron-validation-result .next-runs-preview ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.cron-validation-result .next-runs-preview li {
-    padding: 3px 0;
-    color: var(--color-text);
-    font-family: 'Courier New', monospace;
-}

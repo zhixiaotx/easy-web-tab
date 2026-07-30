@@ -1,0 +1,116 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - heading "🔢 号码生成器" [level=1] [ref=e4]
+    - paragraph [ref=e5]: 开发和测试人员专用工具
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: 生成数量
+        - spinbutton [ref=e11]: "1"
+      - generic [ref=e12]:
+        - heading "📖 使用说明" [level=3] [ref=e13]
+        - list [ref=e14]:
+          - listitem [ref=e15]: 选择号码类型（Tab选项卡）
+          - listitem [ref=e16]: 设置生成数量
+          - listitem [ref=e17]: 点击"生成"按钮
+          - listitem [ref=e18]: 验证、复制或导出结果
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - button "身份证" [ref=e21] [cursor=pointer]
+        - button "组织机构代码" [ref=e22] [cursor=pointer]
+        - button "统一社会信用代码" [ref=e23] [cursor=pointer]
+        - button "银行卡" [ref=e24] [cursor=pointer]
+        - button "手机号" [ref=e25] [cursor=pointer]
+        - button "邮箱" [ref=e26] [cursor=pointer]
+        - button "IP地址" [ref=e27] [cursor=pointer]
+        - button "UUID" [ref=e28] [cursor=pointer]
+        - button "时间戳" [ref=e29] [cursor=pointer]
+      - generic [ref=e31]:
+        - heading "身份证号生成" [level=2] [ref=e33]
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: 省份
+              - combobox [ref=e38] [cursor=pointer]:
+                - option "随机" [selected]
+                - option "北京市"
+                - option "天津市"
+                - option "河北省"
+                - option "山西省"
+                - option "内蒙古"
+                - option "辽宁省"
+                - option "吉林省"
+                - option "黑龙江省"
+                - option "上海市"
+                - option "江苏省"
+                - option "浙江省"
+                - option "安徽省"
+                - option "福建省"
+                - option "江西省"
+                - option "山东省"
+                - option "河南省"
+                - option "湖北省"
+                - option "湖南省"
+                - option "广东省"
+                - option "广西"
+                - option "海南省"
+                - option "重庆市"
+                - option "四川省"
+                - option "贵州省"
+                - option "云南省"
+                - option "西藏"
+                - option "陕西省"
+                - option "甘肃省"
+                - option "青海省"
+                - option "宁夏"
+                - option "新疆"
+            - generic [ref=e39]:
+              - generic [ref=e40]: 城市
+              - combobox [disabled] [ref=e41]:
+                - option "请先选择省份" [selected]
+            - generic [ref=e42]:
+              - generic [ref=e43]: 性别
+              - combobox [ref=e44] [cursor=pointer]:
+                - option "随机" [selected]
+                - option "男"
+                - option "女"
+            - generic [ref=e45]:
+              - generic [ref=e46]: 年龄
+              - combobox [ref=e47] [cursor=pointer]:
+                - option "随机" [selected]
+                - option "18-25岁"
+                - option "26-35岁"
+                - option "36-45岁"
+                - option "46-55岁"
+                - option "56-65岁"
+                - option "65岁以上"
+          - generic [ref=e48]: 点击生成按钮获取号码
+          - generic [ref=e50]:
+            - button "生成" [ref=e51] [cursor=pointer]
+            - button "复制" [ref=e52] [cursor=pointer]
+            - button "验证" [ref=e53] [cursor=pointer]
+          - generic [ref=e54]:
+            - heading "📋 身份证号组成说明" [level=3] [ref=e55]
+            - generic [ref=e56]:
+              - generic [ref=e57]:
+                - generic [ref=e58]: 地址码
+                - generic [ref=e59]: "110101"
+                - generic [ref=e60]: 前6位，表示编码对象常住户口所在县(市、区)的行政区划代码
+              - generic [ref=e61]:
+                - generic [ref=e62]: 出生日期
+                - generic [ref=e63]: "19900315"
+                - generic [ref=e64]: 第7-14位，表示出生年月日（YYYYMMDD格式）
+              - generic [ref=e65]:
+                - generic [ref=e66]: 顺序码
+                - generic [ref=e67]: "001"
+                - generic [ref=e68]: 第15-17位，同一地址码所标识的区域范围内同年同月同日出生的人编定的顺序号；第17位奇数=男，偶数=女
+              - generic [ref=e69]:
+                - generic [ref=e70]: 校验码
+                - generic [ref=e71]: X
+                - generic [ref=e72]: 第18位，ISO 7064:1983, Mod 11-2 校验码；0-9或X（X代表10）
+            - generic [ref=e73]:
+              - strong [ref=e74]: 示例：
+              - text: 11010119900315001X = 11010119900315001X
+    - generic [ref=e76]:
+      - heading "ℹ️ 当前信息" [level=3] [ref=e77]
+      - paragraph [ref=e79]: "生成数量: 1"

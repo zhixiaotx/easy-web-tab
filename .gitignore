@@ -33,8 +33,9 @@ coverage
 tsconfig.tsbuildinfo
 
 # Misc
-*.md
 !README.md
 
 # Build artifacts
 nul
+.omo
+.playwright-mcp

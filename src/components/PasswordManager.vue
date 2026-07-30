@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePasswordsStore } from '../stores/passwords'
 import { useSitesStore } from '../stores/sites'
 import type { PasswordEntry } from '../types'
+import { isCryptoAvailable } from '../composables/useCrypto'
 
 const emit = defineEmits<{
   close: []
@@ -81,8 +82,12 @@ async function handleSetupMasterPassword() {
     await passwordsStore.setupMasterPassword(masterPasswordInput.value)
     isNewSetup.value = false
     unlockError.value = ''
-  } catch {
-    unlockError.value = '设置失败，请重试'
+  } catch (e) {
+    if (!isCryptoAvailable()) {
+      unlockError.value = '当前页面未使用 HTTPS，密码管理功能不可用'
+    } else {
+      unlockError.value = '设置失败，请重试'
+    }
   } finally {
     isUnlocking.value = false
   }
@@ -99,8 +104,12 @@ async function handleUnlock() {
     if (!success) {
       unlockError.value = '密码错误'
     }
-  } catch {
-    unlockError.value = '解锁失败，请重试'
+  } catch (e) {
+    if (!isCryptoAvailable()) {
+      unlockError.value = '当前页面未使用 HTTPS，密码管理功能不可用'
+    } else {
+      unlockError.value = '解锁失败，请重试'
+    }
   } finally {
     isUnlocking.value = false
   }

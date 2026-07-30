@@ -5,6 +5,22 @@
 const SALT_KEY = 'password-salt'
 const VERIFICATION_KEY = 'password-verification'
 
+/**
+ * 检查 Web Crypto API 在当前上下文中是否可用。
+ * crypto.subtle 仅在安全上下文（HTTPS / localhost）中可用。
+ * 在 HTTP 部署的 nginx 中，Firefox/Safari 会返回 undefined。
+ */
+export function isCryptoAvailable(): boolean {
+  return typeof crypto !== 'undefined'
+    && typeof crypto.subtle !== 'undefined'
+}
+
+function requireCrypto(): void {
+  if (!isCryptoAvailable()) {
+    throw new Error('CRYPTO_UNAVAILABLE: 当前页面未使用 HTTPS，加密功能不可用。请通过 HTTPS 访问。')
+  }
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let binary = ''
@@ -71,6 +87,7 @@ async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>): Promi
  * 加密字符串
  */
 export async function encrypt(plaintext: string, masterPassword: string): Promise<string> {
+  requireCrypto()
   const salt = await getSalt()
   const key = await deriveKey(masterPassword, salt)
   const encoder = new TextEncoder()
@@ -87,6 +104,7 @@ export async function encrypt(plaintext: string, masterPassword: string): Promis
  * 解密字符串
  */
 export async function decrypt(ciphertext: string, masterPassword: string): Promise<string> {
+  requireCrypto()
   const [ivBase64, dataBase64] = ciphertext.split('.')
   const salt = await getSalt()
   const key = await deriveKey(masterPassword, salt)
@@ -104,6 +122,7 @@ export async function decrypt(ciphertext: string, masterPassword: string): Promi
  * 验证主密码是否正确（通过加密/解密验证字符串）
  */
 export async function setVerification(masterPassword: string): Promise<void> {
+  requireCrypto()
   const value = 'easy-web-tab-verification'
   const encrypted = await encrypt(value, masterPassword)
   localStorage.setItem(VERIFICATION_KEY, encrypted)

@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Site } from '../types'
+import type { Site, Countdown } from '../types'
 import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
 import { usePasswordsStore } from './passwords'
+import { useCountdownsStore } from '@/stores/countdowns'
 import {
   checkDeadLinks,
   saveCheckResults,
@@ -465,8 +466,17 @@ export const useSitesStore = defineStore('sites', () => {
       }
     }
 
+    // 导出倒计时
+    const countdownsStore = useCountdownsStore()
+    const countdownsSection = countdownsStore.countdowns.length > 0
+      ? `countdowns:\n${countdownsStore.countdowns.map(c => {
+          const repeatLine = c.repeat ? `\n    repeat: ${c.repeat}` : ''
+          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+        }).join('\n\n')}\n\n`
+      : ''
+
     const markdown = `---
-${categoriesSection}${enginesSection}${passwordsSection}sites:
+${categoriesSection}${enginesSection}${passwordsSection}${countdownsSection}sites:
 ${sitesList}
 ---
 
@@ -506,6 +516,28 @@ ${sitesList}
     if (parsed.categories && parsed.categories.length > 0) {
       const categoriesStore = useCategoriesStore()
       categoriesStore.importCategories(parsed.categories)
+    }
+    
+    // 导入倒计时（按 id 去重，保留原有数据）
+    if (parsed.countdowns && parsed.countdowns.length > 0) {
+      const countdownsStore = useCountdownsStore()
+      const existingRaw = localStorage.getItem('user-countdowns')
+      const existingCountdowns: Countdown[] = existingRaw ? JSON.parse(existingRaw) : []
+      const existingIds = new Set(existingCountdowns.map(c => c.id))
+      let changed = false
+      parsed.countdowns.forEach((countdown, index) => {
+        const id = countdown.id || `cd_${Date.now()}_${index}`
+        if (!existingIds.has(id)) {
+          existingCountdowns.push({ ...countdown, id })
+          existingIds.add(id)
+          changed = true
+        }
+      })
+      if (changed) {
+        localStorage.setItem('user-countdowns', JSON.stringify(existingCountdowns))
+        // 重新加载倒计时以更新显示
+        countdownsStore.loadCountdowns()
+      }
     }
     
     // 获取现有的 localStorage 数据

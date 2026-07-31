@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSitesStore } from '../stores/sites'
+import CountdownBar from '@/components/CountdownBar.vue'
+import { useCountdownsStore } from '@/stores/countdowns'
 import SiteCard from '../components/SiteCard.vue'
 import GlobalSearch from '../components/GlobalSearch.vue'
 import CategoryTabs from '../components/CategoryTabs.vue'
@@ -13,11 +15,13 @@ import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useHelpModal } from '../composables/useHelpModal'
 
 const store = useSitesStore()
+const countdownsStore = useCountdownsStore()
 const router = useRouter()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 
 onMounted(() => {
   store.loadSites()
+  countdownsStore.loadCountdowns()
 })
 
 const filteredSites = computed(() => store.paginatedSites)
@@ -54,6 +58,7 @@ const handlePageChange = () => {
 
   <div class="container">
     <header class="header">
+      <CountdownBar />
       <div class="search-section">
         <GlobalSearch class="global-search-bar" />
       </div>

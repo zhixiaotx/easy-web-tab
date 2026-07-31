@@ -43,3 +43,13 @@ export interface PasswordEntry {
   createdAt: string
   updatedAt: string
 }
+
+// 倒计时接口
+export interface Countdown {
+  id: string
+  name: string
+  endDateTime: string // 'YYYY-MM-DDTHH:mm' LOCAL time, no timezone suffix, e.g. '2026-12-31T23:59'
+  repeat?: 'yearly' | null // 'yearly' = recurs every year (birthdays); null/absent = one-off
+  createdAt: string
+  updatedAt: string
+}

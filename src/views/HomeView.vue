@@ -13,9 +13,11 @@ import SearchEngineManager from '../components/SearchEngineManager.vue'
 import PasswordManager from '../components/PasswordManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import CountdownManager from '@/components/CountdownManager.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
+import { useCountdownsStore } from '@/stores/countdowns'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useToast } from '../composables/useToast'
 import { useHelpModal } from '../composables/useHelpModal'
@@ -23,6 +25,7 @@ import { useHelpModal } from '../composables/useHelpModal'
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
+const countdownsStore = useCountdownsStore()
 const toast = useToast()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 const router = useRouter()
@@ -30,6 +33,7 @@ const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
 const showPasswordManager = ref(false)
+const showCountdownManager = ref(false)
 const editingSite = ref<Site | null>(null)
 
 // 拖拽排序状态
@@ -66,6 +70,7 @@ const handleDragEnd = () => {
 
 onMounted(() => {
   store.loadSites()
+  countdownsStore.loadCountdowns()
 })
 
 // 同步 URL query 参数与弹框状态（Ctrl+N / 直接访问 URL 均可打开弹框）
@@ -102,6 +107,12 @@ watchEffect(() => {
     showModal.value = false
     showEngineManager.value = false
     closeHelp()
+  } else if (modal === 'countdown') {
+    showCountdownManager.value = true
+    showModal.value = false
+    showEngineManager.value = false
+    showPasswordManager.value = false
+    closeHelp()
   } else if (modal === 'help') {
     openHelp()
     showModal.value = false
@@ -111,6 +122,7 @@ watchEffect(() => {
     showModal.value = false
     showEngineManager.value = false
     showPasswordManager.value = false
+    showCountdownManager.value = false
     closeHelp()
     editingSite.value = null
   }
@@ -123,6 +135,7 @@ const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
   showPasswordManager.value = false
+  showCountdownManager.value = false
   closeHelp()
   editingSite.value = null
   // 清除 URL query 参数（如果存在的话）
@@ -293,6 +306,7 @@ const handlePageChange = () => {
           </button>
           <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
           <button class="btn-action" @click="router.push({ query: { modal: 'passwords' } })">🔑 密码管理</button>
+          <button class="btn-action" @click="router.push({ query: { modal: 'countdown' } })">⏳ 倒计时</button>
           <SettingsButton />
         </div>
       </div>
@@ -343,6 +357,11 @@ const handlePageChange = () => {
 
     <PasswordManager
       v-if="showPasswordManager"
+      @close="closeAllModals"
+    />
+
+    <CountdownManager
+      v-if="showCountdownManager"
       @close="closeAllModals"
     />
 

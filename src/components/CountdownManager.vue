@@ -1,13 +1,36 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
-import type { CountdownItem } from '@/stores/countdowns'
+import type { CountdownItem, CountdownSortMode } from '@/stores/countdowns'
 
 const emit = defineEmits<{
   close: []
 }>()
 
 const store = useCountdownsStore()
+
+// 排序模式选项
+const sortModes: { value: CountdownSortMode; label: string }[] = [
+  { value: 'remaining', label: '剩余时间' },
+  { value: 'name', label: '名称' },
+  { value: 'created', label: '创建时间' },
+  { value: 'endTime', label: '结束时间' },
+  { value: 'manual', label: '自定义' }
+]
+
+// 自定义排序模式（此时显示 ▲▼ 手动调整按钮）
+const isManual = computed(() => store.sortMode === 'manual')
+
+// 手动模式下的边界检测：首项不可上移，末项不可下移
+function canMoveUp(id: string): boolean {
+  const idx = store.itemsWithRemaining.findIndex(i => i.id === id)
+  return idx > 0
+}
+
+function canMoveDown(id: string): boolean {
+  const idx = store.itemsWithRemaining.findIndex(i => i.id === id)
+  return idx < store.itemsWithRemaining.length - 1
+}
 
 type RemainingStatus = 'normal' | 'urgent' | 'critical' | 'expired'
 
@@ -119,6 +142,25 @@ const previewRemaining = computed(() => {
           <button v-if="!showForm" class="btn-add" @click="startAdd">+ 新增倒计时</button>
         </div>
 
+        <!-- 排序栏 -->
+        <div class="sort-bar">
+          <div class="sort-modes">
+            <button
+              v-for="m in sortModes"
+              :key="m.value"
+              class="sort-mode-btn"
+              :class="{ active: store.sortMode === m.value }"
+              @click="store.setSort(m.value)"
+            >{{ m.label }}</button>
+          </div>
+          <div v-if="!isManual" class="sort-direction">
+            <button class="sort-dir-btn" @click="store.toggleDirection()">
+              {{ store.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="isManual" class="sort-hint">点击 ▲▼ 箭头调整顺序</div>
+
         <!-- 新增/编辑表单 -->
         <div v-if="showForm" class="add-form">
           <h3>{{ editingId ? '编辑倒计时' : '新增倒计时' }}</h3>
@@ -200,6 +242,14 @@ const previewRemaining = computed(() => {
               </div>
               <span class="countdown-time">{{ item.remaining.nextTime }}</span>
             </div>
+            <label class="front-toggle" :title="item.showOnDisplay === false ? '前台隐藏' : '前台显示'">
+              <input
+                type="checkbox"
+                :checked="item.showOnDisplay !== false"
+                @change="store.setShowOnDisplay(item.id, ($event.target as HTMLInputElement).checked)"
+              />
+              <span>前台显示</span>
+            </label>
             <span
               class="countdown-remaining"
               :class="statusClass(item.remaining.status)"
@@ -207,6 +257,10 @@ const previewRemaining = computed(() => {
               {{ item.remaining.label }}
             </span>
             <div class="countdown-actions">
+              <div v-if="isManual" class="move-btns">
+                <button class="btn-move" :disabled="!canMoveUp(item.id)" title="上移" @click="store.moveCountdown(item.id, 'up')">▲</button>
+                <button class="btn-move" :disabled="!canMoveDown(item.id)" title="下移" @click="store.moveCountdown(item.id, 'down')">▼</button>
+              </div>
               <button class="btn-edit" @click="startEdit(item)">编辑</button>
               <button class="btn-delete" @click="handleDelete(item.id)">删除</button>
             </div>
@@ -310,6 +364,115 @@ const previewRemaining = computed(() => {
 .btn-add:disabled {
   background-color: var(--text-muted, var(--color-text-muted));
   cursor: not-allowed;
+}
+
+/* 排序栏 */
+.sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.sort-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sort-mode-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.sort-mode-btn:hover:not(.active) {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.sort-mode-btn.active {
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+  color: #fff;
+}
+
+.sort-dir-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.sort-dir-btn:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.sort-hint {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  margin-bottom: 12px;
+}
+
+/* 行内操作 */
+.move-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-move {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  line-height: 1;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-move:hover:not(:disabled) {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.btn-move:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.front-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.front-toggle input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent-color, var(--color-primary));
 }
 
 /* 表单 */

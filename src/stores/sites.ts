@@ -471,7 +471,9 @@ export const useSitesStore = defineStore('sites', () => {
     const countdownsSection = countdownsStore.countdowns.length > 0
       ? `countdowns:\n${countdownsStore.countdowns.map(c => {
           const repeatLine = c.repeat ? `\n    repeat: ${c.repeat}` : ''
-          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+          const sortOrderLine = typeof c.sortOrder === 'number' ? `\n    sortOrder: ${c.sortOrder}` : ''
+          const showOnDisplayLine = c.showOnDisplay === false ? '\n    showOnDisplay: false' : ''
+          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
         }).join('\n\n')}\n\n`
       : ''
 

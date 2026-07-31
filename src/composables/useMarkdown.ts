@@ -33,7 +33,9 @@ export function useMarkdown() {
               endDateTime: typeof raw?.endDateTime === 'string' ? raw.endDateTime : '',
               repeat: raw?.repeat === 'yearly' ? 'yearly' : null,
               createdAt: typeof raw?.createdAt === 'string' && raw.createdAt.trim() !== '' ? raw.createdAt : now,
-              updatedAt: typeof raw?.updatedAt === 'string' && raw.updatedAt.trim() !== '' ? raw.updatedAt : now
+              updatedAt: typeof raw?.updatedAt === 'string' && raw.updatedAt.trim() !== '' ? raw.updatedAt : now,
+              sortOrder: typeof raw?.sortOrder === 'number' ? raw.sortOrder : undefined,
+              showOnDisplay: typeof raw?.showOnDisplay === 'boolean' ? raw.showOnDisplay : undefined
             }
           })
         : undefined

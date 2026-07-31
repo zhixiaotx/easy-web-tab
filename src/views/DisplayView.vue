@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSitesStore } from '../stores/sites'
-import CountdownBar from '@/components/CountdownBar.vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import SiteCard from '../components/SiteCard.vue'
 import GlobalSearch from '../components/GlobalSearch.vue'
@@ -10,6 +9,7 @@ import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import CountdownModal from '@/components/CountdownModal.vue'
 import HelpModal from '../components/HelpModal.vue'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useHelpModal } from '../composables/useHelpModal'
@@ -18,6 +18,7 @@ const store = useSitesStore()
 const countdownsStore = useCountdownsStore()
 const router = useRouter()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
+const showCountdownModal = ref(false)
 
 onMounted(() => {
   store.loadSites()
@@ -50,6 +51,7 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
+    <button class="btn-countdown" @click="showCountdownModal = true" title="倒计时">⏳</button>
     <button class="btn-help" @click="openHelp" title="帮助">❓</button>
     <button class="btn-admin" @click="toggleAdmin" title="切换到管理后台 (Ctrl+B)">
       管理
@@ -58,7 +60,6 @@ const handlePageChange = () => {
 
   <div class="container">
     <header class="header">
-      <CountdownBar />
       <div class="search-section">
         <GlobalSearch class="global-search-bar" />
       </div>
@@ -86,6 +87,11 @@ const handlePageChange = () => {
     <HelpModal
       v-if="showHelp"
       @close="closeHelp"
+    />
+
+    <CountdownModal
+      v-if="showCountdownModal"
+      @close="showCountdownModal = false"
     />
   </div>
 </template>
@@ -119,7 +125,8 @@ const handlePageChange = () => {
   border-color: #3b82f6;
 }
 
-.btn-help {
+.btn-help,
+.btn-countdown {
   padding: 8px 12px;
   background-color: white;
   color: #64748b;
@@ -131,7 +138,8 @@ const handlePageChange = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.btn-help:hover {
+.btn-help:hover,
+.btn-countdown:hover {
   background-color: #f1f5f9;
   color: #3b82f6;
   border-color: #3b82f6;

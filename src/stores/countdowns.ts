@@ -1,103 +1,28 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Countdown } from '@/types'
+import type { Countdown, CountdownItem } from '@/types'
+import {
+  calcRemaining,
+  sortCountdowns,
+  type CountdownSortMode as SortMode,
+  type CountdownSortDirection as SortDirection
+} from '../composables/countdownCore'
 
-export interface CountdownRemaining {
-  days: number
-  hours: number
-  minutes: number
-  label: string
-  status: 'normal' | 'urgent' | 'critical' | 'expired'
-  nextTime: string
-  isExpired: boolean
-}
-
-export type CountdownItem = Countdown & { remaining: CountdownRemaining }
+export type { CountdownItem, CountdownRemaining } from '@/types'
+export { calcRemaining, sortCountdowns } from '../composables/countdownCore'
+export type { CountdownSortMode, CountdownSortDirection } from '../composables/countdownCore'
 
 const STORAGE_KEY = 'user-countdowns'
+const SORT_STORAGE_KEY = 'user-countdown-sort'
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
-function formatLocal(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-export function calcRemaining(endDateTime: string, repeat?: 'yearly' | null): CountdownRemaining {
-  const now = new Date()
-  const end = new Date(endDateTime)
-
-  // 无效时间
-  if (isNaN(end.getTime())) {
-    return { days: 0, hours: 0, minutes: 0, label: '时间无效', status: 'expired', nextTime: '—', isExpired: true }
-  }
-
-  // 每年重复：计算今年的目标时间，已过则顺延到下一年
-  let target: Date
-  if (repeat === 'yearly') {
-    target = new Date(now.getFullYear(), end.getMonth(), end.getDate(), end.getHours(), end.getMinutes())
-    if (target.getTime() <= now.getTime()) {
-      target = new Date(now.getFullYear() + 1, end.getMonth(), end.getDate(), end.getHours(), end.getMinutes())
-    }
-  } else {
-    target = end
-  }
-
-  const diffMs = target.getTime() - now.getTime()
-
-  // 一次性且已过期
-  if (diffMs <= 0) {
-    const expiredDays = Math.floor(-diffMs / 86400000)
-    return {
-      days: 0,
-      hours: 0,
-      minutes: 0,
-      label: `已过期 ${expiredDays} 天`,
-      status: 'expired',
-      nextTime: formatLocal(target),
-      isExpired: true
-    }
-  }
-
-  const totalMinutes = Math.floor(diffMs / 60000)
-  const days = Math.floor(totalMinutes / 1440)
-  const hours = Math.floor((totalMinutes % 1440) / 60)
-  const minutes = totalMinutes % 60
-
-  let label: string
-  if (days > 0) {
-    label = `还剩 ${days} 天 ${hours} 小时`
-  } else if (days === 0 && hours > 0) {
-    label = `还剩 ${hours} 小时 ${minutes} 分`
-  } else if (days === 0 && hours === 0 && minutes > 0) {
-    label = `还剩 ${minutes} 分钟`
-  } else {
-    label = '就是今天！'
-  }
-
-  let status: 'normal' | 'urgent' | 'critical'
-  if (days <= 7) {
-    status = 'critical'
-  } else if (days <= 30) {
-    status = 'urgent'
-  } else {
-    status = 'normal'
-  }
-
-  return {
-    days,
-    hours,
-    minutes,
-    label,
-    status,
-    nextTime: formatLocal(target),
-    isExpired: false
-  }
-}
+const SORT_MODES: readonly SortMode[] = ['remaining', 'name', 'created', 'endTime', 'manual']
+const SORT_DIRECTIONS: readonly SortDirection[] = ['asc', 'desc']
 
 export const useCountdownsStore = defineStore('countdowns', () => {
   const countdowns = ref<Countdown[]>([])
+
+  const sortMode = ref<SortMode>('remaining')
+  const sortDirection = ref<SortDirection>('asc')
 
   function saveCountdowns(): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(countdowns.value))
@@ -111,6 +36,82 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     }
   }
 
+  function loadSortPreference(): void {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SORT_STORAGE_KEY) ?? '') as {
+        mode?: unknown
+        direction?: unknown
+      }
+      const mode = SORT_MODES.find(m => m === parsed.mode)
+      const direction = SORT_DIRECTIONS.find(d => d === parsed.direction)
+      if (mode !== undefined && direction !== undefined) {
+        sortMode.value = mode
+        sortDirection.value = direction
+      }
+    } catch {
+      // 解析失败 → 保持默认值
+    }
+  }
+
+  function persistSortPreference(): void {
+    localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ mode: sortMode.value, direction: sortDirection.value }))
+  }
+
+  function setSort(mode: SortMode): void {
+    sortMode.value = mode
+    if (mode === 'manual') ensureSortOrders()
+    persistSortPreference()
+  }
+
+  function toggleDirection(): void {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    persistSortPreference()
+  }
+
+  function manualOrderItems(): CountdownItem[] {
+    return sortCountdowns(
+      countdowns.value.map(c => ({
+        ...c,
+        remaining: calcRemaining(c.endDateTime, c.repeat)
+      })),
+      'manual',
+      'asc'
+    )
+  }
+
+  function ensureSortOrders(): void {
+    if (countdowns.value.every(c => typeof c.sortOrder === 'number')) return
+    const manualOrder = manualOrderItems()
+    manualOrder.forEach((item, i) => {
+      const target = countdowns.value.find(c => c.id === item.id)
+      if (target) target.sortOrder = i + 1
+    })
+    saveCountdowns()
+  }
+
+  function moveCountdown(id: string, dir: 'up' | 'down'): void {
+    ensureSortOrders()
+    const manualOrder = manualOrderItems()
+    const idx = manualOrder.findIndex(c => c.id === id)
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (idx === -1 || targetIdx < 0 || targetIdx >= manualOrder.length) return
+    const a = countdowns.value.find(c => c.id === manualOrder[idx].id)
+    const b = countdowns.value.find(c => c.id === manualOrder[targetIdx].id)
+    if (!a || !b) return
+    const tmp = a.sortOrder
+    a.sortOrder = b.sortOrder
+    b.sortOrder = tmp
+    saveCountdowns()
+  }
+
+  function setShowOnDisplay(id: string, show: boolean): void {
+    const c = countdowns.value.find(c => c.id === id)
+    if (c) {
+      c.showOnDisplay = show
+      saveCountdowns()
+    }
+  }
+
   function addCountdown(input: { name: string; endDateTime: string; repeat?: 'yearly' | null }): void {
     const now = new Date().toISOString()
     countdowns.value.push({
@@ -119,12 +120,23 @@ export const useCountdownsStore = defineStore('countdowns', () => {
       endDateTime: input.endDateTime,
       repeat: input.repeat ?? null,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      sortOrder:
+        countdowns.value.reduce((m, c) => Math.max(m, typeof c.sortOrder === 'number' ? c.sortOrder : 0), 0) + 1
     })
     saveCountdowns()
   }
 
-  function updateCountdown(id: string, updates: { name?: string; endDateTime?: string; repeat?: 'yearly' | null }): void {
+  function updateCountdown(
+    id: string,
+    updates: {
+      name?: string
+      endDateTime?: string
+      repeat?: 'yearly' | null
+      sortOrder?: number
+      showOnDisplay?: boolean
+    }
+  ): void {
     const index = countdowns.value.findIndex(c => c.id === id)
     if (index !== -1) {
       countdowns.value[index] = {
@@ -141,20 +153,24 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     saveCountdowns()
   }
 
-  // 排序 key：已过期排最后，其余按下次发生时间升序（最紧急在前）
-  function sortKey(item: CountdownItem): number {
-    if (item.remaining.isExpired) return Number.MAX_SAFE_INTEGER
-    return new Date(item.remaining.nextTime.replace(' ', 'T')).getTime()
-  }
-
+  // 排序：按当前 sortMode / sortDirection 排序（manual 模式忽略方向，始终升序）
   const itemsWithRemaining = computed<CountdownItem[]>(() =>
-    countdowns.value
-      .map(c => ({
+    sortCountdowns(
+      countdowns.value.map(c => ({
         ...c,
         remaining: calcRemaining(c.endDateTime, c.repeat)
-      }))
-      .sort((a, b) => sortKey(a) - sortKey(b))
+      })),
+      sortMode.value,
+      sortDirection.value
+    )
   )
+
+  // 前台展示：默认全部显示；showOnDisplay === false 的隐藏
+  const frontCountdowns = computed<CountdownItem[]>(() =>
+    itemsWithRemaining.value.filter(i => i.showOnDisplay !== false)
+  )
+
+  loadSortPreference()
 
   return {
     countdowns,
@@ -162,6 +178,13 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     addCountdown,
     updateCountdown,
     deleteCountdown,
-    itemsWithRemaining
+    itemsWithRemaining,
+    frontCountdowns,
+    sortMode,
+    sortDirection,
+    setSort,
+    toggleDirection,
+    moveCountdown,
+    setShowOnDisplay
   }
 })

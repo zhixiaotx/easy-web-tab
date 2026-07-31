@@ -52,4 +52,18 @@ export interface Countdown {
   repeat?: 'yearly' | null // 'yearly' = recurs every year (birthdays); null/absent = one-off
   createdAt: string
   updatedAt: string
+  sortOrder?: number        // NEW: manual sort position (1..n); undefined = last
+  showOnDisplay?: boolean   // NEW: front-page visibility; undefined = true
 }
+
+export interface CountdownRemaining {
+  days: number
+  hours: number
+  minutes: number
+  label: string
+  status: 'normal' | 'urgent' | 'critical' | 'expired'
+  nextTime: string
+  isExpired: boolean
+}
+
+export type CountdownItem = Countdown & { remaining: CountdownRemaining }

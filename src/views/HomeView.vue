@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watchEffect } from 'vue'
+import yaml from 'js-yaml'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -227,21 +228,18 @@ const handleImport = (event: Event) => {
     try {
       const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*/)
       if (frontmatterMatch) {
-        const yaml = (window as any).yaml
-        if (yaml) {
-          const data = yaml.load(frontmatterMatch[1])
-          if (data?.searchEngines && Array.isArray(data.searchEngines)) {
-            enginesStore.importEngines(data.searchEngines)
-            msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
-          }
-          // 尝试导入密码（需要主密码解锁状态）
-          if (data?.passwords && Array.isArray(data.passwords)) {
-            const passwordsImported = await store.importPasswordsFromMarkdown(content)
-            if (passwordsImported > 0) {
-              msg += `；密码：已导入 ${passwordsImported} 条`
-            } else if (passwordsImported === 0 && data.passwords.length > 0) {
-              msg += '；密码：未导入（请先解锁密码管理器）'
-            }
+        const data = yaml.load(frontmatterMatch[1]) as Record<string, unknown>
+        if (data?.searchEngines && Array.isArray(data.searchEngines)) {
+          enginesStore.importEngines(data.searchEngines)
+          msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
+        }
+        if (data?.passwords && Array.isArray(data.passwords)) {
+          const passwords = data.passwords
+          const passwordsResult = await store.importPasswordsFromMarkdown(content)
+          if (passwordsResult.imported > 0) {
+            msg += `；密码：已导入 ${passwordsResult.imported} 条`
+          } else if (passwords.length > 0) {
+            msg += passwordsResult.failed > 0 ? '；密码：导入失败（解密失败）' : '；密码：未导入（请先打开密码管理器解锁）'
           }
         }
       }

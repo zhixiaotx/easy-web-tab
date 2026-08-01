@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePasswordsStore } from '../stores/passwords'
 import { useSitesStore } from '../stores/sites'
+import { useToast } from '../composables/useToast'
 import type { PasswordEntry } from '../types'
 
 const emit = defineEmits<{
@@ -10,6 +11,7 @@ const emit = defineEmits<{
 
 const passwordsStore = usePasswordsStore()
 const sitesStore = useSitesStore()
+const toast = useToast()
 
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
@@ -33,6 +35,16 @@ const masterPasswordConfirm = ref('')
 const isNewSetup = ref(!passwordsStore.hasMasterPassword())
 const unlockError = ref('')
 const isUnlocking = ref(false)
+
+// 旧版 vault 迁移：存在 v1 验证 key（password-verification）且无 v2 key（password-verification-v2）时进入迁移流程
+const showLegacyMigration = ref(
+  localStorage.getItem('password-verification') !== null &&
+  localStorage.getItem('password-verification-v2') === null
+)
+const legacyPasswordInput = ref('')
+const migrationMessage = ref('')
+const migrationOk = ref(false)
+const isMigrating = ref(false)
 
 // 搜索
 const searchQuery = ref('')
@@ -112,6 +124,29 @@ function handleLock() {
   masterPasswordConfirm.value = ''
   showForm.value = false
   editingId.value = null
+}
+
+// 迁移旧版 vault（migrateLegacyVault 内部已 catch，不 throw；仅消费返回结果）
+async function handleMigrateLegacyVault() {
+  if (!legacyPasswordInput.value || isMigrating.value) return
+
+  isMigrating.value = true
+  migrationMessage.value = ''
+  migrationOk.value = false
+  try {
+    const result = await passwordsStore.migrateLegacyVault(legacyPasswordInput.value)
+    migrationMessage.value = result.message
+    migrationOk.value = result.ok
+    if (result.ok) {
+      // store 已置 isUnlocked + currentMasterPassword + v2 verification，直接进入列表态
+      showLegacyMigration.value = false
+      isNewSetup.value = !passwordsStore.hasMasterPassword()
+      legacyPasswordInput.value = ''
+      toast.success(result.message)
+    }
+  } finally {
+    isMigrating.value = false
+  }
 }
 
 // 表单操作
@@ -249,6 +284,32 @@ async function copyToClipboard(text: string, label: string) {
       </div>
 
       <div class="manager-body">
+        <!-- 旧版 vault 迁移界面 -->
+        <div v-if="showLegacyMigration" class="auth-section">
+          <div class="auth-card">
+            <h3>迁移旧版密码数据</h3>
+            <p class="auth-hint">检测到旧版密码数据，请输入旧版主密码完成迁移</p>
+            <input
+              v-model="legacyPasswordInput"
+              type="password"
+              placeholder="旧版主密码"
+              class="auth-input"
+              @keyup.enter="handleMigrateLegacyVault"
+            />
+            <p v-if="migrationMessage" :class="migrationOk ? 'auth-success' : 'auth-error'">
+              {{ migrationMessage }}
+            </p>
+            <button
+              class="btn-primary"
+              @click="handleMigrateLegacyVault"
+              :disabled="isMigrating || !legacyPasswordInput"
+            >
+              {{ isMigrating ? '迁移中...' : '迁移' }}
+            </button>
+          </div>
+        </div>
+
+        <template v-else>
         <!-- 主密码设置/解锁界面 -->
         <div v-if="!passwordsStore.isUnlocked" class="auth-section">
           <!-- 新用户设置 -->
@@ -445,6 +506,7 @@ async function copyToClipboard(text: string, label: string) {
             </div>
           </div>
         </div>
+        </template>
       </div>
     </div>
   </div>
@@ -572,6 +634,12 @@ async function copyToClipboard(text: string, label: string) {
 
 .auth-error {
   color: #ef4444;
+  font-size: 13px;
+  margin: 0 0 12px 0;
+}
+
+.auth-success {
+  color: var(--color-success);
   font-size: 13px;
   margin: 0 0 12px 0;
 }

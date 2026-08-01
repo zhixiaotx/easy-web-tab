@@ -52,8 +52,30 @@ export async function encrypt(plaintext: string, masterPassword: string): Promis
  * 解密字符串
  */
 export async function decrypt(ciphertext: string, masterPassword: string): Promise<string> {
+  return decryptCore(ciphertext, masterPassword, getSalt())
+}
+
+/**
+ * 使用调用方传入的盐解密字符串（用于跨设备密码导入）
+ * saltHex 为 hex 字符串，格式同 getSalt().toString(CryptoJS.enc.Hex)
+ */
+export async function decryptWithSalt(
+  ciphertext: string,
+  masterPassword: string,
+  saltHex: string
+): Promise<string> {
+  return decryptCore(ciphertext, masterPassword, CryptoJS.enc.Hex.parse(saltHex))
+}
+
+/**
+ * 解密核心逻辑：使用指定盐派生密钥并解密
+ */
+async function decryptCore(
+  ciphertext: string,
+  masterPassword: string,
+  salt: CryptoJS.lib.WordArray
+): Promise<string> {
   const [ivBase64, dataBase64] = ciphertext.split('.')
-  const salt = getSalt()
   const key = deriveKey(masterPassword, salt)
   const iv = CryptoJS.enc.Base64.parse(ivBase64)
   const ciphertextData = CryptoJS.enc.Base64.parse(dataBase64)
@@ -95,4 +117,12 @@ export async function verifyMasterPassword(masterPassword: string): Promise<bool
  */
 export function hasMasterPassword(): boolean {
   return localStorage.getItem(VERIFICATION_KEY) !== null
+}
+
+/**
+ * 返回当前 PBKDF2 salt 的 hex 字符串
+ * 用于跨设备密码导出时嵌入盐（导出格式: hexSalt|base64(iv).base64(cipher)）
+ */
+export function getSaltHex(): string {
+  return getSalt().toString(CryptoJS.enc.Hex)
 }

@@ -573,13 +573,13 @@ ${sitesList}
   }
 
   // 异步导入密码（从 sites.md，需要主密码解密）
-  async function importPasswordsFromMarkdown(markdownText: string): Promise<number> {
+  async function importPasswordsFromMarkdown(markdownText: string): Promise<{ imported: number; failed: number }> {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
-    if (!parsed.passwords || parsed.passwords.length === 0) return 0
+    if (!parsed.passwords || parsed.passwords.length === 0) return { imported: 0, failed: 0 }
     
     const passwordsStore = usePasswordsStore()
-    if (!passwordsStore.isUnlocked) return 0
+    if (!passwordsStore.isUnlocked) return { imported: 0, failed: 0 }
     
     return await passwordsStore.importPasswords(parsed.passwords)
   }

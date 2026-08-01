@@ -9,8 +9,7 @@ const DELETED_LEGACY_KEY = 'user-deleted-legacy-ids'
 // 需要迁移到自定义分类的原预定义分类
 const LEGACY_CATEGORIES: Category[] = [
   { id: 'office', name: '办公工具', icon: '💼', isBuiltIn: false, sort: 1 },
-  { id: 'books', name: '图书馆', icon: '💼', isBuiltIn: false, sort: 2 },
-  { id: 'other', name: '其他', icon: '📁', isBuiltIn: false, sort: 15 }
+  { id: 'books', name: '图书馆', icon: '💼', isBuiltIn: false, sort: 2 }
 ]
 
 // 加载用户已删除的遗留分类 ID 集合

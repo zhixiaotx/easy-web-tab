@@ -45,17 +45,12 @@ categories:
     icon: ✈️
     sort: 11
 
-  - id: health
-    name: 健康医疗
-    icon: 🏥
-    sort: 12
-
   - id: game
-    name: 游戏动漫
+    name: 游戏
     icon: 🎮
     sort: 13
 
-  - id: custom_1774788526323
+  - id: web3
     name: web3
     icon: 🌊
     sort: 20
@@ -91,22 +86,13 @@ searchEngines:
     isDefault: false
     sort: 9
 
-passwords:
-  - id: pwd_1785547119092
-    siteName: DeepSeek
-    url: https://deepseek.com
-    username: sss
-    password: h+U0jUhqzas5OxIGvtbg+g==.OORF+BhzJ1xs8ro1iKoKTw==
-    createdAt: 2026-08-01T01:18:39.092Z
-    updatedAt: 2026-08-01T01:18:39.092Z
-
 countdowns:
   - id: cd_1785544658582
     name: 27高考
     endDateTime: 2027-06-06T00:00
     sortOrder: 1
-    createdAt: 2026-08-01T01:15:38.153Z
-    updatedAt: 2026-08-01T01:15:38.153Z
+    createdAt: 2026-08-01T01:29:45.627Z
+    updatedAt: 2026-08-01T01:29:45.627Z
 
 sites:
   - name: DeepSeek
@@ -352,15 +338,6 @@ sites:
     sort: 2
     createdAt: 2026-03-29T13:38:22.107Z
 
-  - name: obsidian
-    url: https://github.com/obsidianmd/obsidian-releases
-    description: Obsidian 社区插件和主题列表的仓库。
-    category: other
-    tags: [插件]
-    icon: /icons/github.svg
-    sort: 2
-    createdAt: 2026-04-02T02:57:00.769Z
-
   - name: 中国铁路12306
     url: https://www.12306.cn
     description: 中国铁路12306
@@ -377,7 +354,7 @@ sites:
     tags: [游戏]
     icon: /icons/elsfk.svg
     sort: 1
-    createdAt: 2026-07-31T23:20:21.150Z
+    createdAt: Sat Aug 01 2026 07:20:21 GMT+0800 (中国标准时间)
 
   - name: 小中高古诗
     url: /games/gushi/index.html
@@ -519,7 +496,7 @@ sites:
     description: 通过单一安全 API 实现实时搜索、信息提取、研究分析与网络爬取。全球超过 100 万名开发者信赖使用。实时检索网络数据，提取相关内容，并以结构化分块形式返回给模型，使智能体能够基于事实进行推理，避免产生幻觉。
     category: custom_1773890047269
     tags: [搜索引擎]
-    icon: /icons/trvily.svg
+    icon: data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNzc1MDIzNjUwMDQwIiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjM0MDU1IiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxwYXRoIGQ9Ik0zNjMuOCAzMTMuMWM4LjkgMC4xIDg5LjMgNC4xIDE3MS4xIDUgODEuOCAxIDE1MS4yLTMuMSAxNTctMS4yIDIxLjcgNy4zIDM1LjYtMjAuNCAyNi40LTMxLjgtNy40LTkuMS0xNTcuMi0xNzYtMTY5LjktMTkxLjUtMTQuNC0yMi42LTQzLjUtNi40LTQzLjUtNi40LTkuNiAxMS0xNTIuNiAxODIuOC0xNjMuMiAxOTUuOC03LjggOS41LTguMyAyOS43IDIyLjEgMzAuMXoiIGZpbGw9IiMwNDAwMDAiIHAtaWQ9IjM0MDU2Ij48L3BhdGg+PHBhdGggZD0iTTQ2My42IDI4OXYxOTAuOWMwIDMxLjYgMjUuNyA1Ny4zIDU3LjMgNTcuM2gxNC4zYzMxLjYgMCA1Ny4zLTI1LjcgNTcuMy01Ny4zVjI4OWMwLTMxLjYtMjUuNy01Ny4zLTU3LjMtNTcuM2gtMTQuM2MtMzEuNiAwLjEtNTcuMyAyNS43LTU3LjMgNTcuM3pNMzUyLjIgOTA2LjZjLTUuMy03LjEtNTEtNzMuNC0xMDAtMTM4LjlzLTk0LjMtMTE4LjEtOTYuMy0xMjRjLTcuNC0yMS42LTM3LjktMTUuOS00MS4zLTEuNy0yLjggMTEuNC00NC4yIDIzMS44LTQ4LjkgMjUxLjMtOS4yIDI1LjIgMjEuNCAzOC40IDIxLjQgMzguNCAxNC41IDAuOSAyMzcuOSAxMC4xIDI1NC43IDEwLjcgMTIuMyAwLjUgMjguNy0xMS40IDEwLjQtMzUuOHoiIGZpbGw9IiMwNDAwMDAiIHAtaWQ9IjM0MDU3Ij48L3BhdGg+PHBhdGggZD0iTTI3Mi41IDg0MS45bDE1MS42LTExNmMyNS4xLTE5LjIgMjkuOS01NS4yIDEwLjctODAuM2wtOC43LTExLjRjLTE5LjItMjUuMS01NS4yLTI5LjktODAuMy0xMC43bC0xNTEuNiAxMTZjLTI1LjEgMTkuMi0yOS45IDU1LjItMTAuNyA4MC4zbDguNyAxMS40YzE5LjIgMjUuMSA1NS4yIDI5LjkgODAuMyAxMC43ek02NzEuOCA5MDYuNmM1LjMtNy4xIDUxLTczLjQgMTAwLTEzOC45czk0LjMtMTE4LjEgOTYuMy0xMjRjNy40LTIxLjYgMzcuOS0xNS45IDQxLjMtMS43IDIuOCAxMS40IDQ0LjIgMjMxLjggNDguOSAyNTEuMyA5LjIgMjUuMi0yMS40IDM4LjQtMjEuNCAzOC40LTE0LjUgMC45LTIzNy45IDEwLjEtMjU0LjcgMTAuNy0xMi4zIDAuNS0yOC43LTExLjQtMTAuNC0zNS44eiIgZmlsbD0iIzA0MDAwMCIgcC1pZD0iMzQwNTgiPjwvcGF0aD48cGF0aCBkPSJNNzUxLjUgODQxLjlsLTE1MS42LTExNmMtMjUuMS0xOS4yLTI5LjktNTUuMi0xMC43LTgwLjNsOC43LTExLjRjMTkuMi0yNS4xIDU1LjItMjkuOSA4MC4zLTEwLjdsMTUxLjYgMTE2YzI1LjEgMTkuMiAyOS45IDU1LjIgMTAuNyA4MC4zbC04LjcgMTEuNGMtMTkuMiAyNS4xLTU1LjIgMjkuOS04MC4zIDEwLjd6IiBmaWxsPSIjMDQwMDAwIiBwLWlkPSIzNDA1OSI+PC9wYXRoPjwvc3ZnPg==
     sort: 1
     createdAt: 2026-03-29T04:33:46.620Z
 
@@ -553,7 +530,7 @@ sites:
   - name: Core's Bitcoin Staking
     url: https://stake.coredao.org
     description: core质押网站
-    category: custom_1774788526323
+    category: web3
     tags: []
     icon: data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNzc1NTI3NjEwMjE2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjExNTMyIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxwYXRoIGQ9Ik05NDAuMTY4NTMzMzMgMjk5LjAwOGwwIDQyNS45ODRjMCAxOS42NjA4LTEwLjkyMjY2NjY3IDM3LjEzNzA2NjY2LTI3LjMwNjY2NjY2IDQ2Ljk2NzQ2NjY3TDU0My42NzU3MzMzMyA5ODYuMDQzNzMzMzNjLTE2LjM4Mzk5OTk5IDkuODMwNC0zOC4yMjkzMzMzMyA5LjgzMDQtNTQuNjEzMzMzMzMgMGwtMzY5LjE4NjEzMzMzLTIxMi45OTJjLTE2LjM4Mzk5OTk5LTkuODMwNC0yNy4zMDY2NjY2Ny0yNy4zMDY2NjY2Ny0yNy4zMDY2NjY2Ny00Ni45Njc0NjY2NmwwLTQyNS45ODRjMC0xOS42NjA4IDEwLjkyMjY2NjY3LTM3LjEzNzA2NjY2IDI3LjMwNjY2NjY3LTQ2Ljk2NzQ2NjY3bDM2OS4xODYxMzMzMy0yMTIuOTkyYzE2LjM4Mzk5OTk5LTkuODMwNCAzOC4yMjkzMzMzMy05LjgzMDQgNTQuNjEzMzMzMzIgMEw5MTIuODYxODY2NjcgMjUyLjA0MDUzMzMzYzE2LjM4Mzk5OTk5IDkuODMwNCAyNy4zMDY2NjY2NyAyNy4zMDY2NjY2NyAyNy4zMDY2NjY2NiA0Ni45Njc0NjY2N3ogbS0xMDkuMjI2NjY2NjYgMzk0LjMwODI2NjY3bDAtMzYyLjYzMjUzMzM0LTMxNC41NzI4LTE4MS4zMTYyNjY2Ni0zMTQuNTcyOCAxODEuMzE2MjY2NjZMMjAxLjc5NjI2NjY3IDY5My4zMTYyNjY2NyA1MTYuMzY5MDY2NjcgODc0LjYzMjUzMzMzbDMxNC41NzI4LTE4MS4zMTYyNjY2NnoiIGZpbGw9IiNmNGVhMmEiIHAtaWQ9IjExNTMzIj48L3BhdGg+PC9zdmc+
     sort: 1

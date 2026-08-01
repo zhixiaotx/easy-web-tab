@@ -34,16 +34,8 @@ const BUILT_IN_ENGINES: SearchEngine[] = [
 
 // 默认自定义搜索引擎
 const DEFAULT_ENGINES: SearchEngine[] = [
-  { id: 'google', name: 'Google', url: 'https://www.google.com/search?q=', isDefault: false, sort: 3 },
-  { id: 'sogou', name: '搜狗', url: 'https://www.sogou.com/web?query=', isDefault: false, sort: 4 },
-  { id: '360', name: '360搜索', url: 'https://www.so.com/s?q=', isDefault: false, sort: 5 },
   { id: 'quark', name: '夸克', url: 'https://quark.cn/s?query=', isDefault: false, sort: 6 },
-  { id: 'zhihu', name: '知乎', url: 'https://www.zhihu.com/search?type=content&q=', isDefault: false, sort: 7 },
-  { id: 'bilibili', name: '哔哩哔哩', url: 'https://search.bilibili.com/all?keyword=', isDefault: false, sort: 8 },
   { id: 'github', name: 'GitHub', url: 'https://github.com/search?q=', isDefault: false, sort: 9 },
-  { id: 'translate', name: '翻译', url: 'https://translate.google.com/?sl=auto&tl=zh-CN&text=', isDefault: false, sort: 10 },
-  { id: 'kimi', name: 'Kimi', url: 'https://kimi.moonshot.cn/?q=', isDefault: false, sort: 11 },
-  { id: 'deepseek', name: 'DeepSeek', url: 'https://www.deepseek.com/search?q=', isDefault: false, sort: 12 },
 ]
 
 export const useSearchEnginesStore = defineStore('searchEngines', () => {

@@ -9,18 +9,7 @@ const DELETED_LEGACY_KEY = 'user-deleted-legacy-ids'
 // 需要迁移到自定义分类的原预定义分类
 const LEGACY_CATEGORIES: Category[] = [
   { id: 'office', name: '办公工具', icon: '💼', isBuiltIn: false, sort: 1 },
-  { id: 'tech', name: '开发技术', icon: '💻', isBuiltIn: false, sort: 2 },
-  { id: 'news', name: '新闻资讯', icon: '📰', isBuiltIn: false, sort: 4 },
-  { id: 'social', name: '社交娱乐', icon: '🎮', isBuiltIn: false, sort: 5 },
-  { id: 'shopping', name: '购物电商', icon: '🛒', isBuiltIn: false, sort: 6 },
-  { id: 'life', name: '生活服务', icon: '🏠', isBuiltIn: false, sort: 7 },
-  { id: 'education', name: '教育培训', icon: '📚', isBuiltIn: false, sort: 8 },
-  { id: 'finance', name: '金融理财', icon: '💰', isBuiltIn: false, sort: 9 },
-  { id: 'government', name: '政府公益', icon: '🏛️', isBuiltIn: false, sort: 10 },
-  { id: 'travel', name: '旅游出行', icon: '✈️', isBuiltIn: false, sort: 11 },
-  { id: 'health', name: '健康医疗', icon: '🏥', isBuiltIn: false, sort: 12 },
-  { id: 'game', name: '游戏动漫', icon: '🎮', isBuiltIn: false, sort: 13 },
-  { id: 'design', name: '设计创意', icon: '🎨', isBuiltIn: false, sort: 14 },
+  { id: 'books', name: '图书馆', icon: '💼', isBuiltIn: false, sort: 2 },
   { id: 'other', name: '其他', icon: '📁', isBuiltIn: false, sort: 15 }
 ]
 

@@ -2,18 +2,19 @@
 
 ## OVERVIEW
 
-6 Pinia stores managing all application state. `sites.ts` is the god store with highest centrality.
+7 Pinia stores managing all application state. `sites.ts` is the god store with highest centrality.
 
 ## STRUCTURE
 
 ```
 stores/
-├── sites.ts              # Core data store (528 lines) — CRUD, filtering, pagination, import/export
+├── sites.ts              # Core data store (628 lines) — CRUD, filtering, pagination, import/export
 ├── categories.ts         # Legacy category migration + custom categories
 ├── searchEngines.ts      # 3 built-in (immutable) + custom engines (3 localStorage keys)
 ├── theme.ts              # Dark mode (class toggle) + background image state (two concerns)
-├── passwords.ts          # AES-GCM encrypted password vault (171 lines)
-└── icons.ts              # User-uploaded custom icon storage (116 lines)
+├── passwords.ts          # crypto-js AES-CBC encrypted password vault (171 lines)
+├── icons.ts              # User-uploaded custom icon storage (116 lines)
+└── countdowns.ts         # Countdown CRUD + sort preference (5 modes, yearly repeat)
 ```
 
 ## WHERE TO LOOK
@@ -27,8 +28,9 @@ stores/
 | Category management | `categories.ts` | Only `video` is permanently built-in; legacy categories (office, tech, etc.) are seeds users can delete |
 | Search engine CRUD | `searchEngines.ts` | Built-in: local, baidu, bing (locked, immutable URLs) |
 | Theme/background | `theme.ts` | `initTheme()`, `initBackground()`, toggle methods |
-| Password vault | `passwords.ts` | Master-password-gated, uses `useCrypto.ts` for AES-GCM + PBKDF2 |
+| Password vault | `passwords.ts` | Master-password-gated, uses `useCrypto.ts` for crypto-js AES-CBC + PBKDF2 |
 | Custom icons | `icons.ts` | Merges preset icons with user uploads |
+| Countdown CRUD | `countdowns.ts` | `addCountdown()`, sort modes (remaining/name/created/endTime/manual), yearly repeat |
 
 ## CONVENTIONS
 
@@ -39,7 +41,7 @@ stores/
 
 ## ANTI-PATTERNS
 
-- **`sites.ts` is 528 lines** — avoid adding more responsibilities; extract if growing
+- **`sites.ts` is 628 lines** — avoid adding more responsibilities; extract if growing
 - **`sites.ts` cross-references** `useCategoriesStore`, `useSearchEnginesStore`, and `usePasswordsStore` internally
 - **Only `video` is truly built-in** — do NOT claim "office, tech, video" are all locked
 - **Legacy categories** (office, tech, etc.) are seeded once as user-deletable custom categories — tracked via `user-deleted-legacy-ids` in localStorage

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-11 composable functions for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+12 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
@@ -15,10 +15,11 @@ composables/
 ├── useBackup.ts            # Backup/restore (has its own regex-based parser — lower fidelity than useMarkdown)
 ├── useDeadLinkChecker.ts   # Batch link check with 500ms throttle per request
 ├── useToast.ts             # Singleton toast state (module-level shallowRef, NOT Pinia)
-├── useCrypto.ts            # AES-GCM + PBKDF2 encryption (128 lines) — used by passwords store
+├── useCrypto.ts            # crypto-js AES-CBC + PBKDF2 encryption (98 lines) — used by passwords store
+├── countdownCore.ts        # Pure countdown math: calcRemaining (yearly repeat), sortCountdowns (5 modes)
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
-└── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (255+ lines)
+└── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
 ## WHERE TO LOOK
@@ -32,7 +33,8 @@ composables/
 | Data import/export | `useBackup.ts` | Separate from `useMarkdown` — own regex parser for import |
 | Link checking | `useDeadLinkChecker.ts` | Batch check with 500ms throttle per request |
 | Toast notifications | `useToast.ts` | Singleton pattern — shared across entire app |
-| Encryption | `useCrypto.ts` | Web Crypto API: AES-GCM + PBKDF2 key derivation |
+| Encryption | `useCrypto.ts` | crypto-js: AES-CBC + PBKDF2 key derivation (pure JS, works over HTTP) |
+| Countdown math | `countdownCore.ts` | `calcRemaining()` + `sortCountdowns()` — pure functions, no store deps |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
 

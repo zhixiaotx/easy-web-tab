@@ -34,8 +34,10 @@ tsconfig.tsbuildinfo
 
 # Misc
 !README.md
+sites.md
 
 # Build artifacts
 nul
 .omo
 .playwright-mcp
+public/data/sites.md

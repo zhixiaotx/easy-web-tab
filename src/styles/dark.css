@@ -183,6 +183,10 @@
   border-color: var(--accent-color);
 }
 
+:root.dark .category-count {
+  color: var(--text-secondary);
+}
+
 /* 标签筛选 */
 :root.dark .tag {
   background-color: var(--bg-secondary);

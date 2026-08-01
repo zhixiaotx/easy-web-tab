@@ -27,7 +27,8 @@ export interface Category {
 
 // 预定义分类 (不可删除) - 仅保留 video
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: 'video', name: '视频音乐', icon: '🎬', isBuiltIn: true, sort: 1 }
+  { id: 'video', name: '视频音乐', icon: '🎬', isBuiltIn: true, sort: 1 },
+  { id: 'other', name: '其他', icon: '📁', isBuiltIn: true, sort: 999 }
 ]
 
 // 向后兼容

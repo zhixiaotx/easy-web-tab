@@ -254,12 +254,9 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
     saveEngines()
   }
 
-  // 导出引擎 (内置 + 自定义)
+  // 导出引擎 (仅自定义引擎, 内置引擎不导出)
   function exportEngines(): SearchEngine[] {
-    return [
-      ...BUILT_IN_ENGINES,
-      ...(customEngines.value.length > 0 ? customEngines.value : DEFAULT_ENGINES)
-    ]
+    return customEngines.value.length > 0 ? [...customEngines.value] : [...DEFAULT_ENGINES]
   }
 
   return {

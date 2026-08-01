@@ -56,24 +56,6 @@ categories:
     sort: 20
 
 searchEngines:
-  - id: local
-    name: 本地搜索
-    url: 
-    isDefault: false
-    sort: 0
-
-  - id: baidu
-    name: 百度
-    url: https://www.baidu.com/s?wd=
-    isDefault: true
-    sort: 1
-
-  - id: bing
-    name: 必应
-    url: https://www.bing.com/search?q=
-    isDefault: false
-    sort: 2
-
   - id: quark
     name: 夸克
     url: https://quark.cn/s?query=

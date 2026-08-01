@@ -20,6 +20,23 @@ async function downloadExample() {
   }
 }
 
+async function downloadIcons() {
+  try {
+    const resp = await fetch('/icons/icons.json')
+    if (!resp.ok) throw new Error('下载失败')
+    const text = await resp.text()
+    const blob = new Blob([text], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'icons.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert('图标文件下载失败，请稍后重试')
+  }
+}
+
 const shortcuts = [
   { key: 'Ctrl + N', action: '新增网址' },
   { key: 'Ctrl + B', action: '切换前台/后台' },
@@ -122,17 +139,27 @@ const features = [
               <span class="download-icon">📦</span>
               <div>
                 <h4>下载示例数据</h4>
-                <p>下载预置的网址导航示例文件 <code>site.md</code>，包含常用网站分类和链接。下载后在管理后台点击「导入」上传该文件，即可快速初始化导航页。</p>
+                <p>下载预置的网址导航示例文件 <code>site.md</code> 与图标数据 <code>icons.json</code>，包含常用网站分类、链接和预设图标。网址文件下载后在管理后台点击「导入」上传，即可快速初始化导航页。</p>
               </div>
             </div>
-            <button class="btn-download" @click="downloadExample">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              下载 site.md
-            </button>
+            <div class="download-actions">
+              <button class="btn-download" @click="downloadExample">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                下载网址
+              </button>
+              <button class="btn-download" @click="downloadIcons">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                下载图标
+              </button>
+            </div>
           </div>
         </section>
 
@@ -523,6 +550,13 @@ const features = [
 
 .btn-download:hover {
   background-color: #2563eb;
+}
+
+.download-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* 响应式 */

@@ -443,7 +443,7 @@ const handleSubmit = () => {
           <span class="form-hint">用逗号分隔，如：开发, 代码, 开源</span>
         </div>
 
-        <div class="form-group">
+        <div class="form-group icon-group">
           <label>网站图标</label>
 
           <!-- 图标预览 + 操作按钮 -->
@@ -675,26 +675,37 @@ const handleSubmit = () => {
 }
 
 .form-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
   margin-bottom: 20px;
 }
 
 .form-group label {
-  display: block;
+  flex-shrink: 0;
+  width: 84px;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
-  margin-bottom: 6px;
 }
 
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s;
-  background-color: white;
+/* 网站图标字段：标签相对 48px 预览图垂直居中，而非整个图标列 */
+.form-group.icon-group label {
+  align-self: flex-start;
+  margin-top: 13px; /* (48px 预览图 - 22px 标签行高) / 2 */
+}
+
+/* 输入控件占满标签右侧剩余宽度 */
+.form-group > input,
+.form-group > textarea,
+.form-group > select,
+.form-group > .url-input-group,
+.form-group > .tag-input-wrapper,
+.form-group > .icon-picker,
+.form-group > .skeleton {
+  flex: 1;
+  min-width: 0;
 }
 
 .form-group input,
@@ -707,6 +718,18 @@ const handleSubmit = () => {
   font-size: 14px;
   transition: border-color 0.2s;
   background-color: white;
+}
+
+/* 提示与错误信息整行显示在控件下方，与输入框左对齐 */
+.form-group > .form-hint,
+.form-group > .error-msg {
+  flex-basis: 100%;
+  margin-left: 96px; /* 84px 标签宽 + 12px 间距 */
+}
+
+/* 图标选择面板整行显示在控件下方 */
+.form-group > .icon-picker-panel {
+  flex-basis: 100%;
 }
 
 .form-group input:focus,

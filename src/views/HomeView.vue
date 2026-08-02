@@ -15,6 +15,7 @@ import PasswordManager from '../components/PasswordManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import CountdownManager from '@/components/CountdownManager.vue'
+import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
@@ -35,6 +36,7 @@ const showModal = ref(false)
 const showEngineManager = ref(false)
 const showPasswordManager = ref(false)
 const showCountdownManager = ref(false)
+const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
 
 // 拖拽排序状态
@@ -137,6 +139,7 @@ const closeAllModals = () => {
   showEngineManager.value = false
   showPasswordManager.value = false
   showCountdownManager.value = false
+  showSettingsDialog.value = false
   closeHelp()
   editingSite.value = null
   // 清除 URL query 参数（如果存在的话）
@@ -288,6 +291,11 @@ const handlePageChange = () => {
     </button>
   </div>
 
+  <!-- 左上角工具栏 -->
+  <div class="top-left-toolbar">
+    <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
+  </div>
+
   <div class="container">
     <header class="header">
       <div class="search-section">
@@ -367,6 +375,11 @@ const handlePageChange = () => {
       v-if="showHelp"
       @close="closeAllModals"
     />
+
+    <AppSettingsDialog
+      v-if="showSettingsDialog"
+      @close="showSettingsDialog = false"
+    />
   </div>
 </template>
 
@@ -376,6 +389,16 @@ const handlePageChange = () => {
   position: fixed;
   top: 16px;
   right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+
+/* 左上角工具栏 */
+.top-left-toolbar {
+  position: fixed;
+  top: 16px;
+  left: 16px;
   display: flex;
   gap: 8px;
   z-index: 100;
@@ -518,10 +541,28 @@ const handlePageChange = () => {
   border-color: var(--accent-color, #3b82f6);
 }
 
+/* 左上角设置按钮（暗色，与全局 .btn-help 暗色一致） */
+:root.dark .top-left-toolbar .btn-help {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .top-left-toolbar .btn-help:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
 @media (max-width: 768px) {
   .top-right-toolbar {
     top: 8px;
     right: 8px;
+  }
+
+  .top-left-toolbar {
+    top: 8px;
+    left: 8px;
   }
 
   .container {

@@ -218,8 +218,8 @@ const toggleAutoBackup = () => {
   background: white;
   border-radius: 12px;
   width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
+  max-width: var(--dlg-w-backup, 600px);
+  max-height: var(--dlg-h-backup, 80vh);
   overflow: hidden;
   display: flex;
   flex-direction: column;

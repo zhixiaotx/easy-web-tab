@@ -287,8 +287,8 @@ const previewRemaining = computed(() => {
   background-color: var(--bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 640px;
-  max-height: 80vh;
+  max-width: var(--dlg-w-countdown, 640px);
+  max-height: var(--dlg-h-countdown, 80vh);
   overflow-y: auto;
   box-shadow: var(--shadow-modal);
 }

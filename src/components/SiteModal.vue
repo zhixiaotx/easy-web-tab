@@ -638,8 +638,8 @@ const handleSubmit = () => {
   background-color: white;
   border-radius: 12px;
   width: 100%;
-  max-width: 864px; /* 增加 80% (原 480px * 1.8) */
-  max-height: 90vh;
+  max-width: var(--dlg-w-site, 864px); /* 增加 80% (原 480px * 1.8) */
+  max-height: var(--dlg-h-site, 90vh);
   overflow-y: auto;
 }
 

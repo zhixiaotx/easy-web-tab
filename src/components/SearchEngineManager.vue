@@ -272,8 +272,8 @@ function truncateUrl(url: string, maxLength = 40) {
   background-color: white;
   border-radius: 12px;
   width: 100%;
-  max-width: 700px;
-  max-height: 80vh;
+  max-width: var(--dlg-w-engine, 700px);
+  max-height: var(--dlg-h-engine, 80vh);
   overflow-y: auto;
 }
 

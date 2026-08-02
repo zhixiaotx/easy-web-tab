@@ -317,8 +317,8 @@ function getIconId(icon: MergedIcon): string {
   background-color: white;
   border-radius: 12px;
   width: 100%;
-  max-width: 900px;
-  max-height: 80vh;
+  max-width: var(--dlg-w-icon, 900px);
+  max-height: var(--dlg-h-icon, 80vh);
   overflow-y: auto;
 }
 

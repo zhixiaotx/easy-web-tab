@@ -528,8 +528,8 @@ async function copyToClipboard(text: string, label: string) {
   background-color: white;
   border-radius: 12px;
   width: 100%;
-  max-width: 700px;
-  max-height: 80vh;
+  max-width: var(--dlg-w-password, 700px);
+  max-height: var(--dlg-h-password, 80vh);
   overflow-y: auto;
 }
 

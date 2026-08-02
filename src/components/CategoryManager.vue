@@ -251,8 +251,8 @@ const sortedCustomCategories = computed(() =>
     background-color: white;
     border-radius: 12px;
     width: 100%;
-    max-width: 900px;
-  max-height: 80vh;
+    max-width: var(--dlg-w-category, 900px);
+  max-height: var(--dlg-h-category, 80vh);
   overflow-y: auto;
 }
 

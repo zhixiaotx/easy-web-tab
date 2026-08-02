@@ -434,8 +434,8 @@ function clearBackground() {
   background-color: white;
   border-radius: 16px;
   width: 100%;
-  max-width: 800px;
-  max-height: 85vh;
+  max-width: var(--dlg-w-background, 800px);
+  max-height: var(--dlg-h-background, 85vh);
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);

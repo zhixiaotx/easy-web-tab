@@ -5,6 +5,7 @@ import router from './router'
 import './style.css'
 import './styles/background.css'
 import { useThemeStore } from './stores/theme'
+import { useAppSettingsStore } from './stores/settings'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -16,5 +17,6 @@ app.use(router)
 const themeStore = useThemeStore()
 themeStore.initTheme()
 themeStore.initBackground()
+useAppSettingsStore().initSettings()
 
 app.mount('#app')

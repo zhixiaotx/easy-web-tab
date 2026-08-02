@@ -53,6 +53,14 @@ const selectedGradient = ref(
 const imageUrlInput = ref('')
 const showImageInput = ref(false)
 
+// 内容区域透明度（仅图片背景显示滑块，实时生效）
+const contentOpacity = ref(themeStore.backgroundOpacity)
+const opacityPercent = computed(() => Math.round(contentOpacity.value * 100))
+
+function updateContentOpacity() {
+  themeStore.setBackgroundOpacity(contentOpacity.value)
+}
+
 // 自定义图片列表
 const customImages = ref<CustomBackground[]>([])
 
@@ -348,6 +356,25 @@ function clearBackground() {
               📁 上传本地图片
             </button>
             <span class="upload-hint">支持 JPG/PNG/GIF/WebP，最大 5MB</span>
+          </div>
+
+          <!-- 内容区域透明度 -->
+          <div class="opacity-section">
+            <div class="opacity-header">
+              <label class="subsection-title" for="content-opacity">内容区域透明度</label>
+              <span class="opacity-value">{{ opacityPercent }}%</span>
+            </div>
+            <input
+              id="content-opacity"
+              type="range"
+              class="opacity-slider"
+              v-model.number="contentOpacity"
+              min="0.1"
+              max="1"
+              step="0.05"
+              @input="updateContentOpacity"
+            />
+            <p class="opacity-hint">数值越低，页面内容越透明，背景图片越清晰</p>
           </div>
 
           <!-- 自定义图片列表 -->
@@ -781,6 +808,46 @@ function clearBackground() {
 }
 
 .upload-hint {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 内容区域透明度 */
+.opacity-section {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  margin-bottom: 16px;
+}
+
+.opacity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.opacity-header .subsection-title {
+  margin: 0;
+}
+
+.opacity-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b82f6;
+  min-width: 44px;
+  text-align: right;
+}
+
+.opacity-slider {
+  width: 100%;
+  margin-top: 12px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+.opacity-hint {
+  margin: 8px 0 0 0;
   font-size: 12px;
   color: #94a3b8;
 }

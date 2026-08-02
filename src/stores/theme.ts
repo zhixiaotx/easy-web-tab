@@ -77,6 +77,8 @@ export const useThemeStore = defineStore('theme', () => {
   const backgroundType = ref<BackgroundType>('none')
   // 背景值（颜色值/渐变值/图片URL）
   const backgroundValue = ref<string>('')
+  // 内容区域透明度（仅图片背景生效，0-1，默认 1 = 完全不透明）
+  const backgroundOpacity = ref<number>(1)
   // 用户自定义背景列表
   const customBackgrounds = ref<CustomBackground[]>([])
 
@@ -136,6 +138,7 @@ export const useThemeStore = defineStore('theme', () => {
         const data = JSON.parse(saved)
         backgroundType.value = data.type || 'none'
         backgroundValue.value = data.value || ''
+        backgroundOpacity.value = typeof data.opacity === 'number' ? data.opacity : 1
         customBackgrounds.value = data.customs || []
       } catch (e) {
         console.error('Failed to parse background settings:', e)
@@ -149,6 +152,7 @@ export const useThemeStore = defineStore('theme', () => {
     const data = {
       type: backgroundType.value,
       value: backgroundValue.value,
+      opacity: backgroundOpacity.value,
       customs: customBackgrounds.value
     }
     localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(data))
@@ -164,6 +168,7 @@ export const useThemeStore = defineStore('theme', () => {
       root.style.removeProperty('--app-bg-type')
       root.style.removeProperty('--app-bg-value')
       root.style.removeProperty('--app-bg-image')
+      root.style.removeProperty('--app-content-opacity')
       root.classList.remove('app-has-background')
       root.classList.remove('image')
       body.classList.remove('app-has-background')
@@ -177,6 +182,7 @@ export const useThemeStore = defineStore('theme', () => {
 
     root.style.setProperty('--app-bg-type', backgroundType.value)
     root.style.setProperty('--app-bg-value', backgroundValue.value)
+    root.style.setProperty('--app-content-opacity', String(backgroundOpacity.value))
 
     // 同时添加到 html、body 和 #app
     root.classList.add('app-has-background')
@@ -194,6 +200,7 @@ export const useThemeStore = defineStore('theme', () => {
       }
     } else {
       root.style.removeProperty('--app-bg-image')
+      root.style.removeProperty('--app-content-opacity')
       root.classList.remove('image')
       body.classList.remove('image')
       if (app) {
@@ -206,6 +213,13 @@ export const useThemeStore = defineStore('theme', () => {
   function setBackground(type: BackgroundType, value: string) {
     backgroundType.value = type
     backgroundValue.value = value
+    saveBackgroundSettings()
+    applyBackground()
+  }
+
+  // 设置内容区域透明度（仅图片背景生效，实时预览用）
+  function setBackgroundOpacity(opacity: number) {
+    backgroundOpacity.value = Math.min(1, Math.max(0, opacity))
     saveBackgroundSettings()
     applyBackground()
   }
@@ -251,10 +265,12 @@ export const useThemeStore = defineStore('theme', () => {
     // 背景相关
     backgroundType,
     backgroundValue,
+    backgroundOpacity,
     customBackgrounds,
     presetBackgrounds,
     initBackground,
     setBackground,
+    setBackgroundOpacity,
     addCustomBackground,
     removeCustomBackground,
     clearBackground,

@@ -59,6 +59,13 @@ body.app-has-background.image .container {
   backdrop-filter: none;
 }
 
+/* 内容区域透明度（仅图片背景生效）：整块内容区（搜索栏/卡片/文字）整体变透明，
+   让背景图片透过内容显示。opacity 由 theme store 的 --app-content-opacity 控制（默认 1）。
+   工具栏(top-right-toolbar)与弹窗是 .container 的兄弟节点，不受影响，保持完全不透明。 */
+body.app-has-background.image .container {
+  opacity: var(--app-content-opacity, 1);
+}
+
 /* ========================================
    暗色模式 + 有背景
    ======================================== */
@@ -200,4 +207,14 @@ body.app-has-background.image .container {
 
 :root.dark .background-preview {
   border-color: var(--border-color, #374151);
+}
+
+/* 暗色模式下的内容透明度设置区块 */
+:root.dark .opacity-section {
+  background: var(--bg-primary, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .opacity-hint {
+  color: var(--text-muted, #9ca3af);
 }

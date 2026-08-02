@@ -954,6 +954,12 @@
   border-color: var(--border-color, #374151);
 }
 
+:root.dark .icon-category-tab {
+  background: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
 :root.dark .icon-search-input,
 :root.dark .icon-url-input {
   background: var(--input-bg, #374151);

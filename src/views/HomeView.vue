@@ -293,6 +293,7 @@ const handlePageChange = () => {
 
   <!-- 左上角工具栏 -->
   <div class="top-left-toolbar">
+    <button class="btn-help" @click="router.push('/workbench')" title="个人工作台">🧰 个人工作台</button>
     <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
   </div>
 

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Site, Countdown } from '../types'
+import type { Site } from '../types'
 import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
 import { useCategoriesStore } from './categories'
@@ -497,7 +497,7 @@ ${sitesList}
   }
 
   // 从 Markdown 文本导入到 localStorage（按 URL 去重，保留原来的）
-  function importFromMarkdown(markdownText: string): { added: number; skipped: number; passwordsImported?: number; error?: string } {
+  async function importFromMarkdown(markdownText: string): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string }> {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
     const importedSites = parsed.sites
@@ -520,26 +520,11 @@ ${sitesList}
       categoriesStore.importCategories(parsed.categories)
     }
     
-    // 导入倒计时（按 id 去重，保留原有数据）
+    // 导入倒计时（按 id 去重，保留原有数据，持久层在 countdowns store 内处理）
     if (parsed.countdowns && parsed.countdowns.length > 0) {
       const countdownsStore = useCountdownsStore()
-      const existingRaw = localStorage.getItem('user-countdowns')
-      const existingCountdowns: Countdown[] = existingRaw ? JSON.parse(existingRaw) : []
-      const existingIds = new Set(existingCountdowns.map(c => c.id))
-      let changed = false
-      parsed.countdowns.forEach((countdown, index) => {
-        const id = countdown.id || `cd_${Date.now()}_${index}`
-        if (!existingIds.has(id)) {
-          existingCountdowns.push({ ...countdown, id })
-          existingIds.add(id)
-          changed = true
-        }
-      })
-      if (changed) {
-        localStorage.setItem('user-countdowns', JSON.stringify(existingCountdowns))
-        // 重新加载倒计时以更新显示
-        countdownsStore.loadCountdowns()
-      }
+      const cdResult = await countdownsStore.importCountdowns(parsed.countdowns)
+      console.log(`[Import] 倒计时：导入 ${cdResult.imported} 条，跳过 ${cdResult.skipped} 条`)
     }
     
     // 获取现有的 localStorage 数据

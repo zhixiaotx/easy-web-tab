@@ -20,9 +20,9 @@ const router = useRouter()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 const showCountdownModal = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   store.loadSites()
-  countdownsStore.loadCountdowns()
+  await countdownsStore.loadCountdowns()
 })
 
 const filteredSites = computed(() => store.paginatedSites)

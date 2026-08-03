@@ -47,8 +47,8 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  store.loadCountdowns()
+onMounted(async () => {
+  await store.loadCountdowns()
   window.addEventListener('keydown', handleKeydown)
 })
 
@@ -96,7 +96,7 @@ function cancelForm() {
   resetForm()
 }
 
-function handleSave() {
+async function handleSave() {
   const name = formName.value.trim()
   if (!name || !formDate.value) return
 
@@ -104,16 +104,16 @@ function handleSave() {
   const repeat = formRepeat.value ? 'yearly' : null
 
   if (editingId.value) {
-    store.updateCountdown(editingId.value, { name, endDateTime, repeat })
+    await store.updateCountdown(editingId.value, { name, endDateTime, repeat })
   } else {
-    store.addCountdown({ name, endDateTime, repeat })
+    await store.addCountdown({ name, endDateTime, repeat })
   }
   resetForm()
 }
 
-function handleDelete(id: string) {
+async function handleDelete(id: string) {
   if (confirm('确定要删除这个倒计时吗？')) {
-    store.deleteCountdown(id)
+    await store.deleteCountdown(id)
   }
 }
 

@@ -24,8 +24,8 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  store.loadCountdowns()
+onMounted(async () => {
+  await store.loadCountdowns()
   window.addEventListener('keydown', handleKeydown)
 })
 

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, toRaw } from 'vue'
 import type { Countdown, CountdownItem } from '@/types'
+import { idbGet, idbPut } from '../composables/useIdb'
 import {
   calcRemaining,
   sortCountdowns,
@@ -24,16 +25,34 @@ export const useCountdownsStore = defineStore('countdowns', () => {
   const sortMode = ref<SortMode>('remaining')
   const sortDirection = ref<SortDirection>('asc')
 
-  function saveCountdowns(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(countdowns.value))
+  async function saveCountdowns(): Promise<void> {
+    try {
+      // toRaw：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError），需写入原始数组
+      await idbPut('countdowns', toRaw(countdowns.value))
+    } catch (e) {
+      console.error('[Countdowns] save failed', e)
+    }
   }
 
-  function loadCountdowns(): void {
+  async function loadCountdowns(): Promise<void> {
+    let stored: Countdown[] | undefined
     try {
-      countdowns.value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-    } catch {
-      countdowns.value = []
+      stored = await idbGet<Countdown[]>('countdowns')
+    } catch (e) {
+      console.error('[Countdowns] load failed', e)
+      stored = undefined
     }
+    // 一次性非破坏迁移：IDB 无数据且 localStorage 有遗留快照 → 复制到 IDB（localStorage 保留不删）
+    if (stored === undefined && localStorage.getItem(STORAGE_KEY)) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as Countdown[]
+        await idbPut('countdowns', parsed)
+        stored = parsed
+      } catch (e) {
+        console.error('[Countdowns] migrate failed', e)
+      }
+    }
+    countdowns.value = stored ?? []
   }
 
   function loadSortPreference(): void {
@@ -79,18 +98,18 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     )
   }
 
-  function ensureSortOrders(): void {
+  async function ensureSortOrders(): Promise<void> {
     if (countdowns.value.every(c => typeof c.sortOrder === 'number')) return
     const manualOrder = manualOrderItems()
     manualOrder.forEach((item, i) => {
       const target = countdowns.value.find(c => c.id === item.id)
       if (target) target.sortOrder = i + 1
     })
-    saveCountdowns()
+    await saveCountdowns()
   }
 
-  function moveCountdown(id: string, dir: 'up' | 'down'): void {
-    ensureSortOrders()
+  async function moveCountdown(id: string, dir: 'up' | 'down'): Promise<void> {
+    await ensureSortOrders()
     const manualOrder = manualOrderItems()
     const idx = manualOrder.findIndex(c => c.id === id)
     const targetIdx = dir === 'up' ? idx - 1 : idx + 1
@@ -101,18 +120,18 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     const tmp = a.sortOrder
     a.sortOrder = b.sortOrder
     b.sortOrder = tmp
-    saveCountdowns()
+    await saveCountdowns()
   }
 
-  function setShowOnDisplay(id: string, show: boolean): void {
+  async function setShowOnDisplay(id: string, show: boolean): Promise<void> {
     const c = countdowns.value.find(c => c.id === id)
     if (c) {
       c.showOnDisplay = show
-      saveCountdowns()
+      await saveCountdowns()
     }
   }
 
-  function addCountdown(input: { name: string; endDateTime: string; repeat?: 'yearly' | null }): void {
+  async function addCountdown(input: { name: string; endDateTime: string; repeat?: 'yearly' | null }): Promise<void> {
     const now = new Date().toISOString()
     countdowns.value.push({
       id: `cd_${Date.now()}`,
@@ -124,10 +143,10 @@ export const useCountdownsStore = defineStore('countdowns', () => {
       sortOrder:
         countdowns.value.reduce((m, c) => Math.max(m, typeof c.sortOrder === 'number' ? c.sortOrder : 0), 0) + 1
     })
-    saveCountdowns()
+    await saveCountdowns()
   }
 
-  function updateCountdown(
+  async function updateCountdown(
     id: string,
     updates: {
       name?: string
@@ -136,7 +155,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
       sortOrder?: number
       showOnDisplay?: boolean
     }
-  ): void {
+  ): Promise<void> {
     const index = countdowns.value.findIndex(c => c.id === id)
     if (index !== -1) {
       countdowns.value[index] = {
@@ -144,13 +163,32 @@ export const useCountdownsStore = defineStore('countdowns', () => {
         ...updates,
         updatedAt: new Date().toISOString()
       }
-      saveCountdowns()
+      await saveCountdowns()
     }
   }
 
-  function deleteCountdown(id: string): void {
+  async function deleteCountdown(id: string): Promise<void> {
     countdowns.value = countdowns.value.filter(c => c.id !== id)
-    saveCountdowns()
+    await saveCountdowns()
+  }
+
+  // 从 sites.md 导入倒计时（按 id 去重，只追加，语义等同原 sites.ts 直连 localStorage 块）
+  async function importCountdowns(entries: Countdown[]): Promise<{ imported: number; skipped: number }> {
+    let imported = 0
+    let skipped = 0
+    const existingIds = new Set(countdowns.value.map(c => c.id))
+    entries.forEach((entry, index) => {
+      const id = entry.id || `cd_${Date.now()}_${index}`
+      if (!existingIds.has(id)) {
+        countdowns.value.push({ ...entry, id })
+        existingIds.add(id)
+        imported++
+      } else {
+        skipped++
+      }
+    })
+    await saveCountdowns()
+    return { imported, skipped }
   }
 
   // 排序：按当前 sortMode / sortDirection 排序（manual 模式忽略方向，始终升序）
@@ -185,6 +223,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     setSort,
     toggleDirection,
     moveCountdown,
-    setShowOnDisplay
+    setShowOnDisplay,
+    importCountdowns
   }
 })

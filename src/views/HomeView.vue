@@ -71,9 +71,9 @@ const handleDragEnd = () => {
   dragOverUrl.value = null
 }
 
-onMounted(() => {
+onMounted(async () => {
   store.loadSites()
-  countdownsStore.loadCountdowns()
+  await countdownsStore.loadCountdowns()
 })
 
 // 同步 URL query 参数与弹框状态（Ctrl+N / 直接访问 URL 均可打开弹框）
@@ -217,7 +217,7 @@ const handleImport = (event: Event) => {
     const content = e.target?.result as string
     
     // 导入网站
-    const result = store.importFromMarkdown(content)
+    const result = await store.importFromMarkdown(content)
     
     // 如果有错误，直接显示错误信息
     if (result.error) {

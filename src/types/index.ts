@@ -68,3 +68,44 @@ export interface CountdownRemaining {
 }
 
 export type CountdownItem = Countdown & { remaining: CountdownRemaining }
+
+// 工作台待办任务
+export type TodoPriority = 'low' | 'medium' | 'high'
+
+export interface WorkbenchTodo {
+  id: string
+  title: string
+  description?: string
+  priority: TodoPriority
+  dueDate?: string
+  completed: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// 工作台便签
+export const NOTE_COLORS = ['yellow', 'blue', 'green', 'pink'] as const
+
+export type NoteColor = (typeof NOTE_COLORS)[number]
+
+export interface WorkbenchNote {
+  id: string
+  title?: string
+  content: string
+  color: NoteColor
+  pinned: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// 工作台数据导出/导入格式
+export const WORKBENCH_DATA_VERSION = 1
+
+export interface WorkbenchData {
+  version: number
+  exportedAt: string
+  todos: WorkbenchTodo[]
+  notes: WorkbenchNote[]
+  countdowns: Countdown[]
+  passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
+}

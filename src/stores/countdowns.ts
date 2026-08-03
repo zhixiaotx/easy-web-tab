@@ -168,7 +168,9 @@ export const useCountdownsStore = defineStore('countdowns', () => {
   }
 
   async function deleteCountdown(id: string): Promise<void> {
-    countdowns.value = countdowns.value.filter(c => c.id !== id)
+    // 从 toRaw 的原始数组 filter：在 reactive 代理上直接 filter 会得到 Proxy 元素，
+    // toRaw 只解开一层数组，残留的 Proxy 元素会让 IDB 结构化克隆抛 DataCloneError（L1 变体）
+    countdowns.value = toRaw(countdowns.value).filter(c => c.id !== id)
     await saveCountdowns()
   }
 

@@ -312,8 +312,6 @@ const handlePageChange = () => {
             <span v-else>🔗 检测断链<span v-if="store.invalidCount > 0" class="invalid-count">({{ store.invalidCount }})</span></span>
           </button>
           <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
-          <button class="btn-action" @click="router.push({ query: { modal: 'passwords' } })">🔑 密码管理</button>
-          <button class="btn-action" @click="router.push({ query: { modal: 'countdown' } })">⏳ 倒计时</button>
           <SettingsButton />
         </div>
       </div>

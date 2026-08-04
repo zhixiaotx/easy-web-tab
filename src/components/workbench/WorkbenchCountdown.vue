@@ -573,6 +573,12 @@ onMounted(async () => {
   background-color: var(--bg-secondary, #1f2937);
 }
 
+/* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
+:root.dark .btn-save:disabled {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-muted, #9ca3af);
+}
+
 :root.dark .name-input,
 :root.dark .date-input,
 :root.dark .time-input,

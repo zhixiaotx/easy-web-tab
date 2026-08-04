@@ -566,6 +566,19 @@ onMounted(async () => {
   color: var(--text-secondary, #d1d5db);
 }
 
+/* 覆盖 .filter-tab.active（亮色 (0,2,0) 会被 :root.dark .filter-tab (0,3,0) 盖掉，需显式还原选中态） */
+:root.dark .filter-tab.active {
+  background-color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+  color: #fff;
+}
+
+/* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
+:root.dark .btn-save:disabled {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-muted, #9ca3af);
+}
+
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete {

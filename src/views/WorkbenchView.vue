@@ -390,6 +390,13 @@ async function handleImportFile(event: Event) {
   background-color: var(--bg-primary, #111827);
 }
 
+/* 移动端菜单底边框沿用亮色 token，暗色下需覆盖 */
+@media (max-width: 768px) {
+  :root.dark .wb-menu {
+    border-bottom-color: var(--border-color, #374151);
+  }
+}
+
 @media (max-width: 768px) {
   .wb-header {
     flex-direction: column;

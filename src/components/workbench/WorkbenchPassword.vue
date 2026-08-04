@@ -743,6 +743,12 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   color: var(--text-secondary, #d1d5db);
 }
 
+/* 禁用态主按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
+:root.dark .pwd-btn-primary:disabled {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-muted, #9ca3af);
+}
+
 @media (max-width: 640px) {
   .pwd-form-grid {
     grid-template-columns: 1fr;

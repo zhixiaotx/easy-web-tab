@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-12 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+13 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
@@ -19,6 +19,7 @@ composables/
 ├── countdownCore.ts        # Pure countdown math: calcRemaining (yearly repeat), sortCountdowns (5 modes)
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
+├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v1, 4 stores (todos/notes/countdowns/passwords); idbGet/idbPut/idbClear/idbExportAll/idbImportAll
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
@@ -37,6 +38,7 @@ composables/
 | Countdown math | `countdownCore.ts` | `calcRemaining()` + `sortCountdowns()` — pure functions, no store deps |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
+| IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes; `idbImportAll` validates backup version |
 
 ## CONVENTIONS
 
@@ -52,4 +54,5 @@ composables/
 - **`useBackup.ts` has its own markdown parser** — uses regex instead of `useMarkdown.ts` or `js-yaml`. Lower fidelity than the main parser. Import may silently drop data the main parser would accept.
 - **`useDeadLinkChecker.ts`** has 500ms throttle — rapid sequential requests are an anti-pattern
 - **`useToast.ts`** and **`useHelpModal.ts`** deviate from Pinia pattern — use module-level `shallowRef` for singleton state
+- **`useIdb.ts`** rejects on failure and does NOT fall back to localStorage — callers must `toRaw()` reactive arrays before `idbPut` (IDB structured clone throws DataCloneError on Vue Proxy)
 - **Icon fetch timeout** in `useIconCache.ts`: 8000ms (`AbortSignal.timeout(8000)`) — may need adjustment for slow networks

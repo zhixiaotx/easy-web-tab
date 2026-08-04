@@ -106,7 +106,9 @@ pm2 restart easywebtab
 ## 将 http://localhost:16718/ 设置在起始页面，打开浏览器直接打开。
 ## 多浏览器共享
  - **导入** 点击「导出」下载 `sites.md`，包含所有分类、搜索引擎和网址
- - **清除** F12 找到 Application项，在Storage下Local storage找 http://localhost:16718/，选中点击右键，选择清除。
+ - **清除** F12 打开 Application，在 IndexedDB 下找到 `easy-web-tab` 数据库，选中点击右键 → Delete database，即可清掉倒计时/密码/待办/便签。仅清除 Local storage 已不再清掉这些数据（它们存于 IndexedDB）。
+   - 注意：只清 IndexedDB 时，若 Local storage 仍残留旧快照（`user-countdowns` / `user-passwords`），下次启动会从这些陈旧快照重新迁移出旧数据，需要一并清除 Local storage 下对应 key 才干净。
+   - 多浏览器迁移提示：在个人工作台页点「导出」下载 JSON 备份，再到另一浏览器导入；该导出不含密码加密密钥，密码数据仅原设备（原浏览器）可恢复。
  - **导入**：上传 `.md` 文件（支持含 YAML frontmatter 的格式），按 URL 去重，保留原有数据
 
 ## 项目结构
@@ -256,6 +258,9 @@ npm run serve
   - `user-sites`：用户添加/修改的网址
   - `user-categories`：自定义分类
   - `user-search-engines`：自定义搜索引擎
+- **个人工作台数据**：浏览器 IndexedDB（数据库名 `easy-web-tab`）
+  - 待办、便签、倒计时、密码数据存于 IndexedDB 的 4 个 object store（`todos` / `notes` / `countdowns` / `passwords`）
+  - localStorage 仍存网址/分类/引擎/偏好等（如 `user-sites`、`user-countdown-sort`、`password-verification-v2`）
 
 用户数据优先于内置数据加载（同名 URL 覆盖）。
 

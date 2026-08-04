@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-21 Vue 3 SFCs using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+22 Vue 3 SFCs in the root plus 5 workbench panel SFCs under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -12,6 +12,7 @@ components/
 ├── GlobalSearch.vue      # Multi-engine search bar (583 lines)
 ├── BackgroundManager.vue # Background image picker (876 lines)
 ├── BackupManager.vue     # Import/export UI
+├── AppSettingsDialog.vue # Dialog size settings UI (389 lines, uses `useAppSettingsStore` from settings.ts)
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
 ├── CountdownManager.vue  # Countdown list + CRUD (750 lines)
@@ -28,7 +29,13 @@ components/
 ├── Pagination.vue        # Page navigation
 ├── SkeletonCard.vue      # Loading skeleton (card)
 ├── SkeletonGrid.vue      # Loading skeleton (grid)
-└── Toast.vue             # Notification toast (receives `toasts` array as prop)
+├── Toast.vue             # Notification toast (receives `toasts` array as prop)
+└── workbench/            # 个人工作台 5 面板 (data persisted to IndexedDB via `useIdb.ts`)
+    ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口）
+    ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选）
+    ├── WorkbenchNotes.vue       # 便签面板（增删改查 + 置顶 + 颜色）
+    ├── WorkbenchCountdown.vue   # 倒计时面板
+    └── WorkbenchPassword.vue    # 密码面板（复用 usePasswordsStore / useCrypto.ts）
 ```
 
 ## WHERE TO LOOK
@@ -46,6 +53,7 @@ components/
 | Tag filtering | `TagFilter.vue` + `CategoryTabs.vue` | Tags extracted from all sites |
 | Loading states | `SkeletonCard.vue` + `SkeletonGrid.vue` | Shimmer placeholders |
 | Toast notifications | `Toast.vue` | Receives `toasts` array as prop from `useToast()` |
+| 工作台面板 | `workbench/WorkbenchHome.vue` + `workbench/WorkbenchTodo.vue` + `workbench/WorkbenchNotes.vue` + `workbench/WorkbenchCountdown.vue` + `workbench/WorkbenchPassword.vue` | 个人工作台页面板；待办/便签走 `useWorkbenchTodosStore` / `useWorkbenchNotesStore`，倒计时/密码复用既有 store，均经 `useIdb.ts` 持久化到 IndexedDB |
 
 ## CONVENTIONS
 

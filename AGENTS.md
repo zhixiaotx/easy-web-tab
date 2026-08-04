@@ -5,9 +5,9 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 21 SFCs, sizes, component-level anti-patterns
-- `src/stores/AGENTS.md` — the 7 Pinia stores and data-layer invariants
-- `src/composables/AGENTS.md` — the 12 composables (incl. auto-generated `presetIcons.ts`)
+- `src/components/AGENTS.md` — the 22 root SFCs + 5 workbench panels, sizes, component-level anti-patterns
+- `src/stores/AGENTS.md` — the 10 Pinia stores and data-layer invariants
+- `src/composables/AGENTS.md` — the 13 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts and game rewrite rules
 
 ## STRUCTURE
@@ -15,11 +15,12 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 ```
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
-│   ├── components/               # 21 SFCs (UI layer)
-│   ├── composables/              # 12 composables (reusable logic, 1 auto-generated)
-│   ├── stores/                   # 7 Pinia stores (data layer)
-│   ├── views/                    # 2 routes: HomeView (admin), DisplayView (read-only)
-│   ├── router/index.ts           # / → admin, /display → new-tab page (eager imports)
+│   ├── components/               # 22 root SFCs + workbench/ subdir (UI layer)
+│   │   └── workbench/            # 5 工作台面板: WorkbenchHome/Todo/Notes/Countdown/Password
+│   ├── composables/              # 13 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper)
+│   ├── stores/                   # 10 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts)
+│   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
+│   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台 (eager imports)
 │   ├── types/index.ts            # Site, Category interfaces + DEFAULT_CATEGORIES
 │   └── styles/                   # dark.css, background.css
 ├── public/
@@ -55,6 +56,7 @@ easy-web-tab/
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
+| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | Todo/Notes/Countdown/Password 面板，数据经 `useIdb.ts` 存 IndexedDB |
 
 ## CODE MAP
 
@@ -67,10 +69,13 @@ easy-web-tab/
 | `usePasswordsStore` | store | `src/stores/passwords.ts` | Encrypted password vault |
 | `useIconsStore` | store | `src/stores/icons.ts` | Custom icon uploads |
 | `useCountdownsStore` | store | `src/stores/countdowns.ts` | Countdown CRUD + sort preference |
+| `useWorkbenchTodosStore` | store | `src/stores/workbenchTodos.ts` | Workbench todo CRUD + filter/search/sort (IndexedDB) |
+| `useWorkbenchNotesStore` | store | `src/stores/workbenchNotes.ts` | Workbench notes CRUD + pin (IndexedDB) |
 | `useToast` | composable | `src/composables/useToast.ts` | Singleton toast state |
 | `getIconUrl` / `getFaviconImgSrc` | functions | `src/composables/useIconCache.ts` | Icon resolution chain |
 | `calcRemaining` / `sortCountdowns` | functions | `src/composables/countdownCore.ts` | Pure countdown math + sorting |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
+| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab`, 4 stores: todos/notes/countdowns/passwords) |
 
 ## CONVENTIONS
 
@@ -83,6 +88,7 @@ easy-web-tab/
 - **Module type**: ESM (`"type": "module"`, `.cjs` for CommonJS scripts including PM2 configs)
 - **TypeScript**: Strict + noUnusedLocals + noUnusedParameters
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
+- **IndexedDB persistence**: 工作台数据（待办/便签/倒计时/密码）存浏览器 IndexedDB — DB 名 `easy-web-tab`，4 个 object store（todos/notes/countdowns/passwords），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
@@ -94,7 +100,7 @@ easy-web-tab/
 - **No ESLint/Prettier** — code quality relies solely on TypeScript strict mode
 - **No test framework** — zero test files, no vitest/jest/cypress
 - **User data priority**: localStorage data overrides built-in data (same-URL merge in `loadSites()`)
-- **No Pinia `persist` plugin** — all state persistence is manual `localStorage.setItem` calls
+- **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes
 
 ## UNIQUE STYLES
 
@@ -130,3 +136,5 @@ pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, u
 - `searchEngines.ts` stores engine state across 3 separate localStorage keys.
 - `sites.ts` is the largest store (628 lines) — avoid adding more responsibilities.
 - `public/games/schulte-grid/` is a leftover dir — NOT in manifest.json (4 registered games); rewrites still reference it.
+- 用户数据现主要存 IndexedDB（DB `easy-web-tab`），localStorage 仅剩迁移备份与偏好/密钥等（如 `user-sites`、`password-verification-v2`、`user-countdown-sort`）。
+- 倒计时/密码 store 已切换 IndexedDB（store 'countdowns' / 'passwords'），`user-countdowns` / `user-passwords` 旧 localStorage key 仅作一次性非破坏迁移来源，勿再直接读写。

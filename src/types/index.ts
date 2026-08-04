@@ -45,12 +45,28 @@ export interface PasswordEntry {
   updatedAt: string
 }
 
+// 倒计时提醒分类（固定三分类：工作/生活/学习）
+export const COUNTDOWN_CATEGORIES = ['work', 'life', 'study'] as const
+export type CountdownCategory = (typeof COUNTDOWN_CATEGORIES)[number]
+
+// 倒计时重复规则对象（替代旧 repeat: 'yearly' | null）
+// once 规范存储为 null（parseRepeat 归一）；weekly daysOfWeek: 1=周一 .. 7=周日
+export type CountdownRepeat =
+  | { type: 'once' }
+  | { type: 'daily' }
+  | { type: 'weekly'; daysOfWeek: number[] }
+  | { type: 'monthly'; dayOfMonth: number } // 1-31，越界按当月天数钳制
+  | { type: 'yearly' }
+  | { type: 'interval'; intervalMinutes: number } // 距 endDateTime 起每 N 分钟
+
 // 倒计时接口
 export interface Countdown {
   id: string
   name: string
   endDateTime: string // 'YYYY-MM-DDTHH:mm' LOCAL time, no timezone suffix, e.g. '2026-12-31T23:59'
-  repeat?: 'yearly' | null // 'yearly' = recurs every year (birthdays); null/absent = one-off
+  repeat?: CountdownRepeat | null // 重复规则对象；null/absent = 一次性；旧字符串 'yearly' 由 normalize 迁移为 { type: 'yearly' }
+  category?: CountdownCategory    // 提醒分类；undefined = 'work'（工作）
+  lastRemindedAt?: string         // 上次提醒时刻（'YYYY-MM-DD HH:mm'），防重复提醒
   createdAt: string
   updatedAt: string
   sortOrder?: number        // NEW: manual sort position (1..n); undefined = last

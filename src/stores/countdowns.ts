@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
-import type { Countdown, CountdownItem } from '@/types'
+import type { Countdown, CountdownCategory, CountdownItem, CountdownRepeat } from '@/types'
 import { idbGet, idbPut } from '../composables/useIdb'
 import {
   calcRemaining,
+  normalizeCountdown,
   sortCountdowns,
   type CountdownSortMode as SortMode,
   type CountdownSortDirection as SortDirection
@@ -46,13 +47,15 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     if (stored === undefined && localStorage.getItem(STORAGE_KEY)) {
       try {
         const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as Countdown[]
-        await idbPut('countdowns', parsed)
-        stored = parsed
+        const normalized = parsed.map(normalizeCountdown)
+        await idbPut('countdowns', normalized)
+        stored = normalized
       } catch (e) {
         console.error('[Countdowns] migrate failed', e)
       }
     }
-    countdowns.value = stored ?? []
+    // 统一归一化：IDB 存量可能还是旧结构（repeat:'yearly' 字符串 / 缺 category），幂等映射到新规范
+    countdowns.value = (stored ?? []).map(normalizeCountdown)
   }
 
   function loadSortPreference(): void {
@@ -131,18 +134,26 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     }
   }
 
-  async function addCountdown(input: { name: string; endDateTime: string; repeat?: 'yearly' | null }): Promise<void> {
+  async function addCountdown(input: {
+    name: string
+    endDateTime: string
+    repeat?: CountdownRepeat | null
+    category?: CountdownCategory
+  }): Promise<void> {
     const now = new Date().toISOString()
-    countdowns.value.push({
-      id: `cd_${Date.now()}`,
-      name: input.name,
-      endDateTime: input.endDateTime,
-      repeat: input.repeat ?? null,
-      createdAt: now,
-      updatedAt: now,
-      sortOrder:
-        countdowns.value.reduce((m, c) => Math.max(m, typeof c.sortOrder === 'number' ? c.sortOrder : 0), 0) + 1
-    })
+    countdowns.value.push(
+      normalizeCountdown({
+        id: `cd_${Date.now()}`,
+        name: input.name,
+        endDateTime: input.endDateTime,
+        repeat: input.repeat ?? null,
+        category: input.category,
+        createdAt: now,
+        updatedAt: now,
+        sortOrder:
+          countdowns.value.reduce((m, c) => Math.max(m, typeof c.sortOrder === 'number' ? c.sortOrder : 0), 0) + 1
+      })
+    )
     await saveCountdowns()
   }
 
@@ -151,18 +162,22 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     updates: {
       name?: string
       endDateTime?: string
-      repeat?: 'yearly' | null
+      repeat?: CountdownRepeat | null
+      category?: CountdownCategory
+      lastRemindedAt?: string
       sortOrder?: number
       showOnDisplay?: boolean
     }
   ): Promise<void> {
     const index = countdowns.value.findIndex(c => c.id === id)
     if (index !== -1) {
-      countdowns.value[index] = {
+      // 过滤 undefined：避免 { lastRemindedAt } 之类局部更新把 repeat/category/sortOrder 冲掉
+      const clean = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined)) as typeof updates
+      countdowns.value[index] = normalizeCountdown({
         ...countdowns.value[index],
-        ...updates,
+        ...clean,
         updatedAt: new Date().toISOString()
-      }
+      })
       await saveCountdowns()
     }
   }
@@ -182,7 +197,8 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     entries.forEach((entry, index) => {
       const id = entry.id || `cd_${Date.now()}_${index}`
       if (!existingIds.has(id)) {
-        countdowns.value.push({ ...entry, id })
+        // 导入来源（sites.md 旧格式 repeat:'yearly' / 缺 category）统一归一化
+        countdowns.value.push(normalizeCountdown({ ...entry, id }))
         existingIds.add(id)
         imported++
       } else {

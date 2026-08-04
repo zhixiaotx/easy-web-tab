@@ -6,7 +6,7 @@ import { ref } from 'vue'
 // ========================================
 
 // 弹窗标识
-export type DialogId = 'site' | 'engine' | 'countdown' | 'password' | 'background' | 'category' | 'backup' | 'icon'
+export type DialogId = 'site' | 'engine' | 'countdown' | 'password' | 'background' | 'category' | 'backup' | 'icon' | 'notes'
 
 // 弹窗尺寸设置（width 单位 px，height 单位 vh）
 export interface DialogSizeSetting {
@@ -27,7 +27,8 @@ export const DIALOG_DEFAULTS: Record<DialogId, DialogSizeSetting> = {
   background: { width: 800, height: 85 },
   category: { width: 900, height: 80 },
   backup: { width: 600, height: 80 },
-  icon: { width: 900, height: 80 }
+  icon: { width: 900, height: 80 },
+  notes: { width: 1000, height: 90 }
 }
 
 // 弹窗中文标签
@@ -39,7 +40,8 @@ export const DIALOG_LABELS: Record<DialogId, string> = {
   background: '背景',
   category: '分类管理',
   backup: '备份',
-  icon: '图标管理'
+  icon: '图标管理',
+  notes: '便签'
 }
 
 // 弹窗对应的 CSS 自定义属性名（字面量逐字等于契约表）
@@ -51,12 +53,13 @@ export const DIALOG_VARS: Record<DialogId, { widthVar: string; heightVar: string
   background: { widthVar: '--dlg-w-background', heightVar: '--dlg-h-background' },
   category: { widthVar: '--dlg-w-category', heightVar: '--dlg-h-category' },
   backup: { widthVar: '--dlg-w-backup', heightVar: '--dlg-h-backup' },
-  icon: { widthVar: '--dlg-w-icon', heightVar: '--dlg-h-icon' }
+  icon: { widthVar: '--dlg-w-icon', heightVar: '--dlg-h-icon' },
+  notes: { widthVar: '--dlg-w-notes', heightVar: '--dlg-h-notes' }
 }
 
 const SETTINGS_STORAGE_KEY = 'user-app-settings'
 
-const DIALOG_IDS: DialogId[] = ['site', 'engine', 'countdown', 'password', 'background', 'category', 'backup', 'icon']
+const DIALOG_IDS: DialogId[] = ['site', 'engine', 'countdown', 'password', 'background', 'category', 'backup', 'icon', 'notes']
 
 // 取值范围 clamp
 const clampWidth = (n: number) => Math.min(1600, Math.max(400, n))

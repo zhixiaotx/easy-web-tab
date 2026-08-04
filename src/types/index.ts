@@ -84,7 +84,7 @@ export interface WorkbenchTodo {
 }
 
 // 工作台便签
-export const NOTE_COLORS = ['yellow', 'blue', 'green', 'pink'] as const
+export const NOTE_COLORS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'] as const
 
 export type NoteColor = (typeof NOTE_COLORS)[number]
 

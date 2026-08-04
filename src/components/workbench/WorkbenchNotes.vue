@@ -17,10 +17,14 @@ const formColor = ref<NoteColor>('yellow')
 const isFormValid = computed(() => formContent.value.trim().length > 0)
 
 const COLOR_LABELS: Record<NoteColor, string> = {
-  yellow: '黄色',
-  blue: '蓝色',
-  green: '绿色',
-  pink: '粉色'
+  red: '红',
+  orange: '橙',
+  yellow: '黄',
+  green: '绿',
+  cyan: '青',
+  blue: '蓝',
+  purple: '紫',
+  pink: '粉'
 }
 
 function startAdd(): void {
@@ -331,6 +335,30 @@ onMounted(async () => {
   color: #831843;
 }
 
+.note-red {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.note-orange {
+  background: #ffedd5;
+  border-color: #fdba74;
+  color: #7c2d12;
+}
+
+.note-cyan {
+  background: #cffafe;
+  border-color: #67e8f9;
+  color: #164e63;
+}
+
+.note-purple {
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+  color: #581c87;
+}
+
 .dot-yellow {
   background: #eab308;
 }
@@ -345,6 +373,22 @@ onMounted(async () => {
 
 .dot-pink {
   background: #ec4899;
+}
+
+.dot-red {
+  background: #ef4444;
+}
+
+.dot-orange {
+  background: #f97316;
+}
+
+.dot-cyan {
+  background: #06b6d4;
+}
+
+.dot-purple {
+  background: #a855f7;
 }
 
 /* ===== 空态 ===== */
@@ -372,7 +416,10 @@ onMounted(async () => {
 
 .note-form {
   width: 100%;
-  max-width: 460px;
+  max-width: var(--dlg-w-notes, 1000px);
+  height: var(--dlg-h-notes, 90vh);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -468,6 +515,22 @@ onMounted(async () => {
   background: #ec4899;
 }
 
+.color-red .color-swatch {
+  background: #ef4444;
+}
+
+.color-orange .color-swatch {
+  background: #f97316;
+}
+
+.color-cyan .color-swatch {
+  background: #06b6d4;
+}
+
+.color-purple .color-swatch {
+  background: #a855f7;
+}
+
 /* ===== 表单操作 ===== */
 .note-form-actions {
   display: flex;
@@ -552,6 +615,30 @@ onMounted(async () => {
   background: rgba(236, 72, 153, 0.16);
   border-color: #be185d;
   color: #f9a8d4;
+}
+
+:root.dark .note-red {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: #b91c1c;
+  color: #fca5a5;
+}
+
+:root.dark .note-orange {
+  background: rgba(249, 115, 22, 0.16);
+  border-color: #c2410c;
+  color: #fdba74;
+}
+
+:root.dark .note-cyan {
+  background: rgba(6, 182, 212, 0.16);
+  border-color: #0e7490;
+  color: #67e8f9;
+}
+
+:root.dark .note-purple {
+  background: rgba(168, 85, 247, 0.16);
+  border-color: #7e22ce;
+  color: #d8b4fe;
 }
 
 :root.dark .pin-badge {

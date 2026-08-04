@@ -2,13 +2,13 @@
 
 ## OVERVIEW
 
-13 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+14 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
 ```
 composables/
-├── useMarkdown.ts          # Parses sites.md (gray-matter → YAML frontmatter → Site[])
+├── useMarkdown.ts          # Parses sites.md (gray-matter → YAML frontmatter → Site[] + Countdown 规则对象)
 ├── useUrlMetadata.ts       # Auto-fetch title/desc/icon (Jina.ai → allorigins.win fallback)
 ├── useIconCache.ts         # Icon resolution chain: custom → localStorage cache → Google API → async background fetch
 ├── useKeyboardShortcuts.ts # Ctrl+N/B/D, Esc bindings; returns { isMac, shortcuts }
@@ -16,7 +16,8 @@ composables/
 ├── useDeadLinkChecker.ts   # Batch link check with 500ms throttle per request
 ├── useToast.ts             # Singleton toast state (module-level shallowRef, NOT Pinia)
 ├── useCrypto.ts            # crypto-js AES-CBC + PBKDF2 encryption (98 lines) — used by passwords store
-├── countdownCore.ts        # Pure countdown math: calcRemaining (yearly repeat), sortCountdowns (5 modes)
+├── countdownCore.ts        # 倒计时纯逻辑引擎（494 行）: 6 种重复规则 + 3 分类 + calcRemaining/sortCountdowns
+├── useCountdownReminder.ts # Singleton 提醒弹框引擎：60s tick + 到点提醒 + 每天 9:00 最后3天摘要
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
 ├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v1, 4 stores (todos/notes/countdowns/passwords); idbGet/idbPut/idbClear/idbExportAll/idbImportAll
@@ -35,7 +36,8 @@ composables/
 | Link checking | `useDeadLinkChecker.ts` | Batch check with 500ms throttle per request |
 | Toast notifications | `useToast.ts` | Singleton pattern — shared across entire app |
 | Encryption | `useCrypto.ts` | crypto-js: AES-CBC + PBKDF2 key derivation (pure JS, works over HTTP) |
-| Countdown math | `countdownCore.ts` | `calcRemaining()` + `sortCountdowns()` — pure functions, no store deps |
+| Countdown math | `countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`calcRemaining`/`sortCountdowns`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| Countdown reminder | `useCountdownReminder.ts` | 单例弹框引擎：60s `setInterval` tick + init 立即 tick + visibilitychange 立即 tick；到点写 `lastRemindedAt` 去重；9:00 最后3天摘要用 `STORAGE_KEY`(`user-countdown-reminder-date`) 防同日重复 |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
 | IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes; `idbImportAll` validates backup version |
@@ -45,6 +47,7 @@ composables/
 - Composables follow `use*` naming convention
 - Export functions, not classes
 - `useToast` and `useHelpModal` are singletons (module-level state, not in Pinia)
+- `useCountdownReminder` is also a singleton (module-level shallowRef + `init()` 幂等守卫)
 - `useGames` is also a singleton with a `loaded` guard flag
 - `presetIcons.ts` is auto-generated — never edit manually
 

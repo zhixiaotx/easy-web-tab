@@ -51,7 +51,9 @@ easy-web-tab/
 | Icon caching | `src/composables/useIconCache.ts` | localStorage, 30-day expiry |
 | Toast notifications | `src/composables/useToast.ts` | Singleton (module-level shallowRef, not Pinia) |
 | Password management | `src/stores/passwords.ts` | crypto-js AES-CBC encrypted, `useCrypto.ts` for crypto |
-| Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | Countdown timers, 5 sort modes, yearly repeat |
+| Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 3 categories, 5 sort modes |
+| Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` |
+| Reminder engine | `src/composables/useCountdownReminder.ts` | Minute-level tick + daily 9am 3-day summary, singleton popup |
 | Custom icons | `src/stores/icons.ts` | User-uploaded icon storage |
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
@@ -68,12 +70,14 @@ easy-web-tab/
 | `useSearchEnginesStore` | store | `src/stores/searchEngines.ts` | 3 built-in + custom engines |
 | `usePasswordsStore` | store | `src/stores/passwords.ts` | Encrypted password vault |
 | `useIconsStore` | store | `src/stores/icons.ts` | Custom icon uploads |
-| `useCountdownsStore` | store | `src/stores/countdowns.ts` | Countdown CRUD + sort preference |
+| `useCountdownsStore` | store | `src/stores/countdowns.ts` | Countdown CRUD + sort preference (rule-based repeat, IndexedDB) |
 | `useWorkbenchTodosStore` | store | `src/stores/workbenchTodos.ts` | Workbench todo CRUD + filter/search/sort (IndexedDB) |
 | `useWorkbenchNotesStore` | store | `src/stores/workbenchNotes.ts` | Workbench notes CRUD + pin (IndexedDB) |
 | `useToast` | composable | `src/composables/useToast.ts` | Singleton toast state |
 | `getIconUrl` / `getFaviconImgSrc` | functions | `src/composables/useIconCache.ts` | Icon resolution chain |
 | `calcRemaining` / `sortCountdowns` | functions | `src/composables/countdownCore.ts` | Pure countdown math + sorting |
+| `parseRepeat` / `getReminderDue` / `serializeRepeatYaml` | functions | `src/composables/countdownCore.ts` | Repeat rule engine (parse/normalize, due detection, YAML serialization) |
+| `useCountdownReminder` | composable | `src/composables/useCountdownReminder.ts` | Singleton reminder popup engine (60s tick + 9am summary) |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
 | `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab`, 4 stores: todos/notes/countdowns/passwords) |
 
@@ -89,6 +93,7 @@ easy-web-tab/
 - **TypeScript**: Strict + noUnusedLocals + noUnusedParameters
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
 - **IndexedDB persistence**: 工作台数据（待办/便签/倒计时/密码）存浏览器 IndexedDB — DB 名 `easy-web-tab`，4 个 object store（todos/notes/countdowns/passwords），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）
+- **倒计时 repeat 规范**: `once` 规范存 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有入口（loadCountdowns/importCountdowns/addCountdown/updateCountdown/useMarkdown 解析）经 `normalizeCountdown`/`parseRepeat` 归一化，幂等
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
@@ -98,7 +103,7 @@ easy-web-tab/
 - **Only `video` is a permanently built-in category** — others (office, tech, etc.) are legacy seeds users can delete
 - **No built-in seed data** — `public/data/sites.md` was removed from the repo; `loadSites()` still fetches `/data/sites.md` (404 → caught → empty), so data comes solely from localStorage/imports
 - **No ESLint/Prettier** — code quality relies solely on TypeScript strict mode
-- **No test framework** — zero test files, no vitest/jest/cypress
+- **No test framework** — no vitest/jest/cypress; `countdownCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown`), UI 验证走手动/Playwright QA
 - **User data priority**: localStorage data overrides built-in data (same-URL merge in `loadSites()`)
 - **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes
 
@@ -119,6 +124,7 @@ npm install          # Install deps (first time only)
 npm run dev          # Dev server: http://localhost:16718
 npm run build        # generate-preset-icons → vue-tsc -b → vite build (3 sequential steps)
 npm run preview      # Preview production build
+npm run test:countdown  # Pure-function tests for countdownCore.ts (13 assertions, node --experimental-strip-types)
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

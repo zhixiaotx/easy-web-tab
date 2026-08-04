@@ -15,7 +15,7 @@ stores/
 ├── settings.ts           # Dialog size settings contract (useAppSettingsStore, DIALOG_DEFAULTS / DIALOG_LABELS, 216 lines)
 ├── passwords.ts          # crypto-js AES-CBC encrypted password vault (171 lines, IndexedDB store 'passwords')
 ├── icons.ts              # User-uploaded custom icon storage (116 lines)
-├── countdowns.ts         # Countdown CRUD + sort preference (5 modes, yearly repeat; IndexedDB store 'countdowns')
+├── countdowns.ts         # Countdown CRUD + sort preference (5 modes, 6 重复规则对象 + 3 分类; IndexedDB store 'countdowns')
 ├── workbenchTodos.ts     # 工作台待办 CRUD + 筛选/搜索/排序 (131 lines, IndexedDB store 'todos')
 └── workbenchNotes.ts     # 工作台便签 CRUD + 置顶 (88 lines, IndexedDB store 'notes')
 ```
@@ -33,7 +33,7 @@ stores/
 | Theme/background | `theme.ts` | `initTheme()`, `initBackground()`, toggle methods |
 | Password vault | `passwords.ts` | Master-password-gated, uses `useCrypto.ts` for crypto-js AES-CBC + PBKDF2 |
 | Custom icons | `icons.ts` | Merges preset icons with user uploads |
-| Countdown CRUD | `countdowns.ts` | `addCountdown()`, sort modes (remaining/name/created/endTime/manual), yearly repeat |
+| Countdown CRUD | `countdowns.ts` | `addCountdown()`/`updateCountdown()`/`importCountdowns()`/`loadCountdowns()` 入口全部经 `normalizeCountdown` 归一化；6 种 repeat 规则对象 + 3 分类；sort modes (remaining/name/created/endTime/manual) |
 | Dialog size settings | `settings.ts` | `useAppSettingsStore` — per-dialog width/height contract, clamp 400-1600px / 30-100vh |
 | 工作台待办 | `workbenchTodos.ts` | `addTodo()`, `toggleTodo()`, filter/search/sort; 未完成优先 → 优先级 → 截止日期 → 创建时间 |
 | 工作台便签 | `workbenchNotes.ts` | `addNote()`, `togglePin()`, `sortedNotes`; 置顶优先 → updatedAt 降序 |
@@ -45,6 +45,8 @@ stores/
 - Before writing to IndexedDB, pass `toRaw()`-ed plain data — IDB structured clone cannot handle Vue reactive Proxy (DataCloneError)
 - Built-in data (categories, engines) is hardcoded constant arrays, not loaded from files
 - User data loaded at store initialization: `localStorage` for sites/categories/engines/theme/icons; `idbGet` for countdowns/passwords/workbench todos/notes (with one-time non-destructive migration from legacy localStorage keys)
+- **倒计时 repeat 归一化**: `once` 规范为 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有写入/加载入口（loadCountdowns 含 localStorage 迁移、addCountdown、updateCountdown、importCountdowns）都经 `normalizeCountdown`，幂等——IDB 存量旧结构也在加载时归一化
+- **倒计时字段**: `category?: 'work'|'life'|'study'`（缺省按 `'work'` 展示）；`lastRemindedAt?: string`（YYYY-MM-DD HH:mm，提醒引擎写入去重用）
 
 ## ANTI-PATTERNS
 

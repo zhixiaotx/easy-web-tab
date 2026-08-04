@@ -114,7 +114,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
       <div class="stat-card" data-testid="home-stats-countdowns">
         <div class="stat-header">
           <span class="stat-icon">⏳</span>
-          <span class="stat-label">倒计时</span>
+          <span class="stat-label">定时提醒</span>
           <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
         </div>
         <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
@@ -138,7 +138,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
     <div class="panels-grid">
       <section class="panel-card">
         <div class="panel-header">
-          <h3><span class="panel-icon">⏳</span>即将到期倒计时</h3>
+          <h3><span class="panel-icon">⏳</span>即将到期定时提醒</h3>
           <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
         </div>
         <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
@@ -147,7 +147,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
             <span class="home-list-meta" :class="statusClass(item.remaining.status)">{{ item.remaining.label }}</span>
           </li>
         </ul>
-        <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的倒计时</div>
+        <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的定时提醒</div>
       </section>
 
       <section class="panel-card">

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useToast } from '../composables/useToast'
-import { idbExportAll, idbImportAll } from '../composables/useIdb'
-import { useWorkbenchTodosStore } from '../stores/workbenchTodos'
-import { useWorkbenchNotesStore } from '../stores/workbenchNotes'
+import { useToast } from '@/composables/useToast'
+import { idbExportAll, idbImportAll } from '@/composables/useIdb'
+import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
+import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
-import type { WorkbenchData } from '../types'
-import WorkbenchHome from '../components/workbench/WorkbenchHome.vue'
-import WorkbenchTodo from '../components/workbench/WorkbenchTodo.vue'
-import WorkbenchNotes from '../components/workbench/WorkbenchNotes.vue'
-import WorkbenchCountdown from '../components/workbench/WorkbenchCountdown.vue'
-import WorkbenchPassword from '../components/workbench/WorkbenchPassword.vue'
+import type { WorkbenchData } from '@/types'
+import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
+import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
+import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
+import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
+import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 
 const router = useRouter()
 const toast = useToast()

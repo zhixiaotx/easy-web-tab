@@ -36,9 +36,9 @@ function navigateTo(section: string) {
 
 const MENU_ITEMS = [
   { key: 'home', label: '主页', icon: '🏠' },
-  { key: 'todos', label: '待办任务', icon: '☑️' },
-  { key: 'notes', label: '便签', icon: '📝' },
-  { key: 'countdowns', label: '倒计时', icon: '⏳' },
+  { key: 'todos', label: '工作待办', icon: '☑️' },
+  { key: 'notes', label: '个人便签', icon: '📝' },
+  { key: 'countdowns', label: '定时提醒', icon: '⏳' },
   { key: 'passwords', label: '密码管理', icon: '🔑' }
 ] as const
 
@@ -169,7 +169,7 @@ async function handleImportFile(event: Event) {
     <header class="wb-header">
       <div class="wb-header-left">
         <button class="wb-btn" @click="router.back()">← 返回</button>
-        <h1>个人工作台</h1>
+        <h1>工作台</h1>
       </div>
       <div class="wb-header-right">
         <span class="wb-clock" data-testid="wb-clock">{{ clockText }}</span>

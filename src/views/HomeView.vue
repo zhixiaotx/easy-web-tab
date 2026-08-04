@@ -285,6 +285,7 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
+    <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
     <button class="btn-help" @click="openHelp" title="帮助">❓</button>
     <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
       前台
@@ -293,8 +294,7 @@ const handlePageChange = () => {
 
   <!-- 左上角工具栏 -->
   <div class="top-left-toolbar">
-    <button class="btn-help" @click="router.push('/workbench')" title="个人工作台">🧰 个人工作台</button>
-    <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
+    <button class="btn-help" @click="router.push('/workbench')" title="工作台">🧰 工作台</button>
   </div>
 
   <div class="container">

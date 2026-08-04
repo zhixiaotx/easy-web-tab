@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import type { Site } from '../types'
 import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
+import { serializeRepeatYaml } from '../composables/countdownCore'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
 import { usePasswordsStore } from './passwords'
@@ -470,10 +471,13 @@ export const useSitesStore = defineStore('sites', () => {
     const countdownsStore = useCountdownsStore()
     const countdownsSection = countdownsStore.countdowns.length > 0
       ? `countdowns:\n${countdownsStore.countdowns.map(c => {
-          const repeatLine = c.repeat ? `\n    repeat: ${c.repeat}` : ''
+          const repeatBlock = serializeRepeatYaml(c.repeat)
+          const repeatPrefix = repeatBlock ? '\n' : ''
+          const categoryLine = `\n    category: ${c.category ?? 'work'}`
+          const lastRemindedLine = c.lastRemindedAt ? `\n    lastRemindedAt: '${c.lastRemindedAt}'` : ''
           const sortOrderLine = typeof c.sortOrder === 'number' ? `\n    sortOrder: ${c.sortOrder}` : ''
           const showOnDisplayLine = c.showOnDisplay === false ? '\n    showOnDisplay: false' : ''
-          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
         }).join('\n\n')}\n\n`
       : ''
 

@@ -1,5 +1,7 @@
-import type { Site, SitesData, Category, PasswordEntry, Countdown } from '../types'
+import type { Site, SitesData, Category, PasswordEntry, Countdown, CountdownCategory } from '../types'
+import { COUNTDOWN_CATEGORIES } from '../types'
 import type { SearchEngine } from '../stores/searchEngines'
+import { parseRepeat } from './countdownCore'
 import yaml from 'js-yaml'
 
 export function useMarkdown() {
@@ -31,7 +33,9 @@ export function useMarkdown() {
               id: typeof raw?.id === 'string' && raw.id.trim() !== '' ? raw.id : fallbackId,
               name: typeof raw?.name === 'string' ? raw.name : '',
               endDateTime: typeof raw?.endDateTime === 'string' ? raw.endDateTime : '',
-              repeat: raw?.repeat === 'yearly' ? 'yearly' : null,
+              repeat: parseRepeat(raw?.repeat),
+              category: typeof raw?.category === 'string' && (COUNTDOWN_CATEGORIES as readonly string[]).includes(raw.category) ? (raw.category as CountdownCategory) : undefined,
+              lastRemindedAt: typeof raw?.lastRemindedAt === 'string' && raw.lastRemindedAt.trim() !== '' ? raw.lastRemindedAt : undefined,
               createdAt: typeof raw?.createdAt === 'string' && raw.createdAt.trim() !== '' ? raw.createdAt : now,
               updatedAt: typeof raw?.updatedAt === 'string' && raw.updatedAt.trim() !== '' ? raw.updatedAt : now,
               sortOrder: typeof raw?.sortOrder === 'number' ? raw.sortOrder : undefined,

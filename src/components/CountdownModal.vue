@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import type { CountdownItem } from '@/stores/countdowns'
+import { repeatLabel, categoryLabel } from '@/composables/countdownCore'
 
 const emit = defineEmits<{
   close: []
@@ -53,7 +54,8 @@ const items = computed<CountdownItem[]>(() => store.frontCountdowns)
             <div class="countdown-info">
               <div class="countdown-title">
                 <span class="countdown-name">{{ item.name }}</span>
-                <span v-if="item.repeat === 'yearly'" class="repeat-badge">每年重复</span>
+                <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
+                <span class="cat-badge" :class="'cat-' + (item.category ?? 'work')">{{ categoryLabel(item.category) }}</span>
               </div>
               <span class="countdown-time">{{ item.remaining.nextTime }}</span>
             </div>

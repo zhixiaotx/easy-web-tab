@@ -2,6 +2,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import type { CountdownItem, CountdownSortMode } from '@/stores/countdowns'
+import { repeatLabel, categoryLabel } from '@/composables/countdownCore'
+import type { CountdownRepeat, CountdownCategory } from '@/types'
+import { COUNTDOWN_CATEGORIES } from '@/types'
 
 const emit = defineEmits<{
   close: []
@@ -62,14 +65,58 @@ const editingId = ref<string | null>(null)
 const formName = ref('')
 const formDate = ref('')
 const formTime = ref('')
-const formRepeat = ref(false)
+const formCategory = ref<CountdownCategory>('work')
+const formRepeatType = ref<'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'interval'>('once')
+const formWeekDays = ref<number[]>([])
+const formDayOfMonth = ref(1)
+const formIntervalMinutes = ref(45)
+
+const repeatTypeOptions: {
+  value: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'interval'
+  label: string
+}[] = [
+  { value: 'once', label: '一次性' },
+  { value: 'daily', label: '每天' },
+  { value: 'weekly', label: '每周' },
+  { value: 'monthly', label: '每月' },
+  { value: 'yearly', label: '每年' },
+  { value: 'interval', label: '每隔 N 分钟' }
+]
+
+const weekDayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+// 根据当前规则类型构造 CountdownRepeat；'once' 规范存 null
+function buildRepeat(): CountdownRepeat | null {
+  switch (formRepeatType.value) {
+    case 'once':
+      return null
+    case 'daily':
+      return { type: 'daily' }
+    case 'weekly':
+      return { type: 'weekly', daysOfWeek: [...formWeekDays.value].sort((a, b) => a - b) }
+    case 'monthly':
+      return { type: 'monthly', dayOfMonth: formDayOfMonth.value }
+    case 'yearly':
+      return { type: 'yearly' }
+    case 'interval':
+      return { type: 'interval', intervalMinutes: formIntervalMinutes.value }
+  }
+}
+
+function resetRepeatForm() {
+  formRepeatType.value = 'once'
+  formWeekDays.value = []
+  formDayOfMonth.value = 1
+  formIntervalMinutes.value = 45
+}
 
 function startAdd() {
   editingId.value = null
   formName.value = ''
   formDate.value = ''
   formTime.value = ''
-  formRepeat.value = false
+  formCategory.value = 'work'
+  resetRepeatForm()
   showForm.value = true
 }
 
@@ -79,7 +126,40 @@ function startEdit(item: CountdownItem) {
   const [date, time] = item.endDateTime.split('T')
   formDate.value = date ?? ''
   formTime.value = time ?? ''
-  formRepeat.value = item.repeat === 'yearly'
+  formCategory.value = item.category ?? 'work'
+
+  resetRepeatForm()
+  const rep = item.repeat as CountdownRepeat | string | null | undefined
+  if (rep === null || rep === undefined || rep === 'once') {
+    formRepeatType.value = 'once'
+  } else if (typeof rep === 'string') {
+    // 旧数据遗留的字符串 'yearly'
+    formRepeatType.value = 'yearly'
+  } else {
+    switch (rep.type) {
+      case 'once':
+        formRepeatType.value = 'once'
+        break
+      case 'daily':
+        formRepeatType.value = 'daily'
+        break
+      case 'weekly':
+        formRepeatType.value = 'weekly'
+        formWeekDays.value = [...rep.daysOfWeek]
+        break
+      case 'monthly':
+        formRepeatType.value = 'monthly'
+        formDayOfMonth.value = rep.dayOfMonth
+        break
+      case 'yearly':
+        formRepeatType.value = 'yearly'
+        break
+      case 'interval':
+        formRepeatType.value = 'interval'
+        formIntervalMinutes.value = rep.intervalMinutes
+        break
+    }
+  }
   showForm.value = true
 }
 
@@ -88,7 +168,8 @@ function resetForm() {
   formName.value = ''
   formDate.value = ''
   formTime.value = ''
-  formRepeat.value = false
+  formCategory.value = 'work'
+  resetRepeatForm()
   showForm.value = false
 }
 
@@ -98,15 +179,16 @@ function cancelForm() {
 
 async function handleSave() {
   const name = formName.value.trim()
-  if (!name || !formDate.value) return
+  if (!isFormValid.value) return
 
   const endDateTime = `${formDate.value}T${formTime.value || '00:00'}`
-  const repeat = formRepeat.value ? 'yearly' : null
+  const repeat = buildRepeat()
+  const category = formCategory.value
 
   if (editingId.value) {
-    await store.updateCountdown(editingId.value, { name, endDateTime, repeat })
+    await store.updateCountdown(editingId.value, { name, endDateTime, repeat, category })
   } else {
-    await store.addCountdown({ name, endDateTime, repeat })
+    await store.addCountdown({ name, endDateTime, repeat, category })
   }
   resetForm()
 }
@@ -117,12 +199,27 @@ async function handleDelete(id: string) {
   }
 }
 
+// 表单校验：名称/日期必填，叠加规则面板约束
+const isFormValid = computed(() => {
+  if (!formName.value.trim() || !formDate.value) return false
+  switch (formRepeatType.value) {
+    case 'weekly':
+      return formWeekDays.value.length > 0
+    case 'monthly':
+      return formDayOfMonth.value >= 1 && formDayOfMonth.value <= 31
+    case 'interval':
+      return formIntervalMinutes.value >= 1
+    default:
+      return true
+  }
+})
+
 // 表单实时预览（日期未填时不显示）
 const previewRemaining = computed(() => {
   if (!formDate.value) return null
   return calcRemaining(
     `${formDate.value}T${formTime.value || '00:00'}`,
-    formRepeat.value ? 'yearly' : null
+    buildRepeat()
   )
 })
 </script>
@@ -197,10 +294,66 @@ const previewRemaining = computed(() => {
           </div>
 
           <div class="form-group">
-            <label class="checkbox-label">
-              <input v-model="formRepeat" type="checkbox" />
-              <span>每年重复（生日等每年循环的日期）</span>
-            </label>
+            <label>分类</label>
+            <select v-model="formCategory" class="form-input" data-testid="cm-category">
+              <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>重复</label>
+            <select v-model="formRepeatType" class="form-input" data-testid="cm-repeat-type">
+              <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+
+          <div v-if="formRepeatType === 'weekly'" class="form-group">
+            <label>每周重复（至少选择一天）</label>
+            <div class="weekday-grid">
+              <label
+                v-for="(label, i) in weekDayLabels"
+                :key="i + 1"
+                class="weekday-check"
+                :class="{ active: formWeekDays.includes(i + 1) }"
+              >
+                <input
+                  v-model="formWeekDays"
+                  type="checkbox"
+                  :value="i + 1"
+                  :data-testid="'cm-week-' + (i + 1)"
+                />
+                <span>{{ label }}</span>
+              </label>
+            </div>
+            <button
+              type="button"
+              class="workdays-btn"
+              data-testid="cm-workdays-btn"
+              @click="formWeekDays = [1, 2, 3, 4, 5]"
+            >工作日（周一~五）</button>
+          </div>
+
+          <div v-if="formRepeatType === 'monthly'" class="form-group">
+            <label>每月几号</label>
+            <input
+              v-model.number="formDayOfMonth"
+              type="number"
+              min="1"
+              max="31"
+              class="form-input"
+              data-testid="cm-month-day"
+            />
+          </div>
+
+          <div v-if="formRepeatType === 'interval'" class="form-group">
+            <label>间隔（分钟）</label>
+            <input
+              v-model.number="formIntervalMinutes"
+              type="number"
+              min="1"
+              class="form-input"
+              data-testid="cm-interval-min"
+            />
           </div>
 
           <!-- 实时预览 -->
@@ -217,7 +370,7 @@ const previewRemaining = computed(() => {
             <button
               class="btn-save"
               @click="handleSave"
-              :disabled="!formName.trim() || !formDate"
+              :disabled="!isFormValid"
             >
               {{ editingId ? '保存' : '添加' }}
             </button>
@@ -238,7 +391,8 @@ const previewRemaining = computed(() => {
             <div class="countdown-info">
               <div class="countdown-title">
                 <span class="countdown-name">{{ item.name }}</span>
-                <span v-if="item.repeat === 'yearly'" class="repeat-badge">每年重复</span>
+                <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
+                <span class="cat-badge" :class="'cat-' + (item.category ?? 'work')">{{ categoryLabel(item.category) }}</span>
               </div>
               <span class="countdown-time">{{ item.remaining.nextTime }}</span>
             </div>
@@ -519,21 +673,55 @@ const previewRemaining = computed(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-.checkbox-label {
+/* 重复规则面板 */
+.weekday-grid {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
-  margin-bottom: 0;
+  margin-bottom: 8px;
 }
 
-.checkbox-label input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
+.weekday-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.weekday-check input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
   cursor: pointer;
   accent-color: var(--accent-color, var(--color-primary));
+}
+
+.weekday-check.active {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.workdays-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px dashed var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.workdays-btn:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 /* 实时预览 */
@@ -677,6 +865,51 @@ const previewRemaining = computed(() => {
   color: var(--accent-color, var(--color-primary));
   border: 1px solid var(--accent-color, var(--color-primary));
   opacity: 0.85;
+}
+
+.cat-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  opacity: 0.9;
+}
+
+.cat-work {
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.cat-life {
+  color: var(--success-color, #10b981);
+  border-color: var(--success-color, #10b981);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.cat-study {
+  color: #a855f7;
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.dark .cat-work {
+  color: #93c5fd;
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.dark .cat-life {
+  color: #6ee7b7;
+  border-color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.dark .cat-study {
+  color: #d8b4fe;
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.2);
 }
 
 .countdown-time {

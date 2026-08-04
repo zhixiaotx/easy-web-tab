@@ -11,7 +11,7 @@ const { state, close } = useCountdownReminder()
       <ul class="reminder-list">
         <li v-for="item in state.items" :key="item.id" class="reminder-item">
           <span class="reminder-name">{{ item.name }}</span>
-          <span class="reminder-label">{{ item.label }}</span>
+          <span class="reminder-label"><template v-if="/^\d{2}-\d{2} \d{2}:\d{2}$/.test(item.label)">⏰ </template>{{ item.label }}</span>
         </li>
       </ul>
       <button class="reminder-close" @click="close">关闭</button>

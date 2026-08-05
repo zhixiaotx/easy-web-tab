@@ -143,7 +143,7 @@ export interface WorkbenchNote {
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 1
+export const WORKBENCH_DATA_VERSION = 2
 
 export interface WorkbenchData {
   version: number
@@ -152,4 +152,130 @@ export interface WorkbenchData {
   notes: WorkbenchNote[]
   countdowns: Countdown[]
   passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
+  health: HealthData
+  ledger: LedgerData
+}
+
+// ==================== 健康管理 ====================
+
+export type HealthModule = 'exercise' | 'diet' | 'sleep' | 'weight'
+
+export const EXERCISE_TYPES = ['跑步', '游泳', '力量', '骑行', '瑜伽', '其他'] as const
+
+export const MEAL_TYPES = ['早餐', '午餐', '晚餐', '加餐'] as const
+
+export type MealType = (typeof MEAL_TYPES)[number]
+
+export type HealthPlanMetric = 'times' | 'minutes' | 'calories' | 'duration'
+
+export type HealthPlanPeriod = 'daily' | 'weekly'
+
+export interface HealthPlan {
+  module: 'exercise' | 'diet' | 'sleep'
+  metric: HealthPlanMetric
+  period: HealthPlanPeriod
+  target: number
+  updatedAt: string
+}
+
+export interface ExerciseRecord {
+  id: string
+  module: 'exercise'
+  date: string
+  exerciseType: string
+  duration: number
+  calories: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DietRecord {
+  id: string
+  module: 'diet'
+  date: string
+  mealType: MealType
+  content: string
+  calories: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SleepRecord {
+  id: string
+  module: 'sleep'
+  date: string
+  sleepTime: string
+  wakeTime: string
+  durationHours: number
+  quality: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WeightRecord {
+  id: string
+  module: 'weight'
+  date: string
+  weightKg: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type HealthRecord = ExerciseRecord | DietRecord | SleepRecord | WeightRecord
+
+export interface HealthPlans {
+  exercise?: HealthPlan
+  diet?: HealthPlan
+  sleep?: HealthPlan
+}
+
+export interface HealthData {
+  height?: number
+  plans: HealthPlans
+  records: {
+    exercise: ExerciseRecord[]
+    diet: DietRecord[]
+    sleep: SleepRecord[]
+    weight: WeightRecord[]
+  }
+}
+
+// ==================== 记账本 ====================
+
+export interface LedgerCategory {
+  id: string
+  name: string
+  type: 'income' | 'expense'
+  isBuiltIn: boolean
+}
+
+// 预定义记账分类（不可删除）
+export const DEFAULT_LEDGER_CATEGORIES: LedgerCategory[] = [
+  { id: 'salary', name: '工资', type: 'income', isBuiltIn: true },
+  { id: 'mortgage', name: '房贷', type: 'expense', isBuiltIn: true },
+  { id: 'carloan', name: '车贷', type: 'expense', isBuiltIn: true },
+  { id: 'breakfast', name: '早餐', type: 'expense', isBuiltIn: true },
+  { id: 'lunch', name: '午餐', type: 'expense', isBuiltIn: true },
+  { id: 'dinner', name: '晚餐', type: 'expense', isBuiltIn: true },
+  { id: 'commute', name: '通勤', type: 'expense', isBuiltIn: true },
+  { id: 'daily', name: '日常', type: 'expense', isBuiltIn: true }
+]
+
+export interface LedgerEntry {
+  id: string
+  date: string
+  categoryId: string
+  amount: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LedgerData {
+  categories: LedgerCategory[]
+  entries: LedgerEntry[]
 }

@@ -1,19 +1,52 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useCountdownsStore } from '@/stores/countdowns'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import type { CountdownItem, CountdownRemaining, CountdownSortMode } from '@/stores/countdowns'
-import { repeatLabel, categoryLabel } from '@/composables/countdownCore'
+import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/countdownCore'
+import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
-import { COUNTDOWN_CATEGORIES } from '@/types'
+import { COUNTDOWN_CATEGORIES, COUNTDOWN_COLOR_PRESETS, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 
 const store = useCountdownsStore()
 
-// ===== 表单状态机（新增/编辑共用）=====
+// ===== 查询/筛选（查询按钮生效，重置恢复全量）=====
+const searchName = ref('')
+const searchCategory = ref<'' | CountdownCategory>('')
+const searchRepeat = ref<'' | CountdownRepeatType>('')
+const appliedFilters = ref<CountdownFilterCriteria>({})
+
+const hasActiveFilter = computed(() =>
+  (appliedFilters.value.name ?? '').trim() !== '' ||
+  Boolean(appliedFilters.value.category) ||
+  Boolean(appliedFilters.value.repeat)
+)
+
+function applySearch(): void {
+  appliedFilters.value = {
+    name: searchName.value,
+    category: searchCategory.value,
+    repeat: searchRepeat.value
+  }
+}
+
+function resetSearch(): void {
+  searchName.value = ''
+  searchCategory.value = ''
+  searchRepeat.value = ''
+  appliedFilters.value = {}
+}
+
+// 列表渲染用筛选后的数据；排序/手动移动基于 filteredItems 的位置
+const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, appliedFilters.value))
+
+// ===== 表单状态机（新增/编辑共用，弹框承载）=====
+const showDialog = ref(false)
 const editingId = ref<string | null>(null)
 const formName = ref('')
 const formDate = ref('')
 const formTime = ref('')
 const formCategory = ref<CountdownCategory>('work')
+const formColor = ref(DEFAULT_COUNTDOWN_COLOR)
 const formRepeatType = ref<'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'interval'>('once')
 const formWeekDays = ref<number[]>([])
 const formDayOfMonth = ref(1)
@@ -79,7 +112,9 @@ function startAdd(): void {
   formDate.value = ''
   formTime.value = ''
   formCategory.value = 'work'
+  formColor.value = DEFAULT_COUNTDOWN_COLOR
   resetRepeatForm()
+  showDialog.value = true
 }
 
 function startEdit(item: CountdownItem): void {
@@ -90,6 +125,7 @@ function startEdit(item: CountdownItem): void {
   formDate.value = date ?? ''
   formTime.value = time ?? ''
   formCategory.value = item.category ?? 'work'
+  formColor.value = item.color ?? DEFAULT_COUNTDOWN_COLOR
 
   // 反向映射重复规则：null/absent/'once' → once；旧字符串 'yearly' → yearly；对象 → 类型 + 参数
   resetRepeatForm()
@@ -123,10 +159,12 @@ function startEdit(item: CountdownItem): void {
         break
     }
   }
+  showDialog.value = true
 }
 
 function cancelForm(): void {
-  startAdd()
+  showDialog.value = false
+  editingId.value = null
 }
 
 async function handleSave(): Promise<void> {
@@ -135,10 +173,11 @@ async function handleSave(): Promise<void> {
   const endDateTime = `${formDate.value}T${formTime.value}`
   const repeat = buildRepeat()
   const category = formCategory.value
+  const color = formColor.value
   if (editingId.value) {
-    await store.updateCountdown(editingId.value, { name, endDateTime, repeat, category })
+    await store.updateCountdown(editingId.value, { name, endDateTime, repeat, category, color })
   } else {
-    await store.addCountdown({ name, endDateTime, repeat, category })
+    await store.addCountdown({ name, endDateTime, repeat, category, color })
   }
   cancelForm()
 }
@@ -148,6 +187,15 @@ async function handleDelete(id: string): Promise<void> {
     await store.deleteCountdown(id)
   }
 }
+
+// 表单实时预览（日期未填时不显示）
+const previewRemaining = computed(() => {
+  if (!formDate.value) return null
+  return calcRemaining(
+    `${formDate.value}T${formTime.value || '00:00'}`,
+    buildRepeat()
+  )
+})
 
 // ===== 排序控件 =====
 const SORT_MODES: { value: CountdownSortMode; label: string }[] = [
@@ -164,14 +212,14 @@ function onSortChange(event: Event): void {
   store.setSort((event.target as HTMLSelectElement).value as CountdownSortMode)
 }
 
-// manual 模式边界：按 itemsWithRemaining 位置判断，首行 ▲ 禁用、末行 ▼ 禁用
+// manual 模式边界：按 filteredItems 位置判断，首行 ▲ 禁用、末行 ▼ 禁用
 function canMoveUp(id: string): boolean {
-  return store.itemsWithRemaining.findIndex(i => i.id === id) > 0
+  return filteredItems.value.findIndex(i => i.id === id) > 0
 }
 
 function canMoveDown(id: string): boolean {
-  const idx = store.itemsWithRemaining.findIndex(i => i.id === id)
-  return idx >= 0 && idx < store.itemsWithRemaining.length - 1
+  const idx = filteredItems.value.findIndex(i => i.id === id)
+  return idx >= 0 && idx < filteredItems.value.length - 1
 }
 
 // 剩余时间状态 → 样式类（normal/urgent/critical/expired）
@@ -179,115 +227,60 @@ function statusClass(status: CountdownRemaining['status']): string {
   return `status-${status}`
 }
 
+// ESC 关闭编辑弹框
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && showDialog.value) {
+    event.preventDefault()
+    cancelForm()
+  }
+}
+
 // 面板自管理数据加载（WorkbenchView 已加载，这里防御性重载，数据与 IDB 同步）
 onMounted(async () => {
   await store.loadCountdowns()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
 <template>
   <div class="wb-countdown">
-    <!-- 新增/编辑共用表单 -->
-    <form class="cd-form" @submit.prevent="handleSave">
-      <div class="form-row">
-        <input
-          v-model="formName"
-          type="text"
-          class="form-input name-input"
-          data-testid="cd-name-input"
-          :placeholder="editingId ? '编辑倒计时名称…' : '添加倒计时名称…'"
-        />
-        <input
-          v-model="formDate"
-          type="date"
-          class="form-input date-input"
-          data-testid="cd-date-input"
-        />
-        <input
-          v-model="formTime"
-          type="time"
-          class="form-input time-input"
-          data-testid="cd-time-input"
-        />
-      </div>
-      <div class="form-row">
-        <select v-model="formCategory" class="form-input cat-select" data-testid="cd-category">
-          <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
-        </select>
-        <select v-model="formRepeatType" class="form-input repeat-select" data-testid="cd-repeat-type">
-          <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-        </select>
-        <div v-if="formRepeatType === 'weekly'" class="weekday-grid">
-          <label
-            v-for="(label, i) in weekDayLabels"
-            :key="i + 1"
-            class="weekday-check"
-            :class="{ active: formWeekDays.includes(i + 1) }"
-          >
-            <input
-              v-model="formWeekDays"
-              type="checkbox"
-              :value="i + 1"
-              :data-testid="'cd-week-' + (i + 1)"
-            />
-            <span>{{ label }}</span>
-          </label>
-          <button
-            type="button"
-            class="workdays-btn"
-            data-testid="cd-workdays-btn"
-            @click="formWeekDays = [1, 2, 3, 4, 5]"
-          >工作日（周一~五）</button>
-        </div>
-        <div v-if="formRepeatType === 'monthly'" class="rule-panel">
-          <label class="panel-label">每月</label>
-          <input
-            v-model.number="formDayOfMonth"
-            type="number"
-            min="1"
-            max="31"
-            class="form-input month-day-input"
-            data-testid="cd-month-day"
-          />
-          <label class="panel-label">日</label>
-        </div>
-        <div v-if="formRepeatType === 'interval'" class="rule-panel">
-          <label class="panel-label">每隔</label>
-          <input
-            v-model.number="formIntervalMinutes"
-            type="number"
-            min="1"
-            class="form-input interval-min-input"
-            data-testid="cd-interval-min"
-          />
-          <label class="panel-label">分钟</label>
-        </div>
-      </div>
-      <div class="form-row form-row-bottom">
-        <div class="form-actions">
-          <button
-            v-if="editingId"
-            type="button"
-            class="btn-cancel"
-            data-testid="cd-cancel-button"
-            @click="cancelForm"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            class="btn-save"
-            :disabled="!isFormValid"
-            data-testid="cd-save-button"
-          >
-            {{ editingId ? '保存' : '添加' }}
-          </button>
-        </div>
-      </div>
-    </form>
+    <!-- 查询区（位于新增按钮上方） -->
+    <div class="cd-search">
+      <input
+        v-model="searchName"
+        type="text"
+        class="form-input search-name"
+        placeholder="按名称查询…"
+        data-testid="cd-search-name"
+        @keyup.enter="applySearch"
+      />
+      <select v-model="searchCategory" class="form-input search-select" data-testid="cd-search-category">
+        <option value="">全部分类</option>
+        <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
+      </select>
+      <select v-model="searchRepeat" class="form-input search-select" data-testid="cd-search-repeat">
+        <option value="">全部重复</option>
+        <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+      <button class="search-btn" data-testid="cd-search-btn" @click="applySearch">查询</button>
+      <button class="search-reset-btn" data-testid="cd-search-reset" @click="resetSearch">重置</button>
+    </div>
+
+    <!-- 操作栏：数量 + 新增 -->
+    <div class="cd-headbar">
+      <span class="toolbar-count" data-testid="cd-toolbar-count">
+        <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
+        <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
+      </span>
+      <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
+    </div>
 
     <!-- 排序控件 -->
-    <div class="cd-toolbar">
+    <div class="cd-sortbar">
       <select
         class="form-input sort-select"
         data-testid="cd-sort-select"
@@ -307,47 +300,54 @@ onMounted(async () => {
       <span v-if="isManual" class="sort-hint">点击 ▲▼ 箭头调整顺序</span>
     </div>
 
-    <!-- 列表 -->
-    <div v-if="store.itemsWithRemaining.length === 0" class="empty-state" data-testid="cd-empty">
-      暂无倒计时
+    <!-- 空态 / 卡片墙 -->
+    <div v-if="store.itemsWithRemaining.length === 0" class="empty-state empty-invite" data-testid="cd-empty" @click="startAdd">
+      ＋ 新增第一个提醒
     </div>
 
-    <div v-else class="cd-list">
+    <div v-else-if="filteredItems.length === 0" class="empty-state filter-empty" data-testid="cd-filter-empty">
+      <span>没有符合查询条件的提醒</span>
+      <button class="btn-cancel" @click="resetSearch">重置查询</button>
+    </div>
+
+    <div v-else class="cd-grid">
       <div
-        v-for="item in store.itemsWithRemaining"
+        v-for="item in filteredItems"
         :key="item.id"
-        class="cd-item"
+        class="cd-card"
         data-testid="cd-item"
+        :style="{ '--cd-color': item.color ?? DEFAULT_COUNTDOWN_COLOR }"
+        role="button"
+        tabindex="0"
+        @click="startEdit(item)"
+        @keyup.enter="startEdit(item)"
       >
-        <div class="cd-info">
+        <div class="cd-card-head">
           <div class="cd-title">
             <span class="cd-name">{{ item.name }}</span>
             <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
-            <span class="cat-badge" :class="'cat-' + (item.category ?? 'work')">{{ categoryLabel(item.category) }}</span>
           </div>
-          <span class="cd-time">{{ item.remaining.nextTime }}</span>
+          <span class="cat-badge" :class="'cat-' + (item.category ?? 'work')">{{ categoryLabel(item.category) }}</span>
         </div>
 
-        <label
-          class="front-toggle"
-          :title="item.showOnDisplay === false ? '前台隐藏' : '前台显示'"
-        >
-          <input
-            type="checkbox"
-            :checked="item.showOnDisplay !== false"
-            @change="store.setShowOnDisplay(item.id, ($event.target as HTMLInputElement).checked)"
-          />
-          <span>前台显示</span>
-        </label>
+        <div class="cd-remaining" :class="statusClass(item.remaining.status)">
+          <span class="cd-remaining-label">{{ item.remaining.isExpired ? '已过期' : '剩余' }}</span>
+          <span class="cd-remaining-value">{{ item.remaining.label }}</span>
+        </div>
 
-        <span
-          class="cd-remaining"
-          :class="statusClass(item.remaining.status)"
-        >
-          {{ item.remaining.label }}
-        </span>
+        <div class="cd-meta">
+          <span class="cd-time">{{ item.remaining.nextTime }}</span>
+          <label class="front-toggle" :title="item.showOnDisplay === false ? '前台隐藏' : '前台显示'" @click.stop>
+            <input
+              type="checkbox"
+              :checked="item.showOnDisplay !== false"
+              @change="store.setShowOnDisplay(item.id, ($event.target as HTMLInputElement).checked)"
+            />
+            <span>前台显示</span>
+          </label>
+        </div>
 
-        <div class="cd-actions">
+        <div class="cd-actions" @click.stop>
           <div v-if="isManual" class="move-btns">
             <button
               class="btn-move"
@@ -367,6 +367,137 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- 新增/编辑弹框 -->
+    <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
+      <div class="dialog" data-testid="cd-dialog">
+        <div class="dialog-header">
+          <h3>{{ editingId ? '编辑倒计时' : '新增倒计时' }}</h3>
+          <button class="close-btn" @click="cancelForm">✕</button>
+        </div>
+        <form class="dialog-body" @submit.prevent="handleSave">
+          <div class="form-group">
+            <label>名称 *</label>
+            <input
+              v-model="formName"
+              type="text"
+              class="form-input"
+              placeholder="例如：期末考试"
+              data-testid="cd-name-input"
+            />
+          </div>
+
+          <div class="form-row-fields">
+            <div class="field">
+              <label class="field-label">日期 *</label>
+              <input v-model="formDate" type="date" class="form-input field-date" data-testid="cd-date-input" />
+            </div>
+            <div class="field">
+              <label class="field-label">时间 *</label>
+              <input v-model="formTime" type="time" class="form-input field-time" data-testid="cd-time-input" />
+            </div>
+            <div class="field">
+              <label class="field-label">分类</label>
+              <select v-model="formCategory" class="form-input field-cat" data-testid="cd-category">
+                <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>重复</label>
+            <select v-model="formRepeatType" class="form-input" data-testid="cd-repeat-type">
+              <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+            <div v-if="formRepeatType === 'weekly'" class="weekday-grid">
+              <label
+                v-for="(label, i) in weekDayLabels"
+                :key="i + 1"
+                class="weekday-check"
+                :class="{ active: formWeekDays.includes(i + 1) }"
+              >
+                <input
+                  v-model="formWeekDays"
+                  type="checkbox"
+                  :value="i + 1"
+                  :data-testid="'cd-week-' + (i + 1)"
+                />
+                <span>{{ label }}</span>
+              </label>
+              <button
+                type="button"
+                class="workdays-btn"
+                data-testid="cd-workdays-btn"
+                @click="formWeekDays = [1, 2, 3, 4, 5]"
+              >工作日（周一~五）</button>
+            </div>
+            <div v-if="formRepeatType === 'monthly'" class="rule-panel">
+              <label class="panel-label">每月</label>
+              <input
+                v-model.number="formDayOfMonth"
+                type="number"
+                min="1"
+                max="31"
+                class="form-input month-day-input"
+                data-testid="cd-month-day"
+              />
+              <label class="panel-label">日</label>
+            </div>
+            <div v-if="formRepeatType === 'interval'" class="rule-panel">
+              <label class="panel-label">每隔</label>
+              <input
+                v-model.number="formIntervalMinutes"
+                type="number"
+                min="1"
+                class="form-input interval-min-input"
+                data-testid="cd-interval-min"
+              />
+              <label class="panel-label">分钟</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>卡片颜色</label>
+            <div class="color-picker">
+              <button
+                v-for="(color, i) in COUNTDOWN_COLOR_PRESETS"
+                :key="color"
+                type="button"
+                class="color-option"
+                :class="{ active: formColor.toLowerCase() === color }"
+                :style="{ '--swatch': color }"
+                :data-testid="'cd-color-preset-' + (i + 1)"
+                :title="color"
+                @click="formColor = color"
+              ></button>
+              <label class="color-custom" title="自定义颜色">
+                <input v-model="formColor" type="color" class="color-input" data-testid="cd-color-input" />
+                <span class="color-custom-value">{{ formColor }}</span>
+              </label>
+              <button type="button" class="color-reset" @click="formColor = DEFAULT_COUNTDOWN_COLOR">恢复默认</button>
+            </div>
+          </div>
+
+          <!-- 实时预览 -->
+          <div v-if="previewRemaining" class="preview-row">
+            <span class="preview-label">实时预览：</span>
+            <span class="preview-value" :class="statusClass(previewRemaining.status)">
+              {{ previewRemaining.label }}
+            </span>
+            <span class="preview-time">{{ previewRemaining.nextTime }}</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" data-testid="cd-cancel-button" @click="cancelForm">
+              取消
+            </button>
+            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="cd-save-button">
+              {{ editingId ? '保存' : '添加' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -378,25 +509,485 @@ onMounted(async () => {
   gap: 16px;
 }
 
-/* ===== 表单 ===== */
-.cd-form {
+/* ===== 查询区 ===== */
+.cd-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
-  padding: 14px;
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.form-row {
+.search-name {
+  flex: 1;
+  min-width: 140px;
+}
+
+.search-select {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.search-btn {
+  padding: 9px 16px;
+  background: var(--accent-color, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.search-btn:hover {
+  background: var(--accent-hover, var(--color-primary-hover));
+}
+
+.search-reset-btn {
+  padding: 9px 14px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.search-reset-btn:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 操作栏 ===== */
+.cd-headbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-count {
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.btn-add {
+  padding: 10px 16px;
+  background-color: var(--accent-color, var(--color-primary));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.btn-add:hover {
+  background-color: var(--accent-hover, var(--color-primary-hover));
+}
+
+/* ===== 排序栏 ===== */
+.cd-sortbar {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.form-row-bottom {
-  margin-top: 10px;
-  justify-content: flex-end;
+.sort-select {
+  width: 150px;
+}
+
+.sort-dir-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.sort-dir-btn:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.sort-hint {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+/* ===== 卡片墙 ===== */
+.cd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.cd-card {
+  --cd-color: #3b82f6;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  background-color: var(--bg-card, var(--color-bg-card));
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--cd-color) 8%, transparent), transparent 55%);
+  border: 1px solid var(--border-color, var(--color-border));
+  border-left: 4px solid var(--cd-color);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+  cursor: pointer;
+  transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease),
+    border-color var(--transition-fast, 0.15s ease);
+}
+
+.cd-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
+  border-color: color-mix(in srgb, var(--cd-color) 45%, var(--border-color, #e2e8f0));
+}
+
+.cd-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cd-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cd-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repeat-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--accent-color, var(--color-primary));
+  border: 1px solid var(--accent-color, var(--color-primary));
+  opacity: 0.85;
+}
+
+/* 分类徽章：工作=蓝 / 生活=绿 / 学习=紫 */
+.cat-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 999px);
+  opacity: 0.85;
+}
+
+.cat-work {
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.cat-life {
+  color: #22c55e;
+  border: 1px solid #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.cat-study {
+  color: #a855f7;
+  border: 1px solid #a855f7;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+/* 剩余时间主角（状态色） */
+.cd-remaining {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.cd-remaining-label {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.65;
+}
+
+.cd-remaining-value {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+/* 剩余时间状态色 */
+.status-normal {
+  color: var(--success-color, var(--color-success));
+}
+
+.status-urgent {
+  color: var(--warning-color, var(--color-warning));
+}
+
+.status-critical {
+  color: var(--error-color, var(--color-error));
+}
+
+.status-expired {
+  color: var(--text-muted, var(--color-text-muted));
+  font-weight: 500;
+}
+
+.cd-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cd-time {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
+}
+
+.front-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.front-toggle input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 卡片操作 ===== */
+.cd-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.move-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-move {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 11px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  line-height: 1;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-move:hover:not(:disabled) {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.btn-move:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-edit,
+.btn-delete {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-edit:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.btn-delete:hover {
+  color: var(--error-color, var(--color-error));
+  border-color: var(--error-color, var(--color-error));
+}
+
+/* ===== 空态 ===== */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted, var(--color-text-muted));
+  font-size: 14px;
+  padding: 40px 20px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+}
+
+.empty-invite {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, var(--color-text-secondary));
+  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+}
+
+.empty-invite:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.filter-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ===== 表单（新增/编辑弹框）===== */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.dialog {
+  background-color: var(--bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 12px);
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+  position: sticky;
+  top: 0;
+  background: var(--bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+}
+
+.dialog-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 6px);
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+.close-btn:hover {
+  color: var(--text-primary, var(--color-text));
+}
+
+.dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group > label {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.form-row-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.field-date {
+  width: 160px;
+}
+
+.field-time {
+  width: 120px;
+}
+
+.field-cat {
+  width: 110px;
 }
 
 .form-input {
@@ -413,31 +1004,6 @@ onMounted(async () => {
 .form-input:focus {
   outline: none;
   border-color: var(--accent-color, var(--color-primary));
-}
-
-.name-input {
-  flex: 1;
-  min-width: 140px;
-}
-
-.date-input {
-  width: 150px;
-  flex-shrink: 0;
-}
-
-.time-input {
-  width: 120px;
-  flex-shrink: 0;
-}
-
-.cat-select {
-  width: 110px;
-  flex-shrink: 0;
-}
-
-.repeat-select {
-  width: 130px;
-  flex-shrink: 0;
 }
 
 /* 每周重复选项 */
@@ -515,10 +1081,102 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+/* 颜色选择器 */
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.color-option {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.color-option:hover {
+  transform: scale(1.15);
+}
+
+.color-option.active {
+  box-shadow: 0 0 0 2px var(--bg-card, #ffffff), 0 0 0 4px var(--swatch);
+}
+
+.color-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-input {
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  background: none;
+  cursor: pointer;
+}
+
+.color-custom-value {
+  font-size: 12px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.color-reset {
+  padding: 5px 10px;
+  font-size: 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-full, 999px);
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.color-reset:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* 实时预览 */
+.preview-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: var(--radius-md, 8px);
+  flex-wrap: wrap;
+}
+
+.preview-label {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.preview-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-time {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
 .form-actions {
   display: flex;
   gap: 8px;
-  flex-shrink: 0;
+  justify-content: flex-end;
 }
 
 .btn-save {
@@ -558,253 +1216,26 @@ onMounted(async () => {
   background: var(--hover-bg, var(--color-bg-active));
 }
 
-/* ===== 工具栏 ===== */
-.cd-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.sort-select {
-  width: 150px;
-}
-
-.sort-dir-btn {
-  padding: 8px 14px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.sort-dir-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.sort-hint {
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-}
-
-/* ===== 列表 ===== */
-.cd-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cd-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.cd-item:hover {
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.cd-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.cd-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.cd-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.repeat-badge {
-  flex-shrink: 0;
-  font-size: 12px;
-  padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  color: var(--accent-color, var(--color-primary));
-  border: 1px solid var(--accent-color, var(--color-primary));
-  opacity: 0.85;
-}
-
-/* 分类徽章：工作=蓝 / 生活=绿 / 学习=紫 */
-.cat-badge {
-  flex-shrink: 0;
-  font-size: 12px;
-  padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
-  opacity: 0.85;
-}
-
-.cat-work {
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
-  background: rgba(59, 130, 246, 0.12);
-}
-
-.cat-life {
-  color: #22c55e;
-  border: 1px solid #22c55e;
-  background: rgba(34, 197, 94, 0.12);
-}
-
-.cat-study {
-  color: #a855f7;
-  border: 1px solid #a855f7;
-  background: rgba(168, 85, 247, 0.12);
-}
-
-.cd-time {
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  font-variant-numeric: tabular-nums;
-}
-
-.front-toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.front-toggle input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: var(--accent-color, var(--color-primary));
-}
-
-.cd-remaining {
-  flex-shrink: 0;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 剩余时间状态色 */
-.status-normal {
-  color: var(--success-color, var(--color-success));
-}
-
-.status-urgent {
-  color: var(--warning-color, var(--color-warning));
-}
-
-.status-critical {
-  color: var(--error-color, var(--color-error));
-}
-
-.status-expired {
-  color: var(--text-muted, var(--color-text-muted));
-  font-weight: 500;
-}
-
-/* ===== 行内操作 ===== */
-.cd-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.move-btns {
-  display: flex;
-  gap: 4px;
-}
-
-.btn-move {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  font-size: 11px;
-  border-radius: var(--radius-sm, 6px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  line-height: 1;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-move:hover:not(:disabled) {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.btn-move:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.btn-edit,
-.btn-delete {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-edit:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.btn-delete:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
-}
-
-/* ===== 空态 ===== */
-.empty-state {
-  text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-}
-
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .cd-form {
+:root.dark .cd-search {
   background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
 }
 
-:root.dark .cd-item {
+:root.dark .cd-card {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .empty-state {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .dialog {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .dialog-header {
   background-color: var(--bg-secondary, #1f2937);
 }
 
@@ -814,21 +1245,17 @@ onMounted(async () => {
   color: var(--text-muted, #9ca3af);
 }
 
-:root.dark .name-input,
-:root.dark .date-input,
-:root.dark .time-input,
-:root.dark .cat-select,
-:root.dark .repeat-select,
-:root.dark .month-day-input,
-:root.dark .interval-min-input,
-:root.dark .sort-select {
+:root.dark .form-input,
+:root.dark select.form-input,
+:root.dark input.form-input {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
   border-color: var(--border-color, #374151);
 }
 
 :root.dark .weekday-check,
-:root.dark .workdays-btn {
+:root.dark .workdays-btn,
+:root.dark .color-reset {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
@@ -874,19 +1301,5 @@ onMounted(async () => {
 
 :root.dark .status-critical {
   color: #f87171;
-}
-
-@media (max-width: 640px) {
-  .cd-item {
-    flex-wrap: wrap;
-  }
-
-  .cd-remaining {
-    text-align: left;
-  }
-
-  .cd-actions {
-    margin-left: auto;
-  }
 }
 </style>

@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { usePasswordsStore } from '@/stores/passwords'
+import { useSitesStore } from '@/stores/sites'
+import { useToast } from '@/composables/useToast'
+import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
 
 const passwordsStore = usePasswordsStore()
+const sitesStore = useSitesStore()
+const toast = useToast()
 
 // ===== 三态状态机 =====
-// ① 无主密码 → 设置主密码；② 有主密码但未解锁 → 解锁；③ 已解锁 → 工具栏 + 列表 + 表单
-// 面板不做 onMounted load：setupMasterPassword / unlock 成功时 store 内部才加载/解密数据
+// ① 无主密码 → 设置主密码；② 有主密码但未解锁 → 解锁；③ 已解锁 → 工具栏 + 列表 + 弹窗
 const isNewSetup = ref(!passwordsStore.hasMasterPassword())
 
 const masterPasswordInput = ref('')
@@ -59,14 +63,14 @@ function handleLock(): void {
   cancelForm()
 }
 
-// ===== 搜索 =====
+// ===== 搜索（按网站名称）=====
 const searchQuery = ref('')
 const filteredPasswords = computed<PasswordEntry[]>(() => {
   if (!searchQuery.value) return passwordsStore.passwords
   return passwordsStore.searchPasswords(searchQuery.value)
 })
 
-// ===== 新增/编辑表单（共用，四字段全部必填）=====
+// ===== 新增/编辑弹窗（共用表单，四字段全部必填）=====
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
 const formSiteName = ref('')
@@ -74,6 +78,44 @@ const formUrl = ref('')
 const formUsername = ref('')
 const formPassword = ref('')
 const showFormPassword = ref(false)
+
+// 站点关联下拉（从书签库匹配网站，选中自动带出名称 + URL）
+const siteSearchQuery = ref('')
+const showSiteDropdown = ref(false)
+
+const availableSites = computed(() => {
+  const query = siteSearchQuery.value.toLowerCase()
+  return sitesStore.sites
+    .filter(site =>
+      (site.name ?? '').toLowerCase().includes(query) ||
+      (site.url ?? '').toLowerCase().includes(query)
+    )
+    .slice(0, 20)
+})
+
+function onSiteNameInput(): void {
+  showSiteDropdown.value = true
+  siteSearchQuery.value = formSiteName.value
+}
+
+function onSiteNameBlur(): void {
+  // 延迟关闭，让点击事件先触发
+  setTimeout(() => {
+    showSiteDropdown.value = false
+  }, 200)
+}
+
+function selectSite(site: { name: string; url: string }): void {
+  formSiteName.value = site.name
+  formUrl.value = site.url
+  showSiteDropdown.value = false
+  siteSearchQuery.value = ''
+}
+
+// 列表内按 URL 匹配书签库图标（无匹配则回退 favicon 服务）
+function getSiteIcon(url: string): string {
+  return sitesStore.sites.find(s => s.url === url)?.icon || getIconUrl(url)
+}
 
 const isFormValid = computed(() => {
   return (
@@ -91,6 +133,8 @@ function startAdd(): void {
   formUsername.value = ''
   formPassword.value = ''
   showFormPassword.value = false
+  siteSearchQuery.value = ''
+  showSiteDropdown.value = false
   showForm.value = true
 }
 
@@ -101,6 +145,8 @@ function startEdit(entry: PasswordEntry): void {
   formUsername.value = entry.username
   formPassword.value = entry.password
   showFormPassword.value = false
+  siteSearchQuery.value = ''
+  showSiteDropdown.value = false
   showForm.value = true
 }
 
@@ -112,6 +158,8 @@ function cancelForm(): void {
   formUsername.value = ''
   formPassword.value = ''
   showFormPassword.value = false
+  siteSearchQuery.value = ''
+  showSiteDropdown.value = false
 }
 
 async function handleSave(): Promise<void> {
@@ -124,8 +172,10 @@ async function handleSave(): Promise<void> {
   }
   if (editingId.value) {
     await passwordsStore.updatePassword(editingId.value, data)
+    toast.success('密码已更新')
   } else {
     await passwordsStore.addPassword(data)
+    toast.success('密码已添加')
   }
   cancelForm()
 }
@@ -133,6 +183,7 @@ async function handleSave(): Promise<void> {
 async function handleDelete(id: string): Promise<void> {
   if (confirm('确定要删除这个密码条目吗？')) {
     await passwordsStore.deletePassword(id)
+    toast.success('密码已删除')
   }
 }
 
@@ -151,30 +202,41 @@ function isPasswordVisible(id: string): boolean {
   return visiblePasswords.value.has(id)
 }
 
-// ===== 复制（与 PasswordManager.vue copyToClipboard 一致：clipboard API + show-toast，失败降级 execCommand）=====
+// ===== 复制（clipboard API + toast，失败降级 execCommand）=====
 async function copyToClipboard(text: string, label: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text)
-    // 使用 toast 提示
-    const event = new CustomEvent('show-toast', {
-      detail: { type: 'success', message: `${label}已复制到剪贴板` }
-    })
-    window.dispatchEvent(event)
+    toast.success(`${label}已复制到剪贴板`)
   } catch {
-    // 降级方案
     const textarea = document.createElement('textarea')
     textarea.value = text
     document.body.appendChild(textarea)
     textarea.select()
     document.execCommand('copy')
     document.body.removeChild(textarea)
-
-    const event = new CustomEvent('show-toast', {
-      detail: { type: 'success', message: `${label}已复制到剪贴板` }
-    })
-    window.dispatchEvent(event)
+    toast.success(`${label}已复制到剪贴板`)
   }
 }
+
+// ===== Esc 关闭弹窗 =====
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && showForm.value) {
+    event.preventDefault()
+    cancelForm()
+  }
+}
+
+onMounted(() => {
+  // 为网站名称关联下拉准备书签数据（幂等：已有数据不重复加载）
+  if (sitesStore.sites.length === 0) {
+    sitesStore.loadSites()
+  }
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -237,16 +299,26 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
       </div>
     </div>
 
-    <!-- ③ 已解锁：工具栏 + 新增/编辑表单 + 条目列表 -->
+    <!-- ③ 已解锁：工具栏 + 条目列表 -->
     <div v-else class="pwd-main">
       <div class="pwd-toolbar">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="搜索密码…"
-          class="form-input pwd-search"
-          data-testid="pwd-search-input"
-        />
+        <div class="pwd-search-wrap">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索网站名称…"
+            class="form-input pwd-search"
+            data-testid="pwd-search-input"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="pwd-search-clear"
+            title="清除搜索"
+            data-testid="pwd-search-clear"
+            @click="searchQuery = ''"
+          >✕</button>
+        </div>
         <button class="pwd-btn-lock" data-testid="pwd-lock-btn" title="锁定" @click="handleLock">
           🔒 锁定
         </button>
@@ -254,66 +326,6 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
           + 新增密码
         </button>
       </div>
-
-      <!-- 新增/编辑共用表单 -->
-      <form v-if="showForm" class="pwd-form" @submit.prevent="handleSave">
-        <h3>{{ editingId ? '编辑密码' : '新增密码' }}</h3>
-        <div class="pwd-form-grid">
-          <div class="form-group">
-            <label>网站名称</label>
-            <input
-              v-model="formSiteName"
-              type="text"
-              placeholder="网站名称"
-              class="form-input"
-              data-testid="pwd-form-site"
-            />
-          </div>
-          <div class="form-group">
-            <label>网站 URL</label>
-            <input
-              v-model="formUrl"
-              type="text"
-              placeholder="https://example.com"
-              class="form-input"
-              data-testid="pwd-form-url"
-            />
-          </div>
-          <div class="form-group">
-            <label>用户名</label>
-            <input
-              v-model="formUsername"
-              type="text"
-              placeholder="用户名或邮箱"
-              class="form-input"
-              data-testid="pwd-form-username"
-            />
-          </div>
-          <div class="form-group">
-            <label>密码</label>
-            <div class="pwd-password-wrap">
-              <input
-                v-model="formPassword"
-                :type="showFormPassword ? 'text' : 'password'"
-                placeholder="密码"
-                class="form-input"
-                data-testid="pwd-form-password"
-              />
-              <button type="button" class="pwd-eye-btn" title="显示/隐藏" @click="showFormPassword = !showFormPassword">
-                {{ showFormPassword ? '🙈' : '👁️' }}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="pwd-form-actions">
-          <button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
-            取消
-          </button>
-          <button type="submit" class="pwd-btn-primary" data-testid="pwd-save-btn" :disabled="!isFormValid">
-            {{ editingId ? '保存' : '添加' }}
-          </button>
-        </div>
-      </form>
 
       <!-- 空态 -->
       <div v-if="filteredPasswords.length === 0" class="pwd-empty" data-testid="pwd-empty">
@@ -325,12 +337,21 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
         <div v-for="entry in filteredPasswords" :key="entry.id" class="pwd-item" data-testid="pwd-item">
           <div class="pwd-info">
             <div class="pwd-item-header">
+              <img
+                v-if="getSiteIcon(entry.url)"
+                :src="getSiteIcon(entry.url)"
+                class="pwd-site-icon"
+                alt=""
+                loading="lazy"
+                @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
+              />
               <span class="pwd-site-name">{{ entry.siteName }}</span>
               <a
                 class="pwd-site-url"
                 :href="entry.url"
                 target="_blank"
                 rel="noopener noreferrer"
+                :title="entry.url"
               >{{ entry.url }}</a>
             </div>
             <div class="pwd-details">
@@ -341,6 +362,14 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
             </div>
           </div>
           <div class="pwd-actions">
+            <a
+              class="pwd-icon-btn pwd-open"
+              :href="entry.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="打开网站"
+              :data-testid="`pwd-open-${entry.id}`"
+            >↗</a>
             <button
               class="pwd-icon-btn"
               :title="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
@@ -377,6 +406,101 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
         </div>
       </div>
     </div>
+
+    <!-- 新增/编辑弹窗 -->
+    <Teleport to="body">
+      <div
+        v-if="showForm"
+        class="pwd-modal-overlay"
+        data-testid="pwd-form-modal"
+        @click.self="cancelForm"
+      >
+        <div class="pwd-modal">
+          <div class="pwd-modal-header">
+            <h3>{{ editingId ? '编辑密码' : '新增密码' }}</h3>
+            <button
+              type="button"
+              class="pwd-modal-close"
+              title="关闭"
+              data-testid="pwd-modal-close"
+              @click="cancelForm"
+            >✕</button>
+          </div>
+          <form class="pwd-modal-body" @submit.prevent="handleSave">
+            <div class="form-group">
+              <label>网站名称</label>
+              <div class="pwd-site-input-wrap">
+                <input
+                  v-model="formSiteName"
+                  type="text"
+                  placeholder="输入网站名称或从下拉选择"
+                  class="form-input"
+                  data-testid="pwd-form-site"
+                  @input="onSiteNameInput"
+                  @blur="onSiteNameBlur"
+                  @focus="showSiteDropdown = true"
+                />
+                <div v-if="showSiteDropdown && availableSites.length > 0" class="pwd-site-dropdown">
+                  <div
+                    v-for="site in availableSites"
+                    :key="site.url"
+                    class="pwd-site-option"
+                    data-testid="pwd-site-option"
+                    @mousedown.prevent="selectSite(site)"
+                  >
+                    <span class="pwd-site-option-name">{{ site.name }}</span>
+                    <span class="pwd-site-option-url">{{ site.url }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>网站 URL</label>
+              <input
+                v-model="formUrl"
+                type="text"
+                placeholder="https://example.com"
+                class="form-input"
+                data-testid="pwd-form-url"
+              />
+            </div>
+            <div class="form-group">
+              <label>用户名</label>
+              <input
+                v-model="formUsername"
+                type="text"
+                placeholder="用户名或邮箱"
+                class="form-input"
+                data-testid="pwd-form-username"
+              />
+            </div>
+            <div class="form-group">
+              <label>密码</label>
+              <div class="pwd-password-wrap">
+                <input
+                  v-model="formPassword"
+                  :type="showFormPassword ? 'text' : 'password'"
+                  placeholder="密码"
+                  class="form-input"
+                  data-testid="pwd-form-password"
+                />
+                <button type="button" class="pwd-eye-btn" title="显示/隐藏" @click="showFormPassword = !showFormPassword">
+                  {{ showFormPassword ? '🙈' : '👁️' }}
+                </button>
+              </div>
+            </div>
+            <div class="pwd-form-actions">
+              <button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
+                取消
+              </button>
+              <button type="submit" class="pwd-btn-primary" data-testid="pwd-save-btn" :disabled="!isFormValid">
+                {{ editingId ? '保存' : '添加' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -434,6 +558,7 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
 
 /* ===== 输入框 ===== */
 .form-input {
+  width: 100%;
   padding: 9px 12px;
   background-color: var(--input-bg, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
@@ -479,9 +604,33 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   flex-wrap: wrap;
 }
 
-.pwd-search {
+.pwd-search-wrap {
+  position: relative;
   flex: 1;
   min-width: 160px;
+}
+
+.pwd-search {
+  padding-right: 30px;
+}
+
+.pwd-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.pwd-search-clear:hover {
+  color: var(--text-primary, var(--color-text));
+  background: var(--bg-secondary, var(--color-bg-hover));
 }
 
 .pwd-btn-add {
@@ -503,85 +652,6 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
 .pwd-btn-lock:hover {
   color: var(--accent-color, var(--color-primary));
   border-color: var(--accent-color, var(--color-primary));
-}
-
-/* ===== 新增/编辑表单 ===== */
-.pwd-form {
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  padding: 16px;
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-}
-
-.pwd-form h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-  margin: 0 0 14px 0;
-}
-
-.pwd-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary, var(--color-text-secondary));
-  margin-bottom: 6px;
-}
-
-.pwd-password-wrap {
-  position: relative;
-}
-
-.pwd-password-wrap .form-input {
-  padding-right: 36px;
-}
-
-.pwd-eye-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  padding: 2px;
-  opacity: 0.7;
-  transition: opacity var(--transition-fast, 0.15s ease);
-}
-
-.pwd-eye-btn:hover {
-  opacity: 1;
-}
-
-.pwd-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.pwd-btn-cancel {
-  padding: 9px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.pwd-btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
 }
 
 /* ===== 列表 ===== */
@@ -616,8 +686,17 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
 .pwd-item-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 4px;
+}
+
+.pwd-site-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: var(--bg-secondary, var(--color-bg-hover));
 }
 
 .pwd-site-name {
@@ -627,6 +706,8 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 40%;
 }
 
 .pwd-site-url {
@@ -636,8 +717,8 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-decoration: none;
-  flex-shrink: 0;
-  max-width: 45%;
+  flex: 1;
+  min-width: 0;
 }
 
 .pwd-site-url:hover {
@@ -672,6 +753,11 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   opacity: 0.6;
   transition: opacity var(--transition-fast, 0.15s ease);
   border-radius: var(--radius-sm, 6px);
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pwd-icon-btn:hover {
@@ -694,11 +780,183 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   border-radius: var(--radius-md, 10px);
 }
 
+/* ===== 新增/编辑弹窗 ===== */
+.pwd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pwd-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 8px 30px rgba(0, 0, 0, 0.15));
+}
+
+.pwd-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+}
+
+.pwd-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.pwd-modal-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.pwd-modal-close:hover {
+  color: var(--text-primary, var(--color-text));
+  background: var(--bg-secondary, var(--color-bg-hover));
+}
+
+.pwd-modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, var(--color-text-secondary));
+  margin-bottom: 6px;
+}
+
+/* ===== 网站名称关联下拉 ===== */
+.pwd-site-input-wrap {
+  position: relative;
+}
+
+.pwd-site-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.pwd-site-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pwd-site-option:last-child {
+  border-bottom: none;
+}
+
+.pwd-site-option:hover {
+  background: var(--bg-secondary, var(--color-bg-hover));
+}
+
+.pwd-site-option-name {
+  font-size: 14px;
+  color: var(--text-primary, var(--color-text));
+  font-weight: 500;
+}
+
+.pwd-site-option-url {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 密码输入 ===== */
+.pwd-password-wrap {
+  position: relative;
+}
+
+.pwd-password-wrap .form-input {
+  padding-right: 36px;
+}
+
+.pwd-eye-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast, 0.15s ease);
+}
+
+.pwd-eye-btn:hover {
+  opacity: 1;
+}
+
+.pwd-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pwd-btn-cancel {
+  padding: 9px 16px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.pwd-btn-cancel:hover {
+  background: var(--hover-bg, var(--color-bg-active));
+}
+
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .pwd-auth-card,
-:root.dark .pwd-form,
 :root.dark .pwd-item,
 :root.dark .pwd-empty {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .pwd-modal {
   background-color: var(--bg-secondary, #1f2937);
 }
 
@@ -707,7 +965,7 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
 }
 
 :root.dark .pwd-auth-card h3,
-:root.dark .pwd-form h3 {
+:root.dark .pwd-modal-header h3 {
   color: var(--text-primary, #f9fafb);
 }
 
@@ -716,7 +974,7 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
 }
 
 :root.dark .pwd-auth-card .form-input,
-:root.dark .pwd-form .form-input,
+:root.dark .pwd-modal-body .form-input,
 :root.dark .pwd-search {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
@@ -730,7 +988,8 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   border-color: var(--border-color, #374151);
 }
 
-:root.dark .pwd-icon-btn:hover {
+:root.dark .pwd-icon-btn:hover,
+:root.dark .pwd-modal-close:hover {
   background-color: var(--hover-bg, #374151);
 }
 
@@ -743,6 +1002,27 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
   color: var(--text-secondary, #d1d5db);
 }
 
+:root.dark .pwd-site-dropdown {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .pwd-site-option {
+  border-bottom-color: var(--border-color, #374151);
+}
+
+:root.dark .pwd-site-option:hover {
+  background-color: var(--hover-bg, #374151);
+}
+
+:root.dark .pwd-site-option-name {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .pwd-site-option-url {
+  color: var(--text-secondary, #d1d5db);
+}
+
 /* 禁用态主按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 :root.dark .pwd-btn-primary:disabled {
   background-color: var(--input-bg, #374151);
@@ -750,10 +1030,6 @@ async function copyToClipboard(text: string, label: string): Promise<void> {
 }
 
 @media (max-width: 640px) {
-  .pwd-form-grid {
-    grid-template-columns: 1fr;
-  }
-
   .pwd-item {
     flex-wrap: wrap;
   }

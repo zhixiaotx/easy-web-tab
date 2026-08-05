@@ -126,14 +126,12 @@ export const usePasswordsStore = defineStore('passwords', () => {
     await savePasswords()
   }
 
-  // 搜索密码
+  // 搜索密码（按网站名称匹配；旧数据可能缺字段，防御处理避免渲染崩溃）
   function searchPasswords(query: string): PasswordEntry[] {
     if (!query) return passwords.value
     const lower = query.toLowerCase()
     return passwords.value.filter(p =>
-      p.siteName.toLowerCase().includes(lower) ||
-      p.url.toLowerCase().includes(lower) ||
-      p.username.toLowerCase().includes(lower)
+      (p.siteName ?? '').toLowerCase().includes(lower)
     )
   }
 

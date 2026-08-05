@@ -5,7 +5,7 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 22 root SFCs + 5 workbench panels, sizes, component-level anti-patterns
+- `src/components/AGENTS.md` — the 21 root SFCs + 5 workbench panels, sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 10 Pinia stores and data-layer invariants
 - `src/composables/AGENTS.md` — the 13 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts and game rewrite rules
@@ -15,7 +15,7 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 ```
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
-│   ├── components/               # 22 root SFCs + workbench/ subdir (UI layer)
+│   ├── components/               # 21 root SFCs + workbench/ subdir (UI layer)
 │   │   └── workbench/            # 5 工作台面板: WorkbenchHome/Todo/Notes/Countdown/Password
 │   ├── composables/              # 13 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper)
 │   ├── stores/                   # 10 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts)

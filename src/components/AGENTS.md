@@ -19,7 +19,6 @@ components/
 ├── CountdownModal.vue    # 前台只读倒计时弹框（/display，repeatLabel + categoryLabel 徽标）
 ├── CountdownReminder.vue # 全局提醒弹框（z-index 2000，读 useCountdownReminder 单例，仅「关闭」可关）
 ├── IconManager.vue       # Custom icon upload & management (617 lines)
-├── PasswordManager.vue   # Password vault UI (master-password-gated, 1014 lines)
 ├── SearchBar.vue         # Search input
 ├── SearchEngineManager.vue # Search engine CRUD
 ├── SettingsButton.vue    # Settings gear
@@ -36,7 +35,7 @@ components/
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选）
     ├── WorkbenchNotes.vue       # 便签面板（增删改查 + 置顶 + 颜色）
     ├── WorkbenchCountdown.vue   # 倒计时面板（规则/分类表单 + 徽标，data-testid 前缀 cd-）
-    └── WorkbenchPassword.vue    # 密码面板（复用 usePasswordsStore / useCrypto.ts）
+    └── WorkbenchPassword.vue    # 密码面板（主密码三态 + 新增/编辑弹窗 + 书签关联下拉 + 名称搜索，复用 usePasswordsStore / useCrypto.ts）
 ```
 
 ## WHERE TO LOOK
@@ -49,7 +48,7 @@ components/
 | Data import/export | `BackupManager.vue` | Markdown file upload/download |
 | Category CRUD | `CategoryManager.vue` | Only `video` locked; legacy categories deletable |
 | Icon management | `IconManager.vue` | Upload & manage custom site icons |
-| Password vault | `PasswordManager.vue` | Master-password-gated, tied to `usePasswordsStore` |
+| Password vault | `workbench/WorkbenchPassword.vue` | 主密码三态（设置/解锁/锁定），新增/编辑弹窗 + 书签库名称关联下拉，按网站名称搜索，AES-CBC 加密存 IndexedDB |
 | Countdown management | `CountdownManager.vue` + `workbench/WorkbenchCountdown.vue` | 管理端/工作台表单：6 种重复规则选择器（weekly 周几多选 + 工作日快捷钮 / monthly 几号 / interval 分钟）+ 分类 3 选 + 校验；`repeatLabel`/`categoryLabel` 徽标 |
 | Countdown display | `CountdownModal.vue` | 前台只读展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫） |
 | Reminder popup | `CountdownReminder.vue` | 全屏遮罩弹框，到点时间显示 `⏰ MM-DD HH:mm`；z-index 2000，点击遮罩不关闭 |

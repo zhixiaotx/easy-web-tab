@@ -102,6 +102,19 @@ export type CountdownItem = Countdown & { remaining: CountdownRemaining }
 // 工作台待办任务
 export type TodoPriority = 'low' | 'medium' | 'high'
 
+// 待办卡片自定义颜色：默认蓝 + 8 预设（与倒计时 COUNTDOWN_COLOR_PRESETS / 便签 NOTE_COLORS 同源色值）
+export const DEFAULT_TODO_COLOR = '#3b82f6'
+export const TODO_COLOR_PRESETS = [
+  '#ef4444', // 红
+  '#f97316', // 橙
+  '#eab308', // 黄
+  '#22c55e', // 绿
+  '#06b6d4', // 青
+  '#3b82f6', // 蓝
+  '#a855f7', // 紫
+  '#ec4899'  // 粉
+] as const
+
 export interface WorkbenchTodo {
   id: string
   title: string
@@ -111,6 +124,7 @@ export interface WorkbenchTodo {
   completed: boolean
   createdAt: string
   updatedAt: string
+  color?: string // 卡片自定义颜色（'#RRGGBB' 或 '#RGB' hex）；undefined = 默认蓝
 }
 
 // 工作台便签

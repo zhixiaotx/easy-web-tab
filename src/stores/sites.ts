@@ -562,18 +562,6 @@ ${sitesList}
     return { added, skipped }
   }
 
-  // 异步导入密码（从 sites.md，需要主密码解密）
-  async function importPasswordsFromMarkdown(markdownText: string): Promise<{ imported: number; failed: number }> {
-    const { parseSitesFromMarkdown } = useMarkdown()
-    const parsed = parseSitesFromMarkdown(markdownText)
-    if (!parsed.passwords || parsed.passwords.length === 0) return { imported: 0, failed: 0 }
-    
-    const passwordsStore = usePasswordsStore()
-    if (!passwordsStore.isUnlocked) return { imported: 0, failed: 0 }
-    
-    return await passwordsStore.importPasswords(parsed.passwords)
-  }
-
   return {
     sites,
     searchQuery,
@@ -603,7 +591,6 @@ ${sitesList}
     clearFilters,
     exportToMarkdown,
     importFromMarkdown,
-    importPasswordsFromMarkdown,
     // 断链检测
     isCheckingLinks,
     linkCheckProgress,

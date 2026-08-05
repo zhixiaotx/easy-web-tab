@@ -6,7 +6,7 @@ import { ref } from 'vue'
 // ========================================
 
 // 弹窗标识
-export type DialogId = 'site' | 'engine' | 'countdown' | 'password' | 'background' | 'category' | 'backup' | 'icon' | 'notes'
+export type DialogId = 'site' | 'engine' | 'countdown' | 'background' | 'category' | 'backup' | 'icon' | 'notes'
 
 // 弹窗尺寸设置（width 单位 px，height 单位 vh）
 export interface DialogSizeSetting {
@@ -23,7 +23,6 @@ export const DIALOG_DEFAULTS: Record<DialogId, DialogSizeSetting> = {
   site: { width: 864, height: 90 },
   engine: { width: 700, height: 80 },
   countdown: { width: 640, height: 80 },
-  password: { width: 700, height: 80 },
   background: { width: 800, height: 85 },
   category: { width: 900, height: 80 },
   backup: { width: 600, height: 80 },
@@ -36,7 +35,6 @@ export const DIALOG_LABELS: Record<DialogId, string> = {
   site: '添加/编辑网站',
   engine: '引擎管理',
   countdown: '倒计时',
-  password: '密码管理',
   background: '背景',
   category: '分类管理',
   backup: '备份',
@@ -49,7 +47,6 @@ export const DIALOG_VARS: Record<DialogId, { widthVar: string; heightVar: string
   site: { widthVar: '--dlg-w-site', heightVar: '--dlg-h-site' },
   engine: { widthVar: '--dlg-w-engine', heightVar: '--dlg-h-engine' },
   countdown: { widthVar: '--dlg-w-countdown', heightVar: '--dlg-h-countdown' },
-  password: { widthVar: '--dlg-w-password', heightVar: '--dlg-h-password' },
   background: { widthVar: '--dlg-w-background', heightVar: '--dlg-h-background' },
   category: { widthVar: '--dlg-w-category', heightVar: '--dlg-h-category' },
   backup: { widthVar: '--dlg-w-backup', heightVar: '--dlg-h-backup' },
@@ -59,7 +56,7 @@ export const DIALOG_VARS: Record<DialogId, { widthVar: string; heightVar: string
 
 const SETTINGS_STORAGE_KEY = 'user-app-settings'
 
-const DIALOG_IDS: DialogId[] = ['site', 'engine', 'countdown', 'password', 'background', 'category', 'backup', 'icon', 'notes']
+const DIALOG_IDS: DialogId[] = ['site', 'engine', 'countdown', 'background', 'category', 'backup', 'icon', 'notes']
 
 // 取值范围 clamp
 const clampWidth = (n: number) => Math.min(1600, Math.max(400, n))

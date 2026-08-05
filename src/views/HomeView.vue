@@ -11,7 +11,6 @@ import Pagination from '../components/Pagination.vue'
 import SiteModal from '../components/SiteModal.vue'
 import SettingsButton from '../components/SettingsButton.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
-import PasswordManager from '../components/PasswordManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import CountdownManager from '@/components/CountdownManager.vue'
@@ -34,7 +33,6 @@ const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
-const showPasswordManager = ref(false)
 const showCountdownManager = ref(false)
 const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
@@ -104,17 +102,10 @@ watchEffect(() => {
     showEngineManager.value = true
     showModal.value = false
     closeHelp()
-    showPasswordManager.value = false
-  } else if (modal === 'passwords') {
-    showPasswordManager.value = true
-    showModal.value = false
-    showEngineManager.value = false
-    closeHelp()
   } else if (modal === 'countdown') {
     showCountdownManager.value = true
     showModal.value = false
     showEngineManager.value = false
-    showPasswordManager.value = false
     closeHelp()
   } else if (modal === 'help') {
     openHelp()
@@ -124,7 +115,6 @@ watchEffect(() => {
     // 无 modal query → 关闭所有弹框（URL 清除时）
     showModal.value = false
     showEngineManager.value = false
-    showPasswordManager.value = false
     showCountdownManager.value = false
     closeHelp()
     editingSite.value = null
@@ -137,7 +127,6 @@ const filteredSites = computed(() => store.paginatedSites)
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
-  showPasswordManager.value = false
   showCountdownManager.value = false
   showSettingsDialog.value = false
   closeHelp()
@@ -235,15 +224,6 @@ const handleImport = (event: Event) => {
         if (data?.searchEngines && Array.isArray(data.searchEngines)) {
           enginesStore.importEngines(data.searchEngines)
           msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
-        }
-        if (data?.passwords && Array.isArray(data.passwords)) {
-          const passwords = data.passwords
-          const passwordsResult = await store.importPasswordsFromMarkdown(content)
-          if (passwordsResult.imported > 0) {
-            msg += `；密码：已导入 ${passwordsResult.imported} 条`
-          } else if (passwords.length > 0) {
-            msg += passwordsResult.failed > 0 ? '；密码：导入失败（解密失败）' : '；密码：未导入（请先打开密码管理器解锁）'
-          }
         }
       }
     } catch {
@@ -357,11 +337,6 @@ const handlePageChange = () => {
 
     <SearchEngineManager 
       v-if="showEngineManager" 
-      @close="closeAllModals"
-    />
-
-    <PasswordManager
-      v-if="showPasswordManager"
       @close="closeAllModals"
     />
 

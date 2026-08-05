@@ -49,6 +49,19 @@ export interface PasswordEntry {
 export const COUNTDOWN_CATEGORIES = ['work', 'life', 'study'] as const
 export type CountdownCategory = (typeof COUNTDOWN_CATEGORIES)[number]
 
+// 倒计时卡片自定义颜色：默认蓝 + 8 预设（与便签 NOTE_COLORS 同源色值）
+export const DEFAULT_COUNTDOWN_COLOR = '#3b82f6'
+export const COUNTDOWN_COLOR_PRESETS = [
+  '#ef4444', // 红
+  '#f97316', // 橙
+  '#eab308', // 黄
+  '#22c55e', // 绿
+  '#06b6d4', // 青
+  '#3b82f6', // 蓝
+  '#a855f7', // 紫
+  '#ec4899'  // 粉
+] as const
+
 // 倒计时重复规则对象（替代旧 repeat: 'yearly' | null）
 // once 规范存储为 null（parseRepeat 归一）；weekly daysOfWeek: 1=周一 .. 7=周日
 export type CountdownRepeat =
@@ -71,6 +84,7 @@ export interface Countdown {
   updatedAt: string
   sortOrder?: number        // NEW: manual sort position (1..n); undefined = last
   showOnDisplay?: boolean   // NEW: front-page visibility; undefined = true
+  color?: string            // 卡片自定义颜色（'#RRGGBB' 或 '#RGB' hex）；undefined = 默认蓝
 }
 
 export interface CountdownRemaining {

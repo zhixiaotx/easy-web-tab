@@ -139,6 +139,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     endDateTime: string
     repeat?: CountdownRepeat | null
     category?: CountdownCategory
+    color?: string
   }): Promise<void> {
     const now = new Date().toISOString()
     countdowns.value.push(
@@ -148,6 +149,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
         endDateTime: input.endDateTime,
         repeat: input.repeat ?? null,
         category: input.category,
+        color: input.color,
         createdAt: now,
         updatedAt: now,
         sortOrder:
@@ -164,6 +166,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
       endDateTime?: string
       repeat?: CountdownRepeat | null
       category?: CountdownCategory
+      color?: string
       lastRemindedAt?: string
       sortOrder?: number
       showOnDisplay?: boolean

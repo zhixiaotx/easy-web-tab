@@ -1,7 +1,7 @@
 // 倒计时纯逻辑模块。重复规则引擎：parseRepeat 归一化 → calcNextOccurrence 求下次 → getReminderDue 求补提醒。
 // 运行时依赖仅 COUNTDOWN_CATEGORIES（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 // calcRemaining / sortCountdowns 对外行为与旧版保持一致。
-import { COUNTDOWN_CATEGORIES } from '../types/index.ts'
+import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '../types/index.ts'
 import type { Countdown, CountdownItem, CountdownRemaining, CountdownCategory, CountdownRepeat } from '../types'
 
 export type CountdownSortMode = 'remaining' | 'name' | 'created' | 'endTime' | 'manual'
@@ -87,7 +87,10 @@ export function parseRepeat(raw: unknown): CountdownRepeat | null {
   }
 }
 
-/** 将任意来源的倒计时数据归一化为规范 Countdown（repeat/category 强制归一，字符串字段安全兜底）。 */
+/** 卡片自定义颜色：'#RGB' 或 '#RRGGBB'（大小写均可）。 */
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+
+/** 将任意来源的倒计时数据归一化为规范 Countdown（repeat/category/color 强制归一，字符串字段安全兜底）。 */
 export function normalizeCountdown(raw: Partial<Countdown>): Countdown {
   const category: CountdownCategory =
     typeof raw.category === 'string' && (COUNTDOWN_CATEGORIES as readonly string[]).includes(raw.category)
@@ -99,12 +102,43 @@ export function normalizeCountdown(raw: Partial<Countdown>): Countdown {
     endDateTime: typeof raw.endDateTime === 'string' ? raw.endDateTime : '',
     repeat: parseRepeat(raw.repeat),
     category,
+    color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : DEFAULT_COUNTDOWN_COLOR,
     ...(typeof raw.lastRemindedAt === 'string' ? { lastRemindedAt: raw.lastRemindedAt } : {}),
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
     ...(raw.sortOrder !== undefined ? { sortOrder: raw.sortOrder } : {}),
     ...(raw.showOnDisplay !== undefined ? { showOnDisplay: raw.showOnDisplay } : {})
   }
+}
+
+/** 倒计时重复规则类型（与 COUNTDOWN 6 种规则一一对应；once 规范为 null）。 */
+export type CountdownRepeatType = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'interval'
+
+/** 查询筛选条件：name 模糊 / category 精确 / repeat 规则类型；空串或 undefined 表示不限制。 */
+export interface CountdownFilterCriteria {
+  name?: string
+  category?: '' | CountdownCategory
+  repeat?: '' | CountdownRepeatType
+}
+
+/** 抽取重复规则类型：null/undefined/'once' → 'once'；旧字符串 'yearly' → 'yearly'；对象 → 其 type。 */
+function repeatTypeOf(repeat: Countdown['repeat']): CountdownRepeatType {
+  if (repeat === null || repeat === undefined) return 'once'
+  if (typeof repeat === 'string') return repeat === 'once' ? 'once' : 'yearly'
+  return repeat.type
+}
+
+/** 按条件过滤倒计时（纯函数，供管理端/工作台查询栏复用；空条件返回全部）。保留原条目类型（CountdownItem 等）。 */
+export function filterCountdowns<T extends Countdown>(items: T[], criteria: CountdownFilterCriteria = {}): T[] {
+  const name = (criteria.name ?? '').trim().toLowerCase()
+  const category = criteria.category || undefined
+  const repeat = criteria.repeat || undefined
+  return items.filter(item => {
+    if (name && !item.name.toLowerCase().includes(name)) return false
+    if (category !== undefined && (item.category ?? 'work') !== category) return false
+    if (repeat !== undefined && repeatTypeOf(item.repeat) !== repeat) return false
+    return true
+  })
 }
 
 /**

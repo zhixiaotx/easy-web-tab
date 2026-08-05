@@ -474,10 +474,11 @@ export const useSitesStore = defineStore('sites', () => {
           const repeatBlock = serializeRepeatYaml(c.repeat)
           const repeatPrefix = repeatBlock ? '\n' : ''
           const categoryLine = `\n    category: ${c.category ?? 'work'}`
+          const colorLine = c.color ? `\n    color: ${c.color}` : ''
           const lastRemindedLine = c.lastRemindedAt ? `\n    lastRemindedAt: '${c.lastRemindedAt}'` : ''
           const sortOrderLine = typeof c.sortOrder === 'number' ? `\n    sortOrder: ${c.sortOrder}` : ''
           const showOnDisplayLine = c.showOnDisplay === false ? '\n    showOnDisplay: false' : ''
-          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${colorLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
         }).join('\n\n')}\n\n`
       : ''
 

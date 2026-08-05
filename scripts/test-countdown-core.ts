@@ -8,7 +8,8 @@ import {
   calcRemaining,
   repeatLabel,
   categoryLabel,
-  serializeRepeatYaml
+  serializeRepeatYaml,
+  filterCountdowns
 } from '../src/composables/countdownCore.ts'
 import type { Countdown, CountdownCategory, CountdownRepeat } from '../src/types'
 
@@ -47,6 +48,54 @@ test('S3 normalizeCountdown', () => {
   const passthrough = normalizeCountdown({ category: 'study', lastRemindedAt: '2026-08-04 09:00' })
   assert.equal(passthrough.category, 'study')
   assert.equal(passthrough.lastRemindedAt, '2026-08-04 09:00')
+})
+
+// S3b — color normalization: valid hex kept, invalid/absent → default blue
+test('S3b normalizeCountdown color', () => {
+  assert.equal(normalizeCountdown({}).color, '#3b82f6')
+  assert.equal(normalizeCountdown({ color: '#EF4444' }).color, '#EF4444')
+  assert.equal(normalizeCountdown({ color: '#f00' }).color, '#f00')
+  assert.equal(normalizeCountdown({ color: 'red' }).color, '#3b82f6')
+  assert.equal(normalizeCountdown({ color: '' }).color, '#3b82f6')
+  assert.equal(normalizeCountdown({ color: 123 as unknown as string }).color, '#3b82f6')
+})
+
+// S3c — filterCountdowns: name fuzzy / category / repeat type / combined / empty
+function mkCountdown(id: string, name: string, repeat: Countdown['repeat'], category: Countdown['category'] = 'work'): Countdown {
+  return {
+    id,
+    name,
+    endDateTime: '2026-12-31T09:00',
+    repeat,
+    category,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z'
+  }
+}
+
+test('S3c filterCountdowns', () => {
+  const items = [
+    mkCountdown('a', '年终总结', null, 'work'),
+    mkCountdown('b', '周会提醒', { type: 'weekly', daysOfWeek: [1] }, 'work'),
+    mkCountdown('c', '年体检', 'yearly', 'life'),
+    mkCountdown('d', '晨练', { type: 'daily' }, 'life'),
+    mkCountdown('e', '发薪日', { type: 'monthly', dayOfMonth: 15 }, 'study')
+  ]
+  // 空条件 → 全部
+  assert.equal(filterCountdowns(items).length, 5)
+  assert.equal(filterCountdowns(items, {}).length, 5)
+  // 名称模糊（子串 + trim + 大小写无关）
+  assert.deepEqual(filterCountdowns(items, { name: '年' }).map(i => i.id), ['a', 'c'])
+  assert.deepEqual(filterCountdowns(items, { name: ' 周会 ' }).map(i => i.id), ['b'])
+  // 分类精确
+  assert.deepEqual(filterCountdowns(items, { category: 'life' }).map(i => i.id), ['c', 'd'])
+  // 重复规则：once（null 归一）、daily、旧字符串 'yearly'
+  assert.deepEqual(filterCountdowns(items, { repeat: 'once' }).map(i => i.id), ['a'])
+  assert.deepEqual(filterCountdowns(items, { repeat: 'daily' }).map(i => i.id), ['d'])
+  assert.deepEqual(filterCountdowns(items, { repeat: 'yearly' }).map(i => i.id), ['c'])
+  // 组合条件
+  assert.deepEqual(filterCountdowns(items, { category: 'work', repeat: 'weekly' }).map(i => i.id), ['b'])
+  assert.equal(filterCountdowns(items, { name: '年', category: 'life' }).length, 1)
 })
 
 // S4 — calcNextOccurrence once: future + expired display semantics

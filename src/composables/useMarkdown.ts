@@ -35,6 +35,7 @@ export function useMarkdown() {
               endDateTime: typeof raw?.endDateTime === 'string' ? raw.endDateTime : '',
               repeat: parseRepeat(raw?.repeat),
               category: typeof raw?.category === 'string' && (COUNTDOWN_CATEGORIES as readonly string[]).includes(raw.category) ? (raw.category as CountdownCategory) : undefined,
+              color: typeof raw?.color === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw.color) ? raw.color : undefined,
               lastRemindedAt: typeof raw?.lastRemindedAt === 'string' && raw.lastRemindedAt.trim() !== '' ? raw.lastRemindedAt : undefined,
               createdAt: typeof raw?.createdAt === 'string' && raw.createdAt.trim() !== '' ? raw.createdAt : now,
               updatedAt: typeof raw?.updatedAt === 'string' && raw.updatedAt.trim() !== '' ? raw.updatedAt : now,

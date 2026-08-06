@@ -160,6 +160,9 @@ export interface WorkbenchData {
 
 export type HealthModule = 'exercise' | 'diet' | 'sleep' | 'weight'
 
+// 健康管理面板 tab 键（WorkbenchHealth 容器 + 导航白名单共用单一来源）
+export const HEALTH_TABS = ['exercise', 'diet', 'sleep', 'weight'] as const
+
 export const EXERCISE_TYPES = ['跑步', '游泳', '力量', '骑行', '瑜伽', '其他'] as const
 
 export const MEAL_TYPES = ['早餐', '午餐', '晚餐', '加餐'] as const

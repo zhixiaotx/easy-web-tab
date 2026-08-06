@@ -7,12 +7,19 @@ import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
+import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import type { WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
 import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
 import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
+import WorkbenchExercise from '@/components/workbench/WorkbenchExercise.vue'
+import WorkbenchDiet from '@/components/workbench/WorkbenchDiet.vue'
+import WorkbenchSleep from '@/components/workbench/WorkbenchSleep.vue'
+import WorkbenchWeight from '@/components/workbench/WorkbenchWeight.vue'
+import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -20,9 +27,22 @@ const todosStore = useWorkbenchTodosStore()
 const notesStore = useWorkbenchNotesStore()
 const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
+const healthStore = useWorkbenchHealthStore()
+const ledgerStore = useWorkbenchLedgerStore()
 
-// 左侧菜单 5 项
-const SECTION_KEYS = ['home', 'todos', 'notes', 'countdowns', 'passwords'] as const
+// 左侧菜单 10 项
+const SECTION_KEYS = [
+  'home',
+  'todos',
+  'notes',
+  'countdowns',
+  'passwords',
+  'exercise',
+  'diet',
+  'sleep',
+  'weight',
+  'ledger'
+] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 const activeSection = ref<SectionKey>('home')
@@ -39,7 +59,12 @@ const MENU_ITEMS = [
   { key: 'todos', label: '工作待办', icon: '☑️' },
   { key: 'notes', label: '个人便签', icon: '📝' },
   { key: 'countdowns', label: '定时提醒', icon: '⏳' },
-  { key: 'passwords', label: '密码管理', icon: '🔑' }
+  { key: 'passwords', label: '密码管理', icon: '🔑' },
+  { key: 'exercise', label: '运动', icon: '🏃' },
+  { key: 'diet', label: '饮食', icon: '🍽️' },
+  { key: 'sleep', label: '睡眠', icon: '😴' },
+  { key: 'weight', label: '体重', icon: '⚖️' },
+  { key: 'ledger', label: '记账', icon: '💰' }
 ] as const
 
 // 实时时钟（每秒更新）
@@ -69,7 +94,9 @@ onMounted(async () => {
   await Promise.all([
     todosStore.loadTodos(),
     notesStore.loadNotes(),
-    countdownsStore.loadCountdowns()
+    countdownsStore.loadCountdowns(),
+    healthStore.loadHealth(),
+    ledgerStore.loadLedger()
   ])
 })
 
@@ -142,7 +169,9 @@ async function handleImportFile(event: Event) {
     await Promise.all([
       todosStore.loadTodos(),
       notesStore.loadNotes(),
-      countdownsStore.loadCountdowns()
+      countdownsStore.loadCountdowns(),
+      healthStore.loadHealth(),
+      ledgerStore.loadLedger()
     ])
 
     if (skipPasswords) {
@@ -155,8 +184,13 @@ async function handleImportFile(event: Event) {
       }
     }
 
-    // 成功 toast：仅统计 todos/notes/countdowns（密码不解密不计条数）
-    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，倒计时 ${countdownsStore.countdowns.length} 条`
+    // 成功 toast：仅统计 todos/notes/countdowns/健康/记账（密码不解密不计条数）
+    const healthCount =
+      healthStore.records.exercise.length +
+      healthStore.records.diet.length +
+      healthStore.records.sleep.length +
+      healthStore.records.weight.length
+    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，倒计时 ${countdownsStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledgerStore.entries.length} 笔`
     toast.success(skipPasswords ? `${countMsg}（密码已跳过）` : `${countMsg}；密码库已导入`)
   }
   reader.readAsText(file)
@@ -205,7 +239,12 @@ async function handleImportFile(event: Event) {
         <WorkbenchTodo v-else-if="activeSection === 'todos'" />
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
-        <WorkbenchPassword v-else />
+        <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
+        <WorkbenchExercise v-else-if="activeSection === 'exercise'" />
+        <WorkbenchDiet v-else-if="activeSection === 'diet'" />
+        <WorkbenchSleep v-else-if="activeSection === 'sleep'" />
+        <WorkbenchWeight v-else-if="activeSection === 'weight'" />
+        <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
       </main>
     </div>
   </div>

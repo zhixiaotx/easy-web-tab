@@ -1,14 +1,16 @@
 /**
  * 零依赖 IndexedDB 封装（工作台数据层）
- * DB: easy-web-tab v1；4 个 object store 均无 keyPath，统一使用 out-of-line 键 'items'
+ * DB: easy-web-tab v2；6 个 object store 均无 keyPath，统一使用 out-of-line 键 'items'
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION } from '../types'
-import type { Countdown, WorkbenchData, WorkbenchNote, WorkbenchTodo } from '../types'
+import type { Countdown, HealthData, LedgerData, WorkbenchData, WorkbenchNote, WorkbenchTodo } from '../types'
+import { emptyHealthData } from './healthCore'
+import { emptyLedgerData } from './ledgerCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 1
-export const IDB_STORES = ['todos', 'notes', 'countdowns', 'passwords'] as const
+export const DB_VERSION = 2
+export const IDB_STORES = ['todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger'] as const
 export const IDB_KEY = 'items'
 
 export type IdbStore = (typeof IDB_STORES)[number]
@@ -27,7 +29,16 @@ export function openIdb(): Promise<IDBDatabase> {
           }
         }
       }
-      request.onsuccess = () => resolve(request.result)
+      request.onsuccess = () => {
+        const db = request.result
+        // 另一标签页触发 versionchange（新代码升级 DB）时：关掉旧连接并清缓存，
+        // 下次 open 重建连接，避免旧连接阻塞升级
+        db.onversionchange = () => {
+          db.close()
+          dbPromise = undefined
+        }
+        resolve(db)
+      }
       request.onerror = () => reject(request.error)
     })
   }
@@ -65,11 +76,13 @@ export function idbClear(store: IdbStore): Promise<void> {
 }
 
 export async function idbExportAll(): Promise<WorkbenchData> {
-  const [todos, notes, countdowns, passwords] = await Promise.all([
+  const [todos, notes, countdowns, passwords, health, ledger] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
     idbGet<WorkbenchNote[]>('notes'),
     idbGet<Countdown[]>('countdowns'),
-    idbGet<string>('passwords')
+    idbGet<string>('passwords'),
+    idbGet<HealthData>('health'),
+    idbGet<LedgerData>('ledger')
   ])
   return {
     version: WORKBENCH_DATA_VERSION,
@@ -77,12 +90,14 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     todos: todos ?? [],
     notes: notes ?? [],
     countdowns: countdowns ?? [],
-    passwords: passwords ?? ''
+    passwords: passwords ?? '',
+    health: health ?? emptyHealthData(),
+    ledger: ledger ?? emptyLedgerData()
   }
 }
 
 export async function idbImportAll(data: WorkbenchData): Promise<void> {
-  if (data.version !== WORKBENCH_DATA_VERSION) {
+  if (data.version !== 1 && data.version !== 2) {
     throw new Error('备份文件版本不兼容')
   }
   if (
@@ -92,6 +107,15 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
     typeof data.passwords !== 'string'
   ) {
     throw new Error('备份文件格式无效')
+  }
+  // v1 备份缺 health/ledger 字段 → empty 兜底，归一后统一按 v2 结构逐 store 写入
+  if (data.version === 1) {
+    data = {
+      ...data,
+      version: 2,
+      health: data.health ?? emptyHealthData(),
+      ledger: data.ledger ?? emptyLedgerData()
+    }
   }
   const db = await openIdb()
   const tx = db.transaction([...IDB_STORES], 'readwrite')

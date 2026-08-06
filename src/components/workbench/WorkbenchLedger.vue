@@ -1,0 +1,1207 @@
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { calcMonthlyStats, findCategory, formatYuan, localDateStr, monthKeyOf } from '@/composables/ledgerCore'
+import { useToast } from '@/composables/useToast'
+import type { LedgerCategory, LedgerEntry } from '@/types'
+
+const store = useWorkbenchLedgerStore()
+const toast = useToast()
+
+// ===== 月份选择（顶部条，驱动全部统计/列表/占比重算）=====
+function currentMonth(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const selectedMonth = ref(currentMonth())
+
+function shiftMonth(delta: number): void {
+  const [y, m] = selectedMonth.value.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  selectedMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// ===== 月度统计（必须走 ledgerCore 纯函数，禁组件内重算公式）=====
+const monthStats = computed(() => calcMonthlyStats(store.entries, selectedMonth.value, store.categories))
+
+/** percent（0-1 小数）→ 1 位小数的百分比数值：先放大量级再四舍五入，规避浮点漂移（如 0.3055×100=30.5499…→30.5） */
+function percentOf(percent: number): number {
+  return Math.round((percent * 100 + 1e-9) * 10) / 10
+}
+
+function percentLabel(percent: number): string {
+  return `${percentOf(percent)}%`
+}
+
+// 空月（收入=0 且支出=0）→ 结余/支出比 '—'；收入=0 → 支出比 '—'（expenseRatio 为 null）
+const balanceText = computed(() =>
+  monthStats.value.income === 0 && monthStats.value.expense === 0 ? '—' : formatYuan(monthStats.value.balance)
+)
+const ratioText = computed(() => (monthStats.value.expenseRatio === null ? '—' : percentLabel(monthStats.value.expenseRatio)))
+
+// ===== 月内记录列表（date 降序，同日 createdAt 降序）=====
+const monthEntries = computed(() =>
+  [...store.entries]
+    .filter(e => monthKeyOf(e.date) === selectedMonth.value)
+    .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
+)
+
+interface EntryView {
+  entry: LedgerEntry
+  cat: LedgerCategory | undefined
+}
+
+const viewEntries = computed<EntryView[]>(() =>
+  monthEntries.value.map(entry => ({ entry, cat: findCategory(store.categories, entry.categoryId) }))
+)
+
+function catNameOf(categoryId: string): string {
+  return findCategory(store.categories, categoryId)?.name ?? '未知'
+}
+
+// ===== 记录表单（新增/编辑共用弹框）=====
+const showDialog = ref(false)
+const editingId = ref<string | null>(null)
+const formDate = ref(localDateStr())
+const formCategoryId = ref('')
+const formAmount = ref('')
+const formNote = ref('')
+
+// 金额：>0 且最多 2 位小数，否则保存按钮 disabled
+// 注意：<input type="number"> 的 v-model 在 Vue 3 下会把值转成 number（如 10000），故入参不限定 string
+function isValidAmount(raw: string | number): boolean {
+  const trimmed = String(raw).trim()
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return false
+  const n = Number(trimmed)
+  return Number.isFinite(n) && n > 0
+}
+
+const isFormValid = computed(
+  () => formDate.value !== '' && formCategoryId.value !== '' && isValidAmount(formAmount.value)
+)
+
+function startAdd(): void {
+  editingId.value = null
+  formDate.value = localDateStr()
+  formCategoryId.value = store.incomeCategories[0]?.id ?? store.expenseCategories[0]?.id ?? ''
+  formAmount.value = ''
+  formNote.value = ''
+  showDialog.value = true
+}
+
+function startEdit(view: EntryView): void {
+  editingId.value = view.entry.id
+  formDate.value = view.entry.date
+  formCategoryId.value = view.entry.categoryId
+  formAmount.value = String(view.entry.amount)
+  formNote.value = view.entry.note ?? ''
+  showDialog.value = true
+}
+
+function cancelForm(): void {
+  showDialog.value = false
+  editingId.value = null
+}
+
+async function handleSave(): Promise<void> {
+  if (!isFormValid.value) return
+  const note = formNote.value.trim() || undefined
+  const payload = { date: formDate.value, categoryId: formCategoryId.value, amount: Number(formAmount.value) }
+  if (editingId.value) {
+    await store.updateEntry(editingId.value, note ? { ...payload, note } : payload)
+  } else {
+    await store.addEntry(note ? { ...payload, note } : payload)
+  }
+  cancelForm()
+}
+
+async function handleDelete(id: string): Promise<void> {
+  if (confirm('确定要删除这笔记账吗？')) {
+    await store.deleteEntry(id)
+  }
+}
+
+// ===== 分组管理弹框 =====
+const showCatManager = ref(false)
+const editingCatId = ref<string | null>(null)
+const catEditName = ref('')
+const catEditType = ref<'income' | 'expense'>('expense')
+const newCatName = ref('')
+const newCatType = ref<'income' | 'expense'>('expense')
+
+function openCatManager(): void {
+  editingCatId.value = null
+  showCatManager.value = true
+}
+
+function closeCatManager(): void {
+  showCatManager.value = false
+  editingCatId.value = null
+}
+
+function startEditCat(cat: LedgerCategory): void {
+  editingCatId.value = cat.id
+  catEditName.value = cat.name
+  catEditType.value = cat.type
+}
+
+async function handleEditCatSave(): Promise<void> {
+  const id = editingCatId.value
+  if (!id) return
+  const name = catEditName.value.trim()
+  if (!name) return
+  const ok = await store.updateCategory(id, { name, type: catEditType.value })
+  if (!ok) {
+    toast.error('分组名称已存在')
+    return
+  }
+  editingCatId.value = null
+}
+
+async function handleAddCat(): Promise<void> {
+  const name = newCatName.value.trim()
+  if (!name) return
+  const ok = await store.addCategory({ name, type: newCatType.value })
+  if (!ok) {
+    toast.error('分组名称已存在')
+    return
+  }
+  newCatName.value = ''
+}
+
+async function handleDeleteCat(id: string): Promise<void> {
+  if (!confirm('确定要删除这个分组吗？')) return
+  const res = await store.deleteCategory(id)
+  if (!res.ok) {
+    if (res.reason === 'in-use') {
+      toast.error('该分组已被记账记录使用，无法删除')
+    } else {
+      toast.error('该分组无法删除')
+    }
+  }
+}
+
+// ESC 关闭弹框（先记录弹框，再分组管理）
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape') return
+  if (showDialog.value) {
+    event.preventDefault()
+    cancelForm()
+  } else if (showCatManager.value) {
+    event.preventDefault()
+    closeCatManager()
+  }
+}
+
+// 面板自管理数据加载（WorkbenchView 后续集成统一加载，这里防御性幂等重载）
+onMounted(async () => {
+  await store.loadLedger()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+</script>
+
+<template>
+  <div class="wb-ledger">
+    <!-- 月份选择条（stat 卡上方） -->
+    <div class="ld-month-bar">
+      <button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</button>
+      <button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</button>
+      <input v-model="selectedMonth" type="month" class="form-input month-input" data-testid="ld-month" />
+      <button class="month-btn today-btn" data-testid="ld-today" @click="selectedMonth = currentMonth()">本月</button>
+    </div>
+
+    <!-- 统计卡 5 张（一行 stat-card） -->
+    <div class="ld-stats">
+      <div class="stat-card" data-testid="ld-stat-income">
+        <div class="stat-header">
+          <span class="stat-icon">💰</span>
+          <span class="stat-label">收入</span>
+        </div>
+        <div class="stat-value is-income">{{ formatYuan(monthStats.income) }}</div>
+      </div>
+      <div class="stat-card" data-testid="ld-stat-expense">
+        <div class="stat-header">
+          <span class="stat-icon">📉</span>
+          <span class="stat-label">支出</span>
+        </div>
+        <div class="stat-value is-expense">{{ formatYuan(monthStats.expense) }}</div>
+      </div>
+      <div class="stat-card" data-testid="ld-stat-balance">
+        <div class="stat-header">
+          <span class="stat-icon">⚖️</span>
+          <span class="stat-label">结余</span>
+        </div>
+        <div class="stat-value" :class="{ 'is-negative': monthStats.balance < 0 }">{{ balanceText }}</div>
+      </div>
+      <div class="stat-card" data-testid="ld-stat-count">
+        <div class="stat-header">
+          <span class="stat-icon">🧾</span>
+          <span class="stat-label">消费笔数</span>
+        </div>
+        <div class="stat-value">{{ monthStats.expenseCount }}</div>
+      </div>
+      <div class="stat-card" data-testid="ld-stat-ratio">
+        <div class="stat-header">
+          <span class="stat-icon">📊</span>
+          <span class="stat-label">支出比</span>
+        </div>
+        <div class="stat-value">{{ ratioText }}</div>
+      </div>
+    </div>
+
+    <!-- 支出分类占比明细条（当月 expense>0 才显示整块） -->
+    <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
+      <div class="ld-ratio-title">支出分类占比</div>
+      <div v-for="item in monthStats.byCategory" :key="item.categoryId" class="ld-ratio-row">
+        <div class="ld-ratio-head">
+          <span class="ld-ratio-name">{{ catNameOf(item.categoryId) }}</span>
+          <span class="ld-ratio-val">{{ formatYuan(item.total) }} · {{ percentLabel(item.percent) }}</span>
+        </div>
+        <div class="ld-ratio-track">
+          <div
+            class="ld-ratio-fill"
+            :data-testid="`ld-bar-${item.categoryId}`"
+            :style="{ width: percentOf(item.percent) + '%' }"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作栏：数量 + 管理分组 + 新增 -->
+    <div class="ld-headbar">
+      <span class="toolbar-count" data-testid="ld-toolbar-count">共 {{ monthEntries.length }} 条</span>
+      <div class="ld-headbar-actions">
+        <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
+        <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增记录</button>
+      </div>
+    </div>
+
+    <!-- 空月态 / 记录列表 -->
+    <div v-if="monthEntries.length === 0" class="empty-state empty-invite" data-testid="ld-empty" @click="startAdd">
+      <div class="ld-empty-title">本月暂无记账记录</div>
+      <div class="ld-empty-sub">＋ 新增第一笔记录</div>
+    </div>
+
+    <div v-else class="ld-list">
+      <div v-for="v in viewEntries" :key="v.entry.id" class="ld-item" data-testid="ld-item">
+        <div class="ld-item-head">
+          <span class="ld-date">{{ v.entry.date }}</span>
+          <span
+            class="ld-cat-badge"
+            :class="{ 'is-income': v.cat?.type === 'income' }"
+            :data-testid="`ld-cat-${v.entry.categoryId}`"
+          >
+            {{ v.cat?.name ?? '未知' }}
+          </span>
+        </div>
+        <div class="ld-item-main">
+          <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
+          <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
+            {{ v.cat?.type === 'income' ? '+' : '-' }}{{ formatYuan(v.entry.amount) }}
+          </span>
+        </div>
+        <div class="ld-actions">
+          <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
+          <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新增/编辑记录弹框 -->
+    <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
+      <div class="dialog" data-testid="ld-dialog">
+        <div class="dialog-header">
+          <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
+          <button class="close-btn" @click="cancelForm">✕</button>
+        </div>
+        <form class="dialog-body" @submit.prevent="handleSave">
+          <div class="form-row-fields">
+            <div class="field">
+              <label class="field-label">日期 *</label>
+              <input v-model="formDate" type="date" class="form-input field-date" data-testid="ld-form-date" />
+            </div>
+            <div class="field field-category">
+              <label class="field-label">分组 *</label>
+              <select v-model="formCategoryId" class="form-input" data-testid="ld-form-category">
+                <optgroup label="收入分组">
+                  <option v-for="c in store.incomeCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </optgroup>
+                <optgroup label="支出分组">
+                  <option v-for="c in store.expenseCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>金额 *</label>
+            <input
+              v-model="formAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              class="form-input"
+              placeholder="例如：100.00"
+              data-testid="ld-form-amount"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>备注（可选）</label>
+            <textarea
+              v-model="formNote"
+              class="form-input desc-input"
+              rows="2"
+              placeholder="补充说明…"
+              data-testid="ld-form-note"
+            ></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">取消</button>
+            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">
+              {{ editingId ? '保存' : '添加' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 分组管理弹框 -->
+    <div v-if="showCatManager" class="dialog-overlay" @click.self="closeCatManager">
+      <div class="dialog" data-testid="ld-cat-dialog">
+        <div class="dialog-header">
+          <h3>管理分组</h3>
+          <button class="close-btn" @click="closeCatManager">✕</button>
+        </div>
+        <div class="dialog-body">
+          <div class="ld-cat-list">
+            <div v-for="c in store.sortedCategories" :key="c.id" class="ld-cat-row" :data-testid="`ld-catmgr-row-${c.id}`">
+              <template v-if="editingCatId === c.id">
+                <input
+                  v-model="catEditName"
+                  type="text"
+                  class="form-input"
+                  placeholder="分组名称"
+                  data-testid="ld-catmgr-edit-name"
+                />
+                <select v-model="catEditType" class="form-input" data-testid="ld-catmgr-edit-type">
+                  <option value="income">收入</option>
+                  <option value="expense">支出</option>
+                </select>
+                <div class="ld-cat-actions">
+                  <button
+                    class="btn-save"
+                    :disabled="catEditName.trim() === ''"
+                    :data-testid="`ld-catmgr-save-${c.id}`"
+                    @click="handleEditCatSave"
+                  >
+                    保存
+                  </button>
+                  <button class="btn-cancel" :data-testid="`ld-catmgr-cancel-${c.id}`" @click="editingCatId = null">取消</button>
+                </div>
+              </template>
+              <template v-else>
+                <span class="ld-cat-name">{{ c.name }}</span>
+                <span class="ld-cat-type-badge" :class="{ 'is-income': c.type === 'income' }">
+                  {{ c.type === 'income' ? '收入' : '支出' }}
+                </span>
+                <span v-if="c.isBuiltIn" class="ld-builtin-tag" :data-testid="`ld-catmgr-builtin-${c.id}`">内置</span>
+                <div v-else class="ld-cat-actions">
+                  <button class="btn-edit" :data-testid="`ld-catmgr-edit-${c.id}`" @click="startEditCat(c)">编辑</button>
+                  <button class="btn-delete" :data-testid="`ld-catmgr-del-${c.id}`" @click="handleDeleteCat(c.id)">删除</button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="ld-cat-add-form">
+            <input
+              v-model="newCatName"
+              type="text"
+              class="form-input"
+              placeholder="新分组名称"
+              data-testid="ld-catmgr-new-name"
+            />
+            <select v-model="newCatType" class="form-input" data-testid="ld-catmgr-new-type">
+              <option value="income">收入</option>
+              <option value="expense">支出</option>
+            </select>
+            <button class="btn-add" :disabled="newCatName.trim() === ''" data-testid="ld-catmgr-add" @click="handleAddCat">
+              添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* 面板容器 */
+.wb-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ===== 月份选择条 ===== */
+.ld-month-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.month-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--accent-color, var(--color-primary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.month-btn:hover {
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+  color: #fff;
+}
+
+.today-btn {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.today-btn:hover {
+  background: var(--accent-hover, var(--color-primary-hover));
+  border-color: var(--accent-hover, var(--color-primary-hover));
+}
+
+.month-input {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+/* ===== 统计卡 5 张 ===== */
+.ld-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+  transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.stat-card:hover {
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.stat-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.stat-value.is-income {
+  color: var(--success-color, var(--color-success));
+}
+
+.stat-value.is-expense {
+  color: var(--error-color, var(--color-error));
+}
+
+.stat-value.is-negative {
+  color: var(--error-color, var(--color-error));
+}
+
+/* ===== 支出分类占比条 ===== */
+.ld-ratio-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.ld-ratio-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.ld-ratio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ld-ratio-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ld-ratio-name {
+  font-size: 13px;
+  color: var(--text-primary, var(--color-text));
+}
+
+.ld-ratio-val {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-ratio-track {
+  height: 8px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  overflow: hidden;
+}
+
+.ld-ratio-fill {
+  height: 100%;
+  border-radius: var(--radius-full, 999px);
+  background: var(--accent-color, var(--color-primary));
+  transition: width var(--transition-fast, 0.15s ease);
+}
+
+/* ===== 操作栏 ===== */
+.ld-headbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ld-headbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-count {
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.btn-add {
+  padding: 10px 16px;
+  background-color: var(--accent-color, var(--color-primary));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.btn-add:hover:not(:disabled) {
+  background-color: var(--accent-hover, var(--color-primary-hover));
+}
+
+.btn-add:disabled {
+  background: var(--text-muted, var(--color-text-muted));
+  cursor: not-allowed;
+}
+
+.btn-manage {
+  padding: 10px 16px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-manage:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 空月态 ===== */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted, var(--color-text-muted));
+  font-size: 14px;
+  padding: 40px 20px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+}
+
+.empty-invite {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+}
+
+.empty-invite:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.ld-empty-title {
+  font-size: 14px;
+}
+
+.ld-empty-sub {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ===== 记录列表 ===== */
+.ld-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ld-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 12px;
+  background: var(--bg-card, var(--color-bg-card));
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-color, #3b82f6) 7%, transparent),
+    transparent 55%
+  );
+  border: 1px solid var(--border-color, var(--color-border));
+  border-left: 4px solid var(--accent-color, var(--color-primary));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.ld-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ld-date {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-cat-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 999px);
+  color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+}
+
+.ld-cat-badge.is-income {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.ld-item-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ld-note {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.ld-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-amount.is-income {
+  color: var(--success-color, var(--color-success));
+}
+
+.ld-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* ===== 按钮（复用 WorkbenchTodo/Exercise 体系）===== */
+.btn-edit,
+.btn-delete {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-edit:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.btn-delete:hover {
+  color: var(--error-color, var(--color-error));
+  border-color: var(--error-color, var(--color-error));
+}
+
+/* ===== 弹框（复用 WorkbenchTodo 体系）===== */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.dialog {
+  background-color: var(--bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 12px);
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+  position: sticky;
+  top: 0;
+  background: var(--bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+}
+
+.dialog-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 6px);
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+.close-btn:hover {
+  color: var(--text-primary, var(--color-text));
+}
+
+.dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group > label {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.form-row-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.field-date {
+  width: 170px;
+}
+
+.field-category {
+  flex: 1;
+  min-width: 180px;
+}
+
+.form-input {
+  padding: 9px 12px;
+  background-color: var(--input-bg, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: var(--text-primary, var(--color-text));
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.desc-input {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-save {
+  padding: 9px 18px;
+  background: var(--accent-color, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  cursor: pointer;
+  color: #fff;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.btn-save:hover:not(:disabled) {
+  background: var(--accent-hover, var(--color-primary-hover));
+}
+
+.btn-save:disabled {
+  background: var(--text-muted, var(--color-text-muted));
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  padding: 9px 16px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-cancel:hover {
+  background: var(--hover-bg, var(--color-bg-active));
+}
+
+/* ===== 分组管理 ===== */
+.ld-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ld-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+}
+
+.ld-cat-name {
+  flex: 1;
+  min-width: 80px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.ld-cat-type-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 999px);
+  color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+}
+
+.ld-cat-type-badge.is-income {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.ld-builtin-tag {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-full, 999px);
+  padding: 2px 10px;
+}
+
+.ld-cat-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ld-cat-add-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+}
+
+.ld-cat-add-form .form-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* ===== 暗色模式覆盖 ===== */
+:root.dark .ld-month-bar {
+  background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
+}
+
+:root.dark .stat-card,
+:root.dark .ld-ratio-block {
+  background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
+}
+
+:root.dark .ld-item {
+  background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
+}
+
+:root.dark .empty-state {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .dialog {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .dialog-header {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .ld-date {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .ld-note,
+:root.dark .ld-ratio-val {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .ld-amount {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .ld-amount.is-income {
+  color: #4ade80;
+}
+
+:root.dark .stat-value.is-income {
+  color: #4ade80;
+}
+
+:root.dark .stat-value.is-expense,
+:root.dark .stat-value.is-negative {
+  color: #f87171;
+}
+
+:root.dark .ld-cat-badge {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+:root.dark .ld-cat-badge.is-income,
+:root.dark .ld-cat-type-badge.is-income {
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+:root.dark .ld-cat-type-badge {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+:root.dark .ld-ratio-track {
+  background-color: var(--input-bg, #374151);
+}
+
+:root.dark .ld-cat-row {
+  background-color: var(--bg-card, #1f2937);
+}
+
+:root.dark .ld-cat-name {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .btn-manage,
+:root.dark .btn-cancel,
+:root.dark .btn-edit,
+:root.dark .btn-delete,
+:root.dark .month-btn {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .month-btn:hover {
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+  color: #fff;
+}
+
+:root.dark .today-btn {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
+:root.dark .btn-save:disabled {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .btn-add:disabled {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .form-input,
+:root.dark select.form-input,
+:root.dark input.form-input {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
+@media (max-width: 1100px) {
+  .ld-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .field-date,
+  .field-category,
+  .month-input {
+    width: 100%;
+  }
+}
+</style>

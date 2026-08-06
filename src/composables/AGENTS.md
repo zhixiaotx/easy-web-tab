@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-14 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+16 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
@@ -20,7 +20,9 @@ composables/
 ├── useCountdownReminder.ts # Singleton 提醒弹框引擎：60s tick + 到点提醒 + 每天 9:00 最后3天摘要
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
-├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v1, 4 stores (todos/notes/countdowns/passwords); idbGet/idbPut/idbClear/idbExportAll/idbImportAll
+├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v2, 6 stores (todos/notes/countdowns/passwords/health/ledger); idbGet/idbPut/idbClear/idbExportAll/idbImportAll (备份 v1 兼容导入)
+├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData
+├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/金额格式化 + normalizeLedgerData
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
@@ -40,7 +42,9 @@ composables/
 | Countdown reminder | `useCountdownReminder.ts` | 单例弹框引擎：60s `setInterval` tick + init 立即 tick + visibilitychange 立即 tick；到点写 `lastRemindedAt` 去重；9:00 最后3天摘要用 `STORAGE_KEY`(`user-countdown-reminder-date`) 防同日重复 |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
-| IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes; `idbImportAll` validates backup version |
+| IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes/health/ledger; `idbImportAll` validates backup version (仅接受 v1/v2，v1 补默认空数据兼容) |
+| 健康纯逻辑 | `healthCore.ts` | `emptyHealthData`/`normalizeHealthData`/`calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`/`weightTarget`/`dietCalories`/`sleepDurationHours`(跨天 +24h、相等=24h)/`weightChartScale`/`weekKeyOf` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`monthKeyOf`/`formatYuan` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 
 ## CONVENTIONS
 
@@ -50,6 +54,7 @@ composables/
 - `useCountdownReminder` is also a singleton (module-level shallowRef + `init()` 幂等守卫)
 - `useGames` is also a singleton with a `loaded` guard flag
 - `presetIcons.ts` is auto-generated — never edit manually
+- `healthCore.ts` / `ledgerCore.ts` are pure-logic engines — **禁止 import vue/pinia**（`node --experimental-strip-types` 测试运行器无法执行）；组件/面板只调用它们，禁止重算公式
 
 ## ANTI-PATTERNS
 
@@ -57,5 +62,5 @@ composables/
 - **`useBackup.ts` has its own markdown parser** — uses regex instead of `useMarkdown.ts` or `js-yaml`. Lower fidelity than the main parser. Import may silently drop data the main parser would accept.
 - **`useDeadLinkChecker.ts`** has 500ms throttle — rapid sequential requests are an anti-pattern
 - **`useToast.ts`** and **`useHelpModal.ts`** deviate from Pinia pattern — use module-level `shallowRef` for singleton state
-- **`useIdb.ts`** rejects on failure and does NOT fall back to localStorage — callers must `toRaw()` reactive arrays before `idbPut` (IDB structured clone throws DataCloneError on Vue Proxy)
+- **`useIdb.ts`** rejects on failure and does NOT fall back to localStorage — callers must `toRaw()` reactive arrays before `idbPut` (IDB structured clone throws DataCloneError on Vue Proxy); nested reactive arrays need per-array `toRaw` (whole-object `toRaw({...})` doesn't unwrap nested proxies)
 - **Icon fetch timeout** in `useIconCache.ts`: 8000ms (`AbortSignal.timeout(8000)`) — may need adjustment for slow networks

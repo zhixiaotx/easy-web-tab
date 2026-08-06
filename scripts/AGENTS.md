@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-3 helper scripts: build-time icon generation, production HTTP server, one-time utility. CommonJS + PowerShell (package is ESM — `.cjs` extension required).
+3 helper scripts + 4 test scripts: build-time icon generation, production HTTP server, one-time utility, pure-function test runners. CommonJS + PowerShell + TS (package is ESM — `.cjs` extension required; test scripts run via `node --experimental-strip-types`).
 
 ## STRUCTURE
 
@@ -10,7 +10,11 @@
 scripts/
 ├── generate-preset-icons.cjs # Build-time: scans public/icons/ → generates src/composables/presetIcons.ts (385 lines)
 ├── serve-with-rewrites.cjs   # Custom HTTP server: serves dist/ + game rewrites + SPA fallback (96 lines)
-└── rename-icons.ps1          # One-time icon rename utility (99 lines)
+├── rename-icons.ps1          # One-time icon rename utility (99 lines)
+├── test-countdown-core.ts    # countdownCore.ts 纯函数测试（13 断言；npm run test:countdown）
+├── test-todo-core.ts         # todoCore.ts 纯函数测试（npm run test:todo）
+├── test-health-core.ts       # healthCore.ts 纯函数测试（BMI 国标边界/达标率/睡眠时长/折线图坐标；npm run test:health）
+└── test-ledger-core.ts       # ledgerCore.ts 纯函数测试（月统计/占比/归一化/内置分组防脏改；npm run test:ledger）
 ```
 
 ## WHERE TO LOOK
@@ -20,6 +24,7 @@ scripts/
 | Regenerate preset icons | `generate-preset-icons.cjs` | Runs first in `npm run build`; also runnable standalone |
 | Serve production build | `serve-with-rewrites.cjs` | `npm run serve`; PORT 16718 hardcoded |
 | Add a game URL rewrite | `serve-with-rewrites.cjs` | if/else chain on `filePath`; redirects to trailing-slash for relative asset resolution |
+| 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心（countdownCore/todoCore/healthCore/ledgerCore）禁止 import vue/pinia |
 
 ## CONVENTIONS
 

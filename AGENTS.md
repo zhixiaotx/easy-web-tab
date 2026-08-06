@@ -5,10 +5,10 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 21 root SFCs + 5 workbench panels, sizes, component-level anti-patterns
-- `src/stores/AGENTS.md` — the 10 Pinia stores and data-layer invariants
-- `src/composables/AGENTS.md` — the 13 composables (incl. auto-generated `presetIcons.ts`)
-- `scripts/AGENTS.md` — build/serve scripts and game rewrite rules
+- `src/components/AGENTS.md` — the 21 root SFCs + 10 workbench panels, sizes, component-level anti-patterns
+- `src/stores/AGENTS.md` — the 12 Pinia stores and data-layer invariants
+- `src/composables/AGENTS.md` — the 16 composables (incl. auto-generated `presetIcons.ts`)
+- `scripts/AGENTS.md` — build/serve scripts, test scripts, and game rewrite rules
 
 ## STRUCTURE
 
@@ -16,9 +16,9 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
 │   ├── components/               # 21 root SFCs + workbench/ subdir (UI layer)
-│   │   └── workbench/            # 5 工作台面板: WorkbenchHome/Todo/Notes/Countdown/Password
-│   ├── composables/              # 13 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper)
-│   ├── stores/                   # 10 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts)
+│   │   └── workbench/            # 10 工作台面板: Home/Todo/Notes/Countdown/Password/Exercise/Diet/Sleep/Weight/Ledger
+│   ├── composables/              # 16 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, healthCore.ts, ledgerCore.ts)
+│   ├── stores/                   # 12 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchHealth.ts, workbenchLedger.ts)
 │   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
 │   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台 (eager imports)
 │   ├── types/index.ts            # Site, Category interfaces + DEFAULT_CATEGORIES
@@ -54,11 +54,15 @@ easy-web-tab/
 | Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 3 categories, 5 sort modes |
 | Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` |
 | Reminder engine | `src/composables/useCountdownReminder.ts` | Minute-level tick + daily 9am 3-day summary, singleton popup |
+| 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/` | 目标计划+按天记录混合模型；IndexedDB store 'health'；面板 WorkbenchExercise/Diet/Sleep/Weight.vue |
+| 健康纯逻辑（BMI/达标率/睡眠时长/折线图坐标） | `src/composables/healthCore.ts` | `calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`(国标 WS/T 428-2013)/`weightTarget`/`dietCalories`/`sleepDurationHours`/`weightChartScale`/`normalizeHealthData` |
+| 记账数据 | `src/stores/workbenchLedger.ts` + `src/components/workbench/WorkbenchLedger.vue` | 月份统计 + 分组管理（内置 8 组不可删）；IndexedDB store 'ledger' |
+| 记账纯逻辑（月统计/分类占比） | `src/composables/ledgerCore.ts` | `calcMonthlyStats`/`monthKeyOf`/`formatYuan`/`normalizeLedgerData`/`findCategory` |
 | Custom icons | `src/stores/icons.ts` | User-uploaded icon storage |
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
-| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | Todo/Notes/Countdown/Password 面板，数据经 `useIdb.ts` 存 IndexedDB |
+| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 10 面板（待办/便签/倒计时/密码/运动/饮食/睡眠/体重/记账 + 首页），数据经 `useIdb.ts` 存 IndexedDB |
 
 ## CODE MAP
 
@@ -73,13 +77,17 @@ easy-web-tab/
 | `useCountdownsStore` | store | `src/stores/countdowns.ts` | Countdown CRUD + sort preference (rule-based repeat, IndexedDB) |
 | `useWorkbenchTodosStore` | store | `src/stores/workbenchTodos.ts` | Workbench todo CRUD + filter/search/sort (IndexedDB) |
 | `useWorkbenchNotesStore` | store | `src/stores/workbenchNotes.ts` | Workbench notes CRUD + pin (IndexedDB) |
+| `useWorkbenchHealthStore` | store | `src/stores/workbenchHealth.ts` | 健康数据（height/plans/records 四模块 CRUD，IndexedDB store 'health'） |
+| `useWorkbenchLedgerStore` | store | `src/stores/workbenchLedger.ts` | 记账（categories/entries CRUD + 分组管理，内置 8 组不可删，IndexedDB store 'ledger'） |
 | `useToast` | composable | `src/composables/useToast.ts` | Singleton toast state |
 | `getIconUrl` / `getFaviconImgSrc` | functions | `src/composables/useIconCache.ts` | Icon resolution chain |
 | `calcRemaining` / `sortCountdowns` | functions | `src/composables/countdownCore.ts` | Pure countdown math + sorting |
 | `parseRepeat` / `getReminderDue` / `serializeRepeatYaml` | functions | `src/composables/countdownCore.ts` | Repeat rule engine (parse/normalize, due detection, YAML serialization) |
+| `calcExerciseAttainment` / `calcDailyAttainment` / `calcBmi` / `classifyBmi` / `weightChartScale` | functions | `src/composables/healthCore.ts` | 健康纯逻辑：达标率/BMI 国标四档/减肥建议/折线图坐标（组件禁止重算） |
+| `calcMonthlyStats` / `monthKeyOf` / `formatYuan` | functions | `src/composables/ledgerCore.ts` | 记账纯逻辑：月统计（income/expense/balance/ratio/byCategory）/月份键/金额格式化 |
 | `useCountdownReminder` | composable | `src/composables/useCountdownReminder.ts` | Singleton reminder popup engine (60s tick + 9am summary) |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
-| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab`, 4 stores: todos/notes/countdowns/passwords) |
+| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v2, 6 stores: todos/notes/countdowns/passwords/health/ledger; backup v1 兼容导入) |
 
 ## CONVENTIONS
 
@@ -92,8 +100,9 @@ easy-web-tab/
 - **Module type**: ESM (`"type": "module"`, `.cjs` for CommonJS scripts including PM2 configs)
 - **TypeScript**: Strict + noUnusedLocals + noUnusedParameters
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
-- **IndexedDB persistence**: 工作台数据（待办/便签/倒计时/密码）存浏览器 IndexedDB — DB 名 `easy-web-tab`，4 个 object store（todos/notes/countdowns/passwords），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）
+- **IndexedDB persistence**: 工作台数据（待办/便签/倒计时/密码/健康/记账）存浏览器 IndexedDB — DB 名 `easy-web-tab` v2，6 个 object store（todos/notes/countdowns/passwords/health/ledger），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）；导出备份 version 2，v1 旧备份导入时补默认空数据兼容（不拒绝）
 - **倒计时 repeat 规范**: `once` 规范存 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有入口（loadCountdowns/importCountdowns/addCountdown/updateCountdown/useMarkdown 解析）经 `normalizeCountdown`/`parseRepeat` 归一化，幂等
+- **健康/记账数据规范**: 健康=「目标计划(HealthPlan)+按天记录(HealthRecord 四模块)」混合模型，达标率/时长/BMI 一律走 `healthCore` 纯函数（组件禁止重算）；记账=内置 8 分组（工资=收入 + 房贷/车贷/早餐/午餐/晚餐/通勤/日常=支出，不可删改）+ 自定义分组（唯一名、被记录引用禁删），月统计一律走 `ledgerCore` 纯函数
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
@@ -103,9 +112,9 @@ easy-web-tab/
 - **Only `video` is a permanently built-in category** — others (office, tech, etc.) are legacy seeds users can delete
 - **No built-in seed data** — `public/data/sites.md` was removed from the repo; `loadSites()` still fetches `/data/sites.md` (404 → caught → empty), so data comes solely from localStorage/imports
 - **No ESLint/Prettier** — code quality relies solely on TypeScript strict mode
-- **No test framework** — no vitest/jest/cypress; `countdownCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown`), UI 验证走手动/Playwright QA
+- **No test framework** — no vitest/jest/cypress; `countdownCore.ts`/`todoCore.ts`/`healthCore.ts`/`ledgerCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown` / `test:todo` / `test:health` / `test:ledger`), UI 验证走手动/Playwright QA
 - **User data priority**: localStorage data overrides built-in data (same-URL merge in `loadSites()`)
-- **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes
+- **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes/health/ledger
 
 ## UNIQUE STYLES
 
@@ -125,6 +134,9 @@ npm run dev          # Dev server: http://localhost:16718
 npm run build        # generate-preset-icons → vue-tsc -b → vite build (3 sequential steps)
 npm run preview      # Preview production build
 npm run test:countdown  # Pure-function tests for countdownCore.ts (13 assertions, node --experimental-strip-types)
+npm run test:todo       # Pure-function tests for todoCore.ts (node --experimental-strip-types)
+npm run test:health     # Pure-function tests for healthCore.ts (BMI/达标率/睡眠/折线图, node --experimental-strip-types)
+npm run test:ledger     # Pure-function tests for ledgerCore.ts (月统计/占比, node --experimental-strip-types)
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

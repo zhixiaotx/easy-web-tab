@@ -7,7 +7,11 @@ import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
-import type { CountdownItem, TodoPriority, WorkbenchTodo } from '@/types'
+import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { calcBmi, calcDailyAttainment, calcExerciseAttainment, classifyBmi } from '@/composables/healthCore'
+import { calcMonthlyStats, formatYuan, monthKeyOf } from '@/composables/ledgerCore'
+import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
 
 const emit = defineEmits<{ navigate: [section: string] }>()
 
@@ -15,6 +19,8 @@ const todosStore = useWorkbenchTodosStore()
 const notesStore = useWorkbenchNotesStore()
 const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
+const healthStore = useWorkbenchHealthStore()
+const ledgerStore = useWorkbenchLedgerStore()
 
 // ===== 逾期判断（同 WorkbenchTodo.vue）=====
 // 今天 = 本地日期 YYYY-MM-DD（不能用 toISOString，那是 UTC，会偏一天）
@@ -47,6 +53,72 @@ const countdownStats = computed(() => ({
     i => !i.remaining.isExpired && i.remaining.status !== 'normal'
   ).length
 }))
+
+// ===== 健康 & 记账统计卡（数值全部走 healthCore/ledgerCore 纯函数，不在此重写公式）=====
+
+// 运动指标单位（周达标 sub：次/分钟/千卡）
+const EXERCISE_UNIT: Record<HealthPlanMetric, string> = {
+  times: '次',
+  minutes: '分钟',
+  calories: '千卡',
+  duration: '次'
+}
+
+// 运动：本周达标（times=条数 / minutes=Σduration / calories=Σcalories）
+const exerciseStats = computed(() => {
+  const plan = healthStore.plans.exercise
+  const at = calcExerciseAttainment(healthStore.records.exercise, plan, localToday())
+  if (!at || !plan) return { value: '未设定目标', sub: '点击前往设置' }
+  return { value: `${at.current}/${at.target}`, sub: `本周 · ${EXERCISE_UNIT[plan.metric]}` }
+})
+
+// 饮食：今日热量合计
+const dietStats = computed(() => {
+  const at = calcDailyAttainment(healthStore.records.diet, healthStore.plans.diet, localToday())
+  if (!at) return { value: '未设定目标', sub: '点击前往设置' }
+  return { value: `${at.current}/${at.target} 千卡`, sub: '今日 · 千卡' }
+})
+
+// 睡眠：今日时长（今日无记录但有计划 → '—'）
+const sleepStats = computed(() => {
+  const today = localToday()
+  const plan = healthStore.plans.sleep
+  if (!plan) return { value: '未设定目标', sub: '点击前往设置' }
+  if (!healthStore.records.sleep.some(r => r.date === today)) return { value: '—', sub: '今日暂无记录' }
+  const at = calcDailyAttainment(healthStore.records.sleep, plan, today)
+  // 计划存在且今日有记录 → at 必非 null（calcDailyAttainment 仅无计划/模块非 diet|sleep 时返回 null）
+  if (!at) return { value: '—', sub: '今日暂无记录' }
+  return { value: `${at.current}/${at.target} 小时`, sub: '今日 · 小时' }
+})
+
+// BMI 状态标签（国标 WS/T 428-2013）
+const BMI_LABEL: Record<ReturnType<typeof classifyBmi>, string> = {
+  under: '偏瘦',
+  normal: '正常',
+  overweight: '超重',
+  obese: '肥胖'
+}
+
+// 体重：最近一条（date 降序，同日取 createdAt 新者）+ 身高 → BMI
+const weightStats = computed(() => {
+  const height = healthStore.height
+  const latest = [...healthStore.records.weight].sort((a, b) =>
+    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
+  )[0]
+  if (latest === undefined || height === undefined) return { value: '—', sub: '点击前往设置' }
+  const bmi = calcBmi(latest.weightKg, height)
+  if (bmi === null) return { value: '—', sub: '点击前往设置' }
+  return { value: `BMI ${bmi.toFixed(1)} ${BMI_LABEL[classifyBmi(bmi)]}`, sub: `最近 ${latest.weightKg} kg` }
+})
+
+// 记账：本月收入/支出/结余
+const ledgerStats = computed(() => {
+  const stats = calcMonthlyStats(ledgerStore.entries, monthKeyOf(localToday()), ledgerStore.categories)
+  return {
+    value: `支出 ¥${formatYuan(stats.expense)}`,
+    sub: `收入 ¥${formatYuan(stats.income)} · 结余 ¥${formatYuan(stats.balance)}`
+  }
+})
 
 // ===== 即将到期倒计时：itemsWithRemaining 中未过期的前 3 条（已按 store 排序）=====
 const upcomingCountdowns = computed<CountdownItem[]>(() =>
@@ -131,6 +203,56 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
           {{ passwordsStore.isUnlocked ? `${passwordsStore.passwords.length} 条` : '🔒 解锁后可见' }}
         </div>
         <div class="stat-sub">{{ passwordsStore.isUnlocked ? '已解锁' : '未解锁' }}</div>
+      </div>
+
+      <div class="stat-card" data-testid="home-stats-exercise">
+        <div class="stat-header">
+          <span class="stat-icon">🏃</span>
+          <span class="stat-label">运动</span>
+          <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'exercise')">前往 →</button>
+        </div>
+        <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
+        <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
+      </div>
+
+      <div class="stat-card" data-testid="home-stats-diet">
+        <div class="stat-header">
+          <span class="stat-icon">🍽️</span>
+          <span class="stat-label">饮食</span>
+          <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'diet')">前往 →</button>
+        </div>
+        <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
+        <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
+      </div>
+
+      <div class="stat-card" data-testid="home-stats-sleep">
+        <div class="stat-header">
+          <span class="stat-icon">😴</span>
+          <span class="stat-label">睡眠</span>
+          <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'sleep')">前往 →</button>
+        </div>
+        <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
+        <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
+      </div>
+
+      <div class="stat-card" data-testid="home-stats-weight">
+        <div class="stat-header">
+          <span class="stat-icon">⚖️</span>
+          <span class="stat-label">体重</span>
+          <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'weight')">前往 →</button>
+        </div>
+        <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
+        <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
+      </div>
+
+      <div class="stat-card" data-testid="home-stats-ledger">
+        <div class="stat-header">
+          <span class="stat-icon">💰</span>
+          <span class="stat-label">记账</span>
+          <button class="nav-btn" data-testid="home-nav-ledger" @click="emit('navigate', 'ledger')">前往 →</button>
+        </div>
+        <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
+        <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
       </div>
     </div>
 

@@ -13,7 +13,7 @@ import { calcBmi, calcDailyAttainment, calcExerciseAttainment, classifyBmi } fro
 import { calcMonthlyStats, formatYuan, monthKeyOf } from '@/composables/ledgerCore'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
 
-const emit = defineEmits<{ navigate: [section: string] }>()
+const emit = defineEmits<{ navigate: [section: string, tab?: string] }>()
 
 const todosStore = useWorkbenchTodosStore()
 const notesStore = useWorkbenchNotesStore()
@@ -209,7 +209,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-header">
           <span class="stat-icon">🏃</span>
           <span class="stat-label">运动</span>
-          <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'exercise')">前往 →</button>
+          <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'health', 'exercise')">前往 →</button>
         </div>
         <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
         <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
@@ -219,7 +219,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-header">
           <span class="stat-icon">🍽️</span>
           <span class="stat-label">饮食</span>
-          <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'diet')">前往 →</button>
+          <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'health', 'diet')">前往 →</button>
         </div>
         <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
         <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
@@ -229,7 +229,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-header">
           <span class="stat-icon">😴</span>
           <span class="stat-label">睡眠</span>
-          <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'sleep')">前往 →</button>
+          <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'health', 'sleep')">前往 →</button>
         </div>
         <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
         <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
@@ -239,7 +239,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-header">
           <span class="stat-icon">⚖️</span>
           <span class="stat-label">体重</span>
-          <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'weight')">前往 →</button>
+          <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'health', 'weight')">前往 →</button>
         </div>
         <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
         <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>

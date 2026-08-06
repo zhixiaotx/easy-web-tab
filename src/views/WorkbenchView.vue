@@ -9,16 +9,13 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
-import type { WorkbenchData } from '@/types'
+import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
 import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
 import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
-import WorkbenchExercise from '@/components/workbench/WorkbenchExercise.vue'
-import WorkbenchDiet from '@/components/workbench/WorkbenchDiet.vue'
-import WorkbenchSleep from '@/components/workbench/WorkbenchSleep.vue'
-import WorkbenchWeight from '@/components/workbench/WorkbenchWeight.vue'
+import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
 
 const router = useRouter()
@@ -30,27 +27,30 @@ const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 
-// 左侧菜单 10 项
+// 左侧菜单 7 项
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
   'countdowns',
   'passwords',
-  'exercise',
-  'diet',
-  'sleep',
-  'weight',
+  'health',
   'ledger'
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 const activeSection = ref<SectionKey>('home')
 
+// 健康管理面板当前激活 tab（点击菜单「健康管理」不传 tab → 保留上次激活）
+const activeHealthTab = ref<HealthModule>('exercise')
+
 // WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）
-function navigateTo(section: string) {
+function navigateTo(section: string, tab?: string) {
   if ((SECTION_KEYS as readonly string[]).includes(section)) {
     activeSection.value = section as SectionKey
+    if (section === 'health' && tab !== undefined && (HEALTH_TABS as readonly string[]).includes(tab)) {
+      activeHealthTab.value = tab as HealthModule
+    }
   }
 }
 
@@ -60,10 +60,7 @@ const MENU_ITEMS = [
   { key: 'notes', label: '个人便签', icon: '📝' },
   { key: 'countdowns', label: '定时提醒', icon: '⏳' },
   { key: 'passwords', label: '密码管理', icon: '🔑' },
-  { key: 'exercise', label: '运动', icon: '🏃' },
-  { key: 'diet', label: '饮食', icon: '🍽️' },
-  { key: 'sleep', label: '睡眠', icon: '😴' },
-  { key: 'weight', label: '体重', icon: '⚖️' },
+  { key: 'health', label: '健康管理', icon: '💪' },
   { key: 'ledger', label: '记账', icon: '💰' }
 ] as const
 
@@ -227,7 +224,7 @@ async function handleImportFile(event: Event) {
           :key="item.key"
           class="wb-menu-item"
           :class="{ active: activeSection === item.key }"
-          @click="activeSection = item.key"
+          @click="navigateTo(item.key)"
         >
           <span class="wb-menu-icon">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
@@ -240,10 +237,7 @@ async function handleImportFile(event: Event) {
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
         <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
-        <WorkbenchExercise v-else-if="activeSection === 'exercise'" />
-        <WorkbenchDiet v-else-if="activeSection === 'diet'" />
-        <WorkbenchSleep v-else-if="activeSection === 'sleep'" />
-        <WorkbenchWeight v-else-if="activeSection === 'weight'" />
+        <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
       </main>
     </div>

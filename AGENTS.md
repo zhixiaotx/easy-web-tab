@@ -5,7 +5,7 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 21 root SFCs + 10 workbench panels, sizes, component-level anti-patterns
+- `src/components/AGENTS.md` — the 21 root SFCs + 11 workbench SFCs (10 panels + WorkbenchHealth tabs container), sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 12 Pinia stores and data-layer invariants
 - `src/composables/AGENTS.md` — the 16 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts, test scripts, and game rewrite rules
@@ -16,7 +16,7 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
 │   ├── components/               # 21 root SFCs + workbench/ subdir (UI layer)
-│   │   └── workbench/            # 10 工作台面板: Home/Todo/Notes/Countdown/Password/Exercise/Diet/Sleep/Weight/Ledger
+│   │   └── workbench/            # 10 工作台面板 + WorkbenchHealth tabs 容器（运动/饮食/睡眠/体重 四合一）
 │   ├── composables/              # 16 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, healthCore.ts, ledgerCore.ts)
 │   ├── stores/                   # 12 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchHealth.ts, workbenchLedger.ts)
 │   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
@@ -54,7 +54,7 @@ easy-web-tab/
 | Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 3 categories, 5 sort modes |
 | Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` |
 | Reminder engine | `src/composables/useCountdownReminder.ts` | Minute-level tick + daily 9am 3-day summary, singleton popup |
-| 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/` | 目标计划+按天记录混合模型；IndexedDB store 'health'；面板 WorkbenchExercise/Diet/Sleep/Weight.vue |
+| 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/WorkbenchHealth.vue` | 目标计划+按天记录混合模型；IndexedDB store 'health'；tabs 容器 WorkbenchHealth.vue 内嵌面板 WorkbenchExercise/Diet/Sleep/Weight.vue（受控组件 activeTab + change emit） |
 | 健康纯逻辑（BMI/达标率/睡眠时长/折线图坐标） | `src/composables/healthCore.ts` | `calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`(国标 WS/T 428-2013)/`weightTarget`/`dietCalories`/`sleepDurationHours`/`weightChartScale`/`normalizeHealthData` |
 | 记账数据 | `src/stores/workbenchLedger.ts` + `src/components/workbench/WorkbenchLedger.vue` | 月份统计 + 分组管理（内置 8 组不可删）；IndexedDB store 'ledger' |
 | 记账纯逻辑（月统计/分类占比） | `src/composables/ledgerCore.ts` | `calcMonthlyStats`/`monthKeyOf`/`formatYuan`/`normalizeLedgerData`/`findCategory` |
@@ -62,7 +62,7 @@ easy-web-tab/
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
-| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 10 面板（待办/便签/倒计时/密码/运动/饮食/睡眠/体重/记账 + 首页），数据经 `useIdb.ts` 存 IndexedDB |
+| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 7 项（主页/待办/便签/倒计时/密码/健康管理/记账）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；数据经 `useIdb.ts` 存 IndexedDB |
 
 ## CODE MAP
 

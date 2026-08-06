@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-23 Vue 3 SFCs in the root plus 10 workbench panel SFCs under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+23 Vue 3 SFCs in the root plus 11 workbench SFCs (10 panels + WorkbenchHealth tabs container) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -30,12 +30,13 @@ components/
 ├── SkeletonCard.vue      # Loading skeleton (card)
 ├── SkeletonGrid.vue      # Loading skeleton (grid)
 ├── Toast.vue             # Notification toast (receives `toasts` array as prop)
-└── workbench/            # 个人工作台 10 面板 (data persisted to IndexedDB via `useIdb.ts`)
+└── workbench/            # 个人工作台 11 SFC: 10 面板 + 健康管理 tabs 容器 (data persisted to IndexedDB via `useIdb.ts`)
     ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口，9 张概览卡：4 旧 + 健康/记账 5 新）
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选）
     ├── WorkbenchNotes.vue       # 便签面板（增删改查 + 置顶 + 颜色）
     ├── WorkbenchCountdown.vue   # 倒计时面板（规则/分类表单 + 徽标，data-testid 前缀 cd-）
     ├── WorkbenchPassword.vue    # 密码面板（主密码三态 + 新增/编辑弹窗 + 书签关联下拉 + 名称搜索，复用 usePasswordsStore / useCrypto.ts）
+    ├── WorkbenchHealth.vue      # 健康管理 tabs 容器（受控组件：props activeTab + emit change；tab 栏前缀 hd-；内含运动/饮食/睡眠/体重 四面板）
     ├── WorkbenchExercise.vue    # 运动面板（周目标 times/minutes/calories + 记录 + 达标率，data-testid 前缀 ex-）
     ├── WorkbenchDiet.vue        # 饮食面板（每日热量目标 + 四餐次记录，前缀 dt-）
     ├── WorkbenchSleep.vue       # 睡眠面板（每日时长目标 + 入睡/起床时间自动算时长 + 质量星标，前缀 sl-）
@@ -60,7 +61,7 @@ components/
 | Tag filtering | `TagFilter.vue` + `CategoryTabs.vue` | Tags extracted from all sites |
 | Loading states | `SkeletonCard.vue` + `SkeletonGrid.vue` | Shimmer placeholders |
 | Toast notifications | `Toast.vue` | Receives `toasts` array as prop from `useToast()` |
-| 工作台面板 | `workbench/WorkbenchHome.vue` + `workbench/WorkbenchTodo.vue` + `workbench/WorkbenchNotes.vue` + `workbench/WorkbenchCountdown.vue` + `workbench/WorkbenchPassword.vue` + `workbench/WorkbenchExercise.vue` + `workbench/WorkbenchDiet.vue` + `workbench/WorkbenchSleep.vue` + `workbench/WorkbenchWeight.vue` + `workbench/WorkbenchLedger.vue` | 个人工作台 10 面板；待办/便签走 `useWorkbenchTodosStore` / `useWorkbenchNotesStore`，健康走 `useWorkbenchHealthStore`，记账走 `useWorkbenchLedgerStore`，倒计时/密码复用既有 store，均经 `useIdb.ts` 持久化到 IndexedDB |
+| 工作台面板 | `workbench/WorkbenchHome.vue` + `workbench/WorkbenchTodo.vue` + `workbench/WorkbenchNotes.vue` + `workbench/WorkbenchCountdown.vue` + `workbench/WorkbenchPassword.vue` + `workbench/WorkbenchHealth.vue` + `workbench/WorkbenchExercise.vue` + `workbench/WorkbenchDiet.vue` + `workbench/WorkbenchSleep.vue` + `workbench/WorkbenchWeight.vue` + `workbench/WorkbenchLedger.vue` | 个人工作台：左侧菜单 7 项（主页/待办/便签/倒计时/密码/健康管理/记账）；健康管理=WorkbenchHealth.vue tabs 容器（受控 activeTab+change，前缀 hd-，内含运动/饮食/睡眠/体重四面板）；待办/便签走 `useWorkbenchTodosStore` / `useWorkbenchNotesStore`，健康走 `useWorkbenchHealthStore`，记账走 `useWorkbenchLedgerStore`，倒计时/密码复用既有 store，均经 `useIdb.ts` 持久化到 IndexedDB |
 
 ## CONVENTIONS
 

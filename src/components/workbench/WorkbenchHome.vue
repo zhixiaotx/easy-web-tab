@@ -10,7 +10,7 @@ import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { calcBmi, calcDailyAttainment, calcExerciseAttainment, classifyBmi } from '@/composables/healthCore'
-import { calcMonthlyStats, formatYuan, monthKeyOf } from '@/composables/ledgerCore'
+import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
 
 const emit = defineEmits<{ navigate: [section: string, tab?: string] }>()
@@ -111,12 +111,12 @@ const weightStats = computed(() => {
   return { value: `BMI ${bmi.toFixed(1)} ${BMI_LABEL[classifyBmi(bmi)]}`, sub: `最近 ${latest.weightKg} kg` }
 })
 
-// 记账：本月收入/支出/结余
+// 记账：本月收入/支出/结余（金额走掩码：默认隐藏 ****，跟随记账面板可见性开关实时联动）
 const ledgerStats = computed(() => {
   const stats = calcMonthlyStats(ledgerStore.entries, monthKeyOf(localToday()), ledgerStore.categories)
   return {
-    value: `支出 ¥${formatYuan(stats.expense)}`,
-    sub: `收入 ¥${formatYuan(stats.income)} · 结余 ¥${formatYuan(stats.balance)}`
+    value: `支出 ¥${maskOrReveal(formatYuan(stats.expense), !ledgerStore.showAmount)}`,
+    sub: `收入 ¥${maskOrReveal(formatYuan(stats.income), !ledgerStore.showAmount)} · 结余 ¥${maskOrReveal(formatYuan(stats.balance), !ledgerStore.showAmount)}`
   }
 })
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
-import { calcMonthlyStats, findCategory, formatYuan, localDateStr, monthKeyOf } from '@/composables/ledgerCore'
+import { calcDepositTotal, calcMonthlyStats, findCategory, formatYuan, localDateStr, monthKeyOf } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
 import type { LedgerCategory, LedgerEntry } from '@/types'
 
@@ -24,6 +24,11 @@ function shiftMonth(delta: number): void {
 
 // ===== 月度统计（必须走 ledgerCore 纯函数，禁组件内重算公式）=====
 const monthStats = computed(() => calcMonthlyStats(store.entries, selectedMonth.value, store.categories))
+
+// 存款 = 从最早记账月到当前选中月的每月结余累计（纯函数，禁组件内重算）
+const depositTotal = computed(() => calcDepositTotal(store.entries, selectedMonth.value, store.categories))
+/** 存款统计累计结余，0 也有意义（无记账也显示 0.00，不像结余卡空月显示 '—'） */
+const depositText = computed(() => (depositTotal.value === 0 ? formatYuan(0) : formatYuan(depositTotal.value)))
 
 /** percent（0-1 小数）→ 1 位小数的百分比数值：先放大量级再四舍五入，规避浮点漂移（如 0.3055×100=30.5499…→30.5） */
 function percentOf(percent: number): number {
@@ -218,7 +223,7 @@ onUnmounted(() => {
       <button class="month-btn today-btn" data-testid="ld-today" @click="selectedMonth = currentMonth()">本月</button>
     </div>
 
-    <!-- 统计卡 5 张（一行 stat-card） -->
+    <!-- 统计卡 6 张（一行 stat-card） -->
     <div class="ld-stats">
       <div class="stat-card" data-testid="ld-stat-income">
         <div class="stat-header">
@@ -240,6 +245,13 @@ onUnmounted(() => {
           <span class="stat-label">结余</span>
         </div>
         <div class="stat-value" :class="{ 'is-negative': monthStats.balance < 0 }">{{ balanceText }}</div>
+      </div>
+      <div class="stat-card" data-testid="ld-stat-deposit">
+        <div class="stat-header">
+          <span class="stat-icon">🏦</span>
+          <span class="stat-label">存款</span>
+        </div>
+        <div class="stat-value" :class="{ 'is-negative': depositTotal < 0 }">{{ depositText }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-count">
         <div class="stat-header">
@@ -500,10 +512,10 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* ===== 统计卡 5 张 ===== */
+/* ===== 统计卡 6 张 ===== */
 .ld-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
 }
 

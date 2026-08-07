@@ -47,6 +47,9 @@ const monthEntries = computed(() =>
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
 
+// ===== 记录列表展开/折叠（默认展开；折叠仅隐藏列表，计数/统计不受影响）=====
+const listExpanded = ref(true)
+
 interface EntryView {
   entry: LedgerEntry
   cat: LedgerCategory | undefined
@@ -276,6 +279,9 @@ onUnmounted(() => {
     <div class="ld-headbar">
       <span class="toolbar-count" data-testid="ld-toolbar-count">共 {{ monthEntries.length }} 条</span>
       <div class="ld-headbar-actions">
+        <button class="btn-manage" data-testid="ld-toggle-list" @click="listExpanded = !listExpanded">
+          {{ listExpanded ? '收起记录' : '展开记录' }}
+        </button>
         <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
         <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增记录</button>
       </div>
@@ -287,7 +293,7 @@ onUnmounted(() => {
       <div class="ld-empty-sub">＋ 新增第一笔记录</div>
     </div>
 
-    <div v-else class="ld-list">
+    <div v-else-if="listExpanded" class="ld-list">
       <div v-for="v in viewEntries" :key="v.entry.id" class="ld-item" data-testid="ld-item">
         <span class="ld-date">{{ v.entry.date }}</span>
         <span

@@ -289,22 +289,19 @@ onUnmounted(() => {
 
     <div v-else class="ld-list">
       <div v-for="v in viewEntries" :key="v.entry.id" class="ld-item" data-testid="ld-item">
-        <div class="ld-item-head">
-          <span class="ld-date">{{ v.entry.date }}</span>
-          <span
-            class="ld-cat-badge"
-            :class="{ 'is-income': v.cat?.type === 'income' }"
-            :data-testid="`ld-cat-${v.entry.categoryId}`"
-          >
-            {{ v.cat?.name ?? '未知' }}
-          </span>
-        </div>
-        <div class="ld-item-main">
-          <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
-          <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
-            {{ v.cat?.type === 'income' ? '+' : '-' }}{{ formatYuan(v.entry.amount) }}
-          </span>
-        </div>
+        <span class="ld-date">{{ v.entry.date }}</span>
+        <span
+          class="ld-cat-badge"
+          :class="{ 'is-income': v.cat?.type === 'income' }"
+          :data-testid="`ld-cat-${v.entry.categoryId}`"
+        >
+          {{ v.cat?.name ?? '未知' }}
+        </span>
+        <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
+        <span v-else class="ld-note">—</span>
+        <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
+          {{ v.cat?.type === 'income' ? '+' : '-' }}{{ formatYuan(v.entry.amount) }}
+        </span>
         <div class="ld-actions">
           <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
           <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
@@ -713,47 +710,43 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* ===== 记录列表 ===== */
+/* ===== 记录列表（表格行式：日期 | 分组 | 金额 | 备注 | 操作）===== */
 .ld-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.ld-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px 12px;
+  overflow-x: auto;
   background: var(--bg-card, var(--color-bg-card));
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent-color, #3b82f6) 7%, transparent),
-    transparent 55%
-  );
   border: 1px solid var(--border-color, var(--color-border));
-  border-left: 4px solid var(--accent-color, var(--color-primary));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.ld-item-head {
-  display: flex;
+.ld-item {
+  display: grid;
+  grid-template-columns: 100px 90px 110px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.ld-item:last-child {
+  border-bottom: none;
+}
+
+.ld-item:hover {
+  background-color: var(--hover-bg, var(--color-bg-hover));
 }
 
 .ld-date {
-  flex: 1;
-  min-width: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary, var(--color-text));
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .ld-cat-badge {
-  flex-shrink: 0;
+  justify-self: start;
   font-size: 12px;
   font-weight: 600;
   padding: 2px 10px;
@@ -769,29 +762,22 @@ onUnmounted(() => {
   border-color: #86efac;
 }
 
-.ld-item-main {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .ld-note {
+  min-width: 0;
   font-size: 13px;
   color: var(--text-secondary, var(--color-text-secondary));
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
-  min-height: 0;
+  text-overflow: ellipsis;
 }
 
 .ld-amount {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary, var(--color-text));
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .ld-amount.is-income {
@@ -801,8 +787,9 @@ onUnmounted(() => {
 .ld-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
-  margin-top: auto;
+  white-space: nowrap;
 }
 
 /* ===== 按钮（复用 WorkbenchTodo/Exercise 体系）===== */
@@ -1076,9 +1063,13 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
-:root.dark .ld-item {
+:root.dark .ld-list {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
+}
+
+:root.dark .ld-item:hover {
+  background-color: var(--hover-bg, #374151);
 }
 
 :root.dark .empty-state {
@@ -1202,6 +1193,11 @@ onUnmounted(() => {
   .field-category,
   .month-input {
     width: 100%;
+  }
+
+  /* 窄屏：行保持 5 列不塌，列表横向滚动（.ld-list 已开 overflow-x: auto） */
+  .ld-item {
+    min-width: 640px;
   }
 }
 </style>

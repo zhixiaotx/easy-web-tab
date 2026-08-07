@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {
+  AUTO_COPY_CATEGORY_IDS,
   calcDepositTotal,
   calcMonthlyStats,
   emptyLedgerData,
@@ -9,7 +10,9 @@ import {
   incomeCategories,
   monthKeyOf,
   normalizeLedgerData,
-  normalizeLedgerEntry
+  normalizeLedgerEntry,
+  planAutoCopy,
+  prevMonthKeyOf
 } from '../src/composables/ledgerCore.ts'
 import { DEFAULT_LEDGER_CATEGORIES } from '../src/types/index.ts'
 import type { LedgerCategory, LedgerEntry } from '../src/types'
@@ -295,6 +298,72 @@ test('T16 calcDepositTotal month cutoff + unknown category as expense', () => {
     2700,
     '应只累计到 2026-07：salary 5000 减 mortgage 2000 再减 unknown 300，8 月流水不参与'
   )
+})
+
+// T17 — planAutoCopy：目标月无工资/房贷、上月有 → 复制上月金额（date=目标月-01）
+test('T17 planAutoCopy copies from last month', () => {
+  const entries = [
+    mkEntry('e1', '2026-07-10', 'salary', 10000),
+    mkEntry('e2', '2026-07-01', 'mortgage', 2450)
+  ]
+  const drafts = planAutoCopy(entries, '2026-08')
+  assert.equal(drafts.length, 2)
+  const salary = drafts.find(d => d.categoryId === 'salary')
+  const mortgage = drafts.find(d => d.categoryId === 'mortgage')
+  assert.deepEqual(salary, { date: '2026-08-01', categoryId: 'salary', amount: 10000 })
+  assert.deepEqual(mortgage, { date: '2026-08-01', categoryId: 'mortgage', amount: 2450 })
+})
+
+// T18 — planAutoCopy：目标月已有该分类 → 幂等跳过（不重复复制）
+test('T18 planAutoCopy idempotent when target month has entry', () => {
+  const entries = [
+    mkEntry('e1', '2026-07-10', 'salary', 10000),
+    mkEntry('e2', '2026-07-01', 'mortgage', 2450),
+    mkEntry('e3', '2026-08-15', 'salary', 12000) // 本月已有工资 → 跳过
+  ]
+  const drafts = planAutoCopy(entries, '2026-08')
+  assert.equal(drafts.length, 1)
+  assert.deepEqual(drafts[0], { date: '2026-08-01', categoryId: 'mortgage', amount: 2450 })
+})
+
+// T19 — planAutoCopy：上月无记录/目标月无上月数据 → 空（不跨月回溯）
+test('T19 planAutoCopy skips when no source in last month', () => {
+  // 上月只有 salary，无 mortgage → 只补 salary
+  const entries = [mkEntry('e1', '2026-07-10', 'salary', 10000)]
+  const drafts = planAutoCopy(entries, '2026-08')
+  assert.equal(drafts.length, 1)
+  assert.deepEqual(drafts[0], { date: '2026-08-01', categoryId: 'salary', amount: 10000 })
+
+  // 上月完全没有记录 → 空
+  assert.deepEqual(planAutoCopy([mkEntry('e2', '2026-06-01', 'salary', 5000)], '2026-08'), [])
+  // 空库 → 空
+  assert.deepEqual(planAutoCopy([], '2026-08'), [])
+})
+
+// T20 — prevMonthKeyOf：跨年回退
+test('T20 prevMonthKeyOf cross-year', () => {
+  assert.equal(prevMonthKeyOf('2026-08'), '2026-07')
+  assert.equal(prevMonthKeyOf('2026-01'), '2025-12')
+  assert.equal(prevMonthKeyOf('2025-03'), '2025-02')
+})
+
+// T21 — planAutoCopy：上月同分类多条 → 取 date 最新一条；AUTO_COPY_CATEGORY_IDS 固定为 salary+mortgage
+test('T21 planAutoCopy latest entry + category ids constant', () => {
+  const entries = [
+    mkEntry('e1', '2026-07-05', 'salary', 9000),
+    mkEntry('e2', '2026-07-20', 'salary', 11000), // 最新
+    mkEntry('e3', '2026-07-01', 'mortgage', 2450)
+  ]
+  const drafts = planAutoCopy(entries, '2026-08')
+  const salary = drafts.find(d => d.categoryId === 'salary')
+  assert.deepEqual(salary, { date: '2026-08-01', categoryId: 'salary', amount: 11000 })
+
+  assert.deepEqual(AUTO_COPY_CATEGORY_IDS, ['salary', 'mortgage'])
+  for (const id of AUTO_COPY_CATEGORY_IDS) {
+    const cat = DEFAULT_LEDGER_CATEGORIES.find(c => c.id === id)
+    assert.ok(cat, `内置分类应存在: ${id}`)
+    assert.equal(cat.type, id === 'salary' ? 'income' : 'expense')
+  }
 })
 
 let passed = 0

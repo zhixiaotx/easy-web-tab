@@ -83,6 +83,42 @@ export function monthKeyOf(dateStr: string): string {
   return dateStr.slice(0, 7)
 }
 
+/** 上一月键：'YYYY-MM' → 前一月（跨年回退，如 '2026-01' → '2025-12'）。 */
+export function prevMonthKeyOf(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map(Number)
+  const d = new Date(y, m - 2, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** 每月自动复制的固定分类 id（内置不可删改：工资=收入、房贷=支出）。 */
+export const AUTO_COPY_CATEGORY_IDS = ['salary', 'mortgage'] as const
+
+/** 自动复制草稿：目标月缺该分类记录时待补入的流水（date=目标月-01，amount=上月同分类最新一条金额）。 */
+export interface AutoCopyDraft {
+  date: string
+  categoryId: string
+  amount: number
+}
+
+/**
+ * 每月自动复制计划：目标月（如当前月）缺工资/房贷时，若上月存在同分类记录，
+ * 生成复制草稿（金额取上月该分类 date 最新一条）。幂等：目标月已有该分类 → 跳过；
+ * 上月无该分类记录 → 跳过（不跨月回溯）。纯函数，不 mutate 入参。
+ */
+export function planAutoCopy(entries: LedgerEntry[], targetMonthKey: string): AutoCopyDraft[] {
+  const prevKey = prevMonthKeyOf(targetMonthKey)
+  const drafts: AutoCopyDraft[] = []
+  for (const categoryId of AUTO_COPY_CATEGORY_IDS) {
+    if (entries.some(e => monthKeyOf(e.date) === targetMonthKey && e.categoryId === categoryId)) continue
+    const prev = entries
+      .filter(e => monthKeyOf(e.date) === prevKey && e.categoryId === categoryId)
+      .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
+    if (prev.length === 0) continue
+    drafts.push({ date: `${targetMonthKey}-01`, categoryId, amount: prev[0].amount })
+  }
+  return drafts
+}
+
 export interface MonthlyStats {
   income: number
   expense: number

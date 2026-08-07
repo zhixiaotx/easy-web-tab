@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
 import type { LedgerCategory, LedgerData, LedgerEntry } from '@/types'
-import { emptyLedgerData, normalizeLedgerData, normalizeLedgerEntry } from '@/composables/ledgerCore'
+import { emptyLedgerData, localDateStr, monthKeyOf, normalizeLedgerData, normalizeLedgerEntry, planAutoCopy } from '@/composables/ledgerCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 
 // 工作台记账本 store（数据存 IndexedDB store 'ledger'，经 ledgerCore 归一化后读写）
@@ -15,6 +15,8 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
       const data = normalizeLedgerData(await idbGet<LedgerData>('ledger'))
       categories.value = data.categories
       entries.value = data.entries
+      // 每月自动复制：当前月缺工资/房贷且上月存在 → 补齐（幂等，详见 ledgerCore.planAutoCopy）
+      await applyMonthlyAutoCopy()
     } catch (e) {
       console.error('[Ledger] load failed', e)
       // IDB 空/坏 → 内置 8 分组兜底，保证组始终存在
@@ -22,6 +24,26 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
       categories.value = empty.categories
       entries.value = empty.entries
     }
+  }
+
+  /** 自动复制上月工资/房贷到当前月（仅当月缺该分类且上月存在时补入；id 用 base+序号防同毫秒碰撞）。 */
+  async function applyMonthlyAutoCopy(): Promise<void> {
+    const drafts = planAutoCopy(entries.value, monthKeyOf(localDateStr()))
+    if (drafts.length === 0) return
+    const now = new Date().toISOString()
+    const base = Date.now()
+    for (let i = 0; i < drafts.length; i++) {
+      const d = drafts[i]
+      entries.value.push(
+        normalizeLedgerEntry({
+          ...d,
+          id: `ld_${base}_${i}`,
+          createdAt: now,
+          updatedAt: now
+        })
+      )
+    }
+    await saveLedger()
   }
 
   async function saveLedger(): Promise<void> {

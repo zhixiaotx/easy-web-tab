@@ -52,8 +52,8 @@ const monthEntries = computed(() =>
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
 
-// ===== 记录列表展开/折叠（默认展开；折叠仅隐藏列表，计数/统计不受影响）=====
-const listExpanded = ref(true)
+// ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/统计不受影响）=====
+const listExpanded = ref(false)
 
 interface EntryView {
   entry: LedgerEntry

@@ -22,7 +22,7 @@ composables/
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
 ├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v2, 6 stores (todos/notes/countdowns/passwords/health/ledger); idbGet/idbPut/idbClear/idbExportAll/idbImportAll (备份 v1 兼容导入)
 ├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData
-├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/金额格式化 + normalizeLedgerData
+├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/金额格式化 + normalizeLedgerData
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
@@ -44,7 +44,7 @@ composables/
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
 | IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes/health/ledger; `idbImportAll` validates backup version (仅接受 v1/v2，v1 补默认空数据兼容) |
 | 健康纯逻辑 | `healthCore.ts` | `emptyHealthData`/`normalizeHealthData`/`calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`/`weightTarget`/`dietCalories`/`sleepDurationHours`(跨天 +24h、相等=24h)/`weightChartScale`/`weekKeyOf` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
-| 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`monthKeyOf`/`formatYuan` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`formatYuan` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 
 ## CONVENTIONS
 

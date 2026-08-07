@@ -41,7 +41,7 @@ components/
     ├── WorkbenchDiet.vue        # 饮食面板（每日热量目标 + 四餐次记录，前缀 dt-）
     ├── WorkbenchSleep.vue       # 睡眠面板（每日时长目标 + 入睡/起床时间自动算时长 + 质量星标，前缀 sl-）
     ├── WorkbenchWeight.vue      # 体重面板（身高 + BMI 国标四档徽章 + 减肥建议 + 内联 SVG 折线图，前缀 wt-）
-    └── WorkbenchLedger.vue      # 记账面板（月份切换 + 五指标统计 + 分类占比条 + 分组管理，前缀 ld-）
+    └── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 分类占比条 + 行式记录列表可折叠 + 分组管理，前缀 ld-）
 ```
 
 ## WHERE TO LOOK

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
-import { calcDepositTotal, calcMonthlyStats, findCategory, formatYuan, localDateStr, monthKeyOf } from '@/composables/ledgerCore'
+import { calcDepositTotal, calcMonthlyStats, findCategory, formatYuan, localDateStr, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
 import type { LedgerCategory, LedgerEntry } from '@/types'
 
@@ -44,6 +44,11 @@ const balanceText = computed(() =>
   monthStats.value.income === 0 && monthStats.value.expense === 0 ? '—' : formatYuan(monthStats.value.balance)
 )
 const ratioText = computed(() => (monthStats.value.expenseRatio === null ? '—' : percentLabel(monthStats.value.expenseRatio)))
+
+// 敏感金额/统计显示：隐藏态统一 ****；空月 '—' 无数据不掩码（maskOrReveal 保持通用，例外在此处理）
+function masked(t: string): string {
+  return t === '—' ? t : maskOrReveal(t, !store.showAmount)
+}
 
 // ===== 月内记录列表（date 降序，同日 createdAt 降序）=====
 const monthEntries = computed(() =>
@@ -230,28 +235,28 @@ onUnmounted(() => {
           <span class="stat-icon">💰</span>
           <span class="stat-label">收入</span>
         </div>
-        <div class="stat-value is-income">{{ formatYuan(monthStats.income) }}</div>
+        <div class="stat-value is-income">{{ masked(formatYuan(monthStats.income)) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-expense">
         <div class="stat-header">
           <span class="stat-icon">📉</span>
           <span class="stat-label">支出</span>
         </div>
-        <div class="stat-value is-expense">{{ formatYuan(monthStats.expense) }}</div>
+        <div class="stat-value is-expense">{{ masked(formatYuan(monthStats.expense)) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-balance">
         <div class="stat-header">
           <span class="stat-icon">⚖️</span>
           <span class="stat-label">结余</span>
         </div>
-        <div class="stat-value" :class="{ 'is-negative': monthStats.balance < 0 }">{{ balanceText }}</div>
+        <div class="stat-value" :class="{ 'is-negative': monthStats.balance < 0 }">{{ masked(balanceText) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-deposit">
         <div class="stat-header">
           <span class="stat-icon">🏦</span>
           <span class="stat-label">存款</span>
         </div>
-        <div class="stat-value" :class="{ 'is-negative': depositTotal < 0 }">{{ depositText }}</div>
+        <div class="stat-value" :class="{ 'is-negative': depositTotal < 0 }">{{ masked(depositText) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-count">
         <div class="stat-header">
@@ -265,7 +270,7 @@ onUnmounted(() => {
           <span class="stat-icon">📊</span>
           <span class="stat-label">支出比</span>
         </div>
-        <div class="stat-value">{{ ratioText }}</div>
+        <div class="stat-value">{{ masked(ratioText) }}</div>
       </div>
     </div>
 
@@ -275,7 +280,7 @@ onUnmounted(() => {
       <div v-for="item in monthStats.byCategory" :key="item.categoryId" class="ld-ratio-row">
         <div class="ld-ratio-head">
           <span class="ld-ratio-name">{{ catNameOf(item.categoryId) }}</span>
-          <span class="ld-ratio-val">{{ formatYuan(item.total) }} · {{ percentLabel(item.percent) }}</span>
+          <span class="ld-ratio-val">{{ masked(formatYuan(item.total)) }} · {{ masked(percentLabel(item.percent)) }}</span>
         </div>
         <div class="ld-ratio-track">
           <div
@@ -291,6 +296,9 @@ onUnmounted(() => {
     <div class="ld-headbar">
       <span class="toolbar-count" data-testid="ld-toolbar-count">共 {{ monthEntries.length }} 条</span>
       <div class="ld-headbar-actions">
+        <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
+          {{ store.showAmount ? '🙈 隐藏金额' : '👁️ 显示金额' }}
+        </button>
         <button class="btn-manage" data-testid="ld-toggle-list" @click="listExpanded = !listExpanded">
           {{ listExpanded ? '收起记录' : '展开记录' }}
         </button>
@@ -318,7 +326,7 @@ onUnmounted(() => {
         <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
         <span v-else class="ld-note">—</span>
         <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
-          {{ v.cat?.type === 'income' ? '+' : '-' }}{{ formatYuan(v.entry.amount) }}
+          {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
         </span>
         <div class="ld-actions">
           <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>

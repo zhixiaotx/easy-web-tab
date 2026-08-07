@@ -22,7 +22,7 @@ composables/
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
 ├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v2, 6 stores (todos/notes/countdowns/passwords/health/ledger); idbGet/idbPut/idbClear/idbExportAll/idbImportAll (备份 v1 兼容导入)
 ├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData
-├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/自动复制计划(salary/mortgage)/金额格式化 + normalizeLedgerData
+├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/自动复制计划(salary/mortgage)/金额格式化/敏感金额掩码 + normalizeLedgerData
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
@@ -44,7 +44,7 @@ composables/
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
 | IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes/health/ledger; `idbImportAll` validates backup version (仅接受 v1/v2，v1 补默认空数据兼容) |
 | 健康纯逻辑 | `healthCore.ts` | `emptyHealthData`/`normalizeHealthData`/`calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`/`weightTarget`/`dietCalories`/`sleepDurationHours`(跨天 +24h、相等=24h)/`weightChartScale`/`weekKeyOf` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
-| 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`maskOrReveal` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 
 ## CONVENTIONS
 
@@ -55,6 +55,7 @@ composables/
 - `useGames` is also a singleton with a `loaded` guard flag
 - `presetIcons.ts` is auto-generated — never edit manually
 - `healthCore.ts` / `ledgerCore.ts` are pure-logic engines — **禁止 import vue/pinia**（`node --experimental-strip-types` 测试运行器无法执行）；组件/面板只调用它们，禁止重算公式
+- 记账金额掩码格式唯一来源 `ledgerCore` 的 `MASKED_TEXT`（'****'），组件不得自行硬编码掩码串
 
 ## ANTI-PATTERNS
 

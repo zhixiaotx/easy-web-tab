@@ -16,7 +16,7 @@ composables/
 ├── useDeadLinkChecker.ts   # Batch link check with 500ms throttle per request
 ├── useToast.ts             # Singleton toast state (module-level shallowRef, NOT Pinia)
 ├── useCrypto.ts            # crypto-js AES-CBC + PBKDF2 encryption (98 lines) — used by passwords store
-├── countdownCore.ts        # 倒计时纯逻辑引擎（494 行）: 6 种重复规则 + 3 分类 + calcRemaining/sortCountdowns
+├── countdownCore.ts        # 倒计时纯逻辑引擎（494 行）: 6 种重复规则 + 6 分类（work/life/study/exercise/diet/sleep）+ calcRemaining/sortCountdowns
 ├── useCountdownReminder.ts # Singleton 提醒弹框引擎：60s tick + 到点提醒 + 每天 9:00 最后3天摘要
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)

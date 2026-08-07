@@ -5,7 +5,7 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 21 root SFCs + 11 workbench SFCs (10 panels + WorkbenchHealth tabs container), sizes, component-level anti-patterns
+- `src/components/AGENTS.md` — the 21 root SFCs + 12 workbench SFCs (10 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块), sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 12 Pinia stores and data-layer invariants
 - `src/composables/AGENTS.md` — the 16 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts, test scripts, and game rewrite rules
@@ -16,7 +16,7 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
 │   ├── components/               # 21 root SFCs + workbench/ subdir (UI layer)
-│   │   └── workbench/            # 10 工作台面板 + WorkbenchHealth tabs 容器（运动/饮食/睡眠/体重 四合一）
+│   │   └── workbench/            # 10 工作台面板 + WorkbenchHealth tabs 容器 + WorkbenchHealthReminders 只读提醒（运动/饮食/睡眠/体重 四合一）
 │   ├── composables/              # 16 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, healthCore.ts, ledgerCore.ts)
 │   ├── stores/                   # 12 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchHealth.ts, workbenchLedger.ts)
 │   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
@@ -51,10 +51,10 @@ easy-web-tab/
 | Icon caching | `src/composables/useIconCache.ts` | localStorage, 30-day expiry |
 | Toast notifications | `src/composables/useToast.ts` | Singleton (module-level shallowRef, not Pinia) |
 | Password management | `src/stores/passwords.ts` | crypto-js AES-CBC encrypted, `useCrypto.ts` for crypto |
-| Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 3 categories, 5 sort modes |
+| Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 6 categories (work/life/study/exercise/diet/sleep), 5 sort modes |
 | Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` |
 | Reminder engine | `src/composables/useCountdownReminder.ts` | Minute-level tick + daily 9am 3-day summary, singleton popup |
-| 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/WorkbenchHealth.vue` | 目标计划+按天记录混合模型；IndexedDB store 'health'；tabs 容器 WorkbenchHealth.vue 内嵌面板 WorkbenchExercise/Diet/Sleep/Weight.vue（受控组件 activeTab + change emit） |
+| 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/WorkbenchHealth.vue` | 目标计划+按天记录混合模型；IndexedDB store 'health'；tabs 容器 WorkbenchHealth.vue 内嵌面板 WorkbenchExercise/Diet/Sleep/Weight.vue（受控组件 activeTab + change emit）；运动/饮食/睡眠面板顶部挂只读「定时提醒」区块 WorkbenchHealthReminders.vue（按倒计时 category 1:1 映射，纯展示） |
 | 健康纯逻辑（BMI/达标率/睡眠时长/折线图坐标） | `src/composables/healthCore.ts` | `calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`(国标 WS/T 428-2013)/`weightTarget`/`dietCalories`/`sleepDurationHours`/`weightChartScale`/`normalizeHealthData` |
 | 记账数据 | `src/stores/workbenchLedger.ts` + `src/components/workbench/WorkbenchLedger.vue` | 六指标统计（收入/支出/结余/存款/笔数/支出比）+ 行式记录列表可折叠 + 分组管理（内置 8 组不可删）；IndexedDB store 'ledger' |
 | 记账纯逻辑（月统计/分类占比/存款累计/自动复制） | `src/composables/ledgerCore.ts` | `calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`normalizeLedgerData`/`findCategory`/`maskOrReveal`（金额掩码） |
@@ -62,7 +62,7 @@ easy-web-tab/
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
-| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 7 项（主页/待办/便签/倒计时/密码/健康管理/记账）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；数据经 `useIdb.ts` 存 IndexedDB |
+| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 7 项（主页/待办/便签/倒计时/密码/健康管理/记账）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；运动/饮食/睡眠面板含只读定时提醒区块（WorkbenchHealthReminders.vue）；数据经 `useIdb.ts` 存 IndexedDB |
 
 ## CODE MAP
 
@@ -137,7 +137,7 @@ npm install          # Install deps (first time only)
 npm run dev          # Dev server: http://localhost:16718
 npm run build        # generate-preset-icons → vue-tsc -b → vite build (3 sequential steps)
 npm run preview      # Preview production build
-npm run test:countdown  # Pure-function tests for countdownCore.ts (13 assertions, node --experimental-strip-types)
+npm run test:countdown  # Pure-function tests for countdownCore.ts (15 assertions, node --experimental-strip-types)
 npm run test:todo       # Pure-function tests for todoCore.ts (node --experimental-strip-types)
 npm run test:health     # Pure-function tests for healthCore.ts (BMI/达标率/睡眠/折线图, node --experimental-strip-types)
 npm run test:ledger     # Pure-function tests for ledgerCore.ts (月统计/占比/自动复制, node --experimental-strip-types)

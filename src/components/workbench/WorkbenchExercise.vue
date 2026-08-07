@@ -4,6 +4,7 @@ import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcExerciseAttainment } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
+import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 
 const store = useWorkbenchHealthStore()
 
@@ -88,6 +89,9 @@ const formType = ref<string>(EXERCISE_TYPES[0])
 const formDuration = ref('')
 const formCalories = ref('0')
 const formNote = ref('')
+
+// ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/达标率不受影响）=====
+const listExpanded = ref(false)
 
 // date 必填 + duration > 0 + calories ≥ 0，否则保存按钮 disabled
 const isFormValid = computed(() => {
@@ -198,9 +202,19 @@ onUnmounted(() => {
       <div v-else class="stat-sub">尚未设定周目标</div>
     </div>
 
-    <!-- 操作栏：数量 + 新增 -->
+    <!-- 定时提醒（只读小模块） -->
+    <WorkbenchHealthReminders module="exercise" />
+
+    <!-- 操作栏：展开记录 + 新增 -->
     <div class="ex-headbar">
-      <span class="toolbar-count" data-testid="ex-toolbar-count">共 {{ store.records.exercise.length }} 条</span>
+      <button
+        v-if="store.records.exercise.length > 0"
+        class="btn-toggle-list"
+        data-testid="ex-toggle-list"
+        @click="listExpanded = !listExpanded"
+      >
+        {{ listExpanded ? '收起记录' : '展开记录' }}（{{ store.records.exercise.length }}）
+      </button>
       <button class="btn-add" data-testid="ex-add" @click="startAddRecord">＋ 新增记录</button>
     </div>
 
@@ -215,7 +229,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 记录列表 -->
-    <div v-else class="ex-list">
+    <div v-else-if="listExpanded" class="ex-list">
       <div v-for="rec in sortedRecords" :key="rec.id" class="ex-item" data-testid="ex-item">
         <div class="ex-item-head">
           <span class="ex-date">{{ rec.date }}</span>
@@ -462,9 +476,21 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.toolbar-count {
+.btn-toggle-list {
+  padding: 10px 16px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
   font-size: 14px;
   color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-toggle-list:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 .btn-add {
@@ -858,6 +884,7 @@ onUnmounted(() => {
   border-color: var(--border-color, #374151);
 }
 
+:root.dark .btn-toggle-list,
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete {

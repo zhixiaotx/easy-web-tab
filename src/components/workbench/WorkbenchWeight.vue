@@ -115,6 +115,9 @@ const formDate = ref(localToday())
 const formWeightKg = ref('')
 const formNote = ref('')
 
+// ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/图表不受影响）=====
+const listExpanded = ref(false)
+
 // date 必填 + weightKg > 0（允许 1 位小数），否则保存按钮 disabled
 const isRecordValid = computed(() => {
   const w = Number(formWeightKg.value)
@@ -319,9 +322,16 @@ onUnmounted(() => {
       <div v-else class="wt-chart-empty" data-testid="wt-chart-empty">暂无体重记录</div>
     </div>
 
-    <!-- 操作栏：数量 + 新增 -->
+    <!-- 操作栏：展开记录 + 新增 -->
     <div class="wt-headbar">
-      <span class="toolbar-count" data-testid="wt-toolbar-count">共 {{ store.records.weight.length }} 条</span>
+      <button
+        v-if="store.records.weight.length > 0"
+        class="btn-toggle-list"
+        data-testid="wt-toggle-list"
+        @click="listExpanded = !listExpanded"
+      >
+        {{ listExpanded ? '收起记录' : '展开记录' }}（{{ store.records.weight.length }}）
+      </button>
       <button class="btn-add" data-testid="wt-add" @click="startAddRecord">＋ 新增体重</button>
     </div>
 
@@ -336,7 +346,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 记录列表（date 降序，同日 createdAt 降序） -->
-    <div v-else class="wt-list">
+    <div v-else-if="listExpanded" class="wt-list">
       <div v-for="rec in sortedWeightRecords" :key="rec.id" class="wt-item" data-testid="wt-item">
         <div class="wt-item-head">
           <span class="wt-date">{{ rec.date }}</span>
@@ -635,9 +645,21 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.toolbar-count {
+.btn-toggle-list {
+  padding: 10px 16px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
   font-size: 14px;
   color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-toggle-list:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 .btn-add {
@@ -1009,6 +1031,7 @@ onUnmounted(() => {
   border-color: var(--border-color, #374151);
 }
 
+:root.dark .btn-toggle-list,
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete {

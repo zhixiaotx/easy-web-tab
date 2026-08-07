@@ -8,6 +8,8 @@ import { idbGet, idbPut } from '../composables/useIdb'
 export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
   const categories = ref<LedgerCategory[]>([])
   const entries = ref<LedgerEntry[]>([])
+  // 内存态金额可见性开关（仅 UI，不持久化，刷新即重置）
+  const showAmount = ref(false)
 
   async function loadLedger(): Promise<void> {
     try {
@@ -44,6 +46,10 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
       )
     }
     await saveLedger()
+  }
+
+  function toggleAmountVisibility(): void {
+    showAmount.value = !showAmount.value
   }
 
   async function saveLedger(): Promise<void> {
@@ -153,6 +159,8 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
   return {
     categories,
     entries,
+    showAmount,
+    toggleAmountVisibility,
     loadLedger,
     saveLedger,
     addEntry,

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {
+  calcDepositTotal,
   calcMonthlyStats,
   emptyLedgerData,
   expenseCategories,
@@ -259,6 +260,41 @@ test('T13 normalizeLedgerData entries + no mutation', () => {
   assert.equal(withEntries.entries[0].amount, 0)
   assert.ok(withEntries.entries[0].id.startsWith('ld_'))
   assert.match(withEntries.entries[0].date, /^\d{4}-\d{2}-\d{2}$/)
+})
+
+// T14 — calcDepositTotal：空流水 → 0
+test('T14 calcDepositTotal empty entries', () => {
+  assert.equal(calcDepositTotal([], '2026-08', DEFAULT_LEDGER_CATEGORIES), 0)
+})
+
+// T15 — calcDepositTotal：跨月累计结余（每月 income - expense 累加；只累计到 upToMonthKey）
+test('T15 calcDepositTotal cross-month cumulative balance', () => {
+  const entries = [
+    mkEntry('e1', '2026-06-05', 'salary', 10000),
+    mkEntry('e2', '2026-06-06', 'lunch', 200), // 6 月结余 9800
+    mkEntry('e3', '2026-07-01', 'breakfast', 100),
+    mkEntry('e4', '2026-07-02', 'dinner', 300) // 7 月结余 -400
+  ]
+  // 累计到 7 月：9800 - 400 = 9400
+  assert.equal(calcDepositTotal(entries, '2026-07', DEFAULT_LEDGER_CATEGORIES), 9400)
+  // 只累计到 6 月：9800（证明 upToMonthKey 之后的月份被排除）
+  assert.equal(calcDepositTotal(entries, '2026-06', DEFAULT_LEDGER_CATEGORIES), 9800)
+})
+
+// T16 — calcDepositTotal：只计 ≤ upToMonthKey 的月份 + 未知分类计入支出
+test('T16 calcDepositTotal month cutoff + unknown category as expense', () => {
+  const entries = [
+    mkEntry('e1', '2026-07-01', 'salary', 5000),
+    mkEntry('e2', '2026-07-02', 'mortgage', 2000),
+    mkEntry('e3', '2026-07-03', 'nonexistent', 300), // 未知分类 → 支出
+    mkEntry('e4', '2026-08-01', 'salary', 8000) // 8 月，超出 upToMonthKey → 排除
+  ]
+  // 7 月结余 = 5000 - 2000 - 300 = 2700；8 月（超出 upToMonthKey）排除、未知分类计入支出
+  assert.equal(
+    calcDepositTotal(entries, '2026-07', DEFAULT_LEDGER_CATEGORIES),
+    2700,
+    '应只累计到 2026-07：salary 5000 减 mortgage 2000 再减 unknown 300，8 月流水不参与'
+  )
 })
 
 let passed = 0

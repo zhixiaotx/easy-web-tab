@@ -140,6 +140,12 @@ export function calcMonthlyStats(entries: LedgerEntry[], monthKey: string, categ
   return { income, expense, balance: income - expense, expenseCount, expenseRatio, byCategory }
 }
 
+/** 存款统计：从起始月到 upToMonthKey 的每月结余累加（收入 - 支出，未知分类计支出，只累计 ≤ upToMonthKey 的月份）。
+ *  RED 占位实现（T15/T16 红）：恒返 0，真实累计逻辑见 T3。 */
+export function calcDepositTotal(_entries: LedgerEntry[], _upToMonthKey: string, _categories: LedgerCategory[]): number {
+  return 0
+}
+
 /** 金额格式化：固定 2 位小数。 */
 export function formatYuan(n: number): string {
   return n.toFixed(2)

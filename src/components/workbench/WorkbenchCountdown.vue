@@ -722,6 +722,24 @@ onUnmounted(() => {
   background: rgba(168, 85, 247, 0.12);
 }
 
+.cat-exercise {
+  color: #f97316;
+  border: 1px solid #f97316;
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.cat-diet {
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.cat-sleep {
+  color: #06b6d4;
+  border: 1px solid #06b6d4;
+  background: rgba(6, 182, 212, 0.12);
+}
+
 /* 剩余时间主角（状态色） */
 .cd-remaining {
   display: flex;
@@ -1279,6 +1297,24 @@ onUnmounted(() => {
 :root.dark .cat-study {
   color: #c084fc;
   border-color: #a855f7;
+}
+
+:root.dark .cat-exercise {
+  color: #fdba74;
+  border-color: #fb923c;
+  background: rgba(249, 115, 22, 0.18);
+}
+
+:root.dark .cat-diet {
+  color: #fcd34d;
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+:root.dark .cat-sleep {
+  color: #67e8f9;
+  border-color: #22d3ee;
+  background: rgba(6, 182, 212, 0.18);
 }
 
 :root.dark .sort-dir-btn,

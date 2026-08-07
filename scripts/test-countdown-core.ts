@@ -48,6 +48,12 @@ test('S3 normalizeCountdown', () => {
   const passthrough = normalizeCountdown({ category: 'study', lastRemindedAt: '2026-08-04 09:00' })
   assert.equal(passthrough.category, 'study')
   assert.equal(passthrough.lastRemindedAt, '2026-08-04 09:00')
+
+  // 新分类：exercise/diet/sleep 不强制回退 'work'（回归保护：bogus 仍回退 'work'）
+  assert.equal(normalizeCountdown({ category: 'exercise' }).category, 'exercise')
+  assert.equal(normalizeCountdown({ category: 'diet' }).category, 'diet')
+  assert.equal(normalizeCountdown({ category: 'sleep' }).category, 'sleep')
+  assert.equal(normalizeCountdown({ category: 'bogus' }).category, 'work')
 })
 
 // S3b — color normalization: valid hex kept, invalid/absent → default blue
@@ -79,7 +85,7 @@ test('S3c filterCountdowns', () => {
     mkCountdown('b', '周会提醒', { type: 'weekly', daysOfWeek: [1] }, 'work'),
     mkCountdown('c', '年体检', 'yearly', 'life'),
     mkCountdown('d', '晨练', { type: 'daily' }, 'life'),
-    mkCountdown('e', '发薪日', { type: 'monthly', dayOfMonth: 15 }, 'study')
+    mkCountdown('e', '发薪日', { type: 'monthly', dayOfMonth: 15 }, 'exercise')
   ]
   // 空条件 → 全部
   assert.equal(filterCountdowns(items).length, 5)
@@ -89,6 +95,8 @@ test('S3c filterCountdowns', () => {
   assert.deepEqual(filterCountdowns(items, { name: ' 周会 ' }).map(i => i.id), ['b'])
   // 分类精确
   assert.deepEqual(filterCountdowns(items, { category: 'life' }).map(i => i.id), ['c', 'd'])
+  // 新分类 exercise 精确筛选
+  assert.deepEqual(filterCountdowns(items, { category: 'exercise' }).map(i => i.id), ['e'])
   // 重复规则：once（null 归一）、daily、旧字符串 'yearly'
   assert.deepEqual(filterCountdowns(items, { repeat: 'once' }).map(i => i.id), ['a'])
   assert.deepEqual(filterCountdowns(items, { repeat: 'daily' }).map(i => i.id), ['d'])
@@ -190,6 +198,9 @@ test('S11 repeatLabel/categoryLabel', () => {
 
   assert.equal(categoryLabel(), '工作')
   assert.equal(categoryLabel('life'), '生活')
+  assert.equal(categoryLabel('exercise'), '运动')
+  assert.equal(categoryLabel('diet'), '饮食')
+  assert.equal(categoryLabel('sleep'), '睡眠')
 })
 
 test('S11 serializeRepeatYaml round-trip via js-yaml', () => {

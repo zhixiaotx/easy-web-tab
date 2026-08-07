@@ -183,6 +183,87 @@ const items = computed<CountdownItem[]>(() => store.frontCountdowns)
   opacity: 0.85;
 }
 
+/* 分类徽章：工作=蓝 / 生活=绿 / 学习=紫 / 运动=橙 / 饮食=琥珀 / 睡眠=青 */
+.cat-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full, 999px);
+  opacity: 0.85;
+}
+
+.cat-work {
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.cat-life {
+  color: #22c55e;
+  border: 1px solid #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.cat-study {
+  color: #a855f7;
+  border: 1px solid #a855f7;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.cat-exercise {
+  color: #f97316;
+  border: 1px solid #f97316;
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.cat-diet {
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.cat-sleep {
+  color: #06b6d4;
+  border: 1px solid #06b6d4;
+  background: rgba(6, 182, 212, 0.12);
+}
+
+:root.dark .cat-work {
+  color: #60a5fa;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+:root.dark .cat-life {
+  color: #4ade80;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+:root.dark .cat-study {
+  color: #c084fc;
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.2);
+}
+
+:root.dark .cat-exercise {
+  color: #fdba74;
+  border-color: #fb923c;
+  background: rgba(249, 115, 22, 0.18);
+}
+
+:root.dark .cat-diet {
+  color: #fcd34d;
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+:root.dark .cat-sleep {
+  color: #67e8f9;
+  border-color: #22d3ee;
+  background: rgba(6, 182, 212, 0.18);
+}
+
 .countdown-time {
   font-size: 12px;
   color: var(--text-muted, var(--color-text-muted));

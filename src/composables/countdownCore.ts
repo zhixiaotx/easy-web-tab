@@ -437,6 +437,12 @@ export function categoryLabel(category?: CountdownCategory): string {
       return '生活'
     case 'study':
       return '学习'
+    case 'exercise':
+      return '运动'
+    case 'diet':
+      return '饮食'
+    case 'sleep':
+      return '睡眠'
     default:
       return '工作'
   }

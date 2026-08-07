@@ -894,6 +894,24 @@ const previewRemaining = computed(() => {
   background: rgba(168, 85, 247, 0.12);
 }
 
+.cat-exercise {
+  color: #f97316;
+  border-color: #f97316;
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.cat-diet {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.cat-sleep {
+  color: #06b6d4;
+  border-color: #06b6d4;
+  background: rgba(6, 182, 212, 0.12);
+}
+
 .dark .cat-work {
   color: #93c5fd;
   border-color: #60a5fa;
@@ -910,6 +928,24 @@ const previewRemaining = computed(() => {
   color: #d8b4fe;
   border-color: #c084fc;
   background: rgba(168, 85, 247, 0.2);
+}
+
+.dark .cat-exercise {
+  color: #fdba74;
+  border-color: #fb923c;
+  background: rgba(249, 115, 22, 0.18);
+}
+
+.dark .cat-diet {
+  color: #fcd34d;
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.dark .cat-sleep {
+  color: #67e8f9;
+  border-color: #22d3ee;
+  background: rgba(6, 182, 212, 0.18);
 }
 
 .countdown-time {

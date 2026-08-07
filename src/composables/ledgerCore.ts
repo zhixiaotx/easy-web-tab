@@ -199,6 +199,14 @@ export function formatYuan(n: number): string {
   return n.toFixed(2)
 }
 
+/** 敏感金额/统计掩码占位：隐藏态统一显示固定 * 串（长度与真实值无关）。 */
+export const MASKED_TEXT = '****'
+
+/** 敏感值显示：hidden=true 时返回 MASKED_TEXT，否则原样返回。纯函数，组件/面板所有掩码点统一走它。 */
+export function maskOrReveal(raw: string, hidden: boolean): string {
+  return hidden ? MASKED_TEXT : raw
+}
+
 /** 收入分类（filter 返回新数组，不 mutate 入参）。 */
 export function incomeCategories(categories: LedgerCategory[]): LedgerCategory[] {
   return categories.filter(c => c.type === 'income')

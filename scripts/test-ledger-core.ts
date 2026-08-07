@@ -8,6 +8,7 @@ import {
   findCategory,
   formatYuan,
   incomeCategories,
+  maskOrReveal,
   monthKeyOf,
   normalizeLedgerData,
   normalizeLedgerEntry,
@@ -364,6 +365,21 @@ test('T21 planAutoCopy latest entry + category ids constant', () => {
     assert.ok(cat, `内置分类应存在: ${id}`)
     assert.equal(cat.type, id === 'salary' ? 'income' : 'expense')
   }
+})
+
+// T22 — maskOrReveal：mask 为 true → 掩码
+test('T22 maskOrReveal masks amount when hide is true', () => {
+  assert.strictEqual(maskOrReveal('123.45', true), '****')
+})
+
+// T23 — maskOrReveal：mask 为 false → 原样返回
+test('T23 maskOrReveal reveals amount when hide is false', () => {
+  assert.strictEqual(maskOrReveal('123.45', false), '123.45')
+})
+
+// T24 — maskOrReveal：空串也掩码
+test('T24 maskOrReveal masks empty string too', () => {
+  assert.strictEqual(maskOrReveal('', true), '****')
 })
 
 let passed = 0

@@ -226,6 +226,13 @@ onUnmounted(() => {
       <button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</button>
       <input v-model="selectedMonth" type="month" class="form-input month-input" data-testid="ld-month" />
       <button class="month-btn today-btn" data-testid="ld-today" @click="selectedMonth = currentMonth()">本月</button>
+      <div class="ld-month-actions">
+        <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
+          {{ store.showAmount ? '🙈 隐藏金额' : '👁️ 显示金额' }}
+        </button>
+        <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
+        <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增记录</button>
+      </div>
     </div>
 
     <!-- 统计卡 6 张（一行 stat-card） -->
@@ -294,17 +301,9 @@ onUnmounted(() => {
 
     <!-- 操作栏：数量 + 管理分组 + 新增 -->
     <div class="ld-headbar">
-      <span class="toolbar-count" data-testid="ld-toolbar-count">共 {{ monthEntries.length }} 条</span>
-      <div class="ld-headbar-actions">
-        <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
-          {{ store.showAmount ? '🙈 隐藏金额' : '👁️ 显示金额' }}
-        </button>
-        <button class="btn-manage" data-testid="ld-toggle-list" @click="listExpanded = !listExpanded">
-          {{ listExpanded ? '收起记录' : '展开记录' }}
-        </button>
-        <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
-        <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增记录</button>
-      </div>
+      <button class="btn-manage" data-testid="ld-toggle-list" @click="listExpanded = !listExpanded">
+        {{ listExpanded ? '收起记录' : '展开记录' }}（{{ monthEntries.length }}）
+      </button>
     </div>
 
     <!-- 空月态 / 记录列表 -->
@@ -651,15 +650,11 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.ld-headbar-actions {
+.ld-month-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.toolbar-count {
-  font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
 }
 
 .btn-add {

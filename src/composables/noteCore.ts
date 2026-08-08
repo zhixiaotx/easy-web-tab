@@ -60,7 +60,7 @@ export function normalizeNotes(raw: unknown): WorkbenchNote[] {
   return Array.isArray(raw) ? raw.map(n => normalizeNote(n)) : []
 }
 
-/** 便签分类归一化（内部辅助）：id/name 必填且非空串（缺失 → 剔除），sort 为 number 才保留。 */
+/** 便签分类归一化（内部辅助）：id/name 必填且非空串（缺失 → 剔除），sort 为 number 才保留；showInTabs 仅布尔透传（false 隐藏/true 显式显示，缺失不新增字段保持 undefined=默认显示）。 */
 function normalizeNoteCategory(raw: unknown): NoteCategory | null {
   if (!raw || typeof raw !== 'object') return null
   const c = raw as Record<string, unknown>
@@ -69,6 +69,7 @@ function normalizeNoteCategory(raw: unknown): NoteCategory | null {
   if (!id || !name) return null
   const cat: NoteCategory = { id, name }
   if (typeof c.sort === 'number') cat.sort = c.sort
+  if (typeof c.showInTabs === 'boolean') cat.showInTabs = c.showInTabs
   return cat
 }
 
@@ -155,6 +156,11 @@ export function noteCountText(filteredCount: number, totalCount: number, active:
 export function findNoteCategory(categories: NoteCategory[], id?: string): NoteCategory | undefined {
   if (!id) return undefined
   return categories.find(c => c.id === id)
+}
+
+/** 标签页可见分类：showInTabs !== false（undefined/true = 显示，false = 隐藏）。返回新数组，不 mutate 入参。 */
+export function tabCategoriesOf(categories: NoteCategory[] | undefined): NoteCategory[] {
+  return (categories ?? []).filter(c => c.showInTabs !== false)
 }
 
 /** 未分类判定：categoryId 为 undefined / null / 空串 即视为未分类。 */

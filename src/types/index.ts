@@ -140,6 +140,7 @@ export interface NoteCategory {
   id: string
   name: string
   sort?: number // 排序权重，数字越小越靠前；undefined = 追加末尾
+  showInTabs?: boolean // 是否显示在便签分类标签页；undefined/true = 显示（默认），false = 隐藏
 }
 
 // 时光轴条目（仅 timeline 类型便签使用）

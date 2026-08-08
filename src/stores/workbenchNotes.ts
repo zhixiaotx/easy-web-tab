@@ -89,13 +89,13 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
     if (categories.value.some(c => c.name.trim().toLowerCase() === lower)) return false
     // 追加末尾：sort 取现有最大 +1（镜像 categories.ts addCategory），保证 moveCategory 的 sort 交换有意义
     const maxSort = categories.value.reduce((max, c) => Math.max(max, c.sort ?? 0), 0)
-    categories.value.push({ id: `nc_${Date.now()}`, name: trimmed, sort: maxSort + 1 })
+    categories.value.push({ id: `nc_${Date.now()}`, name: trimmed, sort: maxSort + 1, showInTabs: true })
     await saveNotes()
     return true
   }
 
-  /** 改名/调序：名称唯一校验排除自身；失败（未找到/重名/空名）返回 false，不写入。 */
-  async function updateCategory(id: string, patch: { name?: string; sort?: number }): Promise<boolean> {
+  /** 改名/调序/标签页显隐：名称唯一校验排除自身；失败（未找到/重名/空名）返回 false，不写入。 */
+  async function updateCategory(id: string, patch: { name?: string; sort?: number; showInTabs?: boolean }): Promise<boolean> {
     const index = categories.value.findIndex(c => c.id === id)
     if (index === -1) return false
     const changes: Partial<NoteCategory> = {}
@@ -106,6 +106,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
       changes.name = name
     }
     if (patch.sort !== undefined) changes.sort = patch.sort
+    if (patch.showInTabs !== undefined) changes.showInTabs = patch.showInTabs
     categories.value[index] = { ...categories.value[index], ...changes }
     await saveNotes()
     return true

@@ -10,7 +10,8 @@ import {
   normalizeNotes,
   noteCountText,
   sortNotes,
-  sortTimelineEntries
+  sortTimelineEntries,
+  tabCategoriesOf
 } from '../src/composables/noteCore.ts'
 import type { NoteCategory, NoteData, TimelineEntry, WorkbenchNote } from '../src/types'
 
@@ -309,6 +310,54 @@ test('T21 noteCountText', () => {
   a.equal(noteCountText(0, 5, true), '筛选出 0 / 5 个')
   a.equal(noteCountText(10, 10, false), '共 10 个便签')
   a.equal(noteCountText(0, 0, false), '共 0 个便签')
+})
+
+// T22 — tabCategoriesOf：showInTabs===false 剔除，undefined/true 保留，保序，返回新数组
+test('T22 tabCategoriesOf filters hidden + keeps order + new array', () => {
+  const cats: NoteCategory[] = [
+    { id: 'a', name: 'A', sort: 1, showInTabs: false },
+    { id: 'b', name: 'B', sort: 2 }, // undefined → 显示
+    { id: 'c', name: 'C', sort: 3, showInTabs: true }, // 显式显示
+    { id: 'd', name: 'D', sort: 4, showInTabs: false }
+  ]
+  const visible = tabCategoriesOf(cats)
+  a.deepEqual(visible.map(c => c.id), ['b', 'c'])
+  a.notEqual(visible, cats) // 新数组，不 mutate 入参
+  a.deepEqual(cats.map(c => c.id), ['a', 'b', 'c', 'd']) // 入参未被修改
+  a.deepEqual(tabCategoriesOf([]), [])
+  a.deepEqual(tabCategoriesOf(undefined as unknown as NoteCategory[]), [])
+})
+
+// T23 — normalizeNoteData：showInTabs 仅布尔透传（false/true 保留），非布尔剔除，缺失不新增，幂等（T8 回归守护）
+test('T23 normalizeNoteData showInTabs boolean passthrough', () => {
+  const data = normalizeNoteData({
+    categories: [
+      { id: 'work', name: '工作', sort: 1, showInTabs: false },
+      { id: 'life', name: '生活', sort: 2, showInTabs: true },
+      { id: 'study', name: '学习', sort: 'x', showInTabs: 'yes' }, // 非布尔 → 不保留
+      { id: 'ok', name: '正常' } // 无 key → 不新增
+    ],
+    notes: []
+  })
+  a.equal(data.categories.length, 4)
+  a.deepEqual(data.categories[0], { id: 'work', name: '工作', sort: 1, showInTabs: false })
+  a.deepEqual(data.categories[1], { id: 'life', name: '生活', sort: 2, showInTabs: true })
+  a.deepEqual(data.categories[2], { id: 'study', name: '学习' }) // 非布尔 → 剔除
+  a.deepEqual(data.categories[3], { id: 'ok', name: '正常' }) // 无 key → 不新增
+  a.deepEqual(normalizeNoteData(data), data) // 幂等
+})
+
+// T24 — 归一化后 tabCategoriesOf 组合验证（存库 → 加载 → 标签页可见分类闭环）
+test('T24 tabCategoriesOf after normalizeNoteData roundtrip', () => {
+  const data = normalizeNoteData({
+    categories: [
+      { id: 'a', name: 'A', showInTabs: false },
+      { id: 'b', name: 'B' },
+      { id: 'c', name: 'C', showInTabs: true }
+    ],
+    notes: []
+  })
+  a.deepEqual(tabCategoriesOf(data.categories).map(c => c.id), ['b', 'c'])
 })
 
 let passed = 0

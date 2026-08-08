@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries } from '@/composables/noteCore'
+import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
@@ -46,6 +46,9 @@ function resetFilters(): void {
 const sortedCategories = computed<NoteCategory[]>(() =>
   [...store.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
 )
+
+// 标签页可见分类：showInTabs !== false（undefined/true 显示，false 隐藏）——公式走 noteCore.tabCategoriesOf 纯函数，组件禁止重算
+const tabCategories = computed<NoteCategory[]>(() => tabCategoriesOf(sortedCategories.value))
 
 // 过滤后的便签列表：先 store.sortedNotes（置顶→updatedAt 降序）再走 noteCore.filterNotes（类型/分类/关键词），过滤公式一律走 noteCore
 const filteredNotes = computed<WorkbenchNote[]>(() =>
@@ -291,6 +294,19 @@ async function handleDeleteCat(cat: NoteCategory): Promise<void> {
   if (categoryDraft.value === cat.id) categoryDraft.value = ''
 }
 
+// 标签页显示勾选：写 store（showInTabs）；取消勾选的分类若正被激活筛选 → 回退「全部」（镜像 handleDeleteCat 的回退逻辑）
+async function handleToggleTab(cat: NoteCategory, checked: boolean): Promise<void> {
+  const ok = await store.updateCategory(cat.id, { showInTabs: checked })
+  if (!ok) {
+    toast.error('分类更新失败')
+    return
+  }
+  if (!checked) {
+    if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
+    if (categoryDraft.value === cat.id) categoryDraft.value = ''
+  }
+}
+
 async function handleAddCat(): Promise<void> {
   const name = newCatName.value.trim()
   if (!name) return
@@ -331,7 +347,7 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-notes">
-    <!-- 查询区（关键词/类型 + 查询/重置 + 分类筛选 tabs，与待办面板 td-search 同构） -->
+    <!-- 查询区（关键词/类型 + 查询/重置，与待办面板 td-search 同构；分类筛选 tabs 在下方操作栏之后） -->
     <div class="nt-search">
       <div class="nt-search-fields">
         <label class="nt-field nt-field-grow">
@@ -361,30 +377,6 @@ onUnmounted(() => {
         <button class="nt-btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</button>
         <button class="nt-btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</button>
       </div>
-
-      <!-- 分类筛选标签页（全部/未分类/各分类，即时过滤；与倒计时面板 cd-cat-tabs 同构） -->
-      <div class="nt-cat-tabs">
-        <button
-          class="nt-cat-tab"
-          :class="{ active: activeCategoryId === undefined }"
-          data-testid="nt-cat-all"
-          @click="selectCategoryTab(undefined)"
-        >全部</button>
-        <button
-          class="nt-cat-tab"
-          :class="{ active: activeCategoryId === 'uncategorized' }"
-          data-testid="nt-cat-uncategorized"
-          @click="selectCategoryTab('uncategorized')"
-        >未分类</button>
-        <button
-          v-for="cat in sortedCategories"
-          :key="cat.id"
-          class="nt-cat-tab"
-          :class="{ active: activeCategoryId === cat.id }"
-          :data-testid="`nt-cat-${cat.id}`"
-          @click="selectCategoryTab(cat.id)"
-        >{{ cat.name }}</button>
-      </div>
     </div>
 
     <!-- 操作栏（无卡片）：新增便签/分类管理 + 计数，与待办面板 td-headbar 同构 -->
@@ -394,6 +386,30 @@ onUnmounted(() => {
         <button class="nt-btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
       </div>
       <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
+    </div>
+
+    <!-- 分类筛选标签页（全部/未分类/可见分类，即时过滤；与倒计时面板 cd-cat-tabs 同构，位于操作栏下方） -->
+    <div class="nt-cat-tabs">
+      <button
+        class="nt-cat-tab"
+        :class="{ active: activeCategoryId === undefined }"
+        data-testid="nt-cat-all"
+        @click="selectCategoryTab(undefined)"
+      >全部</button>
+      <button
+        class="nt-cat-tab"
+        :class="{ active: activeCategoryId === 'uncategorized' }"
+        data-testid="nt-cat-uncategorized"
+        @click="selectCategoryTab('uncategorized')"
+      >未分类</button>
+      <button
+        v-for="cat in tabCategories"
+        :key="cat.id"
+        class="nt-cat-tab"
+        :class="{ active: activeCategoryId === cat.id }"
+        :data-testid="`nt-cat-${cat.id}`"
+        @click="selectCategoryTab(cat.id)"
+      >{{ cat.name }}</button>
     </div>
 
     <!-- 时光轴（类型下拉=时光轴）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
@@ -676,6 +692,23 @@ onUnmounted(() => {
           <button class="cat-dialog-close" @click="closeCatManager">✕</button>
         </div>
         <div class="cat-dialog-body">
+          <!-- 标签页显示勾选：决定该分类是否出现在面板顶部筛选标签页（镜像倒计时面板 catmgr 范式，hint 文案同源） -->
+          <div class="cat-tab-section">
+            <div class="cat-tab-section-title">标签页显示</div>
+            <p class="cat-tab-hint">勾选的分类会显示在面板上方的筛选标签页中</p>
+            <div class="cat-tab-list">
+              <label v-for="cat in sortedCategories" :key="cat.id" class="cat-tab-row">
+                <input
+                  type="checkbox"
+                  :checked="cat.showInTabs !== false"
+                  :data-testid="`nt-catmgr-tab-${cat.id}`"
+                  @change="handleToggleTab(cat, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ cat.name }}</span>
+              </label>
+            </div>
+          </div>
+
           <div class="cat-manager-list">
             <div v-for="cat in sortedCategories" :key="cat.id" class="cat-manager-row" :data-testid="`nt-catmgr-row-${cat.id}`">
               <input
@@ -1543,6 +1576,56 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+/* ===== 标签页显示勾选（镜像倒计时面板 catmgr 范式）===== */
+.cat-tab-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-tab-section + .cat-manager-list {
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color, var(--color-border));
+}
+
+.cat-tab-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.cat-tab-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.cat-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cat-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+}
+
+.cat-tab-row input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent-color, var(--color-primary));
+}
+
 .cat-manager-row {
   display: flex;
   align-items: center;
@@ -1763,6 +1846,12 @@ onUnmounted(() => {
 :root.dark .cat-name-input {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .cat-tab-row {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
 }
 

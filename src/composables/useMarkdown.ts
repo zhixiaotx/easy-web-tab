@@ -1,5 +1,4 @@
-import type { Site, SitesData, Category, PasswordEntry, Countdown, CountdownCategory } from '../types'
-import { COUNTDOWN_CATEGORIES } from '../types'
+import type { Site, SitesData, Category, PasswordEntry, Countdown } from '../types'
 import type { SearchEngine } from '../stores/searchEngines'
 import { parseRepeat } from './countdownCore'
 import yaml from 'js-yaml'
@@ -34,7 +33,8 @@ export function useMarkdown() {
               name: typeof raw?.name === 'string' ? raw.name : '',
               endDateTime: typeof raw?.endDateTime === 'string' ? raw.endDateTime : '',
               repeat: parseRepeat(raw?.repeat),
-              category: typeof raw?.category === 'string' && (COUNTDOWN_CATEGORIES as readonly string[]).includes(raw.category) ? (raw.category as CountdownCategory) : undefined,
+              // 分类：任意非空字符串透传（内置 6 类 + 用户自定义名），缺失/空串 → undefined（后续 normalize 兜底 'work'）
+              category: typeof raw?.category === 'string' && raw.category.trim() !== '' ? raw.category.trim() : undefined,
               color: typeof raw?.color === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw.color) ? raw.color : undefined,
               lastRemindedAt: typeof raw?.lastRemindedAt === 'string' && raw.lastRemindedAt.trim() !== '' ? raw.lastRemindedAt : undefined,
               createdAt: typeof raw?.createdAt === 'string' && raw.createdAt.trim() !== '' ? raw.createdAt : now,

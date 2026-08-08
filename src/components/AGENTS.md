@@ -34,7 +34,7 @@ components/
     ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口，9 张概览卡：4 旧 + 健康/记账 5 新）
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选）
     ├── WorkbenchNotes.vue       # 便签面板（类型切换 普通/时光轴 tabs + 搜索 + 分类筛选 chips + 分类管理弹窗 + 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，data-testid 前缀 nt-）
-    ├── WorkbenchCountdown.vue   # 倒计时面板（规则/分类表单 + 徽标，data-testid 前缀 cd-）
+    ├── WorkbenchCountdown.vue   # 倒计时面板（分类筛选 tabs + ⚙️分类管理弹框 + 规则/分类表单 + 徽标，data-testid 前缀 cd-）
     ├── WorkbenchPassword.vue    # 密码面板（主密码三态 + 新增/编辑弹窗 + 书签关联下拉 + 名称搜索，复用 usePasswordsStore / useCrypto.ts）
     ├── WorkbenchHealth.vue      # 健康管理 tabs 容器（受控组件：props activeTab + emit change；tab 栏前缀 hd-；内含运动/饮食/睡眠/体重 四面板）
     ├── WorkbenchHealthReminders.vue # 健康面板只读「定时提醒」区块（props module: exercise/diet/sleep；读倒计时 store 按分类 1:1 过滤，名称+下次触发+重复规则，升序、无下次显示「—」、空分类不渲染；testid 前缀 `${module}-reminders`）
@@ -56,8 +56,8 @@ components/
 | Category CRUD | `CategoryManager.vue` | Only `video` locked; legacy categories deletable |
 | Icon management | `IconManager.vue` | Upload & manage custom site icons |
 | Password vault | `workbench/WorkbenchPassword.vue` | 主密码三态（设置/解锁/锁定），新增/编辑弹窗 + 书签库名称关联下拉，按网站名称搜索，AES-CBC 加密存 IndexedDB |
-| Countdown management | `CountdownManager.vue` + `workbench/WorkbenchCountdown.vue` | 管理端/工作台表单：6 种重复规则选择器（weekly 周几多选 + 工作日快捷钮 / monthly 几号 / interval 分钟）+ 分类 6 选（work/life/study/exercise/diet/sleep）+ 校验；`repeatLabel`/`categoryLabel` 徽标 |
-| Countdown display | `CountdownModal.vue` | 前台只读展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫/exercise=橙/diet=琥珀/sleep=青，亮暗双主题） |
+| Countdown management | `CountdownManager.vue` + `workbench/WorkbenchCountdown.vue` | 管理端/工作台表单：6 种重复规则选择器（weekly 周几多选 + 工作日快捷钮 / monthly 几号 / interval 分钟）+ 分类下拉取 `store.allCategories`（内置 6 + 自定义）+ 校验；`repeatLabel`/`categoryLabel` 徽标；工作台面板分类筛选为 tabs（全部 + `tabCategories`，`cd-cat-all`/`cd-cat-<c>`，即时过滤）+ ⚙️ 分类管理弹框（`cd-cat-dialog`：标签页显示复选框 + 自定义分类重命名/删除/添加，`cd-cat-rename-*`/`cd-cat-del-*`/`cd-cat-new-input`/`cd-cat-add-btn`，失败走 useToast warning） |
+| Countdown display | `CountdownModal.vue` | 前台只读展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫/exercise=橙/diet=琥珀/sleep=青，亮暗双主题；自定义分类统一默认灰 `cat-default`） |
 | Reminder popup | `CountdownReminder.vue` | 全屏遮罩弹框，到点时间显示 `⏰ MM-DD HH:mm`；z-index 2000，点击遮罩不关闭 |
 | Tag filtering | `TagFilter.vue` + `CategoryTabs.vue` | Tags extracted from all sites |
 | Loading states | `SkeletonCard.vue` + `SkeletonGrid.vue` | Shimmer placeholders |

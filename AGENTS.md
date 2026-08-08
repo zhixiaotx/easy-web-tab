@@ -51,7 +51,7 @@ easy-web-tab/
 | Icon caching | `src/composables/useIconCache.ts` | localStorage, 30-day expiry |
 | Toast notifications | `src/composables/useToast.ts` | Singleton (module-level shallowRef, not Pinia) |
 | Password management | `src/stores/passwords.ts` | crypto-js AES-CBC encrypted, `useCrypto.ts` for crypto |
-| Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 6 categories (work/life/study/exercise/diet/sleep), 5 sort modes |
+| Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 6 categories (work/life/study/exercise/diet/sleep) + 自定义分类注册表, 5 sort modes |
 | Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` |
 | Reminder engine | `src/composables/useCountdownReminder.ts` | Minute-level tick + daily 9am 3-day summary, singleton popup |
 | 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/WorkbenchHealth.vue` | 目标计划+按天记录混合模型；IndexedDB store 'health'；tabs 容器 WorkbenchHealth.vue 内嵌面板 WorkbenchExercise/Diet/Sleep/Weight.vue（受控组件 activeTab + change emit）；运动/饮食/睡眠面板顶部挂只读「定时提醒」区块 WorkbenchHealthReminders.vue（按倒计时 category 1:1 映射，纯展示） |
@@ -106,6 +106,7 @@ easy-web-tab/
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
 - **IndexedDB persistence**: 工作台数据（待办/便签/倒计时/密码/健康/记账）存浏览器 IndexedDB — DB 名 `easy-web-tab` v2，6 个 object store（todos/notes/countdowns/passwords/health/ledger），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）；notes store 存 NoteData `{categories, notes}` 双数组；导出备份 version 3，v1/v2 旧备份导入时兼容（v1 补 health/ledger 空数据；notes 旧数组格式归一为 `{categories:[], notes:[...]}`，不拒绝）
 - **倒计时 repeat 规范**: `once` 规范存 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有入口（loadCountdowns/importCountdowns/addCountdown/updateCountdown/useMarkdown 解析）经 `normalizeCountdown`/`parseRepeat` 归一化，幂等
+- **倒计时分类规范**: 内置 6 类（work/life/study/exercise/diet/sleep）+ 自定义分类注册表（`customCategories`，localStorage `user-countdown-categories`，不随 JSON 备份导出，与排序偏好同策略）；标签页可见分类 `tabCategories` 默认 exercise/diet/sleep（localStorage `user-countdown-tab-categories`，首次无记录时落默认值）；`normalizeCountdown` 保留任意 trim 后非空的自定义分类值（不再剥离为 'work'），`categoryLabel` 对未知分类回退原名；`CountdownCategory` 类型 = `string`；表单下拉全量取 `store.allCategories`（内置+自定义）；自定义分类被倒计时引用时删除返回 `{ ok:false, reason:'in-use' }`；重命名会同步存量条目 category 字段（toRaw 重建后 idbPut）
 - **健康/记账数据规范**: 健康=「目标计划(HealthPlan)+按天记录(HealthRecord 四模块)」混合模型，达标率/时长/BMI 一律走 `healthCore` 纯函数（组件禁止重算）；记账=内置 8 分组（工资=收入 + 房贷/车贷/早餐/午餐/晚餐/通勤/日常=支出，不可删改）+ 自定义分组（唯一名、被记录引用禁删），月统计/存款累计/自动复制计划一律走 `ledgerCore` 纯函数
 - **记账自动复制规范**: `loadLedger()` 成功后调 `applyMonthlyAutoCopy()` 补当前月 — 目标月缺 `salary`/`mortgage` 且上月有该类记录 → 生成草稿（date=`当月-01`，金额取上月该类最新一条），幂等（已存在/上月无记录均跳过），不跨月回溯；生成的条目 id 前缀 `ld_`
 - **记账敏感金额掩码规范**: 金额展示（收入/支出/结余/存款/支出比/分类占比金额+百分比/单条记录金额）默认隐藏显示 `****`，经 `ledgerCore` 的 `maskOrReveal`/`MASKED_TEXT` 统一掩码（组件禁止自造掩码串）；`showAmount`+`toggleAmountVisibility()` 为纯内存开关（刷新即重置，不写 IDB/localStorage）；空月 `—` 不掩码、消费笔数/共 N 条不掩码、`0.00` 存款照掩（真实值）；编辑弹框金额回填保持明文（用户主动编辑）；工作台 JSON 导出 `idbExportAll` 保持明文（与密码导出一致）

@@ -15,7 +15,7 @@ stores/
 ├── settings.ts           # Dialog size settings contract (useAppSettingsStore, DIALOG_DEFAULTS / DIALOG_LABELS, 216 lines)
 ├── passwords.ts          # crypto-js AES-CBC encrypted password vault (171 lines, IndexedDB store 'passwords')
 ├── icons.ts              # User-uploaded custom icon storage (116 lines)
-├── countdowns.ts         # Countdown CRUD + sort preference (5 modes, 6 重复规则对象 + 3 分类; IndexedDB store 'countdowns')
+├── countdowns.ts         # Countdown CRUD + sort preference (5 modes, 6 重复规则对象 + 内置 6 分类 + 自定义分类注册表/tabCategories 偏好; IndexedDB store 'countdowns')
 ├── workbenchTodos.ts     # 工作台待办 CRUD + 筛选/搜索/排序 (131 lines, IndexedDB store 'todos')
 ├── workbenchNotes.ts     # 工作台便签：便签 CRUD + 置顶 + 分类 CRUD（addCategory/updateCategory/moveCategory/deleteCategory，名称唯一、删除后该分类便签归未分类）+ 时光轴条目 CRUD（addTimelineEntry/updateTimelineEntry/deleteTimelineEntry） (203 lines, IndexedDB store 'notes' 存 NoteData `{categories, notes}`)
 ├── workbenchHealth.ts    # 健康数据：height/plans/records 四模块（exercise/diet/sleep/weight）CRUD (IndexedDB store 'health')
@@ -35,7 +35,7 @@ stores/
 | Theme/background | `theme.ts` | `initTheme()`, `initBackground()`, toggle methods |
 | Password vault | `passwords.ts` | Master-password-gated, uses `useCrypto.ts` for crypto-js AES-CBC + PBKDF2 |
 | Custom icons | `icons.ts` | Merges preset icons with user uploads |
-| Countdown CRUD | `countdowns.ts` | `addCountdown()`/`updateCountdown()`/`importCountdowns()`/`loadCountdowns()` 入口全部经 `normalizeCountdown` 归一化；6 种 repeat 规则对象 + 3 分类；sort modes (remaining/name/created/endTime/manual) |
+| Countdown CRUD | `countdowns.ts` | `addCountdown()`/`updateCountdown()`/`importCountdowns()`/`loadCountdowns()` 入口全部经 `normalizeCountdown` 归一化（保留自定义分类）；6 种 repeat 规则对象 + 内置 6 分类 + 自定义分类注册表（`addCustomCategory`/`renameCustomCategory`/`deleteCustomCategory` 返回 { ok, reason: empty|builtin|duplicate|not-found|in-use }，重命名同步存量条目、被引用禁删）；`tabCategories` 标签页偏好（默认 exercise/diet/sleep）+ `setTabCategory`；偏好存 localStorage `user-countdown-categories`/`user-countdown-tab-categories`（不随 JSON 备份导出）；sort modes (remaining/name/created/endTime/manual) |
 | Dialog size settings | `settings.ts` | `useAppSettingsStore` — per-dialog width/height contract, clamp 400-1600px / 30-100vh |
 | 工作台待办 | `workbenchTodos.ts` | `addTodo()`, `toggleTodo()`, filter/search/sort; 未完成优先 → 优先级 → 截止日期 → 创建时间 |
 | 工作台便签 | `workbenchNotes.ts` | 便签 CRUD（`addNote()`/`updateNote()`/`deleteNote()`/`togglePin()`）+ 分类 CRUD（`addCategory`/`updateCategory`/`moveCategory`/`deleteCategory`：名称 trim 后非空 + 大小写不敏感唯一、追加 sort=现有最大+1、删除后该分类下便签归未分类 categoryId:undefined）+ 时光轴条目 CRUD（`addTimelineEntry`/`updateTimelineEntry`/`deleteTimelineEntry`）；`sortedNotes`=置顶优先 → updatedAt 降序，排序/筛选/归一化一律走 `noteCore` 纯函数（store 只做薄委托 + 持久化） |
@@ -50,7 +50,7 @@ stores/
 - Built-in data (categories, engines) is hardcoded constant arrays, not loaded from files
 - User data loaded at store initialization: `localStorage` for sites/categories/engines/theme/icons; `idbGet` for countdowns/passwords/workbench todos/notes/health/ledger (with one-time non-destructive migration from legacy localStorage keys)
 - **倒计时 repeat 归一化**: `once` 规范为 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有写入/加载入口（loadCountdowns 含 localStorage 迁移、addCountdown、updateCountdown、importCountdowns）都经 `normalizeCountdown`，幂等——IDB 存量旧结构也在加载时归一化
-- **倒计时字段**: `category?: 'work'|'life'|'study'`（缺省按 `'work'` 展示）；`lastRemindedAt?: string`（YYYY-MM-DD HH:mm，提醒引擎写入去重用）
+- **倒计时字段**: `category?: string`（任意 trim 后非空值，内置 6 类有专属徽标色，自定义统一 `cat-default` 灰；缺省按 `'work'` 展示）；`lastRemindedAt?: string`（YYYY-MM-DD HH:mm，提醒引擎写入去重用）
 - **便签数据规范**: 双数组状态 `categories`（NoteCategory：id `nc_` 前缀 + name 唯一 + sort）+ `notes`（WorkbenchNote：id `nt_` 前缀、`categoryId` undefined=未分类、`entries` 仅 type='timeline' 保留，条目 id `te_` 前缀）；`saveNotes()` 对两个 reactive 数组分别 `toRaw` 后写 `{ categories, notes }` 到 store 'notes'（整体 toRaw 不拆嵌套 Proxy）；`deleteCategory()` 在 `toRaw(notes.value)` 原始数组上 map 把该分类便签置未分类（同 deleteNote 的 toRaw filter 安全模式，防 DataCloneError）；加载入口 `loadNotes()` 经 `normalizeNoteData` 幂等归一（旧数组格式 → `{categories:[], notes:[...]}`）
 
 ## ANTI-PATTERNS

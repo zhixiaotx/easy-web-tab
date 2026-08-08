@@ -16,7 +16,7 @@ composables/
 ├── useDeadLinkChecker.ts   # Batch link check with 500ms throttle per request
 ├── useToast.ts             # Singleton toast state (module-level shallowRef, NOT Pinia)
 ├── useCrypto.ts            # crypto-js AES-CBC + PBKDF2 encryption (98 lines) — used by passwords store
-├── countdownCore.ts        # 倒计时纯逻辑引擎（494 行）: 6 种重复规则 + 6 分类（work/life/study/exercise/diet/sleep）+ calcRemaining/sortCountdowns
+├── countdownCore.ts        # 倒计时纯逻辑引擎（494 行）: 6 种重复规则 + 分类（内置 6 + 任意自定义，normalizeCountdown 保留 trim 非空值、categoryLabel 未知回退原名）+ calcRemaining/sortCountdowns
 ├── useCountdownReminder.ts # Singleton 提醒弹框引擎：60s tick + 到点提醒 + 每天 9:00 最后3天摘要
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
@@ -40,7 +40,7 @@ composables/
 | Link checking | `useDeadLinkChecker.ts` | Batch check with 500ms throttle per request |
 | Toast notifications | `useToast.ts` | Singleton pattern — shared across entire app |
 | Encryption | `useCrypto.ts` | crypto-js: AES-CBC + PBKDF2 key derivation (pure JS, works over HTTP) |
-| Countdown math | `countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`calcRemaining`/`sortCountdowns`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| Countdown math | `countdownCore.ts` | `parseRepeat`/`normalizeCountdown`（保留任意 trim 后非空分类，'once'→null）/`calcNextOccurrence`/`getReminderDue`/`calcRemaining`/`sortCountdowns`/`repeatLabel`/`categoryLabel`（未知分类回退原名）/`serializeRepeatYaml` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | Countdown reminder | `useCountdownReminder.ts` | 单例弹框引擎：60s `setInterval` tick + init 立即 tick + visibilitychange 立即 tick；到点写 `lastRemindedAt` 去重；9:00 最后3天摘要用 `STORAGE_KEY`(`user-countdown-reminder-date`) 防同日重复 |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |

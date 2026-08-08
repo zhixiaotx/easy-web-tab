@@ -4,6 +4,7 @@ import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import type { CountdownItem, CountdownRemaining, CountdownSortMode } from '@/stores/countdowns'
 import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/countdownCore'
 import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
+import { useToast } from '@/composables/useToast'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
 import { COUNTDOWN_CATEGORIES, COUNTDOWN_COLOR_PRESETS, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 
@@ -11,8 +12,9 @@ const store = useCountdownsStore()
 
 // ===== 查询/筛选（查询按钮生效，重置恢复全量）=====
 const searchName = ref('')
-const searchCategory = ref<'' | CountdownCategory>('')
 const searchRepeat = ref<'' | CountdownRepeatType>('')
+// 分类筛选走标签页（即时生效）；'' = 全部
+const activeCategoryTab = ref('')
 const appliedFilters = ref<CountdownFilterCriteria>({})
 
 const hasActiveFilter = computed(() =>
@@ -24,20 +26,99 @@ const hasActiveFilter = computed(() =>
 function applySearch(): void {
   appliedFilters.value = {
     name: searchName.value,
-    category: searchCategory.value,
+    category: activeCategoryTab.value || undefined,
     repeat: searchRepeat.value
   }
 }
 
+function selectCategoryTab(category: string): void {
+  activeCategoryTab.value = category
+  appliedFilters.value = { ...appliedFilters.value, category: category || undefined }
+}
+
 function resetSearch(): void {
   searchName.value = ''
-  searchCategory.value = ''
   searchRepeat.value = ''
+  activeCategoryTab.value = ''
   appliedFilters.value = {}
 }
 
 // 列表渲染用筛选后的数据；排序/手动移动基于 filteredItems 的位置
 const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, appliedFilters.value))
+
+// ===== 分类管理（标签页显示 + 自定义分类 CRUD，偏好存 localStorage）=====
+const toast = useToast()
+
+const showCatDialog = ref(false)
+const newCatName = ref('')
+const renameDrafts = ref<Record<string, string>>({})
+
+function openCatManager(): void {
+  renameDrafts.value = Object.fromEntries(store.customCategories.map(c => [c, c]))
+  newCatName.value = ''
+  showCatDialog.value = true
+}
+
+function closeCatManager(): void {
+  showCatDialog.value = false
+}
+
+function catErrorToast(result: { ok: boolean; reason?: string }): void {
+  if (result.ok) return
+  const messages: Record<string, string> = {
+    empty: '分类名称不能为空',
+    builtin: '内置分类不可修改',
+    duplicate: '分类名称已存在',
+    'not-found': '分类不存在',
+    'in-use': '该分类下还有倒计时，无法删除'
+  }
+  toast.warning(messages[result.reason ?? ''] ?? '操作失败')
+}
+
+function handleAddCategory(): void {
+  const name = newCatName.value.trim()
+  if (!name) return
+  const result = store.addCustomCategory(name)
+  if (result.ok) newCatName.value = ''
+  catErrorToast(result)
+}
+
+function handleRenameCategory(oldName: string): void {
+  const newName = (renameDrafts.value[oldName] ?? '').trim()
+  if (!newName || newName === oldName) return
+  const result = store.renameCustomCategory(oldName, newName)
+  if (result.ok) {
+    const next = { ...renameDrafts.value }
+    delete next[oldName]
+    next[newName] = newName
+    renameDrafts.value = next
+    // 重命名的正是当前激活的筛选 tab → 同步 activeCategoryTab，避免筛选悬空为空态
+    if (activeCategoryTab.value === oldName) {
+      selectCategoryTab(newName)
+    }
+  }
+  catErrorToast(result)
+}
+
+function handleDeleteCategory(category: string): void {
+  const result = store.deleteCustomCategory(category)
+  if (result.ok) {
+    const next = { ...renameDrafts.value }
+    delete next[category]
+    renameDrafts.value = next
+    // 删除的正是当前激活的筛选 tab → 回退到「全部」
+    if (activeCategoryTab.value === category) {
+      selectCategoryTab('')
+    }
+  }
+  catErrorToast(result)
+}
+
+// 徽标 class：内置分类用既有配色，自定义分类统一默认灰
+function categoryBadgeClass(category: string | null | undefined): string {
+  const c = category?.trim() || 'work'
+  return (COUNTDOWN_CATEGORIES as readonly string[]).includes(c) ? `cat-${c}` : 'cat-default'
+}
 
 // ===== 表单状态机（新增/编辑共用，弹框承载）=====
 const showDialog = ref(false)
@@ -227,10 +308,13 @@ function statusClass(status: CountdownRemaining['status']): string {
   return `status-${status}`
 }
 
-// ESC 关闭编辑弹框
+// ESC 关闭分类管理 / 编辑弹框
 function handleKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && showDialog.value) {
-    event.preventDefault()
+  if (event.key !== 'Escape') return
+  event.preventDefault()
+  if (showCatDialog.value) {
+    closeCatManager()
+  } else if (showDialog.value) {
     cancelForm()
   }
 }
@@ -258,16 +342,31 @@ onUnmounted(() => {
         data-testid="cd-search-name"
         @keyup.enter="applySearch"
       />
-      <select v-model="searchCategory" class="form-input search-select" data-testid="cd-search-category">
-        <option value="">全部分类</option>
-        <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
-      </select>
       <select v-model="searchRepeat" class="form-input search-select" data-testid="cd-search-repeat">
         <option value="">全部重复</option>
         <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
       <button class="search-btn" data-testid="cd-search-btn" @click="applySearch">查询</button>
       <button class="search-reset-btn" data-testid="cd-search-reset" @click="resetSearch">重置</button>
+    </div>
+
+    <!-- 分类标签页（即时过滤；⚙️ 管理标签页显示与自定义分类） -->
+    <div class="cd-cat-tabs">
+      <button
+        class="cd-cat-tab"
+        :class="{ active: activeCategoryTab === '' }"
+        data-testid="cd-cat-all"
+        @click="selectCategoryTab('')"
+      >全部</button>
+      <button
+        v-for="c in store.tabCategories"
+        :key="c"
+        class="cd-cat-tab"
+        :class="{ active: activeCategoryTab === c }"
+        :data-testid="'cd-cat-' + c"
+        @click="selectCategoryTab(c)"
+      >{{ categoryLabel(c) }}</button>
+      <button class="cd-cat-manage" data-testid="cd-cat-manage" title="分类管理" @click="openCatManager">⚙️ 管理</button>
     </div>
 
     <!-- 操作栏：数量 + 新增 -->
@@ -327,7 +426,7 @@ onUnmounted(() => {
             <span class="cd-name">{{ item.name }}</span>
             <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
           </div>
-          <span class="cat-badge" :class="'cat-' + (item.category ?? 'work')">{{ categoryLabel(item.category) }}</span>
+          <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
         </div>
 
         <div class="cd-remaining" :class="statusClass(item.remaining.status)">
@@ -399,7 +498,7 @@ onUnmounted(() => {
             <div class="field">
               <label class="field-label">分类</label>
               <select v-model="formCategory" class="form-input field-cat" data-testid="cd-category">
-                <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
+                <option v-for="c in store.allCategories" :key="c" :value="c">{{ categoryLabel(c) }}</option>
               </select>
             </div>
           </div>
@@ -496,6 +595,63 @@ onUnmounted(() => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- 分类管理弹框（标签页显示 + 自定义分类 CRUD） -->
+    <div v-if="showCatDialog" class="dialog-overlay" @click.self="closeCatManager">
+      <div class="dialog catmgr-dialog" data-testid="cd-cat-dialog">
+        <div class="dialog-header">
+          <h3>分类管理</h3>
+          <button class="close-btn" @click="closeCatManager">✕</button>
+        </div>
+        <div class="dialog-body">
+          <div class="catmgr-section">
+            <div class="catmgr-section-title">标签页显示</div>
+            <p class="catmgr-hint">勾选的分类会显示在面板上方的筛选标签页中</p>
+            <div class="catmgr-tab-list">
+              <label v-for="c in store.allCategories" :key="c" class="catmgr-tab-row">
+                <input
+                  type="checkbox"
+                  :checked="store.tabCategories.includes(c)"
+                  @change="store.setTabCategory(c, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ categoryLabel(c) }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="catmgr-section">
+            <div class="catmgr-section-title">自定义分类</div>
+            <p v-if="store.customCategories.length === 0" class="catmgr-hint">暂无自定义分类，可在下方添加</p>
+            <div v-for="c in store.customCategories" :key="c" class="catmgr-custom-row">
+              <input
+                v-model="renameDrafts[c]"
+                class="form-input catmgr-rename-input"
+                :data-testid="'cd-cat-rename-input-' + c"
+                placeholder="分类名称"
+                @keyup.enter="handleRenameCategory(c)"
+              />
+              <button class="catmgr-mini-btn" :data-testid="'cd-cat-rename-' + c" @click="handleRenameCategory(c)">重命名</button>
+              <button class="catmgr-mini-btn danger" :data-testid="'cd-cat-del-' + c" @click="handleDeleteCategory(c)">删除</button>
+            </div>
+            <div class="catmgr-add-row">
+              <input
+                v-model="newCatName"
+                class="form-input catmgr-add-input"
+                data-testid="cd-cat-new-input"
+                placeholder="新分类名称"
+                @keyup.enter="handleAddCategory"
+              />
+              <button
+                class="btn-save catmgr-add-btn"
+                :disabled="!newCatName.trim()"
+                data-testid="cd-cat-add-btn"
+                @click="handleAddCategory"
+              >添加</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -740,6 +896,13 @@ onUnmounted(() => {
   background: rgba(6, 182, 212, 0.12);
 }
 
+/* 自定义分类徽标：统一默认灰 */
+.cat-default {
+  color: #6b7280;
+  border: 1px solid #6b7280;
+  background: rgba(107, 114, 128, 0.12);
+}
+
 /* 剩余时间主角（状态色） */
 .cd-remaining {
   display: flex;
@@ -871,6 +1034,162 @@ onUnmounted(() => {
 .btn-delete:hover {
   color: var(--error-color, var(--color-error));
   border-color: var(--error-color, var(--color-error));
+}
+
+/* ===== 分类标签页 ===== */
+.cd-cat-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cd-cat-tab {
+  padding: 5px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.cd-cat-tab:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.cd-cat-tab.active {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.cd-cat-manage {
+  margin-left: auto;
+  padding: 5px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: none;
+  border: 1px dashed var(--border-color, var(--color-border));
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.cd-cat-manage:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 分类管理弹框 ===== */
+.catmgr-dialog {
+  max-width: 440px;
+}
+
+.catmgr-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catmgr-section + .catmgr-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color, var(--color-border));
+}
+
+.catmgr-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.catmgr-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.catmgr-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catmgr-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+}
+
+.catmgr-tab-row input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent-color, var(--color-primary));
+}
+
+.catmgr-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catmgr-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.catmgr-mini-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.catmgr-mini-btn:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.catmgr-mini-btn.danger:hover {
+  color: var(--error-color, var(--color-error));
+  border-color: var(--error-color, var(--color-error));
+}
+
+.catmgr-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catmgr-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.catmgr-add-btn {
+  padding: 7px 16px;
+  font-size: 13px;
 }
 
 /* ===== 空态 ===== */
@@ -1337,5 +1656,20 @@ onUnmounted(() => {
 
 :root.dark .status-critical {
   color: #f87171;
+}
+
+:root.dark .cat-default {
+  color: #9ca3af;
+  border-color: #6b7280;
+  background: rgba(107, 114, 128, 0.15);
+}
+
+:root.dark .cd-cat-tab,
+:root.dark .cd-cat-manage,
+:root.dark .catmgr-tab-row,
+:root.dark .catmgr-mini-btn {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
 }
 </style>

@@ -41,7 +41,7 @@ test('S3 normalizeCountdown', () => {
   assert.equal(base.category, 'work')
   assert.equal(base.repeat, null)
 
-  const migrated = normalizeCountdown({ category: 'bogus', repeat: 'yearly' })
+  const migrated = normalizeCountdown({ repeat: 'yearly' })
   assert.equal(migrated.category, 'work')
   assert.deepEqual(migrated.repeat, { type: 'yearly' })
 
@@ -49,11 +49,17 @@ test('S3 normalizeCountdown', () => {
   assert.equal(passthrough.category, 'study')
   assert.equal(passthrough.lastRemindedAt, '2026-08-04 09:00')
 
-  // 新分类：exercise/diet/sleep 不强制回退 'work'（回归保护：bogus 仍回退 'work'）
+  // 内置分类：exercise/diet/sleep 保留
   assert.equal(normalizeCountdown({ category: 'exercise' }).category, 'exercise')
   assert.equal(normalizeCountdown({ category: 'diet' }).category, 'diet')
   assert.equal(normalizeCountdown({ category: 'sleep' }).category, 'sleep')
-  assert.equal(normalizeCountdown({ category: 'bogus' }).category, 'work')
+  // 自定义分类：任意非空字符串保留（trim），不再回退 'work'
+  assert.equal(normalizeCountdown({ category: 'bogus' }).category, 'bogus')
+  assert.equal(normalizeCountdown({ category: ' 健身 ' }).category, '健身')
+  // 空串 / 非字符串 → 缺省 'work'
+  assert.equal(normalizeCountdown({ category: '' }).category, 'work')
+  assert.equal(normalizeCountdown({ category: '   ' }).category, 'work')
+  assert.equal(normalizeCountdown({ category: 42 as unknown as string }).category, 'work')
 })
 
 // S3b — color normalization: valid hex kept, invalid/absent → default blue
@@ -85,11 +91,12 @@ test('S3c filterCountdowns', () => {
     mkCountdown('b', '周会提醒', { type: 'weekly', daysOfWeek: [1] }, 'work'),
     mkCountdown('c', '年体检', 'yearly', 'life'),
     mkCountdown('d', '晨练', { type: 'daily' }, 'life'),
-    mkCountdown('e', '发薪日', { type: 'monthly', dayOfMonth: 15 }, 'exercise')
+    mkCountdown('e', '发薪日', { type: 'monthly', dayOfMonth: 15 }, 'exercise'),
+    mkCountdown('f', '撸铁计划', { type: 'daily' }, '健身')
   ]
   // 空条件 → 全部
-  assert.equal(filterCountdowns(items).length, 5)
-  assert.equal(filterCountdowns(items, {}).length, 5)
+  assert.equal(filterCountdowns(items).length, 6)
+  assert.equal(filterCountdowns(items, {}).length, 6)
   // 名称模糊（子串 + trim + 大小写无关）
   assert.deepEqual(filterCountdowns(items, { name: '年' }).map(i => i.id), ['a', 'c'])
   assert.deepEqual(filterCountdowns(items, { name: ' 周会 ' }).map(i => i.id), ['b'])
@@ -97,9 +104,11 @@ test('S3c filterCountdowns', () => {
   assert.deepEqual(filterCountdowns(items, { category: 'life' }).map(i => i.id), ['c', 'd'])
   // 新分类 exercise 精确筛选
   assert.deepEqual(filterCountdowns(items, { category: 'exercise' }).map(i => i.id), ['e'])
+  // 自定义分类精确筛选（字符串相等即可）
+  assert.deepEqual(filterCountdowns(items, { category: '健身' }).map(i => i.id), ['f'])
   // 重复规则：once（null 归一）、daily、旧字符串 'yearly'
   assert.deepEqual(filterCountdowns(items, { repeat: 'once' }).map(i => i.id), ['a'])
-  assert.deepEqual(filterCountdowns(items, { repeat: 'daily' }).map(i => i.id), ['d'])
+  assert.deepEqual(filterCountdowns(items, { repeat: 'daily' }).map(i => i.id), ['d', 'f'])
   assert.deepEqual(filterCountdowns(items, { repeat: 'yearly' }).map(i => i.id), ['c'])
   // 组合条件
   assert.deepEqual(filterCountdowns(items, { category: 'work', repeat: 'weekly' }).map(i => i.id), ['b'])
@@ -201,6 +210,10 @@ test('S11 repeatLabel/categoryLabel', () => {
   assert.equal(categoryLabel('exercise'), '运动')
   assert.equal(categoryLabel('diet'), '饮食')
   assert.equal(categoryLabel('sleep'), '睡眠')
+  // 自定义分类：分类名即标签；空串/undefined 按缺省 '工作'
+  assert.equal(categoryLabel('健身'), '健身')
+  assert.equal(categoryLabel('bogus'), 'bogus')
+  assert.equal(categoryLabel(''), '工作')
 })
 
 test('S11 serializeRepeatYaml round-trip via js-yaml', () => {

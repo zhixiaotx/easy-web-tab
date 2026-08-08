@@ -1,7 +1,7 @@
 // 倒计时纯逻辑模块。重复规则引擎：parseRepeat 归一化 → calcNextOccurrence 求下次 → getReminderDue 求补提醒。
 // 运行时依赖仅 COUNTDOWN_CATEGORIES（node --experimental-strip-types 可运行）；其余类型全部 type-only。
 // calcRemaining / sortCountdowns 对外行为与旧版保持一致。
-import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '../types/index.ts'
+import { DEFAULT_COUNTDOWN_COLOR } from '../types/index.ts'
 import type { Countdown, CountdownItem, CountdownRemaining, CountdownCategory, CountdownRepeat } from '../types'
 
 export type CountdownSortMode = 'remaining' | 'name' | 'created' | 'endTime' | 'manual'
@@ -92,10 +92,9 @@ const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 /** 将任意来源的倒计时数据归一化为规范 Countdown（repeat/category/color 强制归一，字符串字段安全兜底）。 */
 export function normalizeCountdown(raw: Partial<Countdown>): Countdown {
+  // 分类：任意非空字符串保留（内置 6 类 + 用户自定义名），trim 后空串/非字符串 → 'work'
   const category: CountdownCategory =
-    typeof raw.category === 'string' && (COUNTDOWN_CATEGORIES as readonly string[]).includes(raw.category)
-      ? (raw.category as CountdownCategory)
-      : 'work'
+    typeof raw.category === 'string' && raw.category.trim() !== '' ? raw.category.trim() : 'work'
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : genId(),
     name: typeof raw.name === 'string' ? raw.name : '',
@@ -444,7 +443,8 @@ export function categoryLabel(category?: CountdownCategory): string {
     case 'sleep':
       return '睡眠'
     default:
-      return '工作'
+      // 自定义分类：分类名即标签；undefined/空串按缺省 'work' 展示
+      return category && category.trim() !== '' ? category : '工作'
   }
 }
 

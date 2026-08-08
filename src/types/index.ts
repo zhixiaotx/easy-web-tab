@@ -45,9 +45,9 @@ export interface PasswordEntry {
   updatedAt: string
 }
 
-// 倒计时提醒分类（固定六分类：工作/生活/学习/运动/饮食/睡眠）
+// 倒计时提醒分类：内置 6 类（COUNTDOWN_CATEGORIES）+ 用户自定义分类名（string，分类管理新增）
 export const COUNTDOWN_CATEGORIES = ['work', 'life', 'study', 'exercise', 'diet', 'sleep'] as const
-export type CountdownCategory = (typeof COUNTDOWN_CATEGORIES)[number]
+export type CountdownCategory = string
 
 // 倒计时卡片自定义颜色：默认蓝 + 8 预设（与便签 NOTE_COLORS 同源色值）
 export const DEFAULT_COUNTDOWN_COLOR = '#3b82f6'

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
 import type { Countdown, CountdownCategory, CountdownItem, CountdownRepeat } from '@/types'
+import { COUNTDOWN_CATEGORIES } from '@/types'
 import { idbGet, idbPut } from '../composables/useIdb'
 import {
   calcRemaining,
@@ -16,15 +17,113 @@ export type { CountdownSortMode, CountdownSortDirection } from '../composables/c
 
 const STORAGE_KEY = 'user-countdowns'
 const SORT_STORAGE_KEY = 'user-countdown-sort'
+// 分类偏好（localStorage，不随 JSON 备份导出——与排序偏好同策略）：
+// customCategories = 用户自定义分类名数组；tabCategories = 标签页可见分类（默认 运动/饮食/睡眠）
+const CATEGORIES_STORAGE_KEY = 'user-countdown-categories'
+const TAB_CATEGORIES_STORAGE_KEY = 'user-countdown-tab-categories'
+const DEFAULT_TAB_CATEGORIES: readonly string[] = ['exercise', 'diet', 'sleep']
 
 const SORT_MODES: readonly SortMode[] = ['remaining', 'name', 'created', 'endTime', 'manual']
 const SORT_DIRECTIONS: readonly SortDirection[] = ['asc', 'desc']
+
+/** 归一化本地存储读出的分类数组：仅保留 trim 后非空字符串，去重。 */
+function sanitizeCategories(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const c of raw) {
+    if (typeof c !== 'string') continue
+    const name = c.trim()
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    out.push(name)
+  }
+  return out
+}
 
 export const useCountdownsStore = defineStore('countdowns', () => {
   const countdowns = ref<Countdown[]>([])
 
   const sortMode = ref<SortMode>('remaining')
   const sortDirection = ref<SortDirection>('asc')
+
+  // ===== 分类管理（自定义分类注册表 + 标签页可见分类）=====
+  const customCategories = ref<string[]>([])
+  const tabCategories = ref<string[]>([])
+
+  // 内置 6 类 + 自定义分类（表单下拉全量来源）
+  const allCategories = computed<string[]>(() => [...COUNTDOWN_CATEGORIES, ...customCategories.value])
+
+  function loadCategoryPreferences(): void {
+    try {
+      customCategories.value = sanitizeCategories(JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY) ?? '[]'))
+    } catch {
+      customCategories.value = []
+    }
+    try {
+      const saved = sanitizeCategories(JSON.parse(localStorage.getItem(TAB_CATEGORIES_STORAGE_KEY) ?? ''))
+      // 无保存记录（首次）→ 默认 运动/饮食/睡眠；有记录则原样恢复
+      tabCategories.value = saved.length > 0 ? saved : [...DEFAULT_TAB_CATEGORIES]
+    } catch {
+      tabCategories.value = [...DEFAULT_TAB_CATEGORIES]
+    }
+  }
+
+  function persistCategoryPreferences(): void {
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(customCategories.value))
+    localStorage.setItem(TAB_CATEGORIES_STORAGE_KEY, JSON.stringify(tabCategories.value))
+  }
+
+  function addCustomCategory(name: string): { ok: boolean; reason?: string } {
+    const trimmed = name.trim()
+    if (!trimmed) return { ok: false, reason: 'empty' }
+    if ((COUNTDOWN_CATEGORIES as readonly string[]).includes(trimmed)) return { ok: false, reason: 'builtin' }
+    if (customCategories.value.includes(trimmed)) return { ok: false, reason: 'duplicate' }
+    customCategories.value.push(trimmed)
+    // 新建分类自动加入标签页
+    if (!tabCategories.value.includes(trimmed)) tabCategories.value.push(trimmed)
+    persistCategoryPreferences()
+    return { ok: true }
+  }
+
+  function renameCustomCategory(oldName: string, newName: string): { ok: boolean; reason?: string } {
+    const trimmed = newName.trim()
+    if (!trimmed) return { ok: false, reason: 'empty' }
+    if ((COUNTDOWN_CATEGORIES as readonly string[]).includes(trimmed)) return { ok: false, reason: 'builtin' }
+    if (trimmed === oldName) return { ok: true }
+    if (customCategories.value.includes(trimmed)) return { ok: false, reason: 'duplicate' }
+    const idx = customCategories.value.indexOf(oldName)
+    if (idx === -1) return { ok: false, reason: 'not-found' }
+    customCategories.value[idx] = trimmed
+    const ti = tabCategories.value.indexOf(oldName)
+    if (ti !== -1) tabCategories.value[ti] = trimmed
+    // 同步倒计时条目分类字段（toRaw 防 DataCloneError；整数组重建触发响应式）
+    countdowns.value = toRaw(countdowns.value).map(c =>
+      c.category === oldName ? { ...c, category: trimmed, updatedAt: new Date().toISOString() } : c
+    )
+    persistCategoryPreferences()
+    void saveCountdowns()
+    return { ok: true }
+  }
+
+  function deleteCustomCategory(name: string): { ok: boolean; reason?: string } {
+    if (!customCategories.value.includes(name)) return { ok: false, reason: 'not-found' }
+    // 被倒计时引用禁删（同记账分组策略）
+    if (countdowns.value.some(c => c.category === name)) return { ok: false, reason: 'in-use' }
+    customCategories.value = customCategories.value.filter(c => c !== name)
+    tabCategories.value = tabCategories.value.filter(c => c !== name)
+    persistCategoryPreferences()
+    return { ok: true }
+  }
+
+  function setTabCategory(category: string, visible: boolean): void {
+    if (visible) {
+      if (!tabCategories.value.includes(category)) tabCategories.value.push(category)
+    } else {
+      tabCategories.value = tabCategories.value.filter(c => c !== category)
+    }
+    persistCategoryPreferences()
+  }
 
   async function saveCountdowns(): Promise<void> {
     try {
@@ -230,6 +329,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
   )
 
   loadSortPreference()
+  loadCategoryPreferences()
 
   return {
     countdowns,
@@ -245,6 +345,13 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     toggleDirection,
     moveCountdown,
     setShowOnDisplay,
-    importCountdowns
+    importCountdowns,
+    customCategories,
+    tabCategories,
+    allCategories,
+    addCustomCategory,
+    renameCustomCategory,
+    deleteCustomCategory,
+    setTabCategory
   }
 })

@@ -42,6 +42,12 @@ function statusClass(status: RemainingStatus): string {
   return `status-${status}`
 }
 
+// 徽标 class：内置分类用既有配色，自定义分类统一默认灰
+function categoryBadgeClass(category: string | null | undefined): string {
+  const c = category?.trim() || 'work'
+  return (COUNTDOWN_CATEGORIES as readonly string[]).includes(c) ? `cat-${c}` : 'cat-default'
+}
+
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -296,7 +302,7 @@ const previewRemaining = computed(() => {
           <div class="form-group">
             <label>分类</label>
             <select v-model="formCategory" class="form-input" data-testid="cm-category">
-              <option v-for="c in COUNTDOWN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
+              <option v-for="c in store.allCategories" :key="c" :value="c">{{ categoryLabel(c) }}</option>
             </select>
           </div>
 
@@ -392,7 +398,7 @@ const previewRemaining = computed(() => {
               <div class="countdown-title">
                 <span class="countdown-name">{{ item.name }}</span>
                 <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
-                <span class="cat-badge" :class="'cat-' + (item.category ?? 'work')">{{ categoryLabel(item.category) }}</span>
+                <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
               </div>
               <span class="countdown-time">{{ item.remaining.nextTime }}</span>
             </div>
@@ -912,6 +918,13 @@ const previewRemaining = computed(() => {
   background: rgba(6, 182, 212, 0.12);
 }
 
+/* 自定义分类徽标：统一默认灰 */
+.cat-default {
+  color: #6b7280;
+  border-color: #6b7280;
+  background: rgba(107, 114, 128, 0.12);
+}
+
 .dark .cat-work {
   color: #93c5fd;
   border-color: #60a5fa;
@@ -946,6 +959,12 @@ const previewRemaining = computed(() => {
   color: #67e8f9;
   border-color: #22d3ee;
   background: rgba(6, 182, 212, 0.18);
+}
+
+.dark .cat-default {
+  color: #9ca3af;
+  border-color: #6b7280;
+  background: rgba(107, 114, 128, 0.15);
 }
 
 .countdown-time {

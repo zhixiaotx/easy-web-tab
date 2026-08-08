@@ -4,9 +4,10 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION } from '../types'
-import type { Countdown, HealthData, LedgerData, WorkbenchData, WorkbenchNote, WorkbenchTodo } from '../types'
+import type { Countdown, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
 import { emptyHealthData } from './healthCore'
 import { emptyLedgerData } from './ledgerCore'
+import { emptyNoteData, normalizeNoteData } from './noteCore'
 
 export const DB_NAME = 'easy-web-tab'
 export const DB_VERSION = 2
@@ -78,7 +79,7 @@ export function idbClear(store: IdbStore): Promise<void> {
 export async function idbExportAll(): Promise<WorkbenchData> {
   const [todos, notes, countdowns, passwords, health, ledger] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
-    idbGet<WorkbenchNote[]>('notes'),
+    idbGet<NoteData>('notes'),
     idbGet<Countdown[]>('countdowns'),
     idbGet<string>('passwords'),
     idbGet<HealthData>('health'),
@@ -88,7 +89,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     version: WORKBENCH_DATA_VERSION,
     exportedAt: new Date().toISOString(),
     todos: todos ?? [],
-    notes: { categories: [], notes: notes ?? [] },
+    notes: notes ?? emptyNoteData(),
     countdowns: countdowns ?? [],
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),
@@ -97,12 +98,16 @@ export async function idbExportAll(): Promise<WorkbenchData> {
 }
 
 export async function idbImportAll(data: WorkbenchData): Promise<void> {
-  if (data.version !== 1 && data.version !== 2) {
+  if (data.version !== 1 && data.version !== 2 && data.version !== 3) {
     throw new Error('备份文件版本不兼容')
   }
+  // notes 兼容旧数组（v1/v2 纯便签列表）与新对象（v3 NoteData）两种格式
+  const notesValid =
+    Array.isArray(data.notes) ||
+    (typeof data.notes === 'object' && data.notes !== null && 'categories' in data.notes && 'notes' in data.notes)
   if (
     !Array.isArray(data.todos) ||
-    !Array.isArray(data.notes) ||
+    !notesValid ||
     !Array.isArray(data.countdowns) ||
     typeof data.passwords !== 'string'
   ) {
@@ -117,6 +122,9 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
       ledger: data.ledger ?? emptyLedgerData()
     }
   }
+  // 迁移：notes 在写入循环前统一归一化包装（数组 → { categories: [], notes: [...] }；对象 → 原样归一），
+  // 循环直接写归一后的 NoteData，保证 v1/v2/v3 全部入口得到幂等的 v3 结构
+  data = { ...data, notes: normalizeNoteData(data.notes) }
   const db = await openIdb()
   const tx = db.transaction([...IDB_STORES], 'readwrite')
   for (const name of IDB_STORES) {

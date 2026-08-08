@@ -814,7 +814,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 14px;
-  min-height: 130px;
+  min-height: 285px;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
@@ -876,7 +876,7 @@ onUnmounted(() => {
   word-break: break-word;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 11;
   -webkit-box-orient: vertical;
 }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { filterNotes, findNoteCategory, isUncategorized, sortTimelineEntries } from '@/composables/noteCore'
+import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries } from '@/composables/noteCore'
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
@@ -48,6 +48,16 @@ const filteredNotes = computed<WorkbenchNote[]>(() =>
     categoryId: activeCategoryId.value,
     keyword: searchKeyword.value
   })
+)
+
+// 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
+const hasActiveFilter = computed(() =>
+  hasActiveNoteFilter(activeType.value, activeCategoryId.value, searchKeyword.value)
+)
+
+// 工具栏计数文案：有筛选 → 筛选出 X / Y 个；无筛选 → 共 N 个便签（noteCore 纯函数）
+const countText = computed(() =>
+  noteCountText(filteredNotes.value.length, store.sortedNotes.length, hasActiveFilter.value)
 )
 
 // 空态文案：普通 tab 区分「完全没有便签」vs「当前分类/搜索下无便签」；时光轴 tab 区分「还没有时光轴便签」vs「当前筛选无结果」
@@ -315,42 +325,57 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-notes">
-    <!-- 顶部工具栏：左侧操作（新增便签/分类管理）+ 右侧搜索表单（关键词 + 分类下拉 + 类型下拉 + 查询/重置） -->
-    <div class="notes-toolbar">
-      <div class="notes-toolbar-left">
-        <button class="btn-add-note" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
-        <button class="btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
+    <!-- 查询区（关键词/分类/类型 + 右侧查询/重置按钮，与待办面板 td-search 同构） -->
+    <div class="nt-search">
+      <div class="nt-search-fields">
+        <label class="nt-field nt-field-grow">
+          <span class="nt-field-label">关键词</span>
+          <input
+            v-model="searchDraft"
+            type="text"
+            class="form-input nt-field-keyword"
+            placeholder="搜索便签…"
+            data-testid="nt-search-input"
+            @keydown.enter="applyFilters"
+          />
+        </label>
+        <label class="nt-field">
+          <span class="nt-field-label">分类</span>
+          <select
+            v-model="categoryDraft"
+            class="form-input nt-field-select"
+            data-testid="nt-cat-select"
+          >
+            <option value="">全部分类</option>
+            <option value="uncategorized">未分类</option>
+            <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          </select>
+        </label>
+        <label class="nt-field">
+          <span class="nt-field-label">类型</span>
+          <select
+            v-model="typeDraft"
+            class="form-input nt-field-select"
+            data-testid="nt-type-select"
+          >
+            <option value="normal">普通便签</option>
+            <option value="timeline">时光轴便签</option>
+          </select>
+        </label>
       </div>
+      <div class="nt-search-actions" data-testid="nt-search-actions">
+        <button class="nt-btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</button>
+        <button class="nt-btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</button>
+      </div>
+    </div>
 
-      <div class="notes-toolbar-right">
-        <input
-          v-model="searchDraft"
-          type="text"
-          class="form-input search-input"
-          data-testid="nt-search-input"
-          placeholder="搜索便签…"
-          @keydown.enter="applyFilters"
-        />
-        <select
-          v-model="categoryDraft"
-          class="form-input notes-filter-select"
-          data-testid="nt-cat-select"
-        >
-          <option value="">全部分类</option>
-          <option value="uncategorized">未分类</option>
-          <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-        </select>
-        <select
-          v-model="typeDraft"
-          class="form-input notes-filter-select"
-          data-testid="nt-type-select"
-        >
-          <option value="normal">普通便签</option>
-          <option value="timeline">时光轴便签</option>
-        </select>
-        <button class="btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</button>
-        <button class="btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</button>
+    <!-- 操作栏（无卡片）：新增便签/分类管理 + 计数，与待办面板 td-headbar 同构 -->
+    <div class="nt-headbar">
+      <div class="nt-headbar-actions">
+        <button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
+        <button class="nt-btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
       </div>
+      <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
     </div>
 
     <!-- 时光轴（类型下拉=时光轴）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
@@ -678,13 +703,11 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* ===== 顶部工具栏（卡片条：左侧操作 新增/分类管理 | 右侧搜索表单）===== */
-.notes-toolbar {
+/* ===== 查询区（卡片：关键词/分类/类型 + 右侧查询/重置，与 WorkbenchTodo .td-search 同构）===== */
+.nt-search {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 10px;
-  flex-wrap: wrap;
   padding: 12px 14px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
@@ -692,44 +715,104 @@ onUnmounted(() => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.notes-toolbar-left,
-.notes-toolbar-right {
+.nt-search-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.nt-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.nt-field-grow {
+  flex: 1;
+  min-width: 140px;
+}
+
+.nt-field-grow .nt-field-keyword {
+  width: 100%;
+}
+
+.nt-field-label {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.nt-search-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 分类/类型下拉：复用 form-input 基础外观，固定合理宽度 */
+.nt-field-select {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+/* 查询（实心主色） */
+.nt-btn-query {
+  padding: 9px 16px;
+  background: var(--accent-color, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.nt-btn-query:hover {
+  background: var(--accent-hover, var(--color-primary-hover));
+}
+
+/* 重置（次级描边） */
+.nt-btn-reset {
+  padding: 9px 14px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.nt-btn-reset:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 操作栏（无卡片：新增/分类管理 + 计数，与 WorkbenchTodo .td-headbar 同构）===== */
+.nt-headbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nt-headbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.search-input {
-  width: 220px;
-}
-
-/* 搜索表单下拉：复用 form-input 基础外观，固定合理宽度 */
-.notes-filter-select {
-  width: 130px;
-  padding: 9px 12px;
-  cursor: pointer;
-}
-
-.btn-manage {
-  padding: 8px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
+.nt-toolbar-count {
   font-size: 14px;
   color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
 }
 
-.btn-manage:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.btn-add-note {
-  padding: 8px 16px;
+.nt-btn-add {
+  padding: 10px 16px;
   background: var(--accent-color, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -740,29 +823,12 @@ onUnmounted(() => {
   transition: background-color var(--transition-fast, 0.15s ease);
 }
 
-.btn-add-note:hover {
+.nt-btn-add:hover {
   background: var(--accent-hover, var(--color-primary-hover));
 }
 
-/* 查询（实心主色）/ 重置（次级描边） */
-.btn-query {
-  padding: 8px 18px;
-  background: var(--accent-color, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-query:hover {
-  background: var(--accent-hover, var(--color-primary-hover));
-}
-
-.btn-reset {
-  padding: 8px 16px;
+.nt-btn-manage {
+  padding: 10px 16px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 8px);
@@ -773,7 +839,7 @@ onUnmounted(() => {
   transition: all var(--transition-fast, 0.15s ease);
 }
 
-.btn-reset:hover {
+.nt-btn-manage:hover {
   color: var(--accent-color, var(--color-primary));
   border-color: var(--accent-color, var(--color-primary));
 }
@@ -1586,28 +1652,28 @@ onUnmounted(() => {
   color: var(--text-muted, #9ca3af);
 }
 
-:root.dark .notes-toolbar {
+:root.dark .nt-search {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .btn-manage,
-:root.dark .btn-reset {
+:root.dark .nt-search .form-input {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .nt-btn-reset,
+:root.dark .nt-btn-manage {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
 }
 
-:root.dark .btn-manage:hover,
-:root.dark .btn-reset:hover {
+:root.dark .nt-btn-reset:hover,
+:root.dark .nt-btn-manage:hover {
   color: var(--accent-color, #3b82f6);
   border-color: var(--accent-color, #3b82f6);
-}
-
-:root.dark .notes-filter-select {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
 }
 
 :root.dark .note-cat-badge {
@@ -1670,7 +1736,7 @@ onUnmounted(() => {
     max-width: 100%;
   }
 
-  .search-input {
+  .nt-field-grow {
     width: 100%;
   }
 }

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { filterNotes, findNoteCategory, isUncategorized } from '@/composables/noteCore'
+import { filterNotes, findNoteCategory, isUncategorized, sortTimelineEntries } from '@/composables/noteCore'
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
-import type { NoteCategory, NoteColor, NoteType, WorkbenchNote } from '@/types'
+import type { NoteCategory, NoteColor, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
 
 const store = useWorkbenchNotesStore()
 const toast = useToast()
@@ -32,9 +32,11 @@ const filteredNotes = computed<WorkbenchNote[]>(() =>
   })
 )
 
-// 空态文案：区分「完全没有便签」vs「当前分类/搜索下无便签」；时光轴 tab 为占位空态
+// 空态文案：普通 tab 区分「完全没有便签」vs「当前分类/搜索下无便签」；时光轴 tab 区分「还没有时光轴便签」vs「当前筛选无结果」
 const emptyText = computed(() => {
-  if (activeType.value === 'timeline') return '时光轴便签功能即将上线'
+  if (activeType.value === 'timeline') {
+    return store.notes.some(n => (n.type ?? 'normal') === 'timeline') ? '当前分类/搜索下无时光轴便签' : '还没有时光轴便签'
+  }
   if (store.notes.length === 0) return '完全没有便签'
   return '当前分类/搜索下无便签'
 })
@@ -44,15 +46,18 @@ function catNameOf(note: WorkbenchNote): string | undefined {
   return isUncategorized(note) ? undefined : findNoteCategory(store.categories, note.categoryId)?.name
 }
 
-// ===== 表单状态机（新增/编辑共用编辑浮层；本步骤仅 normal 语义，类型/分类选择属 todo 6）=====
+// ===== 表单状态机（新增/编辑共用编辑浮层；类型 radio + 分类下拉）=====
 const formOpen = ref(false)
 const editingId = ref<string | null>(null)
 const formTitle = ref('')
 const formContent = ref('')
 const formColor = ref<NoteColor>('yellow')
+const formType = ref<NoteType>('normal')
+// 分类下拉值：'' = 未分类（v-model 与 select option 全字符串，避免 undefined 绑定 option 的边缘行为）；保存时 || undefined
+const formCategoryId = ref('')
 
-// content 必填：trim 后非空，否则保存按钮 disabled
-const isFormValid = computed(() => formContent.value.trim().length > 0)
+// 表单校验按目标类型执行：normal 需 content trim 非空才能保存；timeline 允许 content 为空（entries 即内容）
+const isFormValid = computed(() => formType.value === 'timeline' || formContent.value.trim().length > 0)
 
 const COLOR_LABELS: Record<NoteColor, string> = {
   red: '红',
@@ -70,6 +75,8 @@ function startAdd(): void {
   formTitle.value = ''
   formContent.value = ''
   formColor.value = 'yellow'
+  formType.value = 'normal' // 新增便签默认普通类型
+  formCategoryId.value = ''
   formOpen.value = true
 }
 
@@ -78,6 +85,8 @@ function startEdit(note: WorkbenchNote): void {
   formTitle.value = note.title ?? ''
   formContent.value = note.content
   formColor.value = note.color
+  formType.value = note.type ?? 'normal'
+  formCategoryId.value = note.categoryId ?? ''
   formOpen.value = true
 }
 
@@ -86,13 +95,15 @@ function cancelForm(): void {
 }
 
 async function handleSave(): Promise<void> {
+  if (!isFormValid.value) return
   const content = formContent.value.trim()
-  if (!content) return
   const title = formTitle.value.trim() || undefined
+  // 类型切换边界规则：切换普通↔时光轴不删除任何数据——content 始终提交，entries 留在数据中仅 timeline 渲染
+  const patch = { title, content, color: formColor.value, type: formType.value, categoryId: formCategoryId.value || undefined }
   if (editingId.value) {
-    await store.updateNote(editingId.value, { title, content, color: formColor.value })
+    await store.updateNote(editingId.value, patch)
   } else {
-    await store.addNote({ title, content, color: formColor.value })
+    await store.addNote(patch)
   }
   cancelForm()
 }
@@ -105,6 +116,97 @@ async function handleDelete(id: string): Promise<void> {
   if (confirm('确定要删除这个便签吗？')) {
     await store.deleteNote(id)
     cancelForm()
+  }
+}
+
+// ===== 时光轴条目 CRUD（条目只在卡片上编辑，编辑浮层不提供 entries 编辑）=====
+const entryDraftDatetime = ref<Record<string, string>>({})
+const entryDraftContent = ref<Record<string, string>>({})
+
+// 当前本地时间 'YYYY-MM-DD HH:mm'——禁用 toISOString()（那是 UTC）；本地 getFullYear/getMonth+1/getDate/getHours/getMinutes 补零拼串
+function localNowString(): string {
+  const d = new Date()
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+// datetime 校验：结构 ^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$ + 范围（月 1-12 / 日 1-31 / 时 0-23 / 分 0-59）——纯正则无法拒绝 '2026-13-99 25:61'
+const DATETIME_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/
+function isValidDatetime(dt: string): boolean {
+  if (!DATETIME_RE.test(dt)) return false
+  const [date, time] = dt.split(' ')
+  const [, m, d] = date.split('-').map(Number)
+  const [hh, mm] = time.split(':').map(Number)
+  return m >= 1 && m <= 12 && d >= 1 && d <= 31 && hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59
+}
+
+// 条目展示排序走 noteCore.sortTimelineEntries（datetime 升序 → createdAt 升序），禁止内联排序公式
+function sortedEntriesOf(note: WorkbenchNote): TimelineEntry[] {
+  return sortTimelineEntries(note.entries ?? [])
+}
+
+// 时光轴卡片渲染时给未初始化草稿补默认 datetime（本地当前时间）；追加成功后也重置为当前时间
+watch(
+  () => filteredNotes.value,
+  () => {
+    if (activeType.value !== 'timeline') return
+    const now = localNowString()
+    for (const note of filteredNotes.value) {
+      if (entryDraftDatetime.value[note.id] === undefined) entryDraftDatetime.value[note.id] = now
+    }
+  },
+  { immediate: true }
+)
+
+// 快速追加按钮可用条件：content trim 非空 + datetime 合法（不合法 → disabled 不落库）
+function canAddEntry(note: WorkbenchNote): boolean {
+  if (!(entryDraftContent.value[note.id] ?? '').trim()) return false
+  return isValidDatetime((entryDraftDatetime.value[note.id] ?? '').trim())
+}
+
+async function handleAddEntry(note: WorkbenchNote): Promise<void> {
+  const datetime = (entryDraftDatetime.value[note.id] ?? '').trim()
+  const content = (entryDraftContent.value[note.id] ?? '').trim()
+  if (!content || !isValidDatetime(datetime)) return
+  const ok = await store.addTimelineEntry(note.id, { datetime, content })
+  if (ok) {
+    entryDraftContent.value[note.id] = ''
+    entryDraftDatetime.value[note.id] = localNowString()
+  }
+}
+
+// 条目编辑：行内编辑（datetime + content），保存校验 datetime 格式 + content 非空
+const editingEntry = ref<{ noteId: string; entryId: string } | null>(null)
+const entryEditDatetime = ref('')
+const entryEditContent = ref('')
+
+function startEditEntry(noteId: string, entry: TimelineEntry): void {
+  editingEntry.value = { noteId, entryId: entry.id }
+  entryEditDatetime.value = entry.datetime
+  entryEditContent.value = entry.content
+}
+
+function cancelEditEntry(): void {
+  editingEntry.value = null
+}
+
+function canSaveEntry(): boolean {
+  return isValidDatetime(entryEditDatetime.value.trim()) && entryEditContent.value.trim().length > 0
+}
+
+async function handleSaveEntry(noteId: string, entryId: string): Promise<void> {
+  if (!canSaveEntry()) return
+  await store.updateTimelineEntry(noteId, entryId, {
+    datetime: entryEditDatetime.value.trim(),
+    content: entryEditContent.value.trim()
+  })
+  editingEntry.value = null
+}
+
+async function handleDeleteEntry(noteId: string, entryId: string): Promise<void> {
+  if (confirm('确定要删除这条时光记录吗？')) {
+    await store.deleteTimelineEntry(noteId, entryId)
+    if (editingEntry.value?.entryId === entryId) editingEntry.value = null
   }
 }
 
@@ -257,10 +359,144 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <!-- 时光轴 tab：本步骤仅过滤 + 占位空态（时光轴卡片渲染属 todo 6） -->
-    <div v-if="activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
-      {{ emptyText }}
-    </div>
+    <!-- 时光轴 tab：filterNotes 过滤后的时光轴卡片网格（复用分类筛选/搜索联动）；空态沿用 emptyText 逻辑 -->
+    <template v-if="activeType === 'timeline'">
+      <div v-if="filteredNotes.length === 0" class="empty-state" data-testid="note-timeline-empty">
+        {{ emptyText }}
+      </div>
+
+      <div v-else class="notes-grid timeline-grid">
+        <div
+          v-for="note in filteredNotes"
+          :key="note.id"
+          class="note-card timeline-card"
+          :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
+          data-testid="nt-timeline-card"
+        >
+          <div class="note-card-header">
+            <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
+            <span v-else></span>
+            <button
+              class="pin-toggle"
+              :class="{ active: note.pinned }"
+              :title="note.pinned ? '取消置顶' : '置顶'"
+              :data-testid="`note-pin-${note.id}`"
+              @click.stop="handlePin(note)"
+            >
+              📌
+            </button>
+          </div>
+
+          <div class="timeline-card-head">
+            <span class="timeline-title">{{ note.title || '时光轴便签' }}</span>
+            <button
+              type="button"
+              class="btn-edit"
+              :data-testid="`nt-note-edit-${note.id}`"
+              @click.stop="startEdit(note)"
+            >
+              编辑
+            </button>
+          </div>
+
+          <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序） -->
+          <div class="timeline-list" data-testid="nt-timeline-list">
+            <div
+              v-for="entry in sortedEntriesOf(note)"
+              :key="entry.id"
+              class="timeline-item"
+              :data-testid="`nt-entry-${entry.id}`"
+            >
+              <span class="timeline-dot"></span>
+              <template v-if="editingEntry && editingEntry.noteId === note.id && editingEntry.entryId === entry.id">
+                <div class="timeline-item-edit">
+                  <input
+                    v-model="entryEditDatetime"
+                    type="text"
+                    class="form-input"
+                    :data-testid="`nt-entry-edit-dt-${entry.id}`"
+                    placeholder="YYYY-MM-DD HH:mm"
+                  />
+                  <input
+                    v-model="entryEditContent"
+                    type="text"
+                    class="form-input"
+                    :data-testid="`nt-entry-edit-content-${entry.id}`"
+                    placeholder="记录内容"
+                  />
+                  <div class="timeline-item-actions">
+                    <button
+                      type="button"
+                      class="btn-save"
+                      :disabled="!canSaveEntry()"
+                      :data-testid="`nt-entry-save-${entry.id}`"
+                      @click="handleSaveEntry(note.id, entry.id)"
+                    >
+                      保存
+                    </button>
+                    <button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
+                      取消
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="timeline-item-body">
+                  <div class="timeline-item-time">{{ entry.datetime }}</div>
+                  <div class="timeline-item-content">{{ entry.content }}</div>
+                  <div class="timeline-item-actions">
+                    <button
+                      type="button"
+                      class="btn-edit"
+                      :data-testid="`nt-entry-edit-${entry.id}`"
+                      @click.stop="startEditEntry(note.id, entry)"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-delete"
+                      :data-testid="`nt-entry-del-${entry.id}`"
+                      @click.stop="handleDeleteEntry(note.id, entry.id)"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- 卡片底部快速追加行：datetime（默认本地当前时间）+ content + 添加按钮 -->
+          <div class="timeline-add-row">
+            <input
+              v-model="entryDraftDatetime[note.id]"
+              type="text"
+              class="form-input timeline-dt-input"
+              :data-testid="`nt-entry-dt-${note.id}`"
+              placeholder="YYYY-MM-DD HH:mm"
+            />
+            <input
+              v-model="entryDraftContent[note.id]"
+              type="text"
+              class="form-input timeline-content-input"
+              :data-testid="`nt-entry-content-${note.id}`"
+              placeholder="添加时光记录…"
+              @keydown.enter="handleAddEntry(note)"
+            />
+            <button
+              type="button"
+              class="btn-add"
+              :disabled="!canAddEntry(note)"
+              data-testid="nt-entry-add"
+              @click="handleAddEntry(note)"
+            >
+              添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
     <template v-else>
@@ -320,12 +556,39 @@ onUnmounted(() => {
           placeholder="标题（可选）"
         />
 
+        <div class="note-form-row">
+          <label class="note-form-label">类型</label>
+          <div class="note-type-radios">
+            <label class="type-radio-option" :class="{ active: formType === 'normal' }">
+              <input v-model="formType" type="radio" name="note-type" value="normal" data-testid="nt-form-type-normal" />
+              <span>普通</span>
+            </label>
+            <label class="type-radio-option" :class="{ active: formType === 'timeline' }">
+              <input v-model="formType" type="radio" name="note-type" value="timeline" data-testid="nt-form-type-timeline" />
+              <span>时光轴</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="note-form-row">
+          <label class="note-form-label" for="nt-form-category">分类</label>
+          <select
+            v-model="formCategoryId"
+            id="nt-form-category"
+            class="form-input note-cat-select"
+            data-testid="nt-form-category"
+          >
+            <option value="">未分类</option>
+            <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          </select>
+        </div>
+
         <textarea
           v-model="formContent"
           class="form-input note-content-input"
           rows="5"
           data-testid="note-content-input"
-          placeholder="便签内容…"
+          :placeholder="formType === 'timeline' ? '便签内容（时光轴可为空，条目在卡片上追加）' : '便签内容…'"
         ></textarea>
 
         <div class="note-color-picker">
@@ -731,6 +994,148 @@ onUnmounted(() => {
   background: #a855f7;
 }
 
+/* ===== 时光轴卡片（竖排时间轴：左侧圆点+竖线，右侧 datetime + content）===== */
+.timeline-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.timeline-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timeline-title {
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  margin: 4px 0 2px;
+}
+
+.timeline-item {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+/* 轴线竖线：圆点下方延伸到下一条（最后一条不画） */
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 20px;
+  bottom: -6px;
+  width: 2px;
+  background: var(--border-color, var(--color-border));
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-dot {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--accent-color, var(--color-primary));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #3b82f6) 25%, transparent);
+  z-index: 1;
+}
+
+.timeline-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-item-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-item-content {
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* 条目 hover 出现编辑/删除按钮 */
+.timeline-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast, 0.15s ease);
+}
+
+.timeline-item:hover .timeline-item-actions {
+  opacity: 1;
+}
+
+.timeline-item-actions .btn-edit,
+.timeline-item-actions .btn-delete {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.timeline-item-edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-item-edit .form-input {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.timeline-item-edit .btn-save,
+.timeline-item-edit .btn-cancel {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+/* 快速追加行 */
+.timeline-add-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color, var(--color-border));
+}
+
+.timeline-dt-input {
+  flex: 0 1 150px;
+  min-width: 130px;
+}
+
+.timeline-content-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.timeline-add-row .btn-add {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
 /* ===== 空态 ===== */
 .empty-state {
   text-align: center;
@@ -797,6 +1202,60 @@ onUnmounted(() => {
 .note-content-input {
   min-height: 110px;
   resize: vertical;
+}
+
+/* ===== 浮层类型 radio + 分类下拉 ===== */
+.note-form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.note-form-label {
+  flex: 0 0 auto;
+  min-width: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.note-type-radios {
+  display: flex;
+  gap: 8px;
+}
+
+.type-radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-full, 999px);
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.type-radio-option input {
+  display: none;
+}
+
+.type-radio-option:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.type-radio-option.active {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.note-cat-select {
+  flex: 1;
+  min-width: 180px;
 }
 
 /* ===== 颜色选择器 ===== */
@@ -1199,6 +1658,37 @@ onUnmounted(() => {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
   border-color: var(--border-color, #374151);
+}
+
+:root.dark .type-radio-option {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .type-radio-option:hover {
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .type-radio-option.active {
+  color: #fff;
+  background: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .note-cat-select {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .timeline-item-time {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .timeline-item::before {
+  background: var(--border-color, #374151);
 }
 
 @media (max-width: 640px) {

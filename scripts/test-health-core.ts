@@ -42,9 +42,10 @@ function mustScale(records: WeightRecord[], width: number, height: number, pad?:
   return s
 }
 
-function mkExercise(id: string, date: string, duration: number, calories: number): ExerciseRecord {
+function mkExercise(id: string, date: string, duration: number, calories: number, distanceKm?: number): ExerciseRecord {
   return {
     id, module: 'exercise', date, exerciseType: '跑步', duration, calories,
+    ...(distanceKm !== undefined ? { distanceKm } : {}),
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z'
   }
 }
@@ -167,7 +168,7 @@ test('T8 normalizeHealthData 剔除脏数据且不抛错', () => {
       sleep: { module: 'sleep', metric: 'duration', period: 'monthly', target: 8, updatedAt: 'x' } // 非法 period → 丢弃
     } as never,
     records: {
-      exercise: [null, { date: 'bad-date', duration: -10, calories: 'abc' }, { date: '2026-08-05', duration: 30 }],
+      exercise: [null, { date: 'bad-date', duration: -10, calories: 'abc', distanceKm: -3 }, { date: '2026-08-05', duration: 30, distanceKm: 5.2 }],
       diet: 'not-an-array', // 非数组 → []
       sleep: [{ durationHours: 'bad' }], // NaN → sleepDurationHours 补算（空时间 → 0）
       weight: [{}]
@@ -181,7 +182,9 @@ test('T8 normalizeHealthData 剔除脏数据且不抛错', () => {
   assert.equal(data.records.exercise[0].module, 'exercise') // null 条目兜底不抛错
   assert.equal(data.records.exercise[1].duration, 0) // 负数钳 0
   assert.equal(data.records.exercise[1].calories, 0) // 'abc' → NaN → 0
+  assert.equal(data.records.exercise[1].distanceKm, 0) // 负数钳 0
   assert.equal(data.records.exercise[2].duration, 30)
+  assert.equal(data.records.exercise[2].distanceKm, 5.2) // 合法值透传
   assert.equal(data.records.diet.length, 0)
   assert.equal(data.records.sleep[0].durationHours, 0)
   assert.ok(data.records.weight[0].id.startsWith('wt_'))
@@ -194,12 +197,13 @@ test('T9 normalizeHealthData 合法数据透传', () => {
     height: 170,
     plans: { exercise: mkPlan('exercise', 'times', 3) },
     records: {
-      exercise: [{ id: 'ex_1', module: 'exercise', date: '2026-08-05', exerciseType: '跑步', duration: 30, calories: 300, createdAt: 'x', updatedAt: 'x' }]
+      exercise: [{ id: 'ex_1', module: 'exercise', date: '2026-08-05', exerciseType: '跑步', duration: 30, calories: 300, distanceKm: 10, createdAt: 'x', updatedAt: 'x' }]
     }
   })
   assert.equal(data.height, 170)
   assert.equal(data.plans.exercise?.target, 3)
   assert.equal(data.records.exercise[0].duration, 30)
+  assert.equal(data.records.exercise[0].distanceKm, 10)
   assert.equal(data.records.diet.length, 0)
 })
 
@@ -265,6 +269,14 @@ test('T12 emptyHealthData 初始结构', () => {
   const e = emptyHealthData()
   assert.equal(e.height, undefined)
   assert.deepEqual(e, { plans: {}, records: { exercise: [], diet: [], sleep: [], weight: [] } })
+})
+
+// T13 — normalizeExerciseRecord distanceKm 透传/钳制/可选：合法值保留、负数钳 0、字符串剔除、缺省不污染
+test('T13 normalizeExerciseRecord distanceKm 透传/钳制/可选', () => {
+  assert.equal(normalizeExerciseRecord({ distanceKm: 5.2 }).distanceKm, 5.2)
+  assert.equal(normalizeExerciseRecord({ distanceKm: -3 }).distanceKm, 0)
+  assert.equal(normalizeExerciseRecord({ distanceKm: 'abc' }).distanceKm, undefined) // 字符串剔除，不落 0
+  assert.equal(normalizeExerciseRecord({}).distanceKm, undefined) // 旧记录缺省不污染 0
 })
 
 let passed = 0

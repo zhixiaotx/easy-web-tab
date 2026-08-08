@@ -188,6 +188,7 @@ export interface ExerciseRecord {
   exerciseType: string
   duration: number
   calories: number
+  distanceKm?: number
   note?: string
   createdAt: string
   updatedAt: string

@@ -114,6 +114,7 @@ export function normalizeExerciseRecord(raw: any): ExerciseRecord {
     exerciseType: typeof r.exerciseType === 'string' ? r.exerciseType : '',
     duration: clampNonNeg(num(r.duration)),
     calories: clampNonNeg(num(r.calories)),
+    ...(typeof r.distanceKm === 'number' ? { distanceKm: clampNonNeg(num(r.distanceKm)) } : {}),
     ...(typeof r.note === 'string' ? { note: r.note } : {}),
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : isoNow(),
     updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : isoNow()

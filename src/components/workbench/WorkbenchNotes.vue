@@ -1,12 +1,50 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
+import { filterNotes, findNoteCategory, isUncategorized } from '@/composables/noteCore'
+import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
-import type { NoteColor, WorkbenchNote } from '@/types'
+import type { NoteCategory, NoteColor, NoteType, WorkbenchNote } from '@/types'
 
 const store = useWorkbenchNotesStore()
+const toast = useToast()
 
-// ===== 表单状态机（新增/编辑共用编辑浮层）=====
+// ===== 类型切换（普通便签 | 时光轴便签；无「全部」tab，默认「普通便签」）=====
+const activeType = ref<NoteType>('normal')
+
+// ===== 搜索（联动 noteCore.filterNotes keyword，大小写不敏感，标题+内容）=====
+const searchKeyword = ref('')
+
+// ===== 分类筛选（undefined=全部；'uncategorized' 字面量=未分类；分类 id=精确匹配）=====
+const activeCategoryId = ref<string | undefined>(undefined)
+
+// 分类按 sort 升序展示（chips 与分类管理行共用；store 数组顺序与 sort 可能不一致，展示层排序）
+const sortedCategories = computed<NoteCategory[]>(() =>
+  [...store.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
+)
+
+// 过滤后的便签列表：先 store.sortedNotes（置顶→updatedAt 降序）再走 noteCore.filterNotes（类型/分类/关键词），过滤公式一律走 noteCore
+const filteredNotes = computed<WorkbenchNote[]>(() =>
+  filterNotes(store.sortedNotes, {
+    type: activeType.value,
+    categoryId: activeCategoryId.value,
+    keyword: searchKeyword.value
+  })
+)
+
+// 空态文案：区分「完全没有便签」vs「当前分类/搜索下无便签」；时光轴 tab 为占位空态
+const emptyText = computed(() => {
+  if (activeType.value === 'timeline') return '时光轴便签功能即将上线'
+  if (store.notes.length === 0) return '完全没有便签'
+  return '当前分类/搜索下无便签'
+})
+
+// 分类徽标名：未分类不显示徽标（isUncategorized 判定）；有分类经 findNoteCategory 取名称
+function catNameOf(note: WorkbenchNote): string | undefined {
+  return isUncategorized(note) ? undefined : findNoteCategory(store.categories, note.categoryId)?.name
+}
+
+// ===== 表单状态机（新增/编辑共用编辑浮层；本步骤仅 normal 语义，类型/分类选择属 todo 6）=====
 const formOpen = ref(false)
 const editingId = ref<string | null>(null)
 const formTitle = ref('')
@@ -70,57 +108,204 @@ async function handleDelete(id: string): Promise<void> {
   }
 }
 
+// ===== 分类管理弹框（仿 WorkbenchLedger.vue 分组管理交互范式）=====
+const showCatManager = ref(false)
+const catDrafts = ref<Record<string, string>>({})
+const newCatName = ref('')
+
+function openCatManager(): void {
+  const drafts: Record<string, string> = {}
+  for (const c of store.categories) drafts[c.id] = c.name
+  catDrafts.value = drafts
+  showCatManager.value = true
+}
+
+function closeCatManager(): void {
+  showCatManager.value = false
+}
+
+// 改名：@change（失焦）或回车提交；重名/空名被 store 拒绝 → toast + 回退草稿
+async function commitCatName(cat: NoteCategory): Promise<void> {
+  const draft = catDrafts.value[cat.id] ?? ''
+  const trimmed = draft.trim()
+  if (trimmed === cat.name) return
+  const ok = await store.updateCategory(cat.id, { name: trimmed })
+  if (!ok) {
+    toast.error('分类名称已存在或为空')
+    catDrafts.value[cat.id] = cat.name
+  }
+}
+
+async function handleMoveCat(cat: NoteCategory, dir: 'up' | 'down'): Promise<void> {
+  const ok = await store.moveCategory(cat.id, dir)
+  if (!ok) toast.warning('已到边界，无法移动')
+}
+
+// 删除分类：确认后调 store.deleteCategory（该分类便签归未分类由 store 处理，组件只管调 API 与刷新视图）；当前正按该分类筛选时重置为「全部」
+async function handleDeleteCat(cat: NoteCategory): Promise<void> {
+  if (!confirm(`确定要删除分类「${cat.name}」吗？该分类下的便签将归为未分类`)) return
+  const ok = await store.deleteCategory(cat.id)
+  if (!ok) {
+    toast.error('分类删除失败')
+    return
+  }
+  delete catDrafts.value[cat.id]
+  if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
+}
+
+async function handleAddCat(): Promise<void> {
+  const name = newCatName.value.trim()
+  if (!name) return
+  const ok = await store.addCategory(name)
+  if (!ok) {
+    toast.error('分类名称已存在')
+    return
+  }
+  // 新分类补录草稿，保证其改名回退/校验基准正确
+  for (const c of store.categories) {
+    if (catDrafts.value[c.id] === undefined) catDrafts.value[c.id] = c.name
+  }
+  newCatName.value = ''
+}
+
+// ESC 关闭弹框（先编辑浮层，再分类管理）
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape') return
+  if (formOpen.value) {
+    event.preventDefault()
+    cancelForm()
+  } else if (showCatManager.value) {
+    event.preventDefault()
+    closeCatManager()
+  }
+}
+
 // 面板自管理数据加载（WorkbenchView 已加载，这里防御性重载，数据在内存中与 IDB 同步）
 onMounted(async () => {
   await store.loadNotes()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
 <template>
   <div class="wb-notes">
-    <!-- 顶部工具栏 -->
+    <!-- 顶部工具栏：类型切换 + 搜索 + 分类管理 + 新增便签 -->
     <div class="notes-toolbar">
-      <button class="btn-add-note" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
-    </div>
+      <div class="notes-type-tabs">
+        <button
+          class="type-tab"
+          :class="{ active: activeType === 'normal' }"
+          data-testid="nt-type-normal"
+          @click="activeType = 'normal'"
+        >
+          普通便签
+        </button>
+        <button
+          class="type-tab"
+          :class="{ active: activeType === 'timeline' }"
+          data-testid="nt-type-timeline"
+          @click="activeType = 'timeline'"
+        >
+          时光轴便签
+        </button>
+      </div>
 
-    <!-- 空态 -->
-    <div v-if="store.sortedNotes.length === 0" class="empty-state" data-testid="note-empty">
-      暂无便签
-    </div>
-
-    <!-- 网格卡片 -->
-    <div v-else class="notes-grid">
-      <div
-        v-for="note in store.sortedNotes"
-        :key="note.id"
-        class="note-card"
-        :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
-        data-testid="note-card"
-        @click="startEdit(note)"
-      >
-        <div class="note-card-header">
-          <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
-          <span v-else></span>
-          <button
-            class="pin-toggle"
-            :class="{ active: note.pinned }"
-            :title="note.pinned ? '取消置顶' : '置顶'"
-            :data-testid="`note-pin-${note.id}`"
-            @click.stop="handlePin(note)"
-          >
-            📌
-          </button>
-        </div>
-
-        <div v-if="note.title" class="note-title">{{ note.title }}</div>
-        <div class="note-content">{{ note.content }}</div>
-
-        <div class="note-color-tag">
-          <span class="color-dot" :class="`dot-${note.color}`"></span>
-          <span>{{ COLOR_LABELS[note.color] }}</span>
-        </div>
+      <div class="notes-toolbar-actions">
+        <input
+          v-model="searchKeyword"
+          type="text"
+          class="form-input search-input"
+          data-testid="nt-search-input"
+          placeholder="搜索便签…"
+        />
+        <button class="btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
+        <button class="btn-add-note" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
       </div>
     </div>
+
+    <!-- 分类筛选 chips（全部 / 未分类 / 各分类，默认激活「全部」） -->
+    <div class="notes-cat-chips">
+      <button
+        class="cat-chip"
+        :class="{ active: activeCategoryId === undefined }"
+        data-testid="nt-cat-all"
+        @click="activeCategoryId = undefined"
+      >
+        全部
+      </button>
+      <button
+        class="cat-chip"
+        :class="{ active: activeCategoryId === 'uncategorized' }"
+        data-testid="nt-cat-uncategorized"
+        @click="activeCategoryId = 'uncategorized'"
+      >
+        未分类
+      </button>
+      <button
+        v-for="cat in sortedCategories"
+        :key="cat.id"
+        class="cat-chip"
+        :class="{ active: activeCategoryId === cat.id }"
+        :data-testid="`nt-cat-${cat.id}`"
+        @click="activeCategoryId = cat.id"
+      >
+        {{ cat.name }}
+      </button>
+    </div>
+
+    <!-- 时光轴 tab：本步骤仅过滤 + 占位空态（时光轴卡片渲染属 todo 6） -->
+    <div v-if="activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
+      {{ emptyText }}
+    </div>
+
+    <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
+    <template v-else>
+      <div v-if="filteredNotes.length === 0" class="empty-state" data-testid="note-empty">
+        {{ emptyText }}
+      </div>
+
+      <div v-else class="notes-grid">
+        <div
+          v-for="note in filteredNotes"
+          :key="note.id"
+          class="note-card"
+          :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
+          data-testid="note-card"
+          @click="startEdit(note)"
+        >
+          <div class="note-card-header">
+            <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
+            <span v-else></span>
+            <button
+              class="pin-toggle"
+              :class="{ active: note.pinned }"
+              :title="note.pinned ? '取消置顶' : '置顶'"
+              :data-testid="`note-pin-${note.id}`"
+              @click.stop="handlePin(note)"
+            >
+              📌
+            </button>
+          </div>
+
+          <div v-if="note.title" class="note-title">{{ note.title }}</div>
+          <div class="note-content">{{ note.content }}</div>
+
+          <div class="note-card-footer">
+            <span v-if="catNameOf(note)" class="note-cat-badge" :data-testid="`note-cat-badge-${note.id}`">
+              {{ catNameOf(note) }}
+            </span>
+            <div class="note-color-tag">
+              <span class="color-dot" :class="`dot-${note.color}`"></span>
+              <span>{{ COLOR_LABELS[note.color] }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- 编辑浮层（新增/编辑共用） -->
     <div v-if="formOpen" class="note-overlay" data-testid="note-overlay" @click.self="cancelForm">
@@ -182,6 +367,49 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- 分类管理弹框（仿 WorkbenchLedger.vue 分组管理交互范式：行 = 名称 input + 上移/下移/删除，底部新增行） -->
+    <div v-if="showCatManager" class="note-overlay cat-manager-overlay" data-testid="nt-cat-dialog" @click.self="closeCatManager">
+      <div class="cat-manager-dialog">
+        <div class="cat-dialog-header">
+          <h3>管理分类</h3>
+          <button class="cat-dialog-close" @click="closeCatManager">✕</button>
+        </div>
+        <div class="cat-dialog-body">
+          <div class="cat-manager-list">
+            <div v-for="cat in sortedCategories" :key="cat.id" class="cat-manager-row" :data-testid="`nt-catmgr-row-${cat.id}`">
+              <input
+                v-model="catDrafts[cat.id]"
+                type="text"
+                class="form-input cat-name-input"
+                :data-testid="`nt-catmgr-name-${cat.id}`"
+                @change="commitCatName(cat)"
+                @keydown.enter="commitCatName(cat)"
+              />
+              <div class="cat-row-actions">
+                <button class="btn-edit" :data-testid="`nt-catmgr-up-${cat.id}`" @click="handleMoveCat(cat, 'up')">↑ 上移</button>
+                <button class="btn-edit" :data-testid="`nt-catmgr-down-${cat.id}`" @click="handleMoveCat(cat, 'down')">↓ 下移</button>
+                <button class="btn-delete" :data-testid="`nt-catmgr-del-${cat.id}`" @click="handleDeleteCat(cat)">删除</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cat-add-form">
+            <input
+              v-model="newCatName"
+              type="text"
+              class="form-input"
+              placeholder="新分类名称"
+              data-testid="nt-catmgr-new-name"
+              @keydown.enter="handleAddCat"
+            />
+            <button class="btn-add" :disabled="newCatName.trim() === ''" data-testid="nt-catmgr-add" @click="handleAddCat">
+              添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -193,10 +421,75 @@ onMounted(async () => {
   gap: 16px;
 }
 
-/* ===== 顶部工具栏 ===== */
+/* ===== 顶部工具栏（卡片条：类型切换 | 搜索 + 分类管理 + 新增）===== */
 .notes-toolbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.notes-type-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.type-tab {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.type-tab:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.type-tab.active {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.notes-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  width: 200px;
+}
+
+.btn-manage {
+  padding: 8px 16px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-manage:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 .btn-add-note {
@@ -213,6 +506,36 @@ onMounted(async () => {
 
 .btn-add-note:hover {
   background: var(--accent-hover, var(--color-primary-hover));
+}
+
+/* ===== 分类筛选 chips ===== */
+.notes-cat-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cat-chip {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.cat-chip:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.cat-chip.active {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 /* ===== 网格卡片 ===== */
@@ -294,11 +617,28 @@ onMounted(async () => {
   -webkit-box-orient: vertical;
 }
 
+.note-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.note-cat-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 999px);
+  color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+}
+
 .note-color-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: auto;
   font-size: 12px;
   opacity: 0.75;
 }
@@ -592,6 +932,148 @@ onMounted(async () => {
   color: #fff;
 }
 
+/* ===== 分类管理弹框（复用 note-overlay 遮罩）===== */
+.cat-manager-dialog {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+}
+
+.cat-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+  position: sticky;
+  top: 0;
+  background: var(--bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 14px) var(--radius-lg, 14px) 0 0;
+}
+
+.cat-dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.cat-dialog-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 6px);
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+.cat-dialog-close:hover {
+  color: var(--text-primary, var(--color-text));
+}
+
+.cat-dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cat-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-manager-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+}
+
+.cat-name-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.cat-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 行内小按钮：复用表单按钮体系但缩小到行级尺寸 */
+.cat-row-actions .btn-edit,
+.cat-row-actions .btn-delete {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.btn-edit {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-edit:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.cat-add-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+}
+
+.cat-add-form .form-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.btn-add {
+  padding: 9px 18px;
+  background: var(--accent-color, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.btn-add:hover:not(:disabled) {
+  background: var(--accent-hover, var(--color-primary-hover));
+}
+
+.btn-add:disabled {
+  background: var(--text-muted, var(--color-text-muted));
+  cursor: not-allowed;
+}
+
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .note-yellow {
   background: rgba(234, 179, 8, 0.18);
@@ -663,9 +1145,69 @@ onMounted(async () => {
   color: var(--text-muted, #9ca3af);
 }
 
+:root.dark .btn-add:disabled {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .notes-toolbar {
+  background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
+}
+
+:root.dark .type-tab,
+:root.dark .cat-chip,
+:root.dark .btn-manage {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .type-tab:hover,
+:root.dark .cat-chip:hover,
+:root.dark .btn-manage:hover {
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .type-tab.active,
+:root.dark .cat-chip.active {
+  color: #fff;
+  background: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
+:root.dark .note-cat-badge {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+:root.dark .cat-manager-dialog {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .cat-dialog-header {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .cat-manager-row {
+  background-color: var(--bg-card, #1f2937);
+}
+
+:root.dark .cat-name-input {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
 @media (max-width: 640px) {
   .note-form {
     max-width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
   }
 }
 </style>

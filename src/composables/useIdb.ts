@@ -88,7 +88,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     version: WORKBENCH_DATA_VERSION,
     exportedAt: new Date().toISOString(),
     todos: todos ?? [],
-    notes: notes ?? [],
+    notes: { categories: [], notes: notes ?? [] },
     countdowns: countdowns ?? [],
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),

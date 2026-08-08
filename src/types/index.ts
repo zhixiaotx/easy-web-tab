@@ -132,6 +132,24 @@ export const NOTE_COLORS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 
 
 export type NoteColor = (typeof NOTE_COLORS)[number]
 
+// 便签类型：normal=普通便签，timeline=时光轴便签
+export type NoteType = 'normal' | 'timeline'
+
+// 便签分类（工作台便签专属，独立于网址 Category）
+export interface NoteCategory {
+  id: string
+  name: string
+  sort?: number // 排序权重，数字越小越靠前；undefined = 追加末尾
+}
+
+// 时光轴条目（仅 timeline 类型便签使用）
+export interface TimelineEntry {
+  id: string
+  datetime: string // 'YYYY-MM-DD HH:mm' 本地时间
+  content: string
+  createdAt: string
+}
+
 export interface WorkbenchNote {
   id: string
   title?: string
@@ -140,16 +158,25 @@ export interface WorkbenchNote {
   pinned: boolean
   createdAt: string
   updatedAt: string
+  type?: NoteType           // 便签类型；undefined = normal（普通便签）
+  categoryId?: string       // 所属便签分类 id；undefined = 未分类
+  entries?: TimelineEntry[] // 时光轴条目（仅 type='timeline' 使用，normal 不写入）
+}
+
+// 工作台便签数据（分类 + 便签列表）
+export interface NoteData {
+  categories: NoteCategory[]
+  notes: WorkbenchNote[]
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 2
+export const WORKBENCH_DATA_VERSION = 3
 
 export interface WorkbenchData {
   version: number
   exportedAt: string
   todos: WorkbenchTodo[]
-  notes: WorkbenchNote[]
+  notes: NoteData
   countdowns: Countdown[]
   passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
   health: HealthData

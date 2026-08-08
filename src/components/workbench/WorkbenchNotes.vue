@@ -1200,7 +1200,7 @@ onUnmounted(() => {
 }
 
 .note-content-input {
-  min-height: 110px;
+  min-height: 330px;
   resize: vertical;
 }
 

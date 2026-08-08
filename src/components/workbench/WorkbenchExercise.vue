@@ -88,16 +88,23 @@ const formDate = ref(localToday())
 const formType = ref<string>(EXERCISE_TYPES[0])
 const formDuration = ref('')
 const formCalories = ref('0')
+const formDistance = ref('')
 const formNote = ref('')
+
+// 距离（公里）仅对 跑步/游泳/骑行 可选展示
+const DISTANCE_TYPES = new Set(['跑步', '游泳', '骑行'])
+const showDistanceField = computed(() => DISTANCE_TYPES.has(formType.value))
 
 // ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/达标率不受影响）=====
 const listExpanded = ref(false)
 
-// date 必填 + duration > 0 + calories ≥ 0，否则保存按钮 disabled
+// date 必填 + duration > 0 + calories ≥ 0 + （距离可选，填写则须 ≥ 0），否则保存按钮 disabled
 const isFormValid = computed(() => {
   const dur = Number(formDuration.value)
   const cal = Number(formCalories.value)
-  return formDate.value !== '' && Number.isFinite(dur) && dur > 0 && Number.isFinite(cal) && cal >= 0
+  const dist = Number(formDistance.value)
+  const distOk = !showDistanceField.value || formDistance.value === '' || (Number.isFinite(dist) && dist >= 0)
+  return formDate.value !== '' && Number.isFinite(dur) && dur > 0 && Number.isFinite(cal) && cal >= 0 && distOk
 })
 
 function startAddRecord(): void {
@@ -106,6 +113,7 @@ function startAddRecord(): void {
   formType.value = EXERCISE_TYPES[0]
   formDuration.value = ''
   formCalories.value = '0'
+  formDistance.value = ''
   formNote.value = ''
   showRecordDialog.value = true
 }
@@ -118,6 +126,7 @@ function startEditRecord(id: string): void {
   formType.value = rec.exerciseType
   formDuration.value = String(rec.duration)
   formCalories.value = String(rec.calories)
+  formDistance.value = String(rec.distanceKm ?? '')
   formNote.value = rec.note ?? ''
   showRecordDialog.value = true
 }
@@ -137,6 +146,9 @@ async function handleSaveRecord(): Promise<void> {
     calories: Number(formCalories.value)
   }
   if (note) payload.note = note
+  if (showDistanceField.value) {
+    payload.distanceKm = formDistance.value === '' ? undefined : Number(formDistance.value)
+  }
   if (editingId.value) {
     await store.updateRecord('exercise', editingId.value, payload)
   } else {
@@ -235,7 +247,11 @@ onUnmounted(() => {
           <span class="ex-date">{{ rec.date }}</span>
           <span class="ex-type-badge">{{ rec.exerciseType }}</span>
         </div>
-        <div class="ex-meta">时长 {{ rec.duration }} 分钟 · {{ rec.calories }} 千卡</div>
+        <div class="ex-meta">
+          时长 {{ rec.duration }} 分钟<span v-if="rec.distanceKm !== undefined && DISTANCE_TYPES.has(rec.exerciseType)">
+            · {{ rec.distanceKm }} 公里</span
+          > · {{ rec.calories }} 千卡
+        </div>
         <div v-if="rec.note" class="ex-note">{{ rec.note }}</div>
         <div class="ex-actions">
           <button class="btn-edit" :data-testid="`ex-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
@@ -336,6 +352,21 @@ onUnmounted(() => {
                 class="form-input field-calories"
                 placeholder="例如：200"
                 data-testid="ex-form-calories"
+              />
+            </div>
+          </div>
+
+          <div v-if="showDistanceField" class="form-row-fields">
+            <div class="field">
+              <label class="field-label">距离（公里）</label>
+              <input
+                v-model="formDistance"
+                type="number"
+                min="0"
+                step="0.1"
+                class="form-input field-distance"
+                placeholder="例如：5.2"
+                data-testid="ex-form-distance"
               />
             </div>
           </div>
@@ -755,6 +786,10 @@ onUnmounted(() => {
   width: 140px;
 }
 
+.field-distance {
+  width: 140px;
+}
+
 .form-input {
   padding: 9px 12px;
   background-color: var(--input-bg, var(--color-bg-card));
@@ -897,7 +932,8 @@ onUnmounted(() => {
   .field-date,
   .field-type,
   .field-duration,
-  .field-calories {
+  .field-calories,
+  .field-distance {
     width: 100%;
   }
 }

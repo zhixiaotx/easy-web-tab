@@ -9,14 +9,32 @@ import type { NoteCategory, NoteColor, NoteType, TimelineEntry, WorkbenchNote } 
 const store = useWorkbenchNotesStore()
 const toast = useToast()
 
-// ===== 类型切换（普通便签 | 时光轴便签；无「全部」tab，默认「普通便签」）=====
+// ===== 搜索表单（草稿 → 应用：输入控件绑定草稿，点「查询」才生效；「重置」一键清空）=====
+// 草稿值（绑定搜索表单控件）：
+//   searchDraft 关键词；typeDraft 类型（普通/时光轴）；categoryDraft 分类（''=全部；'uncategorized'=未分类；分类 id）
+const searchDraft = ref('')
+const typeDraft = ref<NoteType>('normal')
+const categoryDraft = ref('')
+
+// 应用值（filteredNotes/emptyText 消费；undefined=全部，'uncategorized' 字面量=未分类，分类 id=精确匹配）
 const activeType = ref<NoteType>('normal')
-
-// ===== 搜索（联动 noteCore.filterNotes keyword，大小写不敏感，标题+内容）=====
 const searchKeyword = ref('')
-
-// ===== 分类筛选（undefined=全部；'uncategorized' 字面量=未分类；分类 id=精确匹配）=====
 const activeCategoryId = ref<string | undefined>(undefined)
+
+// 查询：草稿 → 应用（keyword trim 后生效）
+function applyFilters(): void {
+  searchKeyword.value = searchDraft.value.trim()
+  activeType.value = typeDraft.value
+  activeCategoryId.value = categoryDraft.value === '' ? undefined : categoryDraft.value
+}
+
+// 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
+function resetFilters(): void {
+  searchDraft.value = ''
+  typeDraft.value = 'normal'
+  categoryDraft.value = ''
+  applyFilters()
+}
 
 // 分类按 sort 升序展示（chips 与分类管理行共用；store 数组顺序与 sort 可能不一致，展示层排序）
 const sortedCategories = computed<NoteCategory[]>(() =>
@@ -252,7 +270,9 @@ async function handleDeleteCat(cat: NoteCategory): Promise<void> {
     return
   }
   delete catDrafts.value[cat.id]
+  // 当前正按该分类筛选（应用值或草稿值）时重置为「全部」
   if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
+  if (categoryDraft.value === cat.id) categoryDraft.value = ''
 }
 
 async function handleAddCat(): Promise<void> {
@@ -295,71 +315,45 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-notes">
-    <!-- 顶部工具栏：类型切换 + 搜索 + 分类管理 + 新增便签 -->
+    <!-- 顶部工具栏：左侧操作（新增便签/分类管理）+ 右侧搜索表单（关键词 + 分类下拉 + 类型下拉 + 查询/重置） -->
     <div class="notes-toolbar">
-      <div class="notes-type-tabs">
-        <button
-          class="type-tab"
-          :class="{ active: activeType === 'normal' }"
-          data-testid="nt-type-normal"
-          @click="activeType = 'normal'"
-        >
-          普通便签
-        </button>
-        <button
-          class="type-tab"
-          :class="{ active: activeType === 'timeline' }"
-          data-testid="nt-type-timeline"
-          @click="activeType = 'timeline'"
-        >
-          时光轴便签
-        </button>
+      <div class="notes-toolbar-left">
+        <button class="btn-add-note" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
+        <button class="btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
       </div>
 
-      <div class="notes-toolbar-actions">
+      <div class="notes-toolbar-right">
         <input
-          v-model="searchKeyword"
+          v-model="searchDraft"
           type="text"
           class="form-input search-input"
           data-testid="nt-search-input"
           placeholder="搜索便签…"
+          @keydown.enter="applyFilters"
         />
-        <button class="btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
-        <button class="btn-add-note" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
+        <select
+          v-model="categoryDraft"
+          class="form-input notes-filter-select"
+          data-testid="nt-cat-select"
+        >
+          <option value="">全部分类</option>
+          <option value="uncategorized">未分类</option>
+          <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+        </select>
+        <select
+          v-model="typeDraft"
+          class="form-input notes-filter-select"
+          data-testid="nt-type-select"
+        >
+          <option value="normal">普通便签</option>
+          <option value="timeline">时光轴便签</option>
+        </select>
+        <button class="btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</button>
+        <button class="btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</button>
       </div>
     </div>
 
-    <!-- 分类筛选 chips（全部 / 未分类 / 各分类，默认激活「全部」） -->
-    <div class="notes-cat-chips">
-      <button
-        class="cat-chip"
-        :class="{ active: activeCategoryId === undefined }"
-        data-testid="nt-cat-all"
-        @click="activeCategoryId = undefined"
-      >
-        全部
-      </button>
-      <button
-        class="cat-chip"
-        :class="{ active: activeCategoryId === 'uncategorized' }"
-        data-testid="nt-cat-uncategorized"
-        @click="activeCategoryId = 'uncategorized'"
-      >
-        未分类
-      </button>
-      <button
-        v-for="cat in sortedCategories"
-        :key="cat.id"
-        class="cat-chip"
-        :class="{ active: activeCategoryId === cat.id }"
-        :data-testid="`nt-cat-${cat.id}`"
-        @click="activeCategoryId = cat.id"
-      >
-        {{ cat.name }}
-      </button>
-    </div>
-
-    <!-- 时光轴 tab：filterNotes 过滤后的时光轴卡片网格（复用分类筛选/搜索联动）；空态沿用 emptyText 逻辑 -->
+    <!-- 时光轴（类型下拉=时光轴）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
     <template v-if="activeType === 'timeline'">
       <div v-if="filteredNotes.length === 0" class="empty-state" data-testid="note-timeline-empty">
         {{ emptyText }}
@@ -684,7 +678,7 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* ===== 顶部工具栏（卡片条：类型切换 | 搜索 + 分类管理 + 新增）===== */
+/* ===== 顶部工具栏（卡片条：左侧操作 新增/分类管理 | 右侧搜索表单）===== */
 .notes-toolbar {
   display: flex;
   align-items: center;
@@ -698,36 +692,8 @@ onUnmounted(() => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.notes-type-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.type-tab {
-  padding: 8px 16px;
-  font-size: 14px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.type-tab:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.type-tab.active {
-  color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.notes-toolbar-actions {
+.notes-toolbar-left,
+.notes-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -735,7 +701,14 @@ onUnmounted(() => {
 }
 
 .search-input {
-  width: 200px;
+  width: 220px;
+}
+
+/* 搜索表单下拉：复用 form-input 基础外观，固定合理宽度 */
+.notes-filter-select {
+  width: 130px;
+  padding: 9px 12px;
+  cursor: pointer;
 }
 
 .btn-manage {
@@ -771,33 +744,37 @@ onUnmounted(() => {
   background: var(--accent-hover, var(--color-primary-hover));
 }
 
-/* ===== 分类筛选 chips ===== */
-.notes-cat-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+/* 查询（实心主色）/ 重置（次级描边） */
+.btn-query {
+  padding: 8px 18px;
+  background: var(--accent-color, var(--color-primary));
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease);
 }
 
-.cat-chip {
-  padding: 6px 14px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
+.btn-query:hover {
+  background: var(--accent-hover, var(--color-primary-hover));
+}
+
+.btn-reset {
+  padding: 8px 16px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
   color: var(--text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
-.cat-chip:hover {
+.btn-reset:hover {
   color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.cat-chip.active {
-  color: #fff;
-  background: var(--accent-color, var(--color-primary));
   border-color: var(--accent-color, var(--color-primary));
 }
 
@@ -1614,26 +1591,23 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
-:root.dark .type-tab,
-:root.dark .cat-chip,
-:root.dark .btn-manage {
+:root.dark .btn-manage,
+:root.dark .btn-reset {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
 }
 
-:root.dark .type-tab:hover,
-:root.dark .cat-chip:hover,
-:root.dark .btn-manage:hover {
+:root.dark .btn-manage:hover,
+:root.dark .btn-reset:hover {
   color: var(--accent-color, #3b82f6);
   border-color: var(--accent-color, #3b82f6);
 }
 
-:root.dark .type-tab.active,
-:root.dark .cat-chip.active {
-  color: #fff;
-  background: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+:root.dark .notes-filter-select {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
 }
 
 :root.dark .note-cat-badge {

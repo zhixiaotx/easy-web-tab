@@ -28,6 +28,12 @@ function applyFilters(): void {
   activeCategoryId.value = categoryDraft.value === '' ? undefined : categoryDraft.value
 }
 
+// 分类筛选标签页：点击即时生效（与倒计时面板一致）；同步草稿 ref，保证「查询」不覆盖、重置/删分类回退逻辑一致
+function selectCategoryTab(id: string | undefined): void {
+  categoryDraft.value = id ?? ''
+  activeCategoryId.value = id
+}
+
 // 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
 function resetFilters(): void {
   searchDraft.value = ''
@@ -325,7 +331,7 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-notes">
-    <!-- 查询区（关键词/分类/类型 + 右侧查询/重置按钮，与待办面板 td-search 同构） -->
+    <!-- 查询区（关键词/类型 + 查询/重置 + 分类筛选 tabs，与待办面板 td-search 同构） -->
     <div class="nt-search">
       <div class="nt-search-fields">
         <label class="nt-field nt-field-grow">
@@ -338,18 +344,6 @@ onUnmounted(() => {
             data-testid="nt-search-input"
             @keydown.enter="applyFilters"
           />
-        </label>
-        <label class="nt-field">
-          <span class="nt-field-label">分类</span>
-          <select
-            v-model="categoryDraft"
-            class="form-input nt-field-select"
-            data-testid="nt-cat-select"
-          >
-            <option value="">全部分类</option>
-            <option value="uncategorized">未分类</option>
-            <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-          </select>
         </label>
         <label class="nt-field">
           <span class="nt-field-label">类型</span>
@@ -366,6 +360,30 @@ onUnmounted(() => {
       <div class="nt-search-actions" data-testid="nt-search-actions">
         <button class="nt-btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</button>
         <button class="nt-btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</button>
+      </div>
+
+      <!-- 分类筛选标签页（全部/未分类/各分类，即时过滤；与倒计时面板 cd-cat-tabs 同构） -->
+      <div class="nt-cat-tabs">
+        <button
+          class="nt-cat-tab"
+          :class="{ active: activeCategoryId === undefined }"
+          data-testid="nt-cat-all"
+          @click="selectCategoryTab(undefined)"
+        >全部</button>
+        <button
+          class="nt-cat-tab"
+          :class="{ active: activeCategoryId === 'uncategorized' }"
+          data-testid="nt-cat-uncategorized"
+          @click="selectCategoryTab('uncategorized')"
+        >未分类</button>
+        <button
+          v-for="cat in sortedCategories"
+          :key="cat.id"
+          class="nt-cat-tab"
+          :class="{ active: activeCategoryId === cat.id }"
+          :data-testid="`nt-cat-${cat.id}`"
+          @click="selectCategoryTab(cat.id)"
+        >{{ cat.name }}</button>
       </div>
     </div>
 
@@ -730,12 +748,11 @@ onUnmounted(() => {
 }
 
 .nt-field-grow {
-  flex: 1;
-  min-width: 140px;
+  flex: 0 0 auto;
 }
 
 .nt-field-grow .nt-field-keyword {
-  width: 100%;
+  width: 250px;
 }
 
 .nt-field-label {
@@ -749,7 +766,38 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-/* 分类/类型下拉：复用 form-input 基础外观，固定合理宽度 */
+/* 分类筛选标签页（全部/未分类/各分类，即时过滤；与 WorkbenchCountdown .cd-cat-tabs 同构） */
+.nt-cat-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nt-cat-tab {
+  padding: 5px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.nt-cat-tab:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.nt-cat-tab.active {
+  color: #fff;
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+/* 类型下拉：复用 form-input 基础外观，固定合理宽度 */
 .nt-field-select {
   width: 130px;
   flex-shrink: 0;
@@ -1663,6 +1711,24 @@ onUnmounted(() => {
   border-color: var(--border-color, #374151);
 }
 
+:root.dark .nt-cat-tab {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .nt-cat-tab:hover {
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
+/* 显式覆盖，避免 :root.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
+:root.dark .nt-cat-tab.active {
+  color: #fff;
+  background: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+
 :root.dark .nt-btn-reset,
 :root.dark .nt-btn-manage {
   background-color: var(--bg-card, #1f2937);
@@ -1737,6 +1803,10 @@ onUnmounted(() => {
   }
 
   .nt-field-grow {
+    width: 100%;
+  }
+
+  .nt-field-grow .nt-field-keyword {
     width: 100%;
   }
 }

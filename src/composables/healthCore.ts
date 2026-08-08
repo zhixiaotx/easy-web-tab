@@ -215,6 +215,16 @@ export function calcExerciseAttainment(
   return { current, target: plan.target, percent: current / plan.target }
 }
 
+/** 年度各运动类型距离（公里）累计：仅统计带 distanceKm 的记录，按 date 年份过滤；结果保留 1 位小数（与输入 step 0.1 一致）。 */
+export function calcYearDistanceTotals(records: ExerciseRecord[], yearStr: string): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const r of records) {
+    if (typeof r.distanceKm !== 'number' || !r.date.startsWith(yearStr)) continue
+    totals[r.exerciseType] = Math.round(((totals[r.exerciseType] ?? 0) + r.distanceKm) * 10) / 10
+  }
+  return totals
+}
+
 /** 日达标率：diet → Σcalories；sleep → ΣdurationHours；非 diet/sleep 计划返回 null。percent 不截断。 */
 export function calcDailyAttainment(
   records: DietRecord[] | SleepRecord[],

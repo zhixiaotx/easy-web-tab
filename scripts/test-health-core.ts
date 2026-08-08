@@ -3,6 +3,7 @@ import {
   calcBmi,
   calcDailyAttainment,
   calcExerciseAttainment,
+  calcYearDistanceTotals,
   classifyBmi,
   dietCalories,
   emptyHealthData,
@@ -277,6 +278,27 @@ test('T13 normalizeExerciseRecord distanceKm 透传/钳制/可选', () => {
   assert.equal(normalizeExerciseRecord({ distanceKm: -3 }).distanceKm, 0)
   assert.equal(normalizeExerciseRecord({ distanceKm: 'abc' }).distanceKm, undefined) // 字符串剔除，不落 0
   assert.equal(normalizeExerciseRecord({}).distanceKm, undefined) // 旧记录缺省不污染 0
+})
+
+// —— 年度距离本地夹具：跑步直用 mkExercise；骑行/力量经对象展开覆盖 exerciseType ——
+const run = (id: string, date: string, km?: number) => mkExercise(id, date, 30, 300, km)
+const ride = (id: string, date: string, km: number) => ({ ...mkExercise(id, date, 30, 300, km), exerciseType: '骑行' })
+const lift = (id: string, date: string, km: number) => ({ ...mkExercise(id, date, 30, 300, km), exerciseType: '力量' })
+
+// T14 — calcYearDistanceTotals：年份过滤 + 缺 distanceKm 剔除 + 跨类型通用累计 + 1 位小数
+test('T14 calcYearDistanceTotals 年份过滤与累计', () => {
+  assert.deepEqual(calcYearDistanceTotals([], '2026'), {})
+  assert.deepEqual(
+    calcYearDistanceTotals([
+      run('a', '2026-06-01', 5.2),
+      run('b', '2026-07-01', 3.1),
+      ride('c', '2026-03-01', 10),
+      run('d', '2025-12-31', 20), // 去年 → 剔除
+      run('e', '2026-08-01'), // 无 distanceKm → 剔除
+      lift('f', '2026-08-02', 2) // 非跑步/骑行也累计（通用 map）
+    ], '2026'),
+    { 跑步: 8.3, 骑行: 10, 力量: 2 }
+  )
 })
 
 let passed = 0

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
-import { calcExerciseAttainment } from '@/composables/healthCore'
+import { calcExerciseAttainment, calcYearDistanceTotals } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
@@ -24,6 +24,9 @@ const targetView = computed<{ label: string; current: number; target: number; pe
     percent: Math.floor(Math.min(a?.percent ?? 0, 1) * 100)
   }
 })
+
+// 年度跑步/骑行距离总数（公里，1 位小数）——纯展示，无交互；禁止组件内重算
+const yearTotals = computed(() => calcYearDistanceTotals(store.records.exercise, todayStr.slice(0, 4)))
 
 const METRIC_LABELS: Record<HealthPlanMetric, string> = {
   times: '次',
@@ -199,6 +202,8 @@ onUnmounted(() => {
       <div class="stat-header">
         <span class="stat-icon">🏃</span>
         <span class="stat-label">运动目标</span>
+        <span class="stat-pill" data-testid="ex-year-run">跑步 {{ yearTotals['跑步'] ?? 0 }} 公里</span>
+        <span class="stat-pill" data-testid="ex-year-ride">骑行 {{ yearTotals['骑行'] ?? 0 }} 公里</span>
         <button v-if="targetView" class="nav-btn" data-testid="ex-edit-target" @click="openTargetDialog">
           调整目标
         </button>
@@ -461,6 +466,17 @@ onUnmounted(() => {
   background: var(--accent-color, var(--color-primary));
   border-color: var(--accent-color, var(--color-primary));
   color: #fff;
+}
+
+.stat-pill {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-muted, var(--color-text-secondary));
+  white-space: nowrap;
 }
 
 .stat-value {
@@ -929,6 +945,9 @@ onUnmounted(() => {
 }
 
 @media (max-width: 640px) {
+  .stat-header {
+    flex-wrap: wrap;
+  }
   .field-date,
   .field-type,
   .field-duration,

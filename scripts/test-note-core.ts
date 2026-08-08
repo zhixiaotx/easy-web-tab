@@ -3,10 +3,12 @@ import {
   emptyNoteData,
   filterNotes,
   findNoteCategory,
+  hasActiveNoteFilter,
   isUncategorized,
   normalizeNote,
   normalizeNoteData,
   normalizeNotes,
+  noteCountText,
   sortNotes,
   sortTimelineEntries
 } from '../src/composables/noteCore.ts'
@@ -289,6 +291,24 @@ test('T19 timeline type keeps + normalizes entries', () => {
   a.ok(n.entries![2].id.startsWith('tle_')) // 非对象 → 兜底生成
   // timeline 缺 entries → []
   a.deepEqual(normalizeNote({ id: 'n11', type: 'timeline' }).entries, [])
+})
+
+// T20 — hasActiveNoteFilter：type 非 normal / categoryId 已定义 / keyword trim 后非空（工具栏计数「是否有筛选」判定）
+test('T20 hasActiveNoteFilter', () => {
+  a.equal(hasActiveNoteFilter('normal', undefined, ''), false)
+  a.equal(hasActiveNoteFilter('normal', undefined, '   '), false) // 纯空白不算
+  a.equal(hasActiveNoteFilter('timeline', undefined, ''), true) // 类型非普通
+  a.equal(hasActiveNoteFilter('normal', 'work', ''), true) // 已选分类
+  a.equal(hasActiveNoteFilter('normal', undefined, ' 字 '), true) // 关键词（前后空白 trim）
+  a.equal(hasActiveNoteFilter('timeline', 'work', 'x'), true) // 组合
+})
+
+// T21 — noteCountText：active → 筛选出 X / Y 个；非 active → 共 Y 个便签
+test('T21 noteCountText', () => {
+  a.equal(noteCountText(3, 10, true), '筛选出 3 / 10 个')
+  a.equal(noteCountText(0, 5, true), '筛选出 0 / 5 个')
+  a.equal(noteCountText(10, 10, false), '共 10 个便签')
+  a.equal(noteCountText(0, 0, false), '共 0 个便签')
 })
 
 let passed = 0

@@ -141,6 +141,16 @@ export function filterNotes(notes: WorkbenchNote[], filter: NoteFilter = {}): Wo
   })
 }
 
+/** 是否有生效筛选条件：type 非 'normal' / categoryId 已定义 / keyword trim 后非空。 */
+export function hasActiveNoteFilter(type: NoteType, categoryId: string | undefined, keyword: string): boolean {
+  return type !== 'normal' || categoryId !== undefined || keyword.trim() !== ''
+}
+
+/** 工具栏计数文案：active 时「筛选出 X / Y 个」，否则「共 Y 个便签」。 */
+export function noteCountText(filteredCount: number, totalCount: number, active: boolean): string {
+  return active ? `筛选出 ${filteredCount} / ${totalCount} 个` : `共 ${totalCount} 个便签`
+}
+
 /** 按 id 查找便签分类：返回 NoteCategory | undefined；id 缺失（undefined/空）→ undefined。 */
 export function findNoteCategory(categories: NoteCategory[], id?: string): NoteCategory | undefined {
   if (!id) return undefined

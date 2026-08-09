@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { reactive, onMounted, onUnmounted } from 'vue'
-import { useAppSettingsStore, DIALOG_LABELS, DIALOG_DEFAULTS } from '@/stores/settings'
+import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import {
+  useAppSettingsStore,
+  DIALOG_LABELS,
+  DIALOG_DEFAULTS,
+  NAV_DIALOG_IDS,
+  WB_DIALOG_IDS
+} from '@/stores/settings'
 import type { DialogId } from '@/stores/settings'
 
-// 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致）
+// 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
+// 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
+
+// 当前激活的设置分组 tab（导航设置 / 工作台设置）
+const activeTab = ref<'nav' | 'wb'>('nav')
 
 const emit = defineEmits<{
   close: []
@@ -102,11 +112,30 @@ onUnmounted(() => {
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
-        <h2>⚙️ 弹窗尺寸设置</h2>
+        <h2>⚙️ 设置</h2>
         <button class="close-btn" @click="emit('close')">✕</button>
       </div>
 
       <div class="manager-body">
+        <div class="settings-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'nav' }"
+            :aria-selected="activeTab === 'nav'"
+            @click="activeTab = 'nav'"
+          >导航设置</button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'wb' }"
+            :aria-selected="activeTab === 'wb'"
+            @click="activeTab = 'wb'"
+          >工作台设置</button>
+        </div>
+
         <p class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
 
         <div class="settings-grid">
@@ -117,7 +146,7 @@ onUnmounted(() => {
             <span class="col-action"></span>
           </div>
 
-          <div v-for="id in DIALOG_IDS" :key="id" class="settings-row">
+          <div v-for="id in activeTab === 'nav' ? NAV_DIALOG_IDS : WB_DIALOG_IDS" :key="id" class="settings-row">
             <span class="row-label">{{ DIALOG_LABELS[id] }}</span>
 
             <div class="field">
@@ -230,6 +259,51 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--text-secondary, var(--color-text-secondary));
   margin: 0 0 16px 0;
+}
+
+/* 顶部 tab 栏（视觉对齐 workbench 面板 tabs，如 WorkbenchHealth.vue 的 .hd-tab） */
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card, var(--color-bg-card));
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.tab-btn:hover {
+  background-color: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--accent-color, var(--color-primary));
+}
+
+.tab-btn.active {
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--accent-color, var(--color-primary));
+  font-weight: 600;
+}
+
+:root.dark .tab-btn {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .tab-btn:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .tab-btn.active {
+  background-color: #1e3a5f;
+  color: #60a5fa;
 }
 
 /* 设置表格 */

@@ -1,0 +1,28 @@
+task-5-settings-tabs — 工作台弹框尺寸接入设置变量 (Playwright QA)
+=================================================================
+Date: 2026-08-10
+Tool: standalone Playwright (chromium headless) via node .omo/task5-qa.cjs
+Server: own dev server `npm run dev -- --port 16720` (NOT shared 16718)
+
+HAPPY-1 (default fallback): td-dialog computed max-width = 480px  [PASS]
+  — 未设置任何 CSS 变量时回退到 var(--dlg-w-wb-todo, 480px) 的 fallback。
+HAPPY-2 (var takes effect): documentElement 设 --dlg-w-wb-todo=700px → 重开 td-dialog computed max-width = 700px  [PASS]
+  — 变量生效且未被 480px 截断（无并列 width 上限冲突）。
+FAILURE (below default): --dlg-w-wb-todo=400px → td-dialog computed max-width = 400px  [PASS]
+  — 低于默认的 clamp 下限允许，证明非硬编码 480px。
+console-errors: none  [PASS]
+
+Grep acceptance (8 containers × w/h vars):
+  WorkbenchTodo.vue:996-997  .dialog       → var(--dlg-w-wb-todo, 480px) / var(--dlg-h-wb-todo, 85vh)
+  WorkbenchTodo.vue:1210-1211 .cat-manager-dialog → var(--dlg-w-wb-todo-cat, 480px) / var(--dlg-h-wb-todo-cat, 85vh)
+  WorkbenchNotes.vue:1527-1528 .cat-manager-dialog → var(--dlg-w-wb-notes-cat, 480px) / var(--dlg-h-wb-notes-cat, 85vh)
+  WorkbenchCountdown.vue:1302-1303 .dialog  → var(--dlg-w-wb-countdown, 480px) / var(--dlg-h-wb-countdown, 85vh)
+  WorkbenchCountdown.vue:1133-1134 .catmgr-dialog → var(--dlg-w-wb-countdown-cat, 440px) / var(--dlg-h-wb-countdown-cat, 85vh)  [特例：显式补 max-height var]
+  WorkbenchPassword.vue:797-798 .pwd-modal → var(--dlg-w-wb-password, 520px) / var(--dlg-h-wb-password, 90vh)
+  WorkbenchLedger.vue:855-856  .dialog[ld-dialog]      → var(--dlg-w-wb-ledger, 480px) / var(--dlg-h-wb-ledger, 85vh)
+  WorkbenchLedger.vue:863-864  .dialog[data-testid=ld-cat-dialog] → var(--dlg-w-wb-ledger-cat, 480px) / var(--dlg-h-wb-ledger-cat, 85vh)
+
+Forbidden anti-pattern check: 无 `width: var(--dlg-w` 或 `height: var(--dlg-w` 并列声明（唯一 `height: var(--dlg-h-notes)` 为既有 .note-form 范本，未触碰）。
+
+npm run build: exit 0（vue-tsc -b 零错误）
+RESULT: ALL PASS

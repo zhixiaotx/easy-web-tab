@@ -1130,7 +1130,8 @@ onUnmounted(() => {
 
 /* ===== 分类管理弹框 ===== */
 .catmgr-dialog {
-  max-width: 440px;
+  max-width: var(--dlg-w-wb-countdown-cat, 440px);
+  max-height: var(--dlg-h-wb-countdown-cat, 85vh);
 }
 
 .catmgr-section {
@@ -1298,8 +1299,8 @@ onUnmounted(() => {
   background-color: var(--bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
+  max-width: var(--dlg-w-wb-countdown, 480px);
+  max-height: var(--dlg-h-wb-countdown, 85vh);
   overflow-y: auto;
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }

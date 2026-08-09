@@ -1524,8 +1524,8 @@ onUnmounted(() => {
 /* ===== 分类管理弹框（复用 note-overlay 遮罩）===== */
 .cat-manager-dialog {
   width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
+  max-width: var(--dlg-w-wb-notes-cat, 480px);
+  max-height: var(--dlg-h-wb-notes-cat, 85vh);
   overflow-y: auto;
   display: flex;
   flex-direction: column;

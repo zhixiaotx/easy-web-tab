@@ -852,10 +852,16 @@ onUnmounted(() => {
   background-color: var(--bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
+  max-width: var(--dlg-w-wb-ledger, 480px);
+  max-height: var(--dlg-h-wb-ledger, 85vh);
   overflow-y: auto;
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+}
+
+/* 分组管理弹框（与表单弹框共享 .dialog，经 data-testid 区分独立尺寸变量） */
+.dialog[data-testid="ld-cat-dialog"] {
+  max-width: var(--dlg-w-wb-ledger-cat, 480px);
+  max-height: var(--dlg-h-wb-ledger-cat, 85vh);
 }
 
 .dialog-header {

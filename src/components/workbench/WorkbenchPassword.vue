@@ -794,8 +794,8 @@ onUnmounted(() => {
 
 .pwd-modal {
   width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
+  max-width: var(--dlg-w-wb-password, 520px);
+  max-height: var(--dlg-h-wb-password, 90vh);
   overflow-y: auto;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));

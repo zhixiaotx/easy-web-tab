@@ -993,8 +993,8 @@ onUnmounted(() => {
   background-color: var(--bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
+  max-width: var(--dlg-w-wb-todo, 480px);
+  max-height: var(--dlg-h-wb-todo, 85vh);
   overflow-y: auto;
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
@@ -1207,8 +1207,8 @@ onUnmounted(() => {
 /* ===== 分类管理弹框（镜像 WorkbenchNotes .cat-manager-dialog 全套）===== */
 .cat-manager-dialog {
   width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
+  max-width: var(--dlg-w-wb-todo-cat, 480px);
+  max-height: var(--dlg-h-wb-todo-cat, 85vh);
   overflow-y: auto;
   display: flex;
   flex-direction: column;

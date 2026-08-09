@@ -5,12 +5,13 @@ import type { TodoPriority, WorkbenchTodo } from '../types'
 
 export const TODO_PRIORITIES: TodoPriority[] = ['high', 'medium', 'low']
 
-/** 内置待办分类（不可删除；用户可在其之外追加任意自定义分类）。 */
-export const BUILTIN_TODO_CATEGORIES: readonly string[] = ['work', 'life', 'study']
-
-/** 是否为内置待办分类（精确成员判定）。 */
-export function isTodoBuiltinCategory(name: string): boolean {
-  return (BUILTIN_TODO_CATEGORIES as readonly string[]).includes(name)
+/** 存量内置分类迁移：work/life/study → undefined（未分类），其余 categoryId 原样保留；返回新数组，不改入参，幂等 */
+export function migrateLegacyBuiltinCategories(todos: WorkbenchTodo[]): WorkbenchTodo[] {
+  return todos.map((t) =>
+    t.categoryId === 'work' || t.categoryId === 'life' || t.categoryId === 'study'
+      ? { ...t, categoryId: undefined }
+      : t
+  )
 }
 
 /** 是否为未分类待办：categoryId 为 undefined/''/null → true（categoryId 仅 string 类型，falsy 判定即等价）。 */

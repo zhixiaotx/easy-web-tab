@@ -6,9 +6,9 @@ import {
   localToday,
   isTodoUncategorized,
   moveCustomCategoryInList,
-  BUILTIN_TODO_CATEGORIES,
-  isTodoBuiltinCategory
+  migrateLegacyBuiltinCategories
 } from '../src/composables/todoCore.ts'
+import * as todoCore from '../src/composables/todoCore.ts'
 import type { WorkbenchTodo } from '../src/types'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -165,11 +165,34 @@ test('T9 moveCustomCategoryInList', () => {
   assert.deepEqual(moveCustomCategoryInList(['work', 'life', 'study'], 'nope', 'up'), ['work', 'life', 'study'])
 })
 
-// T10 — 内置分类常量与成员判定
-test('T10 builtin helpers', () => {
-  assert.deepEqual(BUILTIN_TODO_CATEGORIES, ['work', 'life', 'study'])
-  assert.equal(isTodoBuiltinCategory('work'), true)
-  assert.equal(isTodoBuiltinCategory('custom-x'), false)
+// T10 — 内置分类常量与判定函数已移除（迁移为全自定义分类）
+test('T10 builtin helpers removed', () => {
+  assert.equal('BUILTIN_TODO_CATEGORIES' in todoCore, false, '内置分类常量应已移除')
+  assert.equal('isTodoBuiltinCategory' in todoCore, false, '内置分类判定应已移除')
+})
+
+// T11 — migrateLegacyBuiltinCategories: 存量 work/life/study → undefined，其余值原样保留，不改入参
+test('T11 migrateLegacyBuiltinCategories', () => {
+  const todos: WorkbenchTodo[] = [
+    { id: '1', title: 'a', categoryId: 'work' },
+    { id: '2', title: 'b', categoryId: 'life' },
+    { id: '3', title: 'c', categoryId: 'study' },
+    { id: '4', title: 'd', categoryId: 'custom' },
+    { id: '5', title: 'e', categoryId: '' }
+  ]
+  const out = migrateLegacyBuiltinCategories(todos)
+  assert.equal(out[0].categoryId, undefined, 'work 迁移为未分类')
+  assert.equal(out[1].categoryId, undefined, 'life 迁移为未分类')
+  assert.equal(out[2].categoryId, undefined, 'study 迁移为未分类')
+  assert.equal(out[3].categoryId, 'custom', '自定义分类保留')
+  assert.equal(out[4].categoryId, '', '空串保留')
+  // 不改入参
+  assert.equal(todos[0].categoryId, 'work', '入参不被修改')
+  assert.equal(todos[3].categoryId, 'custom', '入参不被修改')
+  // 幂等：迁移后再迁移无变化
+  const out2 = migrateLegacyBuiltinCategories(out)
+  assert.equal(out2[0].categoryId, undefined, '幂等')
+  assert.equal(out2[3].categoryId, 'custom', '幂等')
 })
 
 let passed = 0

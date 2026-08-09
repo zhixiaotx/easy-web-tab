@@ -12,7 +12,7 @@ scripts/
 ├── serve-with-rewrites.cjs   # Custom HTTP server: serves dist/ + game rewrites + SPA fallback (96 lines)
 ├── rename-icons.ps1          # One-time icon rename utility (99 lines)
 ├── test-countdown-core.ts    # countdownCore.ts 纯函数测试（16 断言，含自定义分类保留/筛选/categoryLabel 回退/moveCustomCategoryInList 上移下移；npm run test:countdown）
-├── test-todo-core.ts         # todoCore.ts 纯函数测试（11 断言 T1-T11：归一化/筛选/dueInfo/categoryId 维度/未分类/移动/旧内置分类迁移；npm run test:todo）
+├── test-todo-core.ts         # todoCore.ts 纯函数测试（16 断言 T1-T16：归一化/筛选/dueInfo/categoryId 维度/未分类/移动/旧内置分类迁移/注册表清理；npm run test:todo）
 ├── test-health-core.ts       # healthCore.ts 纯函数测试（BMI 国标边界/达标率/睡眠时长/折线图坐标；npm run test:health）
 └── test-ledger-core.ts       # ledgerCore.ts 纯函数测试（月统计/占比/归一化/内置分组防脏改；npm run test:ledger）
 ```

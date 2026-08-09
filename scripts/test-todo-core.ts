@@ -195,6 +195,39 @@ test('T11 migrateLegacyBuiltinCategories', () => {
   assert.equal(out2[3].categoryId, 'custom', '幂等')
 })
 
+// T12 — purgeLegacyBuiltinCategories: 清理分类注册表残留的 work/life/study，自定义分类保留
+test('T12 purgeLegacyBuiltinCategories happy path', () => {
+  const result = todoCore.purgeLegacyBuiltinCategories(['work', 'life', 'study', 'custom'])
+  assert.deepEqual(result, ['custom'])
+})
+
+// T13 — purgeLegacyBuiltinCategories: 不改入参（返回新数组）
+test('T13 purgeLegacyBuiltinCategories no-mutation', () => {
+  const input = ['work', 'life', 'study', 'custom']
+  const snapshot = [...input]
+  todoCore.purgeLegacyBuiltinCategories(input)
+  assert.deepEqual(input, snapshot, '入参不被修改')
+})
+
+// T14 — purgeLegacyBuiltinCategories: 幂等（清理后再清理无变化）
+test('T14 purgeLegacyBuiltinCategories idempotent', () => {
+  const once = todoCore.purgeLegacyBuiltinCategories(['work', 'custom'])
+  assert.deepEqual(todoCore.purgeLegacyBuiltinCategories(once), once)
+})
+
+// T15 — purgeLegacyBuiltinCategories: 空数组 → 空数组
+test('T15 purgeLegacyBuiltinCategories empty list', () => {
+  assert.deepEqual(todoCore.purgeLegacyBuiltinCategories([]), [])
+})
+
+// T16 — purgeLegacyBuiltinCategories: 无旧版分类名时原样返回且为新数组引用
+test('T16 purgeLegacyBuiltinCategories no legacy names', () => {
+  const input = ['custom']
+  const result = todoCore.purgeLegacyBuiltinCategories(input)
+  assert.deepEqual(result, ['custom'])
+  assert.notEqual(result, input, '应返回新数组引用')
+})
+
 let passed = 0
 let failed = 0
 for (const t of tests) {

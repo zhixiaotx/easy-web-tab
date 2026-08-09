@@ -4,7 +4,8 @@ import type { TodoPriority, WorkbenchTodo } from '@/types'
 import {
   normalizeTodo,
   moveCustomCategoryInList,
-  migrateLegacyBuiltinCategories
+  migrateLegacyBuiltinCategories,
+  purgeLegacyBuiltinCategories
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 
@@ -131,10 +132,13 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     try {
       // 加载数据（含 color 字段），经 normalizeTodo 幂等归一
       const loaded = ((await idbGet<WorkbenchTodo[]>('todos')) ?? []).map(normalizeTodo)
-      // 存量迁移（一次性）：旧版内置分类 work/life/study → undefined（未分类），marker 门控，幂等
-      if (localStorage.getItem(TODO_BUILTIN_MIGRATED_KEY) === null) {
+      // 存量迁移（marker 版本 '2' 门控，幂等）：旧版内置 work/life/study → 未分类 + 清理分类注册表残留
+      if (localStorage.getItem(TODO_BUILTIN_MIGRATED_KEY) !== '2') {
         todos.value = migrateLegacyBuiltinCategories(loaded)
-        localStorage.setItem(TODO_BUILTIN_MIGRATED_KEY, '1')
+        customCategories.value = purgeLegacyBuiltinCategories(customCategories.value)
+        tabCategories.value = purgeLegacyBuiltinCategories(tabCategories.value)
+        localStorage.setItem(TODO_BUILTIN_MIGRATED_KEY, '2')
+        persistCategoryPreferences()
         await saveTodos()
       } else {
         todos.value = loaded

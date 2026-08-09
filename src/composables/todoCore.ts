@@ -5,12 +5,20 @@ import type { TodoPriority, WorkbenchTodo } from '../types'
 
 export const TODO_PRIORITIES: TodoPriority[] = ['high', 'medium', 'low']
 
+/** 旧版内置分类名（存量迁移用）：work/life/study 已废弃，todos 与分类注册表均需清理。 */
+export const LEGACY_BUILTIN_TODO_CATEGORIES: readonly string[] = ['work', 'life', 'study']
+
+/** 清理分类注册表（customCategories/tabCategories）中残留的旧版内置分类名；返回新数组，不改入参，幂等。 */
+export function purgeLegacyBuiltinCategories(list: string[]): string[] {
+  const legacy = new Set<string>(LEGACY_BUILTIN_TODO_CATEGORIES)
+  return list.filter(c => !legacy.has(c))
+}
+
 /** 存量内置分类迁移：work/life/study → undefined（未分类），其余 categoryId 原样保留；返回新数组，不改入参，幂等 */
 export function migrateLegacyBuiltinCategories(todos: WorkbenchTodo[]): WorkbenchTodo[] {
+  const legacy = new Set<string>(LEGACY_BUILTIN_TODO_CATEGORIES)
   return todos.map((t) =>
-    t.categoryId === 'work' || t.categoryId === 'life' || t.categoryId === 'study'
-      ? { ...t, categoryId: undefined }
-      : t
+    typeof t.categoryId === 'string' && legacy.has(t.categoryId) ? { ...t, categoryId: undefined } : t
   )
 }
 

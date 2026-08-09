@@ -174,8 +174,19 @@ export interface NoteData {
   notes: WorkbenchNote[]
 }
 
+// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度
+export interface AppSettingsData {
+  dialogSizes: Record<string, { width: number; height: number }>
+  buttonOpacity: number
+  bgOpacity: number
+}
+
+export function emptyAppSettingsData(): AppSettingsData {
+  return { dialogSizes: {}, buttonOpacity: 1, bgOpacity: 1 }
+}
+
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 3
+export const WORKBENCH_DATA_VERSION = 4
 
 export interface WorkbenchData {
   version: number
@@ -186,6 +197,7 @@ export interface WorkbenchData {
   passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
   health: HealthData
   ledger: LedgerData
+  settings: AppSettingsData
 }
 
 // ==================== 健康管理 ====================

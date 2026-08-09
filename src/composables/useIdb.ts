@@ -3,7 +3,7 @@
  * DB: easy-web-tab v2；6 个 object store 均无 keyPath，统一使用 out-of-line 键 'items'
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
-import { WORKBENCH_DATA_VERSION } from '../types'
+import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
 import type { Countdown, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
 import { emptyHealthData } from './healthCore'
 import { emptyLedgerData } from './ledgerCore'
@@ -93,7 +93,8 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     countdowns: countdowns ?? [],
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),
-    ledger: ledger ?? emptyLedgerData()
+    ledger: ledger ?? emptyLedgerData(),
+    settings: emptyAppSettingsData()
   }
 }
 

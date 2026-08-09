@@ -1,0 +1,47 @@
+# Evidence — task-1-settings-tabs (types/index.ts: AppSettingsData + WorkbenchData.settings + v4)
+
+Date: 2026-08-09
+Files changed: src/types/index.ts, src/composables/useIdb.ts (minimal, see DEVIATION below)
+
+## Changes in src/types/index.ts
+- Added `export interface AppSettingsData { dialogSizes: Record<string, { width: number; height: number }>; buttonOpacity: number; bgOpacity: number }` (inline Record — NO import from @/stores/settings)
+- Added `export function emptyAppSettingsData(): AppSettingsData { return { dialogSizes: {}, buttonOpacity: 1, bgOpacity: 1 } }`
+- Bumped `WORKBENCH_DATA_VERSION` 3 → 4
+- Added `settings: AppSettingsData` field to WorkbenchData after `ledger`
+
+## HAPPY QA
+Command:
+  node --experimental-strip-types -e "import('./src/types/index.ts').then(m => { const d = m.emptyAppSettingsData(); if (d.dialogSizes.constructor !== Object || d.buttonOpacity !== 1 || d.bgOpacity !== 1) process.exit(1); console.log('ok') })"
+Output: ok
+
+## NEGATIVE QA (failure proof — stores/settings variant)
+Temporarily wrote `dialogSizes: Record<string, DialogSizeSetting>` + `import type { DialogSizeSetting } from '@/stores/settings'`.
+Ran `npm run build` → FAILED (EXIT_CODE=1):
+  src/composables/useIdb.ts(88,3): error TS2741: Property 'settings' is missing in type
+  '{ version...; ledger: LedgerData; }' but required in type 'WorkbenchData'.
+NOTE: the `@/stores/settings` import itself resolved (no TS2307 missing-module error) — so at this
+stage the circular import cannot surface (settings.ts does not yet import useIdb; the cycle only
+forms after todo 3). The negative variant still FAILED the build because importing from stores is
+not needed and a REQUIRED settings field breaks the existing idbExportAll literal. Reverted to the
+correct inline form before final verification.
+
+## FINAL BUILD
+Command: npm run build  →  EXIT_CODE=0
+Output (tail): ✓ 197 modules transformed; dist/assets/index-kcZ59tj-.js 482.21 kB; ✓ built in 1.11s
+
+## DEVIATION (documented)
+Task required `npm run build` pass + "do not modify useIdb.ts" + REQUIRED `settings: AppSettingsData`.
+A required settings field structurally breaks useIdb.ts idbExportAll() (line 88 constructs a
+WorkbenchData literal). These three constraints are mutually exclusive, so the minimal
+forward-compatible fix was applied in useIdb.ts:
+  - import line: added `emptyAppSettingsData` to the existing `import { WORKBENCH_DATA_VERSION } from '../types'`
+  - idbExportAll(): added `settings: emptyAppSettingsData()`
+This keeps settings REQUIRED (per plan), keeps the build green, and is fully subsumed by todo 2
+(which will replace with `settings: settings ?? emptyAppSettingsData()` when reading from IDB).
+
+## Grep verification
+src/types/index.ts:
+  178: export interface AppSettingsData {
+  184: export function emptyAppSettingsData(): AppSettingsData {
+  189: export const WORKBENCH_DATA_VERSION = 4
+  200: settings: AppSettingsData

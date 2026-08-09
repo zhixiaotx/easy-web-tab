@@ -7,6 +7,7 @@ import {
   calcRemaining,
   normalizeCountdown,
   sortCountdowns,
+  moveCustomCategoryInList,
   type CountdownSortMode as SortMode,
   type CountdownSortDirection as SortDirection
 } from '../composables/countdownCore'
@@ -112,6 +113,19 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     if (countdowns.value.some(c => c.category === name)) return { ok: false, reason: 'in-use' }
     customCategories.value = customCategories.value.filter(c => c !== name)
     tabCategories.value = tabCategories.value.filter(c => c !== name)
+    persistCategoryPreferences()
+    return { ok: true }
+  }
+
+  function moveCustomCategory(name: string, dir: 'up' | 'down'): { ok: boolean; reason?: string } {
+    const next = moveCustomCategoryInList(customCategories.value, name, dir)
+    const sameOrder = next.every((c, i) => c === customCategories.value[i])
+    if (sameOrder) {
+      if (!customCategories.value.includes(name)) return { ok: false, reason: 'not-found' }
+      return { ok: false, reason: 'boundary' }
+    }
+    // 新数组整体赋值触发响应式（ref 数组替换）
+    customCategories.value = next
     persistCategoryPreferences()
     return { ok: true }
   }
@@ -352,6 +366,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     addCustomCategory,
     renameCustomCategory,
     deleteCustomCategory,
+    moveCustomCategory,
     setTabCategory
   }
 })

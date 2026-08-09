@@ -183,7 +183,6 @@ function closeCatManager(): void {
 // 分类操作失败 toast：reason 语义 → 中文文案（boundary 在移动分支单独走 warning）
 const CAT_ERROR_MESSAGES: Record<string, string> = {
   empty: '分类名称不能为空',
-  builtin: '内置分类不可修改',
   duplicate: '分类名称已存在',
   'not-found': '分类不存在',
   'in-use': '该分类下有待办，无法删除'

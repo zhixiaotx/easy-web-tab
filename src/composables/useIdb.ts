@@ -1,17 +1,17 @@
 /**
  * 零依赖 IndexedDB 封装（工作台数据层）
- * DB: easy-web-tab v2；6 个 object store 均无 keyPath，统一使用 out-of-line 键 'items'
+ * DB: easy-web-tab v3；7 个 object store 均无 keyPath，统一使用 out-of-line 键 'items'
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { Countdown, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, Countdown, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
 import { emptyHealthData } from './healthCore'
 import { emptyLedgerData } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 2
-export const IDB_STORES = ['todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger'] as const
+export const DB_VERSION = 3
+export const IDB_STORES = ['todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger', 'settings'] as const
 export const IDB_KEY = 'items'
 
 export type IdbStore = (typeof IDB_STORES)[number]
@@ -77,13 +77,14 @@ export function idbClear(store: IdbStore): Promise<void> {
 }
 
 export async function idbExportAll(): Promise<WorkbenchData> {
-  const [todos, notes, countdowns, passwords, health, ledger] = await Promise.all([
+  const [todos, notes, countdowns, passwords, health, ledger, settings] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
     idbGet<NoteData>('notes'),
     idbGet<Countdown[]>('countdowns'),
     idbGet<string>('passwords'),
     idbGet<HealthData>('health'),
-    idbGet<LedgerData>('ledger')
+    idbGet<LedgerData>('ledger'),
+    idbGet<AppSettingsData>('settings')
   ])
   return {
     version: WORKBENCH_DATA_VERSION,
@@ -94,12 +95,12 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),
     ledger: ledger ?? emptyLedgerData(),
-    settings: emptyAppSettingsData()
+    settings: settings ?? emptyAppSettingsData()
   }
 }
 
 export async function idbImportAll(data: WorkbenchData): Promise<void> {
-  if (data.version !== 1 && data.version !== 2 && data.version !== 3) {
+  if (data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4) {
     throw new Error('备份文件版本不兼容')
   }
   // notes 兼容旧数组（v1/v2 纯便签列表）与新对象（v3 NoteData）两种格式
@@ -124,8 +125,10 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
     }
   }
   // 迁移：notes 在写入循环前统一归一化包装（数组 → { categories: [], notes: [...] }；对象 → 原样归一），
-  // 循环直接写归一后的 NoteData，保证 v1/v2/v3 全部入口得到幂等的 v3 结构
+  // 循环直接写归一后的 NoteData，保证 v1/v2/v3/v4 全部入口得到幂等的 v3 结构
   data = { ...data, notes: normalizeNoteData(data.notes) }
+  // settings 兼容 v1/v2/v3 备份（运行时无 settings 字段 → empty 兜底）；v4 备份原样透传
+  data = { ...data, settings: data.settings ?? emptyAppSettingsData() }
   const db = await openIdb()
   const tx = db.transaction([...IDB_STORES], 'readwrite')
   for (const name of IDB_STORES) {

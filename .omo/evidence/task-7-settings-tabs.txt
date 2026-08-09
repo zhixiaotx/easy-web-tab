@@ -1,0 +1,38 @@
+Task 7 evidence — WorkbenchView.vue: 导入备份后重载设置数据
+Date: 2026-08-10 (UTC)
+Server: Vite dev on :16721 (started by this executor — pre-existing 16721 was dead)
+
+CODE EDIT (verified, NOT re-edited):
+  src/views/WorkbenchView.vue L12:  import { useAppSettingsStore } from '@/stores/settings'
+  L30:  const settingsStore = useAppSettingsStore()
+  L174: settingsStore.initSettings() inside import-success reload Promise.all (with todos/notes/countdowns/health/ledger)
+Build: orchestrator-verified `npm run build` exit 0 on this diff.
+
+HAPPY SCENARIO — import backup with settings restores persisted size:
+  1. Set dialog size via store: useAppSettingsStore().setDialogSize('wb-todo', 700, 85)
+     → CSS var --dlg-w-wb-todo computed = "700px" ✓
+  2. Clicked workbench 导出 → captured blob JSON backup (version 4).
+     Backup contains settings.dialogSizes['wb-todo'] = {width:700, height:85} ✓
+  3. resetDefaults() → CSS var unset (cleared) ✓
+  4. Imported that backup via file input (DataTransfer File).
+     → toast "导入成功" shown ✓
+     → --dlg-w-wb-todo computed = "700px" ✓ (initSettings re-read IDB + applySettings)
+  Console: no app errors (only "Not allowed to load local resource: blob:captured" — artifact of our URL.createObjectURL patch for capturing the download, not an app error).
+
+FAILURE SCENARIO — v3 backup with no settings field:
+  1. Fresh reload of /workbench (store at defaults; var unset).
+  2. Built v3 JSON: copy of export with "settings" key deleted, "version": 3.
+  3. Imported via file input.
+     → toast "导入成功" (no "导入失败") ✓
+     → --dlg-w-wb-todo remains unset/default ✓ (empty-settings fallback path)
+     → IDB 'settings' store contains {dialogSizes:{}, buttonOpacity:1, bgOpacity:1}
+        (v3 import wrote empty fallback, initSettings patched nothing → defaults kept)
+  Console: 0 errors during import.
+
+RESULT: PASS (both scenarios)
+
+GOTCHA (see learnings.md): initSettings MERGES into existing in-memory state — it only
+overrides entries present in the loaded IDB record. Empty stored settings do NOT reset
+a size previously set in the same session (e.g. after setDialogSize(700)). The failure
+path's "defaults" assertion therefore only holds on a fresh page load; run failure QA
+after a reload, not right after the happy-path size change.

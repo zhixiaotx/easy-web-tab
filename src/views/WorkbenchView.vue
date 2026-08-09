@@ -9,6 +9,7 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { useAppSettingsStore } from '@/stores/settings'
 import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
@@ -26,6 +27,7 @@ const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
+const settingsStore = useAppSettingsStore()
 
 // 左侧菜单 7 项
 const SECTION_KEYS = [
@@ -168,7 +170,8 @@ async function handleImportFile(event: Event) {
       notesStore.loadNotes(),
       countdownsStore.loadCountdowns(),
       healthStore.loadHealth(),
-      ledgerStore.loadLedger()
+      ledgerStore.loadLedger(),
+      settingsStore.initSettings()
     ])
 
     if (skipPasswords) {

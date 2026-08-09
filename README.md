@@ -259,8 +259,8 @@ npm run serve
   - `user-categories`：自定义分类
   - `user-search-engines`：自定义搜索引擎
 - **个人工作台数据**：浏览器 IndexedDB（数据库名 `easy-web-tab`）
-  - 待办、便签、倒计时、密码数据存于 IndexedDB 的 4 个 object store（`todos` / `notes` / `countdowns` / `passwords`）
-  - localStorage 仍存网址/分类/引擎/偏好等（如 `user-sites`、`user-countdown-sort`、`password-verification-v2`）
+  - 待办、便签、倒计时、密码、健康、记账数据存于 IndexedDB 的 6 个 object store（`todos` / `notes` / `countdowns` / `passwords` / `health` / `ledger`）
+  - localStorage 仍存网址/分类/引擎/偏好等（如 `user-sites`、`user-countdown-sort`、`user-todo-categories`、`user-todo-tab-categories`、`password-verification-v2`）
 
 用户数据优先于内置数据加载（同名 URL 覆盖）。
 

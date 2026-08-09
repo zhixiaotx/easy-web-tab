@@ -32,7 +32,7 @@ components/
 ├── Toast.vue             # Notification toast (receives `toasts` array as prop)
 └── workbench/            # 个人工作台 12 SFC: 10 面板 + 健康管理 tabs 容器 + 定时提醒只读区块 (data persisted to IndexedDB via `useIdb.ts`)
     ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口，9 张概览卡：4 旧 + 健康/记账 5 新）
-    ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选）
+    ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选 + 分类筛选 tabs + ⚙️分类管理弹框（标签页显示勾选/改名/上移下移/删除/新增，失败走 useToast）+ 表单分类下拉 + 卡片分类徽标，data-testid 前缀 td-）
     ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，data-testid 前缀 nt-）
     ├── WorkbenchCountdown.vue   # 倒计时面板（分类筛选 tabs + ⚙️分类管理弹框 + 规则/分类表单 + 徽标，data-testid 前缀 cd-）
     ├── WorkbenchPassword.vue    # 密码面板（主密码三态 + 新增/编辑弹窗 + 书签关联下拉 + 名称搜索，复用 usePasswordsStore / useCrypto.ts）
@@ -73,6 +73,7 @@ components/
 - Props via `defineProps<{}>()`, emits via `defineEmits`
 - No state management inside components — delegate to stores or composables
 - **WorkbenchNotes.vue testid 约定**：工具栏 搜索输入 `nt-search-input`、分类筛选 tabs `nt-cat-all`/`nt-cat-uncategorized`/`nt-cat-<id>`、类型下拉 `nt-type-select`（选项：全部类型默认 'all'/普通便签/时光轴便签）、查询 `nt-search-btn`、重置 `nt-reset-btn`、新增 `note-add-button`、分类管理入口 `nt-cat-manager`（弹窗行 `nt-catmgr-*`，含标签页显示勾选 `nt-catmgr-tab-<id>`）、表单 overlay 类型 radio `nt-form-type-normal`/`nt-form-type-timeline`、时光轴快速追加 `nt-entry-add`、条目行内编辑/删除 `nt-entry-edit-<id>`/`nt-entry-del-<id>`、空态 `note-empty`（普通）/`note-timeline-empty`（时光轴）；其余表单 `note-*` / `nt-form-*` 前缀
+- **WorkbenchTodo.vue testid 约定**：分类筛选 tabs `td-cat-all`/`td-cat-<分类名>`（点击即时过滤，与查询条件叠加，重置恢复全部）、表单分类下拉 `td-form-category`（未分类 + store.allCategories）、卡片分类徽标 `td-cat-badge-<todoId>`、分类管理入口 `td-cat-manager`（弹窗 `td-cat-dialog`：标签页显示勾选 `td-catmgr-tab-<分类名>`、改名 `td-catmgr-name-<分类名>` blur/Enter 提交 Esc 还原、上移下移 `td-catmgr-up-<分类名>`/`td-catmgr-down-<分类名>`、删除 `td-catmgr-del-<分类名>` 带 confirm、新增 `td-catmgr-new-input`/`td-catmgr-add-btn`，失败走 useToast、删除/隐藏激活分类回退「全部」）；其余表单 `td-*` 前缀
 
 ## ANTI-PATTERNS
 

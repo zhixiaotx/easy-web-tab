@@ -9,27 +9,31 @@ import { TODO_COLOR_PRESETS, DEFAULT_TODO_COLOR } from '@/types'
 const store = useWorkbenchTodosStore()
 
 // ===== 查询/筛选（查询按钮生效，重置恢复全量）=====
-const searchName = ref('')
+const searchTitle = ref('')
+const searchDescription = ref('')
 const searchPriority = ref<'' | TodoPriority>('')
 const searchStatus = ref<'' | 'all' | 'active' | 'completed'>('')
 const appliedFilters = ref<TodoFilterCriteria>({})
 
 const hasActiveFilter = computed(() =>
-  (appliedFilters.value.name ?? '').trim() !== '' ||
+  (appliedFilters.value.title ?? '').trim() !== '' ||
+  (appliedFilters.value.description ?? '').trim() !== '' ||
   Boolean(appliedFilters.value.priority) ||
   Boolean(appliedFilters.value.status)
 )
 
 function applySearch(): void {
   appliedFilters.value = {
-    name: searchName.value,
+    title: searchTitle.value,
+    description: searchDescription.value,
     priority: searchPriority.value,
     status: searchStatus.value
   }
 }
 
 function resetSearch(): void {
-  searchName.value = ''
+  searchTitle.value = ''
+  searchDescription.value = ''
   searchPriority.value = ''
   searchStatus.value = ''
   appliedFilters.value = {}
@@ -156,36 +160,60 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-todo">
-    <!-- 查询区（位于新增按钮上方） -->
+    <!-- 查询区（标题/描述/优先级/状态 + 右侧查询重置按钮） -->
     <div class="td-search">
-      <input
-        v-model="searchName"
-        type="text"
-        class="form-input search-name"
-        placeholder="按标题/描述查询…"
-        data-testid="td-search-name"
-        @keyup.enter="applySearch"
-      />
-      <select v-model="searchPriority" class="form-input search-select" data-testid="td-search-priority">
-        <option value="">全部优先级</option>
-        <option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-      </select>
-      <select v-model="searchStatus" class="form-input search-select" data-testid="td-search-status">
-        <option value="">全部状态</option>
-        <option value="active">待办</option>
-        <option value="completed">已完成</option>
-      </select>
-      <button class="search-btn" data-testid="td-search-btn" @click="applySearch">查询</button>
-      <button class="search-reset-btn" data-testid="td-search-reset" @click="resetSearch">重置</button>
+      <div class="td-search-fields">
+        <label class="td-field td-field-grow">
+          <span class="td-field-label">标题</span>
+          <input
+            v-model="searchTitle"
+            type="text"
+            class="form-input td-field-title"
+            placeholder="按标题查询…"
+            data-testid="td-search-title"
+            @keyup.enter="applySearch"
+          />
+        </label>
+        <label class="td-field td-field-grow">
+          <span class="td-field-label">描述</span>
+          <input
+            v-model="searchDescription"
+            type="text"
+            class="form-input td-field-desc"
+            placeholder="按描述查询…"
+            data-testid="td-search-desc"
+            @keyup.enter="applySearch"
+          />
+        </label>
+        <label class="td-field">
+          <span class="td-field-label">优先级</span>
+          <select v-model="searchPriority" class="form-input search-select" data-testid="td-search-priority">
+            <option value="">全部优先级</option>
+            <option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+        <label class="td-field">
+          <span class="td-field-label">状态</span>
+          <select v-model="searchStatus" class="form-input search-select" data-testid="td-search-status">
+            <option value="">全部状态</option>
+            <option value="active">待办</option>
+            <option value="completed">已完成</option>
+          </select>
+        </label>
+      </div>
+      <div class="td-search-actions">
+        <button class="search-btn" data-testid="td-search-btn" @click="applySearch">查询</button>
+        <button class="search-reset-btn" data-testid="td-search-reset" @click="resetSearch">重置</button>
+      </div>
     </div>
 
-    <!-- 操作栏：数量 + 新增 -->
+    <!-- 操作栏：新增 + 数量 -->
     <div class="td-headbar">
+      <button class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</button>
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
         <template v-else>共 {{ store.sortedTodos.length }} 个待办</template>
       </span>
-      <button class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</button>
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -346,9 +374,8 @@ onUnmounted(() => {
 /* ===== 查询区 ===== */
 .td-search {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
   padding: 12px 14px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
@@ -356,10 +383,12 @@ onUnmounted(() => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.search-name {
-  flex: 1;
-  min-width: 140px;
-}
+.td-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.td-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.td-field-grow { flex: 1; min-width: 140px; }
+.td-field-grow :is(.td-field-desc, .td-field-title) { width: 100%; }
+.td-field-label { font-size: 13px; color: var(--text-secondary, var(--color-text-secondary)); }
+.td-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .search-select {
   width: 130px;
@@ -986,7 +1015,8 @@ onUnmounted(() => {
 
 @media (max-width: 640px) {
   .search-input,
-  .search-name {
+  .td-field-title,
+  .td-field-grow {
     width: 100%;
   }
 }

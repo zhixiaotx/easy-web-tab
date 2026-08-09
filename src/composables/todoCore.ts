@@ -32,22 +32,23 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
   }
 }
 
-/** 查询筛选条件：name 模糊匹配标题+描述 / priority 精确 / status 完成态；空串或 undefined 表示不限制。 */
+/** 查询筛选条件：标题模糊匹配标题 / 描述模糊匹配描述 / 两者同时非空为 AND / priority 精确 / status 完成态；空串或 undefined 表示不限制。 */
 export interface TodoFilterCriteria {
-  name?: string
+  title?: string
+  description?: string
   priority?: '' | TodoPriority
   status?: '' | 'all' | 'active' | 'completed'
 }
 
 /** 按条件过滤待办（纯函数，供查询栏复用；空条件返回全部）。保留原条目类型（WorkbenchTodo 及其扩展）。 */
 export function filterTodos<T extends WorkbenchTodo>(items: T[], criteria: TodoFilterCriteria = {}): T[] {
-  const name = (criteria.name ?? '').trim().toLowerCase()
+  const title = (criteria.title ?? '').trim().toLowerCase()
+  const description = (criteria.description ?? '').trim().toLowerCase()
   const priority = criteria.priority || undefined
   const status = criteria.status || undefined
   return items.filter(todo => {
-    if (name && !todo.title.toLowerCase().includes(name) && !(todo.description ?? '').toLowerCase().includes(name)) {
-      return false
-    }
+    if (title && !todo.title.toLowerCase().includes(title)) return false
+    if (description && !(todo.description ?? '').toLowerCase().includes(description)) return false
     if (priority !== undefined && todo.priority !== priority) return false
     if (status === 'active' && todo.completed) return false
     if (status === 'completed' && !todo.completed) return false

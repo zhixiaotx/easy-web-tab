@@ -39,7 +39,7 @@ test('T2 normalizeTodo normalize', () => {
   assert.equal(normalizeTodo({ color: 123 as unknown as string }).color, '#3b82f6')
 })
 
-// T3 — filterTodos: name (title/desc) / priority / status / combined / empty
+// T3 — filterTodos: title / description / priority / status / combined / empty
 function mkTodo(id: string, title: string, priority: WorkbenchTodo['priority'], completed = false, description?: string): WorkbenchTodo {
   return {
     id,
@@ -62,12 +62,21 @@ test('T3 filterTodos', () => {
   // 空条件返回全部（且保持顺序）
   assert.equal(filterTodos(items).length, 3)
 
-  // 名称模糊：命中标题
-  assert.deepEqual(filterTodos(items, { name: '季度' }).map(t => t.id), ['a'])
-  // 名称模糊：命中描述
-  assert.deepEqual(filterTodos(items, { name: '纪要' }).map(t => t.id), ['c'])
-  // 名称不区分大小写（英文标题场景）
-  assert.deepEqual(filterTodos(items, { name: '购买' }).map(t => t.id), ['b'])
+  // 标题模糊：只命中标题
+  assert.deepEqual(filterTodos(items, { title: '季度' }).map(t => t.id), ['a'])
+  assert.deepEqual(filterTodos(items, { title: '周会' }).map(t => t.id), ['c'])
+  // 描述模糊：只命中描述
+  assert.deepEqual(filterTodos(items, { description: '纪要' }).map(t => t.id), ['c'])
+  // 标题不匹配描述内容（title 只查标题）
+  assert.deepEqual(filterTodos(items, { title: '纪要' }).map(t => t.id), [])
+  assert.deepEqual(filterTodos(items, { description: '财务部' }).map(t => t.id), ['a'])
+  // 空串 = 无约束
+  assert.equal(filterTodos(items, { title: '' }).length, 3)
+  assert.equal(filterTodos(items, { description: '' }).length, 3)
+  // AND：标题 + 描述同时命中
+  assert.deepEqual(filterTodos(items, { title: '周会', description: '纪要' }).map(t => t.id), ['c'])
+  // AND：无条目同时命中两者
+  assert.deepEqual(filterTodos(items, { title: '季度', description: '纪要' }).map(t => t.id), [])
   // 优先级精确
   assert.deepEqual(filterTodos(items, { priority: 'medium' }).map(t => t.id), ['c'])
   // 状态：待办（未完成）
@@ -78,8 +87,8 @@ test('T3 filterTodos', () => {
   assert.equal(filterTodos(items, { status: 'all' }).length, 3)
   // 组合：高优先级 + 待办
   assert.deepEqual(filterTodos(items, { priority: 'high', status: 'active' }).map(t => t.id), ['a'])
-  // 名称 + 状态组合无结果
-  assert.equal(filterTodos(items, { name: '周会', status: 'active' }).length, 0)
+  // 标题 + 状态组合无结果
+  assert.equal(filterTodos(items, { title: '周会', status: 'active' }).length, 0)
 })
 
 // T4 — dueInfo: future / today / overdue / no date

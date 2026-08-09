@@ -1,12 +1,29 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
+import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
+import type { AppSettingsData } from '@/types'
 
 // ========================================
 // 类型
 // ========================================
 
 // 弹窗标识
-export type DialogId = 'site' | 'engine' | 'countdown' | 'background' | 'category' | 'backup' | 'icon' | 'notes'
+export type DialogId =
+  | 'site'
+  | 'engine'
+  | 'background'
+  | 'category'
+  | 'backup'
+  | 'icon'
+  | 'notes'
+  | 'wb-todo'
+  | 'wb-todo-cat'
+  | 'wb-notes-cat'
+  | 'wb-countdown'
+  | 'wb-countdown-cat'
+  | 'wb-password'
+  | 'wb-ledger'
+  | 'wb-ledger-cat'
 
 // 弹窗尺寸设置（width 单位 px，height 单位 vh）
 export interface DialogSizeSetting {
@@ -22,41 +39,95 @@ export interface DialogSizeSetting {
 export const DIALOG_DEFAULTS: Record<DialogId, DialogSizeSetting> = {
   site: { width: 864, height: 90 },
   engine: { width: 700, height: 80 },
-  countdown: { width: 640, height: 80 },
   background: { width: 800, height: 85 },
   category: { width: 900, height: 80 },
   backup: { width: 600, height: 80 },
   icon: { width: 900, height: 80 },
-  notes: { width: 1000, height: 90 }
+  notes: { width: 1000, height: 90 },
+  'wb-todo': { width: 480, height: 85 },
+  'wb-todo-cat': { width: 480, height: 85 },
+  'wb-notes-cat': { width: 480, height: 85 },
+  'wb-countdown': { width: 480, height: 85 },
+  'wb-countdown-cat': { width: 440, height: 85 },
+  'wb-password': { width: 520, height: 90 },
+  'wb-ledger': { width: 480, height: 85 },
+  'wb-ledger-cat': { width: 480, height: 85 }
 }
 
 // 弹窗中文标签
 export const DIALOG_LABELS: Record<DialogId, string> = {
   site: '添加/编辑网站',
   engine: '引擎管理',
-  countdown: '倒计时',
   background: '背景',
   category: '分类管理',
   backup: '备份',
   icon: '图标管理',
-  notes: '便签'
+  notes: '便签',
+  'wb-todo': '待办表单',
+  'wb-todo-cat': '待办分类管理',
+  'wb-notes-cat': '便签分类管理',
+  'wb-countdown': '倒计时表单',
+  'wb-countdown-cat': '倒计时分类管理',
+  'wb-password': '密码表单',
+  'wb-ledger': '记账表单',
+  'wb-ledger-cat': '记账分组管理'
 }
 
 // 弹窗对应的 CSS 自定义属性名（字面量逐字等于契约表）
 export const DIALOG_VARS: Record<DialogId, { widthVar: string; heightVar: string }> = {
   site: { widthVar: '--dlg-w-site', heightVar: '--dlg-h-site' },
   engine: { widthVar: '--dlg-w-engine', heightVar: '--dlg-h-engine' },
-  countdown: { widthVar: '--dlg-w-countdown', heightVar: '--dlg-h-countdown' },
   background: { widthVar: '--dlg-w-background', heightVar: '--dlg-h-background' },
   category: { widthVar: '--dlg-w-category', heightVar: '--dlg-h-category' },
   backup: { widthVar: '--dlg-w-backup', heightVar: '--dlg-h-backup' },
   icon: { widthVar: '--dlg-w-icon', heightVar: '--dlg-h-icon' },
-  notes: { widthVar: '--dlg-w-notes', heightVar: '--dlg-h-notes' }
+  notes: { widthVar: '--dlg-w-notes', heightVar: '--dlg-h-notes' },
+  'wb-todo': { widthVar: '--dlg-w-wb-todo', heightVar: '--dlg-h-wb-todo' },
+  'wb-todo-cat': { widthVar: '--dlg-w-wb-todo-cat', heightVar: '--dlg-h-wb-todo-cat' },
+  'wb-notes-cat': { widthVar: '--dlg-w-wb-notes-cat', heightVar: '--dlg-h-wb-notes-cat' },
+  'wb-countdown': { widthVar: '--dlg-w-wb-countdown', heightVar: '--dlg-h-wb-countdown' },
+  'wb-countdown-cat': { widthVar: '--dlg-w-wb-countdown-cat', heightVar: '--dlg-h-wb-countdown-cat' },
+  'wb-password': { widthVar: '--dlg-w-wb-password', heightVar: '--dlg-h-wb-password' },
+  'wb-ledger': { widthVar: '--dlg-w-wb-ledger', heightVar: '--dlg-h-wb-ledger' },
+  'wb-ledger-cat': { widthVar: '--dlg-w-wb-ledger-cat', heightVar: '--dlg-h-wb-ledger-cat' }
 }
 
 const SETTINGS_STORAGE_KEY = 'user-app-settings'
 
-const DIALOG_IDS: DialogId[] = ['site', 'engine', 'countdown', 'background', 'category', 'backup', 'icon', 'notes']
+// 全部弹窗 id（全量契约遍历来源）
+const DIALOG_IDS: DialogId[] = [
+  'site',
+  'engine',
+  'background',
+  'category',
+  'backup',
+  'icon',
+  'notes',
+  'wb-todo',
+  'wb-todo-cat',
+  'wb-notes-cat',
+  'wb-countdown',
+  'wb-countdown-cat',
+  'wb-password',
+  'wb-ledger',
+  'wb-ledger-cat'
+]
+
+// 导航设置分组（弹窗尺寸设置 Tab 1）——notes 不属于导航组
+export const NAV_DIALOG_IDS: DialogId[] = ['site', 'engine', 'background', 'category', 'backup', 'icon']
+
+// 工作台设置分组（弹窗尺寸设置 Tab 2）
+export const WB_DIALOG_IDS: DialogId[] = [
+  'notes',
+  'wb-todo',
+  'wb-todo-cat',
+  'wb-notes-cat',
+  'wb-countdown',
+  'wb-countdown-cat',
+  'wb-password',
+  'wb-ledger',
+  'wb-ledger-cat'
+]
 
 // 取值范围 clamp
 const clampWidth = (n: number) => Math.min(1600, Math.max(400, n))
@@ -72,6 +143,36 @@ const cloneDefaults = (): Record<DialogId, DialogSizeSetting> => {
   return sizes
 }
 
+// 解析原始设置记录 → 校验 + clamp 后的完整 AppSettingsData（缺失/非法字段回退默认值）
+function parseSettingsData(raw: unknown): AppSettingsData {
+  const out: AppSettingsData = { dialogSizes: {}, buttonOpacity: 1, bgOpacity: 1 }
+  const data = raw as Record<string, unknown>
+  if (!data || typeof data !== 'object') return out
+  const sizes = data.dialogSizes
+  if (sizes && typeof sizes === 'object') {
+    const dlg: Record<string, { width: number; height: number }> = {}
+    for (const id of DIALOG_IDS) {
+      const item = (sizes as Record<string, unknown>)[id]
+      let width = DIALOG_DEFAULTS[id].width
+      let height = DIALOG_DEFAULTS[id].height
+      if (item && typeof item === 'object') {
+        const size = item as Record<string, unknown>
+        if (typeof size.width === 'number' && Number.isFinite(size.width)) width = clampWidth(size.width)
+        if (typeof size.height === 'number' && Number.isFinite(size.height)) height = clampHeight(size.height)
+      }
+      dlg[id] = { width, height }
+    }
+    out.dialogSizes = dlg
+  }
+  if (typeof data.buttonOpacity === 'number' && Number.isFinite(data.buttonOpacity)) {
+    out.buttonOpacity = clampOpacity(data.buttonOpacity)
+  }
+  if (typeof data.bgOpacity === 'number' && Number.isFinite(data.bgOpacity)) {
+    out.bgOpacity = clampOpacity(data.bgOpacity)
+  }
+  return out
+}
+
 export const useAppSettingsStore = defineStore('app-settings', () => {
   // ========================================
   // 状态
@@ -84,12 +185,15 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 持久化
   // ========================================
   function persist() {
-    const data = {
-      dialogSizes: dialogSizes.value,
+    // toRaw：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError）。
+    // dialogSizes.value 是 deep reactive ref 记录，必须单独 toRaw（对新建外层对象整体 toRaw 是 no-op）
+    void idbPut('settings', toRaw({
+      dialogSizes: toRaw(dialogSizes.value),
       buttonOpacity: buttonOpacity.value,
       bgOpacity: bgOpacity.value
-    }
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data))
+    })).catch(() => {
+      // IDB 写入失败静默忽略（fire-and-forget，不抛错）
+    })
   }
 
   // ========================================
@@ -125,40 +229,41 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   }
 
   // ========================================
-  // 初始化：解析 localStorage，逐项校验类型并 clamp，
-  // 损坏/非法 JSON 静默回退默认（不抛错）
+  // 初始化：优先读 IndexedDB，空时尝试从 localStorage 快照一次性非破坏迁移；
+  // 逐项校验类型并 clamp，损坏/非法数据/IDB 失败静默回退默认（不抛错）
   // ========================================
-  function initSettings() {
+  async function initSettings(): Promise<void> {
+    // 1. 优先读 IndexedDB（IDB 失败 → undefined，走下方迁移/默认回退）
+    let stored: AppSettingsData | undefined
+    try {
+      stored = await idbGet<AppSettingsData>('settings')
+    } catch {
+      stored = undefined
+    }
+    // 2. 一次性非破坏迁移：IDB 空且 localStorage 有遗留快照 → 解析校验后写入 IDB
+    //    （localStorage 不删不写，仅作为迁移来源；写入失败静默回退默认）
+    let migrated: AppSettingsData | undefined
     const saved = localStorage.getItem(SETTINGS_STORAGE_KEY)
-    if (saved) {
+    if (stored === undefined && saved) {
       try {
-        const data = JSON.parse(saved) as Record<string, unknown>
-        if (data && typeof data === 'object') {
-          const sizes = data.dialogSizes
-          if (sizes && typeof sizes === 'object') {
-            for (const id of DIALOG_IDS) {
-              const item = (sizes as Record<string, unknown>)[id]
-              if (item && typeof item === 'object') {
-                const size = item as Record<string, unknown>
-                if (typeof size.width === 'number' && Number.isFinite(size.width)) {
-                  dialogSizes.value[id].width = clampWidth(size.width)
-                }
-                if (typeof size.height === 'number' && Number.isFinite(size.height)) {
-                  dialogSizes.value[id].height = clampHeight(size.height)
-                }
-              }
-            }
-          }
-          if (typeof data.buttonOpacity === 'number' && Number.isFinite(data.buttonOpacity)) {
-            buttonOpacity.value = clampOpacity(data.buttonOpacity)
-          }
-          if (typeof data.bgOpacity === 'number' && Number.isFinite(data.bgOpacity)) {
-            bgOpacity.value = clampOpacity(data.bgOpacity)
-          }
-        }
+        migrated = parseSettingsData(JSON.parse(saved))
+        await idbPut('settings', toRaw(migrated))
       } catch {
-        // 损坏 JSON → 保持默认值，不抛错
+        migrated = undefined
       }
+    }
+    // 3. 生效来源：IDB 优先，其次 localStorage 迁移结果；缺失/非法字段保持默认值
+    const effective = stored ?? migrated
+    if (effective) {
+      for (const id of DIALOG_IDS) {
+        const size = effective.dialogSizes[id]
+        if (size) {
+          if (Number.isFinite(size.width)) dialogSizes.value[id].width = clampWidth(size.width)
+          if (Number.isFinite(size.height)) dialogSizes.value[id].height = clampHeight(size.height)
+        }
+      }
+      if (Number.isFinite(effective.buttonOpacity)) buttonOpacity.value = clampOpacity(effective.buttonOpacity)
+      if (Number.isFinite(effective.bgOpacity)) bgOpacity.value = clampOpacity(effective.bgOpacity)
     }
     applySettings()
   }
@@ -186,7 +291,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   }
 
   // ========================================
-  // 恢复默认：还原状态 → 移除全部 18 个 CSS 变量（不 set 默认值）→ 清除存储
+  // 恢复默认：还原状态 → 移除全部弹窗 CSS 变量（不 set 默认值）→ 清除存储（IDB + localStorage 快照）
   // ========================================
   function resetDefaults() {
     dialogSizes.value = cloneDefaults()
@@ -199,6 +304,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     }
     root.style.removeProperty('--ui-btn-opacity')
     root.style.removeProperty('--app-bg-opacity')
+    void idbClear('settings').catch(() => {
+      // IDB 清除失败静默忽略（不抛错）
+    })
     localStorage.removeItem(SETTINGS_STORAGE_KEY)
   }
 

@@ -9,7 +9,8 @@ import {
   repeatLabel,
   categoryLabel,
   serializeRepeatYaml,
-  filterCountdowns
+  filterCountdowns,
+  moveCustomCategoryInList
 } from '../src/composables/countdownCore.ts'
 import type { Countdown, CountdownCategory, CountdownRepeat } from '../src/types'
 
@@ -243,6 +244,17 @@ test('calcRemaining shape', () => {
   assert.equal(typeof once.status, 'string')
   assert.equal(typeof once.nextTime, 'string')
   assert.equal(typeof once.isExpired, 'boolean')
+})
+
+// S12 — moveCustomCategoryInList（上移/下移交换、边界原地、not-found 原地、不修改入参）
+test('S12 moveCustomCategoryInList', () => {
+  const list = ['a', 'b', 'c']
+  assert.deepEqual(moveCustomCategoryInList(list, 'b', 'up'), ['b', 'a', 'c'])
+  assert.deepEqual(moveCustomCategoryInList(list, 'b', 'down'), ['a', 'c', 'b'])
+  assert.deepEqual(moveCustomCategoryInList(list, 'a', 'up'), ['a', 'b', 'c'])
+  assert.deepEqual(moveCustomCategoryInList(list, 'c', 'down'), ['a', 'b', 'c'])
+  assert.deepEqual(moveCustomCategoryInList(list, 'x', 'up'), ['a', 'b', 'c'])
+  assert.deepEqual(list, ['a', 'b', 'c'])
 })
 
 let failed = 0

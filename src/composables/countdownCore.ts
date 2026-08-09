@@ -532,3 +532,19 @@ export function sortCountdowns(items: CountdownItem[], mode: CountdownSortMode, 
     }
   })
 }
+
+/**
+ * 自定义分类排序：将 name 在 list 中上移/下移一格。
+ * 返回新数组（不修改入参）；name 不存在或已在边界时返回与入参顺序相同的新数组。
+ */
+export function moveCustomCategoryInList(list: string[], name: string, dir: 'up' | 'down'): string[] {
+  const idx = list.indexOf(name)
+  if (idx === -1) return [...list]
+  const target = dir === 'up' ? idx - 1 : idx + 1
+  if (target < 0 || target >= list.length) return [...list]
+  const next = [...list]
+  const tmp = next[idx]
+  next[idx] = next[target]
+  next[target] = tmp
+  return next
+}

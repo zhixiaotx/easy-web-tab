@@ -5,6 +5,19 @@ import type { TodoPriority, WorkbenchTodo } from '../types'
 
 export const TODO_PRIORITIES: TodoPriority[] = ['high', 'medium', 'low']
 
+/** 内置待办分类（不可删除；用户可在其之外追加任意自定义分类）。 */
+export const BUILTIN_TODO_CATEGORIES: readonly string[] = ['work', 'life', 'study']
+
+/** 是否为内置待办分类（精确成员判定）。 */
+export function isTodoBuiltinCategory(name: string): boolean {
+  return (BUILTIN_TODO_CATEGORIES as readonly string[]).includes(name)
+}
+
+/** 是否为未分类待办：categoryId 为 undefined/''/null → true（categoryId 仅 string 类型，falsy 判定即等价）。 */
+export function isTodoUncategorized(todo: { categoryId?: string }): boolean {
+  return !todo.categoryId
+}
+
 /** 缺省 id 兜底（沿用 store 的 td_ 前缀，追加随机段防批量碰撞）。 */
 function genId(): string {
   return `td_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -19,6 +32,7 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
     typeof raw.priority === 'string' && (TODO_PRIORITIES as string[]).includes(raw.priority)
       ? (raw.priority as TodoPriority)
       : 'medium'
+  const categoryId = typeof raw.categoryId === 'string' ? raw.categoryId.trim() : ''
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : genId(),
     title: typeof raw.title === 'string' ? raw.title : '',
@@ -28,7 +42,8 @@ export function normalizeTodo(raw: Partial<WorkbenchTodo>): WorkbenchTodo {
     completed: raw.completed === true,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
-    color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : DEFAULT_TODO_COLOR
+    color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : DEFAULT_TODO_COLOR,
+    ...(categoryId ? { categoryId } : {})
   }
 }
 
@@ -38,6 +53,8 @@ export interface TodoFilterCriteria {
   description?: string
   priority?: '' | TodoPriority
   status?: '' | 'all' | 'active' | 'completed'
+  /** 分类筛选：undefined/'' = 全部不过滤；'uncategorized' 字面量 = 未分类；其他 = 分类名精确匹配。 */
+  categoryId?: string
 }
 
 /** 按条件过滤待办（纯函数，供查询栏复用；空条件返回全部）。保留原条目类型（WorkbenchTodo 及其扩展）。 */
@@ -46,12 +63,20 @@ export function filterTodos<T extends WorkbenchTodo>(items: T[], criteria: TodoF
   const description = (criteria.description ?? '').trim().toLowerCase()
   const priority = criteria.priority || undefined
   const status = criteria.status || undefined
+  const categoryId = criteria.categoryId || undefined
   return items.filter(todo => {
     if (title && !todo.title.toLowerCase().includes(title)) return false
     if (description && !(todo.description ?? '').toLowerCase().includes(description)) return false
     if (priority !== undefined && todo.priority !== priority) return false
     if (status === 'active' && todo.completed) return false
     if (status === 'completed' && !todo.completed) return false
+    if (categoryId !== undefined) {
+      if (categoryId === 'uncategorized') {
+        if (!isTodoUncategorized(todo)) return false
+      } else if (todo.categoryId !== categoryId) {
+        return false
+      }
+    }
     return true
   })
 }
@@ -83,4 +108,20 @@ export function dueInfo(dueDate: string | undefined, completed: boolean, today?:
   if (days > 0) return { label: `剩余 ${days} 天`, status: 'normal' }
   if (days === 0) return { label: '今天到期', status: 'today' }
   return { label: `已逾期 ${-days} 天`, status: 'overdue' }
+}
+
+/**
+ * 自定义分类排序：将 name 在 list 中上移/下移一格。
+ * 返回新数组（不修改入参）；name 不存在或已在边界时返回与入参顺序相同的新数组。
+ */
+export function moveCustomCategoryInList(list: string[], name: string, dir: 'up' | 'down'): string[] {
+  const idx = list.indexOf(name)
+  if (idx === -1) return [...list]
+  const target = dir === 'up' ? idx - 1 : idx + 1
+  if (target < 0 || target >= list.length) return [...list]
+  const next = [...list]
+  const tmp = next[idx]
+  next[idx] = next[target]
+  next[target] = tmp
+  return next
 }

@@ -125,6 +125,7 @@ export interface WorkbenchTodo {
   createdAt: string
   updatedAt: string
   color?: string // 卡片自定义颜色（'#RRGGBB' 或 '#RGB' hex）；undefined = 默认蓝
+  categoryId?: string // 待办分类（undefined/'' = 未分类）
 }
 
 // 工作台便签

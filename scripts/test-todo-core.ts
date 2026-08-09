@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict'
-import { normalizeTodo, filterTodos, dueInfo, localToday } from '../src/composables/todoCore.ts'
+import {
+  normalizeTodo,
+  filterTodos,
+  dueInfo,
+  localToday,
+  isTodoUncategorized,
+  moveCustomCategoryInList,
+  BUILTIN_TODO_CATEGORIES,
+  isTodoBuiltinCategory
+} from '../src/composables/todoCore.ts'
 import type { WorkbenchTodo } from '../src/types'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -107,6 +116,60 @@ test('T5 localToday', () => {
   // 2026-08-05 00:30 本地时刻：UTC 前一天，验证不偏移
   const d = new Date(2026, 7, 5, 0, 30)
   assert.equal(localToday(d), '2026-08-05')
+})
+
+// T6 — filterTodos categoryId 维度（RED：todoCore 当前忽略 categoryId，故以下断言应失败）
+test('T6 filterTodos categoryId', () => {
+  const items: (WorkbenchTodo & { categoryId?: string })[] = [
+    mkTodo('a', '标题A', 'medium', false),
+    mkTodo('b', '标题B', 'medium', false),
+    mkTodo('c', '标题C', 'high', false)
+  ]
+  items[0].categoryId = 'work'
+  items[2].categoryId = 'study'
+
+  // 空条件返回全部
+  assert.equal(filterTodos(items).length, 3)
+  // 指定分类精确命中
+  assert.deepEqual(filterTodos(items, { categoryId: 'work' }).map(t => t.id), ['a'])
+  // 'uncategorized' 字面量匹配未分类
+  assert.deepEqual(filterTodos(items, { categoryId: 'uncategorized' }).map(t => t.id), ['b'])
+  // 空串 = 全部不过滤
+  assert.equal(filterTodos(items, { categoryId: '' }).length, 3)
+  // 与既有维度 AND 组合：work + high 无交集
+  assert.deepEqual(filterTodos(items, { categoryId: 'work', priority: 'high' }).map(t => t.id), [])
+})
+
+// T7 — normalizeTodo categoryId 归一化（RED：todoCore 当前未处理 categoryId，故以下断言应失败）
+test('T7 normalizeTodo categoryId', () => {
+  assert.equal(normalizeTodo({ categoryId: 'work' }).categoryId, 'work')
+  assert.equal(normalizeTodo({ categoryId: '  work  ' }).categoryId, 'work')
+  assert.equal(normalizeTodo({ categoryId: '' }).categoryId, undefined)
+  assert.equal(normalizeTodo({ categoryId: '   ' }).categoryId, undefined)
+  assert.equal(normalizeTodo({}).categoryId, undefined)
+})
+
+// T8 — isTodoUncategorized: undefined/''/null → true，其余 false
+test('T8 isTodoUncategorized', () => {
+  assert.equal(isTodoUncategorized({}), true)
+  assert.equal(isTodoUncategorized({ categoryId: '' }), true)
+  assert.equal(isTodoUncategorized({ categoryId: 'work' }), false)
+})
+
+// T9 — moveCustomCategoryInList: 上移/下移一格；不存在或已在边界时原样返回（不改入参）
+test('T9 moveCustomCategoryInList', () => {
+  assert.deepEqual(moveCustomCategoryInList(['work', 'life', 'study'], 'life', 'up'), ['life', 'work', 'study'])
+  assert.deepEqual(moveCustomCategoryInList(['work', 'life', 'study'], 'work', 'up'), ['work', 'life', 'study'])
+  assert.deepEqual(moveCustomCategoryInList(['work', 'life', 'study'], 'study', 'down'), ['work', 'life', 'study'])
+  assert.deepEqual(moveCustomCategoryInList(['work', 'life', 'study'], 'study', 'down'), ['work', 'life', 'study'])
+  assert.deepEqual(moveCustomCategoryInList(['work', 'life', 'study'], 'nope', 'up'), ['work', 'life', 'study'])
+})
+
+// T10 — 内置分类常量与成员判定
+test('T10 builtin helpers', () => {
+  assert.deepEqual(BUILTIN_TODO_CATEGORIES, ['work', 'life', 'study'])
+  assert.equal(isTodoBuiltinCategory('work'), true)
+  assert.equal(isTodoBuiltinCategory('custom-x'), false)
 })
 
 let passed = 0

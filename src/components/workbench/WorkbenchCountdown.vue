@@ -96,11 +96,15 @@ function handleRenameCategory(oldName: string): void {
     if (activeCategoryTab.value === oldName) {
       selectCategoryTab(newName)
     }
+  } else {
+    // 改名失败（重名等）→ 还原草稿为原名称（与便签面板 commitCatName 一致）
+    renameDrafts.value[oldName] = oldName
   }
   catErrorToast(result)
 }
 
 function handleDeleteCategory(category: string): void {
+  if (!confirm(`确定要删除分类「${category}」吗？`)) return
   const result = store.deleteCustomCategory(category)
   if (result.ok) {
     const next = { ...renameDrafts.value }
@@ -110,6 +114,22 @@ function handleDeleteCategory(category: string): void {
     if (activeCategoryTab.value === category) {
       selectCategoryTab('')
     }
+  }
+  catErrorToast(result)
+}
+
+// Esc 还原改名草稿为原名称（未保存的修改直接丢弃）
+function discardRenameDraft(category: string): void {
+  renameDrafts.value[category] = category
+}
+
+// 上移/下移：store 移动自定义分类；边界提示（与便签面板 moveCategory 边界处理一致），not-found 走 catErrorToast
+function handleMoveCategory(category: string, dir: 'up' | 'down'): void {
+  const result = store.moveCustomCategory(category, dir)
+  if (result.ok) return
+  if (result.reason === 'boundary') {
+    toast.warning('已到边界，无法移动')
+    return
   }
   catErrorToast(result)
 }
@@ -332,25 +352,39 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-countdown">
-    <!-- 查询区（位于新增按钮上方） -->
-    <div class="cd-search">
-      <input
-        v-model="searchName"
-        type="text"
-        class="form-input search-name"
-        placeholder="按名称查询…"
-        data-testid="cd-search-name"
-        @keyup.enter="applySearch"
-      />
-      <select v-model="searchRepeat" class="form-input search-select" data-testid="cd-search-repeat">
-        <option value="">全部重复</option>
-        <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-      </select>
-      <button class="search-btn" data-testid="cd-search-btn" @click="applySearch">查询</button>
-      <button class="search-reset-btn" data-testid="cd-search-reset" @click="resetSearch">重置</button>
+    <!-- 查询卡片（第一行：名称/重复；第二行：查询/重置 靠右） -->
+    <div class="cd-search-card">
+      <div class="cd-search-fields">
+        <input
+          v-model="searchName"
+          type="text"
+          class="form-input search-name"
+          placeholder="按名称查询…"
+          data-testid="cd-search-name"
+          @keyup.enter="applySearch"
+        />
+        <select v-model="searchRepeat" class="form-input search-select" data-testid="cd-search-repeat">
+          <option value="">全部重复</option>
+          <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+        </select>
+      </div>
+      <div class="cd-search-actions">
+        <button class="search-btn" data-testid="cd-search-btn" @click="applySearch">查询</button>
+        <button class="search-reset-btn" data-testid="cd-search-reset" @click="resetSearch">重置</button>
+      </div>
     </div>
 
-    <!-- 分类标签页（即时过滤；⚙️ 管理标签页显示与自定义分类） -->
+    <!-- 操作行：新增提醒 + 分类管理 靠左 -->
+    <div class="cd-actionbar">
+      <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
+      <button class="btn-cat-manage" data-testid="cd-cat-manage" title="分类管理" @click="openCatManager">⚙️ 分类管理</button>
+      <span class="toolbar-count" data-testid="cd-toolbar-count">
+        <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
+        <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
+      </span>
+    </div>
+
+    <!-- 分类标签页（即时过滤） -->
     <div class="cd-cat-tabs">
       <button
         class="cd-cat-tab"
@@ -366,16 +400,6 @@ onUnmounted(() => {
         :data-testid="'cd-cat-' + c"
         @click="selectCategoryTab(c)"
       >{{ categoryLabel(c) }}</button>
-      <button class="cd-cat-manage" data-testid="cd-cat-manage" title="分类管理" @click="openCatManager">⚙️ 管理</button>
-    </div>
-
-    <!-- 操作栏：数量 + 新增 -->
-    <div class="cd-headbar">
-      <span class="toolbar-count" data-testid="cd-toolbar-count">
-        <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
-        <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
-      </span>
-      <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
     </div>
 
     <!-- 排序控件 -->
@@ -628,12 +652,17 @@ onUnmounted(() => {
               <input
                 v-model="renameDrafts[c]"
                 class="form-input catmgr-rename-input"
-                :data-testid="'cd-cat-rename-input-' + c"
+                :data-testid="`cd-cat-rename-input-${c}`"
                 placeholder="分类名称"
+                @change="handleRenameCategory(c)"
                 @keyup.enter="handleRenameCategory(c)"
+                @keydown.esc.stop="discardRenameDraft(c)"
               />
-              <button class="catmgr-mini-btn" :data-testid="'cd-cat-rename-' + c" @click="handleRenameCategory(c)">重命名</button>
-              <button class="catmgr-mini-btn danger" :data-testid="'cd-cat-del-' + c" @click="handleDeleteCategory(c)">删除</button>
+              <div class="catmgr-row-actions">
+                <button class="catmgr-mini-btn" :data-testid="`cd-cat-up-${c}`" @click="handleMoveCategory(c, 'up')">↑ 上移</button>
+                <button class="catmgr-mini-btn" :data-testid="`cd-cat-down-${c}`" @click="handleMoveCategory(c, 'down')">↓ 下移</button>
+                <button class="catmgr-mini-btn danger" :data-testid="`cd-cat-del-${c}`" @click="handleDeleteCategory(c)">删除</button>
+              </div>
             </div>
             <div class="catmgr-add-row">
               <input
@@ -665,17 +694,29 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-/* ===== 查询区 ===== */
-.cd-search {
+/* ===== 查询卡片（第一行字段 + 第二行按钮靠右） ===== */
+.cd-search-card {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 12px 14px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.cd-search-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cd-search-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .search-name {
@@ -721,13 +762,16 @@ onUnmounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-/* ===== 操作栏 ===== */
-.cd-headbar {
+/* ===== 操作行（新增提醒 + 分类管理 靠左，数量靠右） ===== */
+.cd-actionbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.cd-actionbar .toolbar-count {
+  margin-left: auto;
 }
 
 .toolbar-count {
@@ -749,6 +793,23 @@ onUnmounted(() => {
 
 .btn-add:hover {
   background-color: var(--accent-hover, var(--color-primary-hover));
+}
+
+.btn-cat-manage {
+  padding: 10px 16px;
+  font-size: 14px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-cat-manage:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 /* ===== 排序栏 ===== */
@@ -1067,24 +1128,6 @@ onUnmounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-.cd-cat-manage {
-  margin-left: auto;
-  padding: 5px 12px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: none;
-  border: 1px dashed var(--border-color, var(--color-border));
-  color: var(--text-muted, var(--color-text-muted));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.cd-cat-manage:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
 /* ===== 分类管理弹框 ===== */
 .catmgr-dialog {
   max-width: 440px;
@@ -1143,6 +1186,18 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+}
+
+.catmgr-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .catmgr-rename-input {
@@ -1178,6 +1233,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
 }
 
 .catmgr-add-input {
@@ -1665,7 +1723,7 @@ onUnmounted(() => {
 }
 
 :root.dark .cd-cat-tab,
-:root.dark .cd-cat-manage,
+:root.dark .btn-cat-manage,
 :root.dark .catmgr-tab-row,
 :root.dark .catmgr-mini-btn {
   background-color: var(--bg-card, #1f2937);

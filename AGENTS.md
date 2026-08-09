@@ -52,7 +52,7 @@ easy-web-tab/
 | Toast notifications | `src/composables/useToast.ts` | Singleton (module-level shallowRef, not Pinia) |
 | Password management | `src/stores/passwords.ts` | crypto-js AES-CBC encrypted, `useCrypto.ts` for crypto |
 | Countdown management | `src/stores/countdowns.ts` + `src/components/CountdownManager.vue` | 6 repeat rules (once/daily/weekly/monthly/yearly/interval), 6 categories (work/life/study/exercise/diet/sleep) + 自定义分类注册表, 5 sort modes |
-| Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml` |
+| Countdown repeat/category math | `src/composables/countdownCore.ts` | `parseRepeat`/`normalizeCountdown`/`calcNextOccurrence`/`getReminderDue`/`repeatLabel`/`categoryLabel`/`serializeRepeatYaml`/`moveCustomCategoryInList` |
 | Reminder engine | `src/composables/useCountdownReminder.ts` | Minute-level tick + daily 9am 3-day summary, singleton popup |
 | 健康数据（运动/饮食/睡眠/体重） | `src/stores/workbenchHealth.ts` + `src/components/workbench/WorkbenchHealth.vue` | 目标计划+按天记录混合模型；IndexedDB store 'health'；tabs 容器 WorkbenchHealth.vue 内嵌面板 WorkbenchExercise/Diet/Sleep/Weight.vue（受控组件 activeTab + change emit）；运动/饮食/睡眠面板顶部挂只读「定时提醒」区块 WorkbenchHealthReminders.vue（按倒计时 category 1:1 映射，纯展示） |
 | 健康纯逻辑（BMI/达标率/睡眠时长/折线图坐标） | `src/composables/healthCore.ts` | `calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`(国标 WS/T 428-2013)/`weightTarget`/`dietCalories`/`sleepDurationHours`/`weightChartScale`/`normalizeHealthData` |
@@ -75,14 +75,14 @@ easy-web-tab/
 | `useSearchEnginesStore` | store | `src/stores/searchEngines.ts` | 3 built-in + custom engines |
 | `usePasswordsStore` | store | `src/stores/passwords.ts` | Encrypted password vault |
 | `useIconsStore` | store | `src/stores/icons.ts` | Custom icon uploads |
-| `useCountdownsStore` | store | `src/stores/countdowns.ts` | Countdown CRUD + sort preference (rule-based repeat, IndexedDB) |
+| `useCountdownsStore` | store | `src/stores/countdowns.ts` | Countdown CRUD + custom-category registry (add/rename/delete/move) + sort preference (rule-based repeat, IndexedDB) |
 | `useWorkbenchTodosStore` | store | `src/stores/workbenchTodos.ts` | Workbench todo CRUD + filter/search/sort (IndexedDB) |
 | `useWorkbenchNotesStore` | store | `src/stores/workbenchNotes.ts` | 便签 CRUD + 置顶 + 分类 CRUD（addCategory/updateCategory/moveCategory/deleteCategory，名称唯一、删除后该分类便签归未分类）+ 时光轴条目 CRUD（addTimelineEntry/updateTimelineEntry/deleteTimelineEntry）；IndexedDB store 'notes' 存 `{categories, notes}`（NoteData） |
 | `useWorkbenchHealthStore` | store | `src/stores/workbenchHealth.ts` | 健康数据（height/plans/records 四模块 CRUD，IndexedDB store 'health'） |
 | `useWorkbenchLedgerStore` | store | `src/stores/workbenchLedger.ts` | 记账（categories/entries CRUD + 分组管理，内置 8 组不可删，IndexedDB store 'ledger'）；金额可见性 `showAmount`+`toggleAmountVisibility()`（纯内存，不持久化） |
 | `useToast` | composable | `src/composables/useToast.ts` | Singleton toast state |
 | `getIconUrl` / `getFaviconImgSrc` | functions | `src/composables/useIconCache.ts` | Icon resolution chain |
-| `calcRemaining` / `sortCountdowns` | functions | `src/composables/countdownCore.ts` | Pure countdown math + sorting |
+| `calcRemaining` / `sortCountdowns` / `moveCustomCategoryInList` | functions | `src/composables/countdownCore.ts` | Pure countdown math + sorting |
 | `parseRepeat` / `getReminderDue` / `serializeRepeatYaml` | functions | `src/composables/countdownCore.ts` | Repeat rule engine (parse/normalize, due detection, YAML serialization) |
 | `calcExerciseAttainment` / `calcDailyAttainment` / `calcBmi` / `classifyBmi` / `weightChartScale` | functions | `src/composables/healthCore.ts` | 健康纯逻辑：达标率/BMI 国标四档/减肥建议/折线图坐标（组件禁止重算） |
 | `calcMonthlyStats` / `monthKeyOf` / `formatYuan` | functions | `src/composables/ledgerCore.ts` | 记账纯逻辑：月统计（income/expense/balance/ratio/byCategory）/月份键/金额格式化；金额掩码由 `maskOrReveal`/`MASKED_TEXT` 统一提供 |
@@ -141,7 +141,7 @@ npm install          # Install deps (first time only)
 npm run dev          # Dev server: http://localhost:16718
 npm run build        # generate-preset-icons → vue-tsc -b → vite build (3 sequential steps)
 npm run preview      # Preview production build
-npm run test:countdown  # Pure-function tests for countdownCore.ts (15 assertions, node --experimental-strip-types)
+npm run test:countdown  # Pure-function tests for countdownCore.ts (16 assertions, node --experimental-strip-types)
 npm run test:todo       # Pure-function tests for todoCore.ts (node --experimental-strip-types)
 npm run test:health     # Pure-function tests for healthCore.ts (BMI/达标率/睡眠/折线图, node --experimental-strip-types)
 npm run test:ledger     # Pure-function tests for ledgerCore.ts (月统计/占比/自动复制, node --experimental-strip-types)

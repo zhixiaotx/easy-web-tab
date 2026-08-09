@@ -13,12 +13,10 @@ import SettingsButton from '../components/SettingsButton.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
-import CountdownManager from '@/components/CountdownManager.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
-import { useCountdownsStore } from '@/stores/countdowns'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useToast } from '../composables/useToast'
 import { useHelpModal } from '../composables/useHelpModal'
@@ -26,14 +24,12 @@ import { useHelpModal } from '../composables/useHelpModal'
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
-const countdownsStore = useCountdownsStore()
 const toast = useToast()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
-const showCountdownManager = ref(false)
 const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
 
@@ -71,7 +67,6 @@ const handleDragEnd = () => {
 
 onMounted(async () => {
   store.loadSites()
-  await countdownsStore.loadCountdowns()
 })
 
 // 同步 URL query 参数与弹框状态（Ctrl+N / 直接访问 URL 均可打开弹框）
@@ -102,11 +97,6 @@ watchEffect(() => {
     showEngineManager.value = true
     showModal.value = false
     closeHelp()
-  } else if (modal === 'countdown') {
-    showCountdownManager.value = true
-    showModal.value = false
-    showEngineManager.value = false
-    closeHelp()
   } else if (modal === 'help') {
     openHelp()
     showModal.value = false
@@ -115,7 +105,6 @@ watchEffect(() => {
     // 无 modal query → 关闭所有弹框（URL 清除时）
     showModal.value = false
     showEngineManager.value = false
-    showCountdownManager.value = false
     closeHelp()
     editingSite.value = null
   }
@@ -127,7 +116,6 @@ const filteredSites = computed(() => store.paginatedSites)
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
-  showCountdownManager.value = false
   showSettingsDialog.value = false
   closeHelp()
   editingSite.value = null
@@ -337,11 +325,6 @@ const handlePageChange = () => {
 
     <SearchEngineManager 
       v-if="showEngineManager" 
-      @close="closeAllModals"
-    />
-
-    <CountdownManager
-      v-if="showCountdownManager"
       @close="closeAllModals"
     />
 

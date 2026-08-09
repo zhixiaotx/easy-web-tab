@@ -3,9 +3,8 @@ import { computed, ref, toRaw } from 'vue'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
 import {
   normalizeTodo,
-  BUILTIN_TODO_CATEGORIES,
-  isTodoBuiltinCategory,
-  moveCustomCategoryInList
+  moveCustomCategoryInList,
+  migrateLegacyBuiltinCategories
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
 
@@ -16,9 +15,10 @@ const PRIORITY_ORDER: Record<TodoPriority, number> = { high: 0, medium: 1, low: 
 // customCategories = 用户自定义分类名数组；tabCategories = 标签页可见分类（默认全部内置）
 const TODO_CATEGORIES_KEY = 'user-todo-categories'
 const TODO_TAB_CATEGORIES_KEY = 'user-todo-tab-categories'
+const TODO_BUILTIN_MIGRATED_KEY = 'user-todo-categories-migrated'
 
-/** 分类操作错误语义：empty 空名 / builtin 内置禁删 / duplicate 重名 / not-found 不存在 / in-use 被引用 / boundary 已在边界。 */
-export type TodoCategoryError = 'empty' | 'builtin' | 'duplicate' | 'not-found' | 'in-use' | 'boundary'
+/** 分类操作错误语义：empty 空名 / duplicate 重名 / not-found 不存在 / in-use 被引用 / boundary 已在边界。 */
+export type TodoCategoryError = 'empty' | 'duplicate' | 'not-found' | 'in-use' | 'boundary'
 /** 分类 CRUD 统一返回结构（ok:true 无 reason；ok:false 时 reason 语义精确）。 */
 export type TodoCategoryOp = { ok: boolean; reason?: TodoCategoryError }
 
@@ -40,14 +40,14 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   const customCategories = ref<string[]>([])
   const tabCategories = ref<string[]>([])
 
-  // 内置 3 类 + 自定义分类（表单下拉全量来源）
-  const allCategories = computed<string[]>(() => [...BUILTIN_TODO_CATEGORIES, ...customCategories.value])
+  // 自定义分类（表单下拉全量来源；无内置分类，全部自定义）
+  const allCategories = computed<string[]>(() => [...customCategories.value])
 
   function loadCategoryPreferences(): void {
     customCategories.value = readStringArray(TODO_CATEGORIES_KEY)
     const saved = readStringArray(TODO_TAB_CATEGORIES_KEY)
-    // 首次无记录 → 默认全部内置分类可见；有记录则原样恢复
-    tabCategories.value = saved.length > 0 ? saved : [...BUILTIN_TODO_CATEGORIES]
+    // 无默认定义：仅恢复用户勾选记录；首次无记录 → 空（筛选标签页不显示任何分类）
+    tabCategories.value = saved
   }
 
   function persistCategoryPreferences(): void {
@@ -91,7 +91,6 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
   }
 
   function deleteCategory(name: string): TodoCategoryOp {
-    if (isTodoBuiltinCategory(name)) return { ok: false, reason: 'builtin' }
     if (!customCategories.value.includes(name)) return { ok: false, reason: 'not-found' }
     // 被任一 todo（全量，非筛选视图）引用禁删（同倒计时/记账策略）
     if (todos.value.some(t => t.categoryId === name)) return { ok: false, reason: 'in-use' }
@@ -130,8 +129,16 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
 
   async function loadTodos(): Promise<void> {
     try {
-      // 存量数据（无 color 等字段）经 normalizeTodo 幂等归一
-      todos.value = ((await idbGet<WorkbenchTodo[]>('todos')) ?? []).map(normalizeTodo)
+      // 加载数据（含 color 字段），经 normalizeTodo 幂等归一
+      const loaded = ((await idbGet<WorkbenchTodo[]>('todos')) ?? []).map(normalizeTodo)
+      // 存量迁移（一次性）：旧版内置分类 work/life/study → undefined（未分类），marker 门控，幂等
+      if (localStorage.getItem(TODO_BUILTIN_MIGRATED_KEY) === null) {
+        todos.value = migrateLegacyBuiltinCategories(loaded)
+        localStorage.setItem(TODO_BUILTIN_MIGRATED_KEY, '1')
+        await saveTodos()
+      } else {
+        todos.value = loaded
+      }
     } catch (e) {
       console.error('[Todos] load failed', e)
       todos.value = []

@@ -9,10 +9,14 @@ import {
   normalizeNoteData,
   normalizeNotes,
   noteCountText,
+  partitionNotesByType,
   sortNotes,
   sortTimelineEntries,
   tabCategoriesOf
 } from '../src/composables/noteCore.ts'
+// 命名空间导入：partitionNotesByType 尚不存在（TDD RED），经命名空间在调用点解析，
+// 使导入本身不抛链接期错误、mini-runner 能继续执行 T1-T24；生产代码补齐后自然通过。
+import * as noteCore from '../src/composables/noteCore.ts'
 import type { NoteCategory, NoteData, TimelineEntry, WorkbenchNote } from '../src/types'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -358,6 +362,64 @@ test('T24 tabCategoriesOf after normalizeNoteData roundtrip', () => {
     notes: []
   })
   a.deepEqual(tabCategoriesOf(data.categories).map(c => c.id), ['b', 'c'])
+})
+
+// T25 — filterNotes type='all'：两种类型都通过（缺失 type 视为 normal），不修改入参
+test('T25 filterNotes type all passes both types', () => {
+  const notes = [
+    mkNote({ id: 'a', type: 'normal' }),
+    mkNote({ id: 'b', type: 'timeline', entries: [] }),
+    mkNote({ id: 'c' }), // type 缺失 → normal
+    mkNote({ id: 'd', type: 'normal' })
+  ]
+  const result = filterNotes(notes, { type: 'all' })
+  a.equal(result.length, 4)
+  a.deepEqual(result.map(n => n.id), ['a', 'b', 'c', 'd'])
+  a.deepEqual(notes.map(n => n.id), ['a', 'b', 'c', 'd']) // 入参未被修改
+})
+
+// T26 — filterNotes {type:'all', categoryId, keyword} 组合仍生效：keyword trim + uncategorized 字面量保留
+test('T26 filterNotes all combined with category + keyword', () => {
+  const notes = [
+    mkNote({ id: 'm1', type: 'normal', categoryId: 'work', content: 'x' }),
+    mkNote({ id: 'm2', type: 'timeline', categoryId: 'work', content: 'y', entries: [] }),
+    mkNote({ id: 'm3', categoryId: 'life', content: 'x' }), // type 缺失 → normal
+    mkNote({ id: 'm4' }) // 未分类
+  ]
+  // 组合：type all + category work + keyword（带空白需 trim）
+  a.deepEqual(filterNotes(notes, { type: 'all', categoryId: 'work', keyword: ' x ' }).map(n => n.id), ['m1'])
+  // type all + uncategorized 字面量
+  a.deepEqual(filterNotes(notes, { type: 'all', categoryId: 'uncategorized' }).map(n => n.id), ['m4'])
+})
+
+// T27 — hasActiveNoteFilter Option B：all 视为非激活，除非 category/keyword 激活；timeline 始终激活（回归守护）
+test('T27 hasActiveNoteFilter with all type', () => {
+  a.equal(hasActiveNoteFilter('all', undefined, ''), false)
+  a.equal(hasActiveNoteFilter('all', undefined, '   '), false) // 纯空白不算
+  a.equal(hasActiveNoteFilter('all', 'work', ''), true) // 已选分类
+  a.equal(hasActiveNoteFilter('all', undefined, ' 字 '), true) // 关键词（trim 后非空）
+  a.equal(hasActiveNoteFilter('all', 'work', 'x'), true) // 组合
+  a.equal(hasActiveNoteFilter('timeline', undefined, ''), true) // 非 all/normal → 激活
+})
+
+// T28 — partitionNotesByType：按 type 拆分（缺失 type → normal），空输入双空，不改入参，返回新数组
+test('T28 partitionNotesByType splits + no mutation', () => {
+  const notes = [
+    mkNote({ id: 'n1', type: 'normal' }),
+    mkNote({ id: 'n2', type: 'timeline', entries: [] }),
+    mkNote({ id: 'n3' }) // type 缺失 → normal
+  ]
+  const before = JSON.parse(JSON.stringify(notes))
+  const { normal, timeline } = noteCore.partitionNotesByType(notes)
+  a.deepEqual(normal.map(n => n.id), ['n1', 'n3'])
+  a.deepEqual(timeline.map(n => n.id), ['n2'])
+  a.deepEqual(notes, before) // 入参未被修改（deepEqual 前后）
+  a.notEqual(normal, notes) // 返回数组是全新引用
+  a.notEqual(timeline, notes)
+  // 空数组 → 两侧均为 []
+  const empty = partitionNotesByType([])
+  a.deepEqual(empty.normal, [])
+  a.deepEqual(empty.timeline, [])
 })
 
 let passed = 0

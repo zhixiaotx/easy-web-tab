@@ -58,7 +58,7 @@ easy-web-tab/
 | 健康纯逻辑（BMI/达标率/睡眠时长/折线图坐标） | `src/composables/healthCore.ts` | `calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`(国标 WS/T 428-2013)/`weightTarget`/`dietCalories`/`sleepDurationHours`/`weightChartScale`/`normalizeHealthData` |
 | 记账数据 | `src/stores/workbenchLedger.ts` + `src/components/workbench/WorkbenchLedger.vue` | 六指标统计（收入/支出/结余/存款/笔数/支出比）+ 行式记录列表可折叠 + 分组管理（内置 8 组不可删）；IndexedDB store 'ledger' |
 | 记账纯逻辑（月统计/分类占比/存款累计/自动复制） | `src/composables/ledgerCore.ts` | `calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`normalizeLedgerData`/`findCategory`/`maskOrReveal`（金额掩码） |
-| 便签数据（分类+时光轴） | `src/stores/workbenchNotes.ts` + `src/components/workbench/WorkbenchNotes.vue` | 便签分类 CRUD（`addCategory`/`updateCategory`/`moveCategory`/`deleteCategory`，名称唯一、删除后该分类便签归未分类）+ 时光轴条目 CRUD（`addTimelineEntry`/`updateTimelineEntry`/`deleteTimelineEntry`）；排序/筛选/归一化一律走 `noteCore` 纯函数；IndexedDB store 'notes' 存 `{categories, notes}`（NoteData） |
+| 便签数据（分类+时光轴） | `src/stores/workbenchNotes.ts` + `src/components/workbench/WorkbenchNotes.vue` | 便签分类 CRUD（`addCategory`/`updateCategory`/`moveCategory`/`deleteCategory`，名称唯一、删除后该分类便签归未分类）+ 时光轴条目 CRUD（`addTimelineEntry`/`updateTimelineEntry`/`deleteTimelineEntry`）；排序/筛选/归一化一律走 `noteCore` 纯函数（类型筛选默认全部类型 'all'，普通/时光轴精确匹配，拆分走 `noteCore.partitionNotesByType`）；IndexedDB store 'notes' 存 `{categories, notes}`（NoteData） |
 | Custom icons | `src/stores/icons.ts` | User-uploaded icon storage |
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
@@ -88,7 +88,7 @@ easy-web-tab/
 | `calcMonthlyStats` / `monthKeyOf` / `formatYuan` | functions | `src/composables/ledgerCore.ts` | 记账纯逻辑：月统计（income/expense/balance/ratio/byCategory）/月份键/金额格式化；金额掩码由 `maskOrReveal`/`MASKED_TEXT` 统一提供 |
 | `calcDepositTotal` | function | `src/composables/ledgerCore.ts` | 存款统计：累计结余（≤upToMonthKey，未知分类计支出） |
 | `prevMonthKeyOf` / `planAutoCopy` / `AUTO_COPY_CATEGORY_IDS` | functions | `src/composables/ledgerCore.ts` | 每月自动复制计划：目标月缺 salary/mortgage 且上月有记录 → 生成草稿（金额取上月该分类最新一条）；幂等，不跨月回溯 |
-| `filterNotes` / `sortNotes` / `sortTimelineEntries` | functions | `src/composables/noteCore.ts` | 便签纯逻辑：筛选（type/categoryId/keyword，categoryId='uncategorized' 字面量匹配未分类）/排序（置顶优先 → updatedAt 降序）/时光轴条目排序（datetime 升序 → createdAt 升序）+ `normalizeNoteData`（数组旧格式兼容）+ `findNoteCategory`/`isUncategorized` |
+| `filterNotes` / `partitionNotesByType` / `sortNotes` / `sortTimelineEntries` | functions | `src/composables/noteCore.ts` | 便签纯逻辑：筛选（type/categoryId/keyword，type='all' 全部类型不过滤、categoryId='uncategorized' 字面量匹配未分类）/拆分（`partitionNotesByType` 过滤后便签 → {normal,timeline}）/排序（置顶优先 → updatedAt 降序）/时光轴条目排序（datetime 升序 → createdAt 升序）+ `normalizeNoteData`（数组旧格式兼容）+ `findNoteCategory`/`isUncategorized` |
 | `useCountdownReminder` | composable | `src/composables/useCountdownReminder.ts` | Singleton reminder popup engine (60s tick + 9am summary) |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
 | `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v2, 6 stores: todos/notes/countdowns/passwords/health/ledger; backup 导出 version 3, v1/v2 兼容导入) |
@@ -110,7 +110,7 @@ easy-web-tab/
 - **健康/记账数据规范**: 健康=「目标计划(HealthPlan)+按天记录(HealthRecord 四模块)」混合模型，达标率/时长/BMI 一律走 `healthCore` 纯函数（组件禁止重算）；记账=内置 8 分组（工资=收入 + 房贷/车贷/早餐/午餐/晚餐/通勤/日常=支出，不可删改）+ 自定义分组（唯一名、被记录引用禁删），月统计/存款累计/自动复制计划一律走 `ledgerCore` 纯函数
 - **记账自动复制规范**: `loadLedger()` 成功后调 `applyMonthlyAutoCopy()` 补当前月 — 目标月缺 `salary`/`mortgage` 且上月有该类记录 → 生成草稿（date=`当月-01`，金额取上月该类最新一条），幂等（已存在/上月无记录均跳过），不跨月回溯；生成的条目 id 前缀 `ld_`
 - **记账敏感金额掩码规范**: 金额展示（收入/支出/结余/存款/支出比/分类占比金额+百分比/单条记录金额）默认隐藏显示 `****`，经 `ledgerCore` 的 `maskOrReveal`/`MASKED_TEXT` 统一掩码（组件禁止自造掩码串）；`showAmount`+`toggleAmountVisibility()` 为纯内存开关（刷新即重置，不写 IDB/localStorage）；空月 `—` 不掩码、消费笔数/共 N 条不掩码、`0.00` 存款照掩（真实值）；编辑弹框金额回填保持明文（用户主动编辑）；工作台 JSON 导出 `idbExportAll` 保持明文（与密码导出一致）
-- **便签数据规范**: 便签=「分类(NoteCategory)+便签(WorkbenchNote)」混合模型，IDB store 'notes' 存 `{categories, notes}`（NoteData）；便签带 `categoryId`（undefined/null/空串 = 未分类）+ `entries`（时光轴条目，仅 type='timeline' 保留，normal 类型归一化时强制剔除）；时光轴条目排序走 `sortTimelineEntries`（datetime 升序 → createdAt 升序，noteCore 纯函数，组件禁止内联排序公式）；类型切换（normal ↔ timeline）保留 content+entries 数据不删除
+- **便签数据规范**: 便签=「分类(NoteCategory)+便签(WorkbenchNote)」混合模型，IDB store 'notes' 存 `{categories, notes}`（NoteData）；便签带 `categoryId`（undefined/null/空串 = 未分类）+ `entries`（时光轴条目，仅 type='timeline' 保留，normal 类型归一化时强制剔除）；时光轴条目排序走 `sortTimelineEntries`（datetime 升序 → createdAt 升序，noteCore 纯函数，组件禁止内联排序公式）；类型筛选默认 'all'（全部类型，不过滤），普通/时光轴精确匹配，'all' 视图经 `partitionNotesByType` 拆分为双段（普通+时光轴）渲染；类型切换（normal ↔ timeline）保留 content+entries 数据不删除
 
 ## ANTI-PATTERNS (THIS PROJECT)
 

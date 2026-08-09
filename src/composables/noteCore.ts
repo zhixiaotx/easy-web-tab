@@ -2,7 +2,7 @@
 // 纯函数硬约束：禁止 import vue/pinia（node --experimental-strip-types 测试运行器无法执行）；
 // 运行时依赖仅 NOTE_COLORS 常量（与 ledgerCore 引 DEFAULT_LEDGER_CATEGORIES 同模式），其余类型全部 type-only。
 import { NOTE_COLORS } from '../types/index.ts'
-import type { NoteCategory, NoteColor, NoteData, NoteType, TimelineEntry, WorkbenchNote } from '../types/index.ts'
+import type { NoteCategory, NoteColor, NoteData, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '../types/index.ts'
 
 /** 空便签数据：无分类 + 无便签（返回全新结构，不共享任何引用）。 */
 export function emptyNoteData(): NoteData {
@@ -112,21 +112,21 @@ export function sortTimelineEntries(entries: TimelineEntry[]): TimelineEntry[] {
 
 /** 便签筛选条件：type/categoryId/keyword 均为可选；categoryId 为 'uncategorized' 字面量时匹配未分类。 */
 export interface NoteFilter {
-  type?: NoteType
+  type?: NoteTypeFilter
   categoryId?: string
   keyword?: string
 }
 
 /**
  * 便签筛选（返回新数组，不 mutate 入参）：
- * - type：undefined=不过滤；注意未归一化的便签 type 缺失视为 'normal'
+ * - type：undefined 与 'all'=全部类型不过滤；注意未归一化的便签 type 缺失视为 'normal'
  * - categoryId：undefined=全部；具体分类 id → 精确匹配；'uncategorized' 字面量 → 匹配 categoryId 为 undefined/null/空串 的未分类便签
  * - keyword：title+content 大小写不敏感 includes；空/纯空白 → 不过滤
  */
 export function filterNotes(notes: WorkbenchNote[], filter: NoteFilter = {}): WorkbenchNote[] {
   const kw = (filter.keyword ?? '').trim().toLowerCase()
   return notes.filter(n => {
-    if (filter.type !== undefined && (n.type ?? 'normal') !== filter.type) return false
+    if (filter.type !== undefined && filter.type !== 'all' && (n.type ?? 'normal') !== filter.type) return false
     if (filter.categoryId !== undefined) {
       if (filter.categoryId === 'uncategorized') {
         if (!isUncategorized(n)) return false
@@ -142,9 +142,22 @@ export function filterNotes(notes: WorkbenchNote[], filter: NoteFilter = {}): Wo
   })
 }
 
-/** 是否有生效筛选条件：type 非 'normal' / categoryId 已定义 / keyword trim 后非空。 */
-export function hasActiveNoteFilter(type: NoteType, categoryId: string | undefined, keyword: string): boolean {
-  return type !== 'normal' || categoryId !== undefined || keyword.trim() !== ''
+/**
+ * 按类型拆分便签数组（过滤后渲染用）：type 缺失视为 normal。返回新对象 {normal, timeline}，不 mutate 入参。
+ */
+export function partitionNotesByType(notes: WorkbenchNote[]): { normal: WorkbenchNote[]; timeline: WorkbenchNote[] } {
+  const normal: WorkbenchNote[] = []
+  const timeline: WorkbenchNote[] = []
+  for (const n of notes) {
+    if ((n.type ?? 'normal') === 'timeline') timeline.push(n)
+    else normal.push(n)
+  }
+  return { normal, timeline }
+}
+
+/** 是否有生效筛选条件：默认 'all' 与显式 'normal' 均不视为类型激活（仅 'timeline' 视为类型激活）；categoryId 已定义 / keyword trim 后非空同样激活。 */
+export function hasActiveNoteFilter(type: NoteTypeFilter, categoryId: string | undefined, keyword: string): boolean {
+  return (type !== 'all' && type !== 'normal') || categoryId !== undefined || keyword.trim() !== ''
 }
 
 /** 工具栏计数文案：active 时「筛选出 X / Y 个」，否则「共 Y 个便签」。 */

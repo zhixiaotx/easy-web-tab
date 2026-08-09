@@ -135,6 +135,9 @@ export type NoteColor = (typeof NOTE_COLORS)[number]
 // 便签类型：normal=普通便签，timeline=时光轴便签
 export type NoteType = 'normal' | 'timeline'
 
+// 便签类型筛选：'all' = 全部类型（不过滤），普通/时光轴 = 精确匹配
+export type NoteTypeFilter = NoteType | 'all'
+
 // 便签分类（工作台便签专属，独立于网址 Category）
 export interface NoteCategory {
   id: string

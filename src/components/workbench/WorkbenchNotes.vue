@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
+import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
-import type { NoteCategory, NoteColor, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
+import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 
 const store = useWorkbenchNotesStore()
 const toast = useToast()
@@ -13,11 +13,11 @@ const toast = useToast()
 // 草稿值（绑定搜索表单控件）：
 //   searchDraft 关键词；typeDraft 类型（普通/时光轴）；categoryDraft 分类（''=全部；'uncategorized'=未分类；分类 id）
 const searchDraft = ref('')
-const typeDraft = ref<NoteType>('normal')
+const typeDraft = ref<NoteTypeFilter>('all')
 const categoryDraft = ref('')
 
 // 应用值（filteredNotes/emptyText 消费；undefined=全部，'uncategorized' 字面量=未分类，分类 id=精确匹配）
-const activeType = ref<NoteType>('normal')
+const activeType = ref<NoteTypeFilter>('all')
 const searchKeyword = ref('')
 const activeCategoryId = ref<string | undefined>(undefined)
 
@@ -37,7 +37,7 @@ function selectCategoryTab(id: string | undefined): void {
 // 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
 function resetFilters(): void {
   searchDraft.value = ''
-  typeDraft.value = 'normal'
+  typeDraft.value = 'all'
   categoryDraft.value = ''
   applyFilters()
 }
@@ -58,6 +58,11 @@ const filteredNotes = computed<WorkbenchNote[]>(() =>
     keyword: searchKeyword.value
   })
 )
+
+// 'all' 视图双段渲染：filterNotes 结果按类型拆分为普通/时光轴两段（noteCore 纯函数，组件禁止重算）
+const filteredPartition = computed(() => partitionNotesByType(filteredNotes.value))
+const filteredNormal = computed(() => filteredPartition.value.normal)
+const filteredTimeline = computed(() => filteredPartition.value.timeline)
 
 // 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
 const hasActiveFilter = computed(() =>
@@ -186,7 +191,7 @@ function sortedEntriesOf(note: WorkbenchNote): TimelineEntry[] {
 watch(
   () => filteredNotes.value,
   () => {
-    if (activeType.value !== 'timeline') return
+    if (activeType.value === 'normal') return
     const now = localNowString()
     for (const note of filteredNotes.value) {
       if (entryDraftDatetime.value[note.id] === undefined) entryDraftDatetime.value[note.id] = now
@@ -368,6 +373,7 @@ onUnmounted(() => {
             class="form-input nt-field-select"
             data-testid="nt-type-select"
           >
+            <option value="all">全部类型</option>
             <option value="normal">普通便签</option>
             <option value="timeline">时光轴便签</option>
           </select>
@@ -412,15 +418,11 @@ onUnmounted(() => {
       >{{ cat.name }}</button>
     </div>
 
-    <!-- 时光轴（类型下拉=时光轴）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
-    <template v-if="activeType === 'timeline'">
-      <div v-if="filteredNotes.length === 0" class="empty-state" data-testid="note-timeline-empty">
-        {{ emptyText }}
-      </div>
-
-      <div v-else class="notes-grid timeline-grid">
+    <!-- 时光轴（类型下拉=时光轴/'all' 双段渲染之一）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
+    <template v-if="activeType !== 'normal'">
+      <div v-if="filteredTimeline.length > 0" class="notes-grid timeline-grid">
         <div
-          v-for="note in filteredNotes"
+          v-for="note in filteredTimeline"
           :key="note.id"
           class="note-card timeline-card"
           :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
@@ -549,17 +551,17 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+
+      <div v-else-if="activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
+        {{ emptyText }}
+      </div>
     </template>
 
     <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
-    <template v-else>
-      <div v-if="filteredNotes.length === 0" class="empty-state" data-testid="note-empty">
-        {{ emptyText }}
-      </div>
-
-      <div v-else class="notes-grid">
+    <template v-if="activeType !== 'timeline'">
+      <div v-if="filteredNormal.length > 0" class="notes-grid">
         <div
-          v-for="note in filteredNotes"
+          v-for="note in filteredNormal"
           :key="note.id"
           class="note-card"
           :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
@@ -593,6 +595,10 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div v-else-if="activeType === 'normal' || filteredTimeline.length === 0" class="empty-state" data-testid="note-empty">
+        {{ emptyText }}
       </div>
     </template>
 

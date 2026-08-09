@@ -23,7 +23,7 @@ composables/
 ├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v2, 6 stores (todos/notes/countdowns/passwords/health/ledger); idbGet/idbPut/idbClear/idbExportAll/idbImportAll (备份 version 3，v1/v2 兼容导入)
 ├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData
 ├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/自动复制计划(salary/mortgage)/金额格式化/敏感金额掩码 + normalizeLedgerData
-├── noteCore.ts             # 便签纯逻辑引擎: normalizeNoteData(数组旧格式兼容)/sortNotes(置顶→updatedAt 降序)/filterNotes(type/categoryId/keyword)/sortTimelineEntries(datetime 升序→createdAt 升序)/findNoteCategory/tabCategoriesOf(showInTabs 过滤)/isUncategorized
+├── noteCore.ts             # 便签纯逻辑引擎: normalizeNoteData(数组旧格式兼容)/sortNotes(置顶→updatedAt 降序)/filterNotes(type/categoryId/keyword，type='all' 不过滤)/partitionNotesByType({normal,timeline} 拆分)/sortTimelineEntries(datetime 升序→createdAt 升序)/findNoteCategory/tabCategoriesOf(showInTabs 过滤)/isUncategorized
 ├── todoCore.ts             # 待办纯逻辑引擎: normalizeTodo/TODO_PRIORITIES/filterTodos/localToday/dueInfo
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
@@ -47,7 +47,7 @@ composables/
 | IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords stores + workbench todos/notes/health/ledger; `idbImportAll` validates backup version (导出 version 3；仅接受 v1/v2/v3，v1 补 health/ledger 空数据，notes 数组旧格式 → `{categories:[], notes:[...]}` 归一化包装) |
 | 健康纯逻辑 | `healthCore.ts` | `emptyHealthData`/`normalizeHealthData`/`calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`/`weightTarget`/`dietCalories`/`sleepDurationHours`(跨天 +24h、相等=24h)/`weightChartScale`/`weekKeyOf` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`maskOrReveal` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
-| 便签纯逻辑 | `noteCore.ts` | `emptyNoteData`/`normalizeNoteData`(数组旧格式兼容，分类 showInTabs 仅布尔透传)/`normalizeNote`/`normalizeNotes`/`sortNotes`(置顶→updatedAt 降序)/`sortTimelineEntries`(datetime 升序→createdAt 升序)/`filterNotes`(type/categoryId/keyword，categoryId='uncategorized' 匹配未分类)/`findNoteCategory`/`tabCategoriesOf`(showInTabs!==false 过滤，返回新数组)/`isUncategorized` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| 便签纯逻辑 | `noteCore.ts` | `emptyNoteData`/`normalizeNoteData`(数组旧格式兼容，分类 showInTabs 仅布尔透传)/`normalizeNote`/`normalizeNotes`/`sortNotes`(置顶→updatedAt 降序)/`sortTimelineEntries`(datetime 升序→createdAt 升序)/`filterNotes`(type/categoryId/keyword，NoteFilter.type 接受 'all'=全部类型不过滤、categoryId='uncategorized' 匹配未分类)/`partitionNotesByType`(拆分过滤后便签为 {normal,timeline})/`findNoteCategory`/`tabCategoriesOf`(showInTabs!==false 过滤，返回新数组)/`isUncategorized` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 
 ## CONVENTIONS
 

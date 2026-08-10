@@ -56,15 +56,9 @@ function navigateTo(section: string, tab?: string) {
   }
 }
 
-const MENU_ITEMS = [
-  { key: 'home', label: '主页', icon: '🏠' },
-  { key: 'todos', label: '工作待办', icon: '☑️' },
-  { key: 'notes', label: '个人便签', icon: '📝' },
-  { key: 'countdowns', label: '定时提醒', icon: '⏳' },
-  { key: 'passwords', label: '密码管理', icon: '🔑' },
-  { key: 'health', label: '健康管理', icon: '💪' },
-  { key: 'ledger', label: '记账', icon: '💰' }
-] as const
+// 菜单渲染项：顺序/名称/图标一律来自设置 store（workbenchMenuItems 由 core 解析，home 恒居首）
+// 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
+const menuItems = computed(() => settingsStore.workbenchMenuItems)
 
 // 实时时钟（每秒更新）
 const now = ref(new Date())
@@ -223,14 +217,16 @@ async function handleImportFile(event: Event) {
     <div class="wb-body">
       <nav class="wb-menu">
         <button
-          v-for="item in MENU_ITEMS"
+          v-for="item in menuItems"
           :key="item.key"
           class="wb-menu-item"
           :class="{ active: activeSection === item.key }"
+          :title="item.label"
+          :data-testid="`wb-menu-${item.key}`"
           @click="navigateTo(item.key)"
         >
           <span class="wb-menu-icon">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
+          <span class="wb-menu-label">{{ item.label }}</span>
         </button>
       </nav>
 
@@ -353,6 +349,16 @@ async function handleImportFile(event: Event) {
 .wb-menu-icon {
   font-size: 15px;
   line-height: 1;
+  flex-shrink: 0;
+}
+
+/* 溢出省略作用于内部 label span（对按钮本身设 ellipsis 不会截断子 span 文本）：
+   min-width:0 允许 flex 项收缩，配合 overflow/text-overflow/nowrap 生效 */
+.wb-menu-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wb-menu-item:hover {

@@ -174,11 +174,13 @@ export interface NoteData {
   notes: WorkbenchNote[]
 }
 
-// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度
+// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度 + 工作台菜单顺序/名称
 export interface AppSettingsData {
   dialogSizes: Record<string, { width: number; height: number }>
   buttonOpacity: number
   bgOpacity: number
+  workbenchMenuOrder?: string[]
+  workbenchMenuLabels?: Record<string, string>
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

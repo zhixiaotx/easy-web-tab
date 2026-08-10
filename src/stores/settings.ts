@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { ref, computed, toRaw } from 'vue'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
+import {
+  WORKBENCH_MENU_DEFAULT_ORDER,
+  normalizeWorkbenchMenu,
+  moveMenuItem,
+  renameMenuLabel,
+  resolveMenuItems
+} from '@/composables/workbenchMenuCore'
+import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import type { AppSettingsData } from '@/types'
 
 // ========================================
@@ -145,7 +153,13 @@ const cloneDefaults = (): Record<DialogId, DialogSizeSetting> => {
 
 // 解析原始设置记录 → 校验 + clamp 后的完整 AppSettingsData（缺失/非法字段回退默认值）
 function parseSettingsData(raw: unknown): AppSettingsData {
-  const out: AppSettingsData = { dialogSizes: {}, buttonOpacity: 1, bgOpacity: 1 }
+  const out: AppSettingsData = {
+    dialogSizes: {},
+    buttonOpacity: 1,
+    bgOpacity: 1,
+    workbenchMenuOrder: [...WORKBENCH_MENU_DEFAULT_ORDER],
+    workbenchMenuLabels: {}
+  }
   const data = raw as Record<string, unknown>
   if (!data || typeof data !== 'object') return out
   const sizes = data.dialogSizes
@@ -170,6 +184,10 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.bgOpacity === 'number' && Number.isFinite(data.bgOpacity)) {
     out.bgOpacity = clampOpacity(data.bgOpacity)
   }
+  // 工作台菜单：顺序/名称归一化（home 恒居 index 0、缺失补全、截断 12 code point），非法/缺失回退默认
+  const menu = normalizeWorkbenchMenu(data.workbenchMenuOrder, data.workbenchMenuLabels)
+  out.workbenchMenuOrder = menu.order
+  out.workbenchMenuLabels = menu.labels
   return out
 }
 
@@ -181,16 +199,22 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const buttonOpacity = ref<number>(1)
   const bgOpacity = ref<number>(1)
 
+  // 工作台菜单顺序/名称：初始即默认序（拷贝，勿直接引用只读常量），杜绝空菜单闪屏
+  const workbenchMenuOrder = ref<string[]>([...WORKBENCH_MENU_DEFAULT_ORDER])
+  const workbenchMenuLabels = ref<Record<string, string>>({})
+
   // ========================================
   // 持久化
   // ========================================
   function persist() {
     // toRaw：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError）。
-    // dialogSizes.value 是 deep reactive ref 记录，必须单独 toRaw（对新建外层对象整体 toRaw 是 no-op）
+    // 嵌套 reactive 记录必须逐字段 toRaw（对新建外层对象整体 toRaw 是 no-op）
     void idbPut('settings', toRaw({
       dialogSizes: toRaw(dialogSizes.value),
       buttonOpacity: buttonOpacity.value,
-      bgOpacity: bgOpacity.value
+      bgOpacity: bgOpacity.value,
+      workbenchMenuOrder: toRaw(workbenchMenuOrder.value),
+      workbenchMenuLabels: toRaw(workbenchMenuLabels.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
@@ -252,9 +276,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
         migrated = undefined
       }
     }
-    // 3. 生效来源：IDB 优先，其次 localStorage 迁移结果；缺失/非法字段保持默认值
+    // 3. 生效来源：IDB 优先，其次 localStorage 迁移结果；缺失/非法字段保持默认值。
+    //    菜单两字段在应用前必经 normalizeWorkbenchMenu（两条来源统一归一化，home 恒居 index 0）
     const effective = stored ?? migrated
     if (effective) {
+      const menu = normalizeWorkbenchMenu(effective.workbenchMenuOrder, effective.workbenchMenuLabels)
+      workbenchMenuOrder.value = menu.order
+      workbenchMenuLabels.value = menu.labels
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -264,6 +292,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       }
       if (Number.isFinite(effective.buttonOpacity)) buttonOpacity.value = clampOpacity(effective.buttonOpacity)
       if (Number.isFinite(effective.bgOpacity)) bgOpacity.value = clampOpacity(effective.bgOpacity)
+      // 归一化结果写回 IDB（fire-and-forget）：保证导出/导入往返幂等，镜像迁移分支的 idbPut
+      persist()
     }
     applySettings()
   }
@@ -297,6 +327,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     dialogSizes.value = cloneDefaults()
     buttonOpacity.value = 1
     bgOpacity.value = 1
+    workbenchMenuOrder.value = [...WORKBENCH_MENU_DEFAULT_ORDER]
+    workbenchMenuLabels.value = {}
     const root = document.documentElement
     for (const id of DIALOG_IDS) {
       root.style.removeProperty(DIALOG_VARS[id].widthVar)
@@ -310,15 +342,61 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     localStorage.removeItem(SETTINGS_STORAGE_KEY)
   }
 
+  // ========================================
+  // 工作台菜单：变更函数全部委托 core（禁止内联排序/截断公式）→ 持久化
+  // ========================================
+  function moveWorkbenchMenuItem(
+    key: string,
+    dir: 'up' | 'down'
+  ): { ok: boolean; reason: 'locked' | 'boundary' | 'not-found' | 'ok' } {
+    const r = moveMenuItem(toRaw(workbenchMenuOrder.value), key, dir)
+    if (r.ok && r.order) {
+      workbenchMenuOrder.value = r.order
+      persist()
+    }
+    return { ok: r.ok, reason: r.reason }
+  }
+
+  function renameWorkbenchMenuItem(
+    key: string,
+    name: string
+  ): { ok: boolean; reason: 'empty' | 'not-found' | 'ok' } {
+    const r = renameMenuLabel(toRaw(workbenchMenuLabels.value), key, name)
+    if (r.ok && r.labels) {
+      workbenchMenuLabels.value = r.labels
+      persist()
+    }
+    return { ok: r.ok, reason: r.reason }
+  }
+
+  function resetWorkbenchMenu(): { ok: boolean; reason: 'ok' } {
+    // 区块级恢复默认：只重置菜单两字段，不触碰 dialogSizes/opacity/CSS 变量，不调用 resetDefaults
+    workbenchMenuOrder.value = [...WORKBENCH_MENU_DEFAULT_ORDER]
+    workbenchMenuLabels.value = {}
+    persist()
+    return { ok: true, reason: 'ok' as const }
+  }
+
+  // 菜单渲染项（label 回退默认名，icon 查表）——默认态恒 7 项、home 首位
+  const workbenchMenuItems = computed<WorkbenchMenuItem[]>(() =>
+    resolveMenuItems(workbenchMenuOrder.value, workbenchMenuLabels.value)
+  )
+
   return {
     dialogSizes,
     buttonOpacity,
     bgOpacity,
+    workbenchMenuOrder,
+    workbenchMenuLabels,
+    workbenchMenuItems,
     initSettings,
     applySettings,
     setDialogSize,
     setButtonOpacity,
     setBgOpacity,
-    resetDefaults
+    resetDefaults,
+    moveWorkbenchMenuItem,
+    renameWorkbenchMenuItem,
+    resetWorkbenchMenu
   }
 })

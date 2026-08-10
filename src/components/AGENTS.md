@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-23 Vue 3 SFCs in the root plus 12 workbench SFCs (10 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+21 Vue 3 SFCs in the root plus 12 workbench SFCs (10 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -15,7 +15,6 @@ components/
 ├── AppSettingsDialog.vue # Dialog size settings UI (389 lines, uses `useAppSettingsStore` from settings.ts)
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
-├── CountdownManager.vue  # 倒计时管理弹框（列表+CRUD+规则/分类表单，~983 行）
 ├── CountdownModal.vue    # 前台只读倒计时弹框（/display，repeatLabel + categoryLabel 徽标）
 ├── CountdownReminder.vue # 全局提醒弹框（z-index 2000，读 useCountdownReminder 单例，仅「关闭」可关）
 ├── IconManager.vue       # Custom icon upload & management (617 lines)
@@ -56,7 +55,7 @@ components/
 | Category CRUD | `CategoryManager.vue` | Only `video` locked; legacy categories deletable |
 | Icon management | `IconManager.vue` | Upload & manage custom site icons |
 | Password vault | `workbench/WorkbenchPassword.vue` | 主密码三态（设置/解锁/锁定），新增/编辑弹窗 + 书签库名称关联下拉，按网站名称搜索，AES-CBC 加密存 IndexedDB |
-| Countdown management | `CountdownManager.vue` + `workbench/WorkbenchCountdown.vue` | 管理端/工作台表单：6 种重复规则选择器（weekly 周几多选 + 工作日快捷钮 / monthly 几号 / interval 分钟）+ 分类下拉取 `store.allCategories`（内置 6 + 自定义）+ 校验；`repeatLabel`/`categoryLabel` 徽标；工作台面板分类筛选为 tabs（全部 + `tabCategories`，`cd-cat-all`/`cd-cat-<c>`，即时过滤）+ ⚙️ 分类管理弹框（`cd-cat-dialog`：标签页显示复选框 + 自定义分类内联改名（`cd-cat-rename-input-*`，blur/Enter 提交、Esc 还原）/上移下移（`cd-cat-up-*`/`cd-cat-down-*`）/删除（`cd-cat-del-*`，带 confirm）/添加（`cd-cat-new-input`/`cd-cat-add-btn`），失败走 useToast warning） |
+| Countdown management | `workbench/WorkbenchCountdown.vue` | 工作台表单：6 种重复规则选择器（weekly 周几多选 + 工作日快捷钮 / monthly 几号 / interval 分钟）+ 分类下拉取 `store.allCategories`（内置 6 + 自定义）+ 校验；`repeatLabel`/`categoryLabel` 徽标；面板分类筛选为 tabs（全部 + `tabCategories`，`cd-cat-all`/`cd-cat-<c>`，即时过滤）+ ⚙️ 分类管理弹框（`cd-cat-dialog`：标签页显示复选框 + 自定义分类内联改名（`cd-cat-rename-input-*`，blur/Enter 提交、Esc 还原）/上移下移（`cd-cat-up-*`/`cd-cat-down-*`）/删除（`cd-cat-del-*`，带 confirm）/添加（`cd-cat-new-input`/`cd-cat-add-btn`），失败走 useToast warning） |
 | Countdown display | `CountdownModal.vue` | 前台只读展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫/exercise=橙/diet=琥珀/sleep=青，亮暗双主题；自定义分类统一默认灰 `cat-default`） |
 | Reminder popup | `CountdownReminder.vue` | 全屏遮罩弹框，到点时间显示 `⏰ MM-DD HH:mm`；z-index 2000，点击遮罩不关闭 |
 | Tag filtering | `TagFilter.vue` + `CategoryTabs.vue` | Tags extracted from all sites |

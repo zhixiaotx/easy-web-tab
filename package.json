@@ -13,7 +13,8 @@
     "test:todo": "node --experimental-strip-types scripts/test-todo-core.ts",
     "test:health": "node --experimental-strip-types scripts/test-health-core.ts",
     "test:ledger": "node --experimental-strip-types scripts/test-ledger-core.ts",
-    "test:notes": "node --experimental-strip-types scripts/test-note-core.ts"
+    "test:notes": "node --experimental-strip-types scripts/test-note-core.ts",
+    "test:menu": "node --experimental-strip-types scripts/test-workbench-menu-core.ts"
   },
   "dependencies": {
     "@vueuse/core": "^14.2.1",

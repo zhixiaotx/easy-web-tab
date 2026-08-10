@@ -7,7 +7,7 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
 - `src/components/AGENTS.md` — the 21 root SFCs + 12 workbench SFCs (10 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块), sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 12 Pinia stores and data-layer invariants
-- `src/composables/AGENTS.md` — the 18 composables (incl. auto-generated `presetIcons.ts`)
+- `src/composables/AGENTS.md` — the 19 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts, test scripts, and game rewrite rules
 
 ## STRUCTURE
@@ -17,7 +17,7 @@ easy-web-tab/
 ├── src/                          # Vue 3 SPA
 │   ├── components/               # 21 root SFCs + workbench/ subdir (UI layer)
 │   │   └── workbench/            # 10 工作台面板 + WorkbenchHealth tabs 容器 + WorkbenchHealthReminders 只读提醒（运动/饮食/睡眠/体重 四合一）
-│   ├── composables/              # 18 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, noteCore.ts, healthCore.ts, ledgerCore.ts)
+│   ├── composables/              # 19 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, workbenchMenuCore.ts, noteCore.ts, healthCore.ts, ledgerCore.ts)
 │   ├── stores/                   # 12 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchHealth.ts, workbenchLedger.ts)
 │   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
 │   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台 (eager imports)
@@ -62,6 +62,7 @@ easy-web-tab/
 | 待办数据（分类注册表） | `src/stores/workbenchTodos.ts` + `src/components/workbench/WorkbenchTodo.vue` | 待办分类 CRUD（`addCategory`/`updateCategory`/`deleteCategory`/`moveCategory`/`toggleTabCategory`，全自定义分类无内置、被引用禁删、重命名同步存量 categoryId、存量 work/life/study 一次性迁移未分类，`user-todo-categories-migrated` marker '2' 门控 + 注册表清理）+ 分类筛选 tabs（`tabCategories` 可见性，`td-cat-*`）+ 表单分类下拉（`allCategories` 仅自定义分类，`td-form-category`）+ 卡片分类徽标；筛选/归一化一律走 `todoCore` 纯函数；分类偏好存 localStorage `user-todo-categories`/`user-todo-tab-categories`（不随 JSON 备份导出）；IndexedDB store 'todos' 存待办数组 |
 | Custom icons | `src/stores/icons.ts` | User-uploaded icon storage |
 | 设置（弹窗尺寸） | `src/stores/settings.ts` + `src/components/AppSettingsDialog.vue` | 设置数据存 IDB store 'settings'（经 `useIdb.ts` 持久化）；`AppSettingsData` 类型 + `emptyAppSettingsData()` 在 `src/types/index.ts` |
+| 工作台菜单设置 | `src/stores/settings.ts` + `src/components/AppSettingsDialog.vue`（工作台设置 tab「工作台菜单」区块）+ `src/composables/workbenchMenuCore.ts` | 7 项菜单顺序/改名（主页恒居 index 0、名称 ≤12 code point）；排序/改名/归一化一律走 `workbenchMenuCore` 纯函数（组件/视图禁止内联重算）；左菜单渲染由 `settingsStore.workbenchMenuItems` 驱动（WorkbenchView 消费）；IDB store 'settings' 持久化，随备份导出 |
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
@@ -82,6 +83,7 @@ easy-web-tab/
 | `useWorkbenchNotesStore` | store | `src/stores/workbenchNotes.ts` | 便签 CRUD + 置顶 + 分类 CRUD（addCategory/updateCategory/moveCategory/deleteCategory，名称唯一、删除后该分类便签归未分类）+ 时光轴条目 CRUD（addTimelineEntry/updateTimelineEntry/deleteTimelineEntry）；IndexedDB store 'notes' 存 `{categories, notes}`（NoteData） |
 | `useWorkbenchHealthStore` | store | `src/stores/workbenchHealth.ts` | 健康数据（height/plans/records 四模块 CRUD，IndexedDB store 'health'） |
 | `useWorkbenchLedgerStore` | store | `src/stores/workbenchLedger.ts` | 记账（categories/entries CRUD + 分组管理，内置 8 组不可删，IndexedDB store 'ledger'）；金额可见性 `showAmount`+`toggleAmountVisibility()`（纯内存，不持久化） |
+| `useAppSettingsStore` | store | `src/stores/settings.ts` | 弹窗尺寸/透明度契约 + 工作台菜单：状态 `workbenchMenuOrder`/`workbenchMenuLabels`，变更 `moveWorkbenchMenuItem`/`renameWorkbenchMenuItem`/`resetWorkbenchMenu`（返回 `{ok,reason}`，全部委托 core），computed `workbenchMenuItems`（resolveMenuItems 解析）；IDB store 'settings'，initSettings 两条来源经 `normalizeWorkbenchMenu` |
 | `useToast` | composable | `src/composables/useToast.ts` | Singleton toast state |
 | `getIconUrl` / `getFaviconImgSrc` | functions | `src/composables/useIconCache.ts` | Icon resolution chain |
 | `calcRemaining` / `sortCountdowns` / `moveCustomCategoryInList` | functions | `src/composables/countdownCore.ts` | Pure countdown math + sorting |
@@ -92,6 +94,7 @@ easy-web-tab/
 | `prevMonthKeyOf` / `planAutoCopy` / `AUTO_COPY_CATEGORY_IDS` | functions | `src/composables/ledgerCore.ts` | 每月自动复制计划：目标月缺 salary/mortgage 且上月有记录 → 生成草稿（金额取上月该分类最新一条）；幂等，不跨月回溯 |
 | `filterNotes` / `partitionNotesByType` / `sortNotes` / `sortTimelineEntries` | functions | `src/composables/noteCore.ts` | 便签纯逻辑：筛选（type/categoryId/keyword，type='all' 全部类型不过滤、categoryId='uncategorized' 字面量匹配未分类）/拆分（`partitionNotesByType` 过滤后便签 → {normal,timeline}）/排序（置顶优先 → updatedAt 降序）/时光轴条目排序（datetime 升序 → createdAt 升序）+ `normalizeNoteData`（数组旧格式兼容）+ `findNoteCategory`/`isUncategorized` |
 | `LEGACY_BUILTIN_TODO_CATEGORIES` / `normalizeTodo` / `filterTodos` / `dueInfo` / `migrateLegacyBuiltinCategories` / `purgeLegacyBuiltinCategories` / `isTodoUncategorized` / `moveCustomCategoryInList` | functions | `src/composables/todoCore.ts` | 待办纯逻辑：归一化（categoryId trim 后空值剔除）/查询筛选（title/description/priority/status/categoryId，categoryId='uncategorized' 字面量匹配未分类）/截止倒计时主角（剩余/今天/逾期）/旧内置分类 work/life/study → 未分类迁移（migrateLegacyBuiltinCategories）+ 注册表残留清理（purgeLegacyBuiltinCategories，不改入参、幂等、返回新数组）/自定义分类移动（组件禁止重算） |
+| `WORKBENCH_MENU_KEYS` / `WORKBENCH_MENU_DEFAULT_ORDER` / `MENU_DEFAULT_LABELS` / `MENU_ICONS` + `normalizeWorkbenchMenu` / `moveMenuItem` / `renameMenuLabel` / `resolveMenuItems` | functions | `src/composables/workbenchMenuCore.ts` | 工作台菜单纯逻辑：键/默认序/默认名（逐字一致，load-bearing）/图标常量；归一化（home 恒 index 0、未知键剔除、去重首次优先、缺失按默认序补全恒 7 项、label trim 去空截断 12 code point）/移动（`{ok, reason:'locked'|'boundary'|'not-found'|'ok'}`，不改入参）/改名（`{ok, reason:'empty'|'not-found'|'ok'}`）/解析渲染（label 回退默认名、icon 查表）；组件/视图禁止重算 |
 | `useCountdownReminder` | composable | `src/composables/useCountdownReminder.ts` | Singleton reminder popup engine (60s tick + 9am summary) |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
 | `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v3, 7 stores: todos/notes/countdowns/passwords/health/ledger/settings; backup 导出 version 4, v1-v4 兼容导入) |
@@ -124,7 +127,7 @@ easy-web-tab/
 - **Only `video` is a permanently built-in category** — others (office, tech, etc.) are legacy seeds users can delete
 - **No built-in seed data** — `public/data/sites.md` was removed from the repo; `loadSites()` still fetches `/data/sites.md` (404 → caught → empty), so data comes solely from localStorage/imports
 - **No ESLint/Prettier** — code quality relies solely on TypeScript strict mode
-- **No test framework** — no vitest/jest/cypress; `countdownCore.ts`/`todoCore.ts`/`healthCore.ts`/`ledgerCore.ts`/`noteCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown` / `test:todo` / `test:health` / `test:ledger` / `test:notes`), UI 验证走手动/Playwright QA
+- **No test framework** — no vitest/jest/cypress; `countdownCore.ts`/`todoCore.ts`/`healthCore.ts`/`ledgerCore.ts`/`workbenchMenuCore.ts`/`noteCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown` / `test:todo` / `test:health` / `test:ledger` / `test:menu` / `test:notes`), UI 验证走手动/Playwright QA
 - **User data priority**: localStorage data overrides built-in data (same-URL merge in `loadSites()`)
 - **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes/health/ledger
 
@@ -150,6 +153,7 @@ npm run test:todo       # Pure-function tests for todoCore.ts (16 断言 T1-T16:
 npm run test:health     # Pure-function tests for healthCore.ts (BMI/达标率/睡眠/折线图, node --experimental-strip-types)
 npm run test:ledger     # Pure-function tests for ledgerCore.ts (月统计/占比/自动复制, node --experimental-strip-types)
 npm run test:notes      # Pure-function tests for noteCore.ts (归一化/排序/筛选, node --experimental-strip-types)
+npm run test:menu       # Pure-function tests for workbenchMenuCore.ts (13 断言 T1-T13: 归一化/home 恒 0/移动/改名/解析/常量完整性, node --experimental-strip-types)
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

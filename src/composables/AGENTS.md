@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-18 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+19 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
@@ -25,6 +25,7 @@ composables/
 ├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/自动复制计划(salary/mortgage)/金额格式化/敏感金额掩码 + normalizeLedgerData
 ├── noteCore.ts             # 便签纯逻辑引擎: normalizeNoteData(数组旧格式兼容)/sortNotes(置顶→updatedAt 降序)/filterNotes(type/categoryId/keyword，type='all' 不过滤)/partitionNotesByType({normal,timeline} 拆分)/sortTimelineEntries(datetime 升序→createdAt 升序)/findNoteCategory/tabCategoriesOf(showInTabs 过滤)/isUncategorized
 ├── todoCore.ts             # 待办纯逻辑引擎: LEGACY_BUILTIN_TODO_CATEGORIES/normalizeTodo(categoryId trim 后空值剔除)/TODO_PRIORITIES/migrateLegacyBuiltinCategories(旧内置 work/life/study → 未分类)/purgeLegacyBuiltinCategories(注册表过滤 work/life/study，不改入参幂等返回新数组)/isTodoUncategorized/filterTodos(title/description/priority/status/categoryId)/localToday/dueInfo/moveCustomCategoryInList
+├── workbenchMenuCore.ts    # 工作台菜单纯逻辑引擎（154 行）: WORKBENCH_MENU_KEYS(7 键 home 首位)/WORKBENCH_MENU_DEFAULT_ORDER/MENU_DEFAULT_LABELS(主页/工作待办/个人便签/定时提醒/密码管理/健康管理/记账，逐字一致)/MENU_ICONS + normalizeWorkbenchMenu(home 恒 index 0、未知键剔除、去重首次优先、缺失按默认序补全恒 7 项、label trim 去空截断 12 code point)/moveMenuItem(上移下移，{ok,reason:'locked'|'boundary'|'not-found'|'ok'})/renameMenuLabel({ok,reason:'empty'|'not-found'|'ok'})/resolveMenuItems(label 回退默认、icon 查表)
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
@@ -49,6 +50,7 @@ composables/
 | 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`maskOrReveal` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 便签纯逻辑 | `noteCore.ts` | `emptyNoteData`/`normalizeNoteData`(数组旧格式兼容，分类 showInTabs 仅布尔透传)/`normalizeNote`/`normalizeNotes`/`sortNotes`(置顶→updatedAt 降序)/`sortTimelineEntries`(datetime 升序→createdAt 升序)/`filterNotes`(type/categoryId/keyword，NoteFilter.type 接受 'all'=全部类型不过滤、categoryId='uncategorized' 匹配未分类)/`partitionNotesByType`(拆分过滤后便签为 {normal,timeline})/`findNoteCategory`/`tabCategoriesOf`(showInTabs!==false 过滤，返回新数组)/`isUncategorized` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 待办纯逻辑 | `todoCore.ts` | `LEGACY_BUILTIN_TODO_CATEGORIES`/`TODO_PRIORITIES`/`migrateLegacyBuiltinCategories`(旧内置 work/life/study → undefined 未分类，不改入参，幂等)/`purgeLegacyBuiltinCategories`(过滤 work/life/study 注册表名，不改入参、幂等、返回新数组)/`isTodoUncategorized`(falsy 即未分类)/`normalizeTodo`(categoryId trim 后空值剔除、color hex 校验)/`filterTodos`(title/description/priority/status/categoryId，categoryId='uncategorized' 字面量匹配未分类)/`localToday`(本地日期防 UTC 偏移)/`dueInfo`(剩余/今天/逾期)/`moveCustomCategoryInList`(自定义分类上移/下移一格，不改入参) — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| 工作台菜单纯逻辑 | `workbenchMenuCore.ts` | `WORKBENCH_MENU_KEYS`(7 键 home/todos/notes/countdowns/passwords/health/ledger，顺序即默认展示序)/`WORKBENCH_MENU_DEFAULT_ORDER`/`MENU_DEFAULT_LABELS`(默认名逐字一致，load-bearing)/`MENU_ICONS` + `normalizeWorkbenchMenu`(幂等：home 强制 index 0、未知 key 剔除、去重首次优先、缺失按默认序补全恒 7 项、labels 仅已知键 trim 去空截断 12 code point)/`moveMenuItem`(上移下移返回 `{ok, reason:'locked'|'boundary'|'not-found'|'ok', order?}`，home 恒 locked、不改入参)/`renameMenuLabel`(返回 `{ok, reason:'empty'|'not-found'|'ok', labels?}`，截断 12 code point)/`resolveMenuItems`(按 order 迭代 `{key,label,icon}[]`，label 回退默认名、icon 查表) — 纯函数，零 vue/pinia 运行时依赖，`node --experimental-strip-types` 可测 |
 
 ## CONVENTIONS
 

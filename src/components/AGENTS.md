@@ -12,7 +12,7 @@ components/
 ├── GlobalSearch.vue      # Multi-engine search bar (583 lines)
 ├── BackgroundManager.vue # Background image picker (876 lines)
 ├── BackupManager.vue     # Import/export UI
-├── AppSettingsDialog.vue # Dialog size settings UI (389 lines, uses `useAppSettingsStore` from settings.ts)
+├── AppSettingsDialog.vue # Dialog size settings UI (463 lines, uses `useAppSettingsStore` from settings.ts)
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
 ├── CountdownModal.vue    # 前台只读倒计时弹框（/display，repeatLabel + categoryLabel 徽标）

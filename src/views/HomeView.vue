@@ -65,7 +65,7 @@ const handleDragEnd = () => {
   dragOverUrl.value = null
 }
 
-onMounted(async () => {
+onMounted(() => {
   store.loadSites()
 })
 

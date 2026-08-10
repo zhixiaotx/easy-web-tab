@@ -1129,7 +1129,7 @@ onUnmounted(() => {
 }
 
 /* ===== 分类管理弹框 ===== */
-.catmgr-dialog {
+.dialog.catmgr-dialog {
   max-width: var(--dlg-w-wb-countdown-cat, 440px);
   max-height: var(--dlg-h-wb-countdown-cat, 85vh);
 }

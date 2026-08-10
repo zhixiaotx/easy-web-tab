@@ -77,17 +77,17 @@ const localSearchResults = computed(() => {
   return sitesStore.sites
     .filter(site => {
       // 匹配网站名称
-      if (site.name.toLowerCase().includes(query)) return true
+      if ((site.name ?? '').toLowerCase().includes(query)) return true
       // 匹配网址
-      if (site.url.toLowerCase().includes(query)) return true
+      if ((site.url ?? '').toLowerCase().includes(query)) return true
       // 匹配描述
-      if (site.description?.toLowerCase().includes(query)) return true
-      // 匹配标签
-      if (site.tags.some(tag => tag.toLowerCase().includes(query))) return true
+      if ((site.description ?? '').toLowerCase().includes(query)) return true
+      // 匹配标签（旧数据可能缺 tags 字段，防御处理）
+      if ((site.tags ?? []).some(tag => (tag ?? '').toLowerCase().includes(query))) return true
       // 匹配分类
       const category = categoriesStore.allCategories.find(c => c.id === site.category)
-      if (category && category.name.toLowerCase().includes(query)) return true
-      
+      if (category && (category.name ?? '').toLowerCase().includes(query)) return true
+
       return false
     })
     .slice(0, 10)  // 最多显示10条

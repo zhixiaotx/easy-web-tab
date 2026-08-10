@@ -1,0 +1,38 @@
+TASK 4 — AppSettingsDialog 2-tab (导航设置/工作台设置)
+Plan todo 4 from .omo/plans/settings-tabs.md (L104-115)
+Commit: feat(settings-dialog): 弹窗尺寸设置改为导航/工作台双 tab
+Date: 2026-08-10
+
+== BUILD GATE ==
+- npm run build: exit 0, zero errors (generate-preset-icons → vue-tsc -b → vite build, 197 modules, 1.05s)
+- Generated artifacts restored post-build (presetIcons.ts / tsconfig.tsbuildinfo via git checkout)
+- LSP: no vue server configured (user declined) — build's vue-tsc strict step is the compiler gate
+
+== GREP ACCEPTANCE ==
+- src/components/AppSettingsDialog.vue contains: `<h2>⚙️ 设置</h2>`, `NAV_DIALOG_IDS`, `WB_DIALOG_IDS`, `activeTab` ✓
+
+== HAPPY QA (Playwright, dev server http://localhost:16719 — own port, NOT shared 16718) ==
+Steps: navigate / → click ⚙️ SettingsButton → assert dialog.
+1. Dialog title text exactly: "⚙️ 设置" ✓ (snapshot: heading "⚙️ 设置" [level=2])
+2. Two tabs present: 「导航设置」(default, selected) + 「工作台设置」 ✓ (role=tablist, aria-selected switching)
+3. Default tab 导航设置 — 6 rows, labels exactly:
+   添加/编辑网站, 引擎管理, 背景, 分类管理, 备份, 图标管理 ✓
+4. Nav tab does NOT include: 便签 / 倒计时 / 待办表单 (evaluate: forbiddenPresent == []) ✓
+5. Click「工作台设置」→ 9 rows, labels exactly:
+   便签, 待办表单, 待办分类管理, 便签分类管理, 倒计时表单, 倒计时分类管理, 密码表单, 记账表单, 记账分组管理 ✓
+   (order matches WB_DIALOG_IDS: notes + 8 wb ids)
+6. WB tab does NOT include「添加/编辑网站」 ✓
+
+== FAILURE QA ==
+- Nav tab does NOT contain「倒计时」 (countdown removed from DialogId in todo 3) ✓ (forbiddenPresent empty)
+- Tab switch affects only rendered list; drafts/syncAll still iterate full DIALOG_IDS (Object.keys(DIALOG_DEFAULTS)) — createDrafts/syncRow/syncAll/onWidthInput/onHeightInput/onWidthBlur verbatim unchanged ✓
+
+== CONSOLE ==
+- 5 errors, all external network/CORS, unrelated to this change:
+  * api.allorigins.win CORS (allow-origin pinned to :16718; QA ran on :16719)
+  * google s2 favicons ERR_CONNECTION_TIMED_OUT
+- Zero Vue/store/DataCloneError console entries.
+
+== SCOPE ==
+- Modified ONLY src/components/AppSettingsDialog.vue.
+- Bottom「恢复默认」button (resetDefaults() + syncAll()) unchanged — resets both groups.

@@ -113,7 +113,7 @@ const features = [
   {
     icon: '🔒',
     title: '密码管理',
-    desc: 'AES-GCM 加密存储账号密码，支持主密码保护、一键复制、搜索筛选。导入/导出时密码自动加密解密，跨设备安全同步。'
+    desc: 'AES-CBC 加密存储账号密码（位于「工作台」面板），支持主密码保护、一键复制、按网站名称搜索，新增加密存储时自动关联书签网站信息。'
   }
 ]
 </script>
@@ -216,8 +216,9 @@ const features = [
           <h3 class="section-title">💾 数据存储</h3>
           <ul class="storage-list">
             <li><strong>内置数据</strong>：构建进包，不可动态修改</li>
-            <li><strong>用户数据</strong>：存储于浏览器 <code>localStorage</code>，包括网址、分类、搜索引擎、密码</li>
-            <li><strong>密码数据</strong>：AES-GCM 加密后存储，需主密码解锁才能查看</li>
+            <li><strong>用户数据</strong>：存储于浏览器 <code>localStorage</code>，包括网址、分类、搜索引擎</li>
+            <li><strong>工作台数据</strong>：存储于浏览器 <code>IndexedDB</code>，包括待办、便签、倒计时、密码</li>
+            <li><strong>密码数据</strong>：AES-CBC 加密后存储于 IndexedDB，需主密码解锁才能查看</li>
             <li><strong>断链检测结果</strong>：存储于 <code>localStorage</code>，关闭页面后保留</li>
           </ul>
         </section>

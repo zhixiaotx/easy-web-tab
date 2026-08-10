@@ -10,6 +10,7 @@ import {
   hasMasterPassword,
   getSaltHex
 } from '../composables/useCrypto'
+import { idbGet, idbPut } from '../composables/useIdb'
 
 const STORAGE_KEY = 'user-passwords'
 
@@ -18,9 +19,27 @@ export const usePasswordsStore = defineStore('passwords', () => {
   const isUnlocked = ref(false)
   let currentMasterPassword = ''
 
-  // 加载加密数据
+  // 加载加密数据（IndexedDB 优先；localStorage 仅在 v2 验证存在时一次性迁移）
   async function loadPasswords(masterPassword: string): Promise<boolean> {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    let stored: string | undefined
+    try {
+      stored = await idbGet<string>('passwords')
+    } catch (e) {
+      console.error('[Passwords] load failed', e)
+    }
+    if (stored === undefined) {
+      const legacy = localStorage.getItem(STORAGE_KEY)
+      // 仅当 v2 验证存在时才迁移：v2 不存在说明是 v1 AES-GCM 旧库，
+      // 绝不能复制（留给 migrateLegacyVault 流程），否则 crypto-js 解密失败且旧数据被"假迁移"
+      if (legacy !== null && localStorage.getItem('password-verification-v2') !== null) {
+        stored = legacy
+        try {
+          await idbPut('passwords', stored)
+        } catch (e) {
+          console.error('[Passwords] migrate to IDB failed', e)
+        }
+      }
+    }
     if (!stored) {
       passwords.value = []
       isUnlocked.value = true
@@ -39,12 +58,16 @@ export const usePasswordsStore = defineStore('passwords', () => {
     }
   }
 
-  // 保存到 localStorage（加密）
+  // 保存到 IndexedDB（加密；失败仅 console.error，不崩溃）
   async function savePasswords(): Promise<void> {
     if (!currentMasterPassword) return
     const json = JSON.stringify(passwords.value)
     const encrypted = await encrypt(json, currentMasterPassword)
-    localStorage.setItem(STORAGE_KEY, encrypted)
+    try {
+      await idbPut('passwords', encrypted)
+    } catch (e) {
+      console.error('[Passwords] save failed', e)
+    }
   }
 
   // 设置主密码
@@ -103,14 +126,12 @@ export const usePasswordsStore = defineStore('passwords', () => {
     await savePasswords()
   }
 
-  // 搜索密码
+  // 搜索密码（按网站名称匹配；旧数据可能缺字段，防御处理避免渲染崩溃）
   function searchPasswords(query: string): PasswordEntry[] {
     if (!query) return passwords.value
     const lower = query.toLowerCase()
     return passwords.value.filter(p =>
-      p.siteName.toLowerCase().includes(lower) ||
-      p.url.toLowerCase().includes(lower) ||
-      p.username.toLowerCase().includes(lower)
+      (p.siteName ?? '').toLowerCase().includes(lower)
     )
   }
 

@@ -2,19 +2,23 @@
 import { onMounted } from 'vue'
 import { useThemeStore } from './stores/theme'
 import Toast from './components/Toast.vue'
+import CountdownReminder from './components/CountdownReminder.vue'
 import { useToast } from './composables/useToast'
+import { useCountdownReminder } from './composables/useCountdownReminder'
 
 const themeStore = useThemeStore()
 const { toasts, removeToast } = useToast()
 
 onMounted(() => {
   themeStore.initTheme()
+  useCountdownReminder().init()
 })
 </script>
 
 <template>
   <router-view />
   <Toast :toasts="toasts as any" @remove="removeToast" />
+  <CountdownReminder />
 </template>
 
 <style>

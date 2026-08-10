@@ -11,15 +11,12 @@ import Pagination from '../components/Pagination.vue'
 import SiteModal from '../components/SiteModal.vue'
 import SettingsButton from '../components/SettingsButton.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
-import PasswordManager from '../components/PasswordManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
-import CountdownManager from '@/components/CountdownManager.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
-import { useCountdownsStore } from '@/stores/countdowns'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useToast } from '../composables/useToast'
 import { useHelpModal } from '../composables/useHelpModal'
@@ -27,15 +24,12 @@ import { useHelpModal } from '../composables/useHelpModal'
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
-const countdownsStore = useCountdownsStore()
 const toast = useToast()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
-const showPasswordManager = ref(false)
-const showCountdownManager = ref(false)
 const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
 
@@ -73,7 +67,6 @@ const handleDragEnd = () => {
 
 onMounted(() => {
   store.loadSites()
-  countdownsStore.loadCountdowns()
 })
 
 // 同步 URL query 参数与弹框状态（Ctrl+N / 直接访问 URL 均可打开弹框）
@@ -104,18 +97,6 @@ watchEffect(() => {
     showEngineManager.value = true
     showModal.value = false
     closeHelp()
-    showPasswordManager.value = false
-  } else if (modal === 'passwords') {
-    showPasswordManager.value = true
-    showModal.value = false
-    showEngineManager.value = false
-    closeHelp()
-  } else if (modal === 'countdown') {
-    showCountdownManager.value = true
-    showModal.value = false
-    showEngineManager.value = false
-    showPasswordManager.value = false
-    closeHelp()
   } else if (modal === 'help') {
     openHelp()
     showModal.value = false
@@ -124,8 +105,6 @@ watchEffect(() => {
     // 无 modal query → 关闭所有弹框（URL 清除时）
     showModal.value = false
     showEngineManager.value = false
-    showPasswordManager.value = false
-    showCountdownManager.value = false
     closeHelp()
     editingSite.value = null
   }
@@ -137,8 +116,6 @@ const filteredSites = computed(() => store.paginatedSites)
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
-  showPasswordManager.value = false
-  showCountdownManager.value = false
   showSettingsDialog.value = false
   closeHelp()
   editingSite.value = null
@@ -217,7 +194,7 @@ const handleImport = (event: Event) => {
     const content = e.target?.result as string
     
     // 导入网站
-    const result = store.importFromMarkdown(content)
+    const result = await store.importFromMarkdown(content)
     
     // 如果有错误，直接显示错误信息
     if (result.error) {
@@ -235,15 +212,6 @@ const handleImport = (event: Event) => {
         if (data?.searchEngines && Array.isArray(data.searchEngines)) {
           enginesStore.importEngines(data.searchEngines)
           msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
-        }
-        if (data?.passwords && Array.isArray(data.passwords)) {
-          const passwords = data.passwords
-          const passwordsResult = await store.importPasswordsFromMarkdown(content)
-          if (passwordsResult.imported > 0) {
-            msg += `；密码：已导入 ${passwordsResult.imported} 条`
-          } else if (passwords.length > 0) {
-            msg += passwordsResult.failed > 0 ? '；密码：导入失败（解密失败）' : '；密码：未导入（请先打开密码管理器解锁）'
-          }
         }
       }
     } catch {
@@ -285,6 +253,7 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
+    <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
     <button class="btn-help" @click="openHelp" title="帮助">❓</button>
     <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
       前台
@@ -293,7 +262,7 @@ const handlePageChange = () => {
 
   <!-- 左上角工具栏 -->
   <div class="top-left-toolbar">
-    <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
+    <button class="btn-help" @click="router.push('/workbench')" title="工作台">🧰 工作台</button>
   </div>
 
   <div class="container">
@@ -311,8 +280,6 @@ const handlePageChange = () => {
             <span v-else>🔗 检测断链<span v-if="store.invalidCount > 0" class="invalid-count">({{ store.invalidCount }})</span></span>
           </button>
           <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
-          <button class="btn-action" @click="router.push({ query: { modal: 'passwords' } })">🔑 密码管理</button>
-          <button class="btn-action" @click="router.push({ query: { modal: 'countdown' } })">⏳ 倒计时</button>
           <SettingsButton />
         </div>
       </div>
@@ -358,16 +325,6 @@ const handlePageChange = () => {
 
     <SearchEngineManager 
       v-if="showEngineManager" 
-      @close="closeAllModals"
-    />
-
-    <PasswordManager
-      v-if="showPasswordManager"
-      @close="closeAllModals"
-    />
-
-    <CountdownManager
-      v-if="showCountdownManager"
       @close="closeAllModals"
     />
 

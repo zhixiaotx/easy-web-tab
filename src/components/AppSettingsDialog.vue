@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { reactive, onMounted, onUnmounted } from 'vue'
-import { useAppSettingsStore, DIALOG_LABELS, DIALOG_DEFAULTS } from '@/stores/settings'
+import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import {
+  useAppSettingsStore,
+  DIALOG_LABELS,
+  DIALOG_DEFAULTS,
+  NAV_DIALOG_IDS,
+  WB_DIALOG_IDS
+} from '@/stores/settings'
 import type { DialogId } from '@/stores/settings'
+import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 
-// 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致）
+// 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
+// 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
+
+// 当前激活的设置分组 tab（导航设置 / 工作台设置）
+const activeTab = ref<'nav' | 'wb'>('nav')
 
 const emit = defineEmits<{
   close: []
@@ -81,6 +92,50 @@ function resetAll() {
   syncAll()
 }
 
+// ========================================
+// 工作台菜单（仅工作台设置 tab 展示）：排序 + 改名 + 区块恢复默认
+// ========================================
+
+// 改名输入直接绑定 store 状态（无草稿机制，Metis F11）：
+// 输入框 :value = menuEditing[key] ?? item.label —— menuEditing 仅暂存「正在输入」的文本，
+// 提交/还原后立即删除对应条目，值回落到 store 派生 label（store.workbenchMenuItems computed 重算）。
+// 因此全局 resetAll 重置 store 后 computed 重新派生、menuEditing 为空 → 输入框自动展示新默认值，
+// 不会残留旧值（响应式重渲染，无需为区块做任何同步）。
+const menuEditing = reactive<Record<string, string>>({})
+
+// 上移/下移：disabled 由模板按 home/边界判定；store 结果兜底（locked/boundary/not-found 直接忽略，无 toast——与「可用+toast」惯例有意偏离）
+function onMoveMenu(key: string, dir: 'up' | 'down'): void {
+  store.moveWorkbenchMenuItem(key, dir)
+}
+
+// 上移按钮禁用：home 恒禁用（store 返回 locked）；index ≤ 1（index 0 恒为 home，index 1 为首个可移动项）达上边界
+function isMenuUpDisabled(item: WorkbenchMenuItem, index: number): boolean {
+  return item.key === 'home' || index <= 1
+}
+
+// 下移按钮禁用：home 恒禁用；末行（index === items.length - 1）达下边界
+function isMenuDownDisabled(item: WorkbenchMenuItem, index: number): boolean {
+  return item.key === 'home' || index >= store.workbenchMenuItems.length - 1
+}
+
+// 改名提交（blur / Enter）：先按 code point 校验 ≤ 12（Metis N2：代理对不得绕过上限）；
+// trim 后为空 → 还原上值（纯本地回退，不调 store）；store 拒绝（ok:false）→ 删除暂存即回落到旧值
+function commitMenuName(key: string): void {
+  const raw = menuEditing[key] ?? ''
+  const name = raw.trim()
+  if (!name || Array.from(name).length > 12) {
+    delete menuEditing[key]
+    return
+  }
+  store.renameWorkbenchMenuItem(key, name)
+  delete menuEditing[key]
+}
+
+// Esc 还原：删除暂存，输入框回落到 store 当前值（不调 store）
+function revertMenuName(key: string): void {
+  delete menuEditing[key]
+}
+
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -102,12 +157,81 @@ onUnmounted(() => {
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
-        <h2>⚙️ 弹窗尺寸设置</h2>
+        <h2>⚙️ 设置</h2>
         <button class="close-btn" @click="emit('close')">✕</button>
       </div>
 
       <div class="manager-body">
+        <div class="settings-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'nav' }"
+            :aria-selected="activeTab === 'nav'"
+            @click="activeTab = 'nav'"
+          >导航设置</button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'wb' }"
+            :aria-selected="activeTab === 'wb'"
+            @click="activeTab = 'wb'"
+          >工作台设置</button>
+        </div>
+
         <p class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+
+        <!-- 工作台菜单（仅工作台设置 tab）：排序 + 改名 + 区块恢复默认；主页恒置顶不可动 -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">工作台菜单</h3>
+            <button type="button" class="row-reset" data-testid="wbmenu-reset" @click="store.resetWorkbenchMenu()">恢复默认</button>
+          </div>
+          <p class="wb-menu-hint">主页固定置顶，不可调整顺序；位于最前/最后时按钮禁用</p>
+
+          <div class="wb-menu-list">
+            <div
+              v-for="(item, index) in store.workbenchMenuItems"
+              :key="item.key"
+              class="wb-menu-row"
+              :data-testid="`wbmenu-row-${item.key}`"
+            >
+              <span class="wb-menu-icon">{{ item.icon }}</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                maxlength="12"
+                :data-testid="`wbmenu-name-${item.key}`"
+                :aria-label="`${item.label}名称`"
+                :value="menuEditing[item.key] ?? item.label"
+                @input="menuEditing[item.key] = ($event.target as HTMLInputElement).value"
+                @blur="commitMenuName(item.key)"
+                @keydown.enter="commitMenuName(item.key)"
+                @keydown.esc.stop="revertMenuName(item.key)"
+              />
+              <div class="wb-menu-actions">
+                <button
+                  type="button"
+                  class="wb-menu-btn"
+                  :data-testid="`wbmenu-up-${item.key}`"
+                  :disabled="isMenuUpDisabled(item, index)"
+                  :aria-disabled="isMenuUpDisabled(item, index) ? 'true' : 'false'"
+                  @click="onMoveMenu(item.key, 'up')"
+                >上移</button>
+                <button
+                  type="button"
+                  class="wb-menu-btn"
+                  :data-testid="`wbmenu-down-${item.key}`"
+                  :disabled="isMenuDownDisabled(item, index)"
+                  :aria-disabled="isMenuDownDisabled(item, index) ? 'true' : 'false'"
+                  @click="onMoveMenu(item.key, 'down')"
+                >下移</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="settings-grid">
           <div class="grid-header">
@@ -117,7 +241,7 @@ onUnmounted(() => {
             <span class="col-action"></span>
           </div>
 
-          <div v-for="id in DIALOG_IDS" :key="id" class="settings-row">
+          <div v-for="id in activeTab === 'nav' ? NAV_DIALOG_IDS : WB_DIALOG_IDS" :key="id" class="settings-row">
             <span class="row-label">{{ DIALOG_LABELS[id] }}</span>
 
             <div class="field">
@@ -230,6 +354,51 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--text-secondary, var(--color-text-secondary));
   margin: 0 0 16px 0;
+}
+
+/* 顶部 tab 栏（视觉对齐 workbench 面板 tabs，如 WorkbenchHealth.vue 的 .hd-tab） */
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card, var(--color-bg-card));
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.tab-btn:hover {
+  background-color: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--accent-color, var(--color-primary));
+}
+
+.tab-btn.active {
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--accent-color, var(--color-primary));
+  font-weight: 600;
+}
+
+:root.dark .tab-btn {
+  background-color: var(--bg-secondary, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .tab-btn:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .tab-btn.active {
+  background-color: #1e3a5f;
+  color: #60a5fa;
 }
 
 /* 设置表格 */
@@ -361,6 +530,126 @@ onUnmounted(() => {
 
 .btn-cancel:hover {
   background: var(--hover-bg, var(--color-bg-active));
+}
+
+/* 工作台菜单配置区块（独立于 .settings-grid，不复用其列定义——R6） */
+.wb-menu-config {
+  margin-bottom: 20px;
+  padding: 14px;
+  background-color: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md);
+}
+
+.wb-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wb-menu-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.wb-menu-hint {
+  margin: 6px 0 12px;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.wb-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wb-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wb-menu-icon {
+  flex-shrink: 0;
+  width: 24px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.wb-menu-name-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-primary, var(--color-text));
+  background-color: var(--input-bg, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.wb-menu-name-input:focus {
+  outline: none;
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.wb-menu-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.wb-menu-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.wb-menu-btn:hover:not(:disabled) {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.wb-menu-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* 暗色模式：沿用文件现有 :root.dark 变量覆盖惯例，确保区块文字可读 */
+:root.dark .wb-menu-config {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .wb-menu-title {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .wb-menu-hint {
+  color: var(--text-muted, #9ca3af);
+}
+
+:root.dark .wb-menu-name-input {
+  color: var(--text-primary, #f9fafb);
+  background-color: var(--input-bg, #111827);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .wb-menu-btn {
+  color: var(--text-secondary, #d1d5db);
+  background-color: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
 }
 
 @media (max-width: 640px) {

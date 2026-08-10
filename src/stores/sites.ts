@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Site, Countdown } from '../types'
+import type { Site } from '../types'
 import { CATEGORIES } from '../types'
 import { useMarkdown } from '../composables/useMarkdown'
+import { serializeRepeatYaml } from '../composables/countdownCore'
 import { useCategoriesStore } from './categories'
 import { useSearchEnginesStore } from './searchEngines'
 import { usePasswordsStore } from './passwords'
@@ -470,10 +471,14 @@ export const useSitesStore = defineStore('sites', () => {
     const countdownsStore = useCountdownsStore()
     const countdownsSection = countdownsStore.countdowns.length > 0
       ? `countdowns:\n${countdownsStore.countdowns.map(c => {
-          const repeatLine = c.repeat ? `\n    repeat: ${c.repeat}` : ''
+          const repeatBlock = serializeRepeatYaml(c.repeat)
+          const repeatPrefix = repeatBlock ? '\n' : ''
+          const categoryLine = `\n    category: ${c.category ?? 'work'}`
+          const colorLine = c.color ? `\n    color: ${c.color}` : ''
+          const lastRemindedLine = c.lastRemindedAt ? `\n    lastRemindedAt: '${c.lastRemindedAt}'` : ''
           const sortOrderLine = typeof c.sortOrder === 'number' ? `\n    sortOrder: ${c.sortOrder}` : ''
           const showOnDisplayLine = c.showOnDisplay === false ? '\n    showOnDisplay: false' : ''
-          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${colorLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
         }).join('\n\n')}\n\n`
       : ''
 
@@ -497,7 +502,7 @@ ${sitesList}
   }
 
   // 从 Markdown 文本导入到 localStorage（按 URL 去重，保留原来的）
-  function importFromMarkdown(markdownText: string): { added: number; skipped: number; passwordsImported?: number; error?: string } {
+  async function importFromMarkdown(markdownText: string): Promise<{ added: number; skipped: number; passwordsImported?: number; error?: string }> {
     const { parseSitesFromMarkdown } = useMarkdown()
     const parsed = parseSitesFromMarkdown(markdownText)
     const importedSites = parsed.sites
@@ -520,26 +525,11 @@ ${sitesList}
       categoriesStore.importCategories(parsed.categories)
     }
     
-    // 导入倒计时（按 id 去重，保留原有数据）
+    // 导入倒计时（按 id 去重，保留原有数据，持久层在 countdowns store 内处理）
     if (parsed.countdowns && parsed.countdowns.length > 0) {
       const countdownsStore = useCountdownsStore()
-      const existingRaw = localStorage.getItem('user-countdowns')
-      const existingCountdowns: Countdown[] = existingRaw ? JSON.parse(existingRaw) : []
-      const existingIds = new Set(existingCountdowns.map(c => c.id))
-      let changed = false
-      parsed.countdowns.forEach((countdown, index) => {
-        const id = countdown.id || `cd_${Date.now()}_${index}`
-        if (!existingIds.has(id)) {
-          existingCountdowns.push({ ...countdown, id })
-          existingIds.add(id)
-          changed = true
-        }
-      })
-      if (changed) {
-        localStorage.setItem('user-countdowns', JSON.stringify(existingCountdowns))
-        // 重新加载倒计时以更新显示
-        countdownsStore.loadCountdowns()
-      }
+      const cdResult = await countdownsStore.importCountdowns(parsed.countdowns)
+      console.log(`[Import] 倒计时：导入 ${cdResult.imported} 条，跳过 ${cdResult.skipped} 条`)
     }
     
     // 获取现有的 localStorage 数据
@@ -572,18 +562,6 @@ ${sitesList}
     return { added, skipped }
   }
 
-  // 异步导入密码（从 sites.md，需要主密码解密）
-  async function importPasswordsFromMarkdown(markdownText: string): Promise<{ imported: number; failed: number }> {
-    const { parseSitesFromMarkdown } = useMarkdown()
-    const parsed = parseSitesFromMarkdown(markdownText)
-    if (!parsed.passwords || parsed.passwords.length === 0) return { imported: 0, failed: 0 }
-    
-    const passwordsStore = usePasswordsStore()
-    if (!passwordsStore.isUnlocked) return { imported: 0, failed: 0 }
-    
-    return await passwordsStore.importPasswords(parsed.passwords)
-  }
-
   return {
     sites,
     searchQuery,
@@ -613,7 +591,6 @@ ${sitesList}
     clearFilters,
     exportToMarkdown,
     importFromMarkdown,
-    importPasswordsFromMarkdown,
     // 断链检测
     isCheckingLinks,
     linkCheckProgress,

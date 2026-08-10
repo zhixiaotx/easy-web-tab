@@ -39,3 +39,12 @@ tsconfig.tsbuildinfo
 nul
 .omo
 .playwright-mcp
+site.md
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+public/sites (1).md

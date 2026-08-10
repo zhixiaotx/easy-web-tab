@@ -8,7 +8,13 @@
     "build": "node scripts/generate-preset-icons.cjs && vue-tsc -b && vite build",
     "preview": "vite preview",
     "serve": "node scripts/serve-with-rewrites.cjs",
-    "start": "npm run build && npm run serve"
+    "start": "npm run build && npm run serve",
+    "test:countdown": "node --experimental-strip-types scripts/test-countdown-core.ts",
+    "test:todo": "node --experimental-strip-types scripts/test-todo-core.ts",
+    "test:health": "node --experimental-strip-types scripts/test-health-core.ts",
+    "test:ledger": "node --experimental-strip-types scripts/test-ledger-core.ts",
+    "test:notes": "node --experimental-strip-types scripts/test-note-core.ts",
+    "test:menu": "node --experimental-strip-types scripts/test-workbench-menu-core.ts"
   },
   "dependencies": {
     "@vueuse/core": "^14.2.1",
@@ -17,17 +23,32 @@
     "js-yaml": "^4.1.1",
     "markdown-it": "^14.1.1",
     "pinia": "^3.0.4",
+    "playwright": "^1.62.1",
     "vue": "^3.5.30",
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/crypto-js": "^4.2.2",
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.1.2",
+    "@types/node": "^26.1.2",
     "@vitejs/plugin-vue": "^6.0.5",
+    "playwright-core": "^1.62.1",
     "pm2": "^5.3.0",
     "serve": "^14.2.6",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vue-tsc": "^3.2.6"
-  }
+  },
+  "description": "简洁的个人网址导航页，支持分类管理、全文搜索、键盘快捷键、暗色模式，以及导入/导出为 Markdown 文件。",
+  "main": "vite.config.js",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/sifujiang/easy-web-tab.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "types": "./vite.config.d.ts"
 }

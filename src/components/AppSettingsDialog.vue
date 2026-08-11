@@ -9,6 +9,7 @@ import {
 } from '@/stores/settings'
 import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
+import Icon from '@/components/Icon.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
@@ -198,7 +199,7 @@ onUnmounted(() => {
               class="wb-menu-row"
               :data-testid="`wbmenu-row-${item.key}`"
             >
-              <span class="wb-menu-icon">{{ item.icon }}</span>
+              <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
               <input
                 type="text"
                 class="wb-menu-name-input"
@@ -576,8 +577,9 @@ onUnmounted(() => {
 .wb-menu-icon {
   flex-shrink: 0;
   width: 24px;
-  font-size: 16px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .wb-menu-name-input {

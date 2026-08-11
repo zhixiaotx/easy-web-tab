@@ -158,15 +158,15 @@ test('T13 constants integrity', () => {
     health: '健康管理',
     ledger: '记账'
   })
-  assert.equal(MENU_ICONS.home, '🏠')
-  assert.equal(MENU_ICONS.todos, '☑️')
-  assert.equal(MENU_ICONS.notes, '📝')
-  assert.equal(MENU_ICONS.countdowns, '⏳')
-  assert.equal(MENU_ICONS.pomodoro, '🍅')
-  assert.equal(MENU_ICONS.habits, '📆')
-  assert.equal(MENU_ICONS.passwords, '🔑')
-  assert.equal(MENU_ICONS.health, '💪')
-  assert.equal(MENU_ICONS.ledger, '💰')
+  assert.equal(MENU_ICONS.home, 'home')
+  assert.equal(MENU_ICONS.todos, 'todos')
+  assert.equal(MENU_ICONS.notes, 'notes')
+  assert.equal(MENU_ICONS.countdowns, 'countdowns')
+  assert.equal(MENU_ICONS.pomodoro, 'pomodoro')
+  assert.equal(MENU_ICONS.habits, 'habits')
+  assert.equal(MENU_ICONS.passwords, 'passwords')
+  assert.equal(MENU_ICONS.health, 'health')
+  assert.equal(MENU_ICONS.ledger, 'ledger')
 })
 
 // T14 — 旧备份兼容（happy）：v3/v4 时代 7 项 order 经 normalize → 恒 9 项、旧 7 键顺序完整保留、

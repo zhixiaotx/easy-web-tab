@@ -4,12 +4,13 @@ import WorkbenchExercise from './WorkbenchExercise.vue'
 import WorkbenchDiet from './WorkbenchDiet.vue'
 import WorkbenchSleep from './WorkbenchSleep.vue'
 import WorkbenchWeight from './WorkbenchWeight.vue'
+import Icon from '@/components/Icon.vue'
 
 const TAB_META: Record<HealthModule, { label: string; icon: string }> = {
-  exercise: { label: '运动', icon: '🏃' },
-  diet: { label: '饮食', icon: '🍽️' },
-  sleep: { label: '睡眠', icon: '😴' },
-  weight: { label: '体重', icon: '⚖️' },
+  exercise: { label: '运动', icon: 'exercise' },
+  diet: { label: '饮食', icon: 'diet' },
+  sleep: { label: '睡眠', icon: 'sleep' },
+  weight: { label: '体重', icon: 'weight' },
 }
 
 const props = defineProps<{ activeTab: HealthModule }>()
@@ -30,7 +31,7 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
         :data-testid="`hd-tab-${tab}`"
         @click="emit('change', tab)"
       >
-        <span class="hd-tab-icon">{{ TAB_META[tab].icon }}</span>
+        <span class="hd-tab-icon"><Icon :name="TAB_META[tab].icon" /></span>
         <span class="hd-tab-label">{{ TAB_META[tab].label }}</span>
       </button>
     </div>
@@ -70,8 +71,9 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
 }
 
 .hd-tab-icon {
-  font-size: 15px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hd-tab:hover {

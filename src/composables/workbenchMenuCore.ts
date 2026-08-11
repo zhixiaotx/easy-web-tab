@@ -31,17 +31,17 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   ledger: '记账'
 }
 
-/** 菜单图标映射。 */
+/** 菜单图标映射（内联 SVG path 标识，由 Icon.vue 查表渲染；值 = Icon 表键名，非 emoji）。 */
 export const MENU_ICONS: Record<string, string> = {
-  home: '🏠',
-  todos: '☑️',
-  notes: '📝',
-  countdowns: '⏳',
-  pomodoro: '🍅',
-  habits: '📆',
-  passwords: '🔑',
-  health: '💪',
-  ledger: '💰'
+  home: 'home',
+  todos: 'todos',
+  notes: 'notes',
+  countdowns: 'countdowns',
+  pomodoro: 'pomodoro',
+  habits: 'habits',
+  passwords: 'passwords',
+  health: 'health',
+  ledger: 'ledger'
 }
 
 const KNOWN_MENU_KEYS: ReadonlySet<string> = new Set<string>(WORKBENCH_MENU_KEYS)

@@ -18,6 +18,7 @@ import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
+import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -225,7 +226,7 @@ async function handleImportFile(event: Event) {
           :data-testid="`wb-menu-${item.key}`"
           @click="navigateTo(item.key)"
         >
-          <span class="wb-menu-icon">{{ item.icon }}</span>
+          <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
           <span class="wb-menu-label">{{ item.label }}</span>
         </button>
       </nav>
@@ -347,8 +348,9 @@ async function handleImportFile(event: Event) {
 }
 
 .wb-menu-icon {
-  font-size: 15px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 

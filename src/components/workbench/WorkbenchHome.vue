@@ -12,6 +12,7 @@ import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { calcBmi, calcDailyAttainment, calcExerciseAttainment, classifyBmi } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
+import Icon from '@/components/Icon.vue'
 
 const emit = defineEmits<{ navigate: [section: string, tab?: string] }>()
 
@@ -165,7 +166,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
     <div class="stats-grid">
       <div class="stat-card" data-testid="home-stats-todos">
         <div class="stat-header">
-          <span class="stat-icon">☑️</span>
+          <span class="stat-icon"><Icon name="todos" :size="18" /></span>
           <span class="stat-label">待办任务</span>
           <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
         </div>
@@ -175,7 +176,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-notes">
         <div class="stat-header">
-          <span class="stat-icon">📝</span>
+          <span class="stat-icon"><Icon name="notes" :size="18" /></span>
           <span class="stat-label">便签</span>
           <button class="nav-btn" data-testid="home-nav-notes" @click="emit('navigate', 'notes')">前往 →</button>
         </div>
@@ -185,7 +186,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-countdowns">
         <div class="stat-header">
-          <span class="stat-icon">⏳</span>
+          <span class="stat-icon"><Icon name="countdowns" :size="18" /></span>
           <span class="stat-label">定时提醒</span>
           <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
         </div>
@@ -195,7 +196,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-passwords">
         <div class="stat-header">
-          <span class="stat-icon">🔑</span>
+          <span class="stat-icon"><Icon name="passwords" :size="18" /></span>
           <span class="stat-label">密码</span>
           <button class="nav-btn" data-testid="home-nav-passwords" @click="emit('navigate', 'passwords')">前往 →</button>
         </div>
@@ -207,7 +208,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-exercise">
         <div class="stat-header">
-          <span class="stat-icon">🏃</span>
+          <span class="stat-icon"><Icon name="exercise" :size="18" /></span>
           <span class="stat-label">运动</span>
           <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'health', 'exercise')">前往 →</button>
         </div>
@@ -217,7 +218,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-diet">
         <div class="stat-header">
-          <span class="stat-icon">🍽️</span>
+          <span class="stat-icon"><Icon name="diet" :size="18" /></span>
           <span class="stat-label">饮食</span>
           <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'health', 'diet')">前往 →</button>
         </div>
@@ -227,7 +228,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-sleep">
         <div class="stat-header">
-          <span class="stat-icon">😴</span>
+          <span class="stat-icon"><Icon name="sleep" :size="18" /></span>
           <span class="stat-label">睡眠</span>
           <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'health', 'sleep')">前往 →</button>
         </div>
@@ -237,7 +238,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-weight">
         <div class="stat-header">
-          <span class="stat-icon">⚖️</span>
+          <span class="stat-icon"><Icon name="weight" :size="18" /></span>
           <span class="stat-label">体重</span>
           <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'health', 'weight')">前往 →</button>
         </div>
@@ -247,7 +248,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <div class="stat-card" data-testid="home-stats-ledger">
         <div class="stat-header">
-          <span class="stat-icon">💰</span>
+          <span class="stat-icon"><Icon name="ledger" :size="18" /></span>
           <span class="stat-label">记账</span>
           <button class="nav-btn" data-testid="home-nav-ledger" @click="emit('navigate', 'ledger')">前往 →</button>
         </div>
@@ -260,7 +261,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
     <div class="panels-grid">
       <section class="panel-card">
         <div class="panel-header">
-          <h3><span class="panel-icon">⏳</span>即将到期定时提醒</h3>
+          <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
           <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
         </div>
         <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
@@ -274,7 +275,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
       <section class="panel-card">
         <div class="panel-header">
-          <h3><span class="panel-icon">☑️</span>未完成待办</h3>
+          <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
           <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
         </div>
         <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
@@ -332,8 +333,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 }
 
 .stat-icon {
-  font-size: 18px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -417,6 +419,8 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 }
 
 .panel-icon {
+  display: inline-flex;
+  align-items: center;
   margin-right: 4px;
 }
 

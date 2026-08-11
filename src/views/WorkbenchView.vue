@@ -22,6 +22,10 @@ import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
 import Icon from '@/components/Icon.vue'
+import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
+import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
+import type { SpotlightData } from '@/composables/spotlightCore'
+import { useSitesStore } from '@/stores/sites'
 
 const router = useRouter()
 const toast = useToast()
@@ -33,6 +37,7 @@ const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
 const settingsStore = useAppSettingsStore()
+const sitesStore = useSitesStore()
 
 // 左侧菜单导航白名单（9 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
@@ -67,6 +72,35 @@ function navigateTo(section: string, tab?: string) {
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
 
+// ===== 全局搜索（侧栏底部按钮 / Alt+K 打开）=====
+const spotlightOpen = ref(false)
+
+// 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
+const spotlightData = computed<SpotlightData>(() => ({
+  todos: todosStore.todos,
+  notes: notesStore.notes,
+  countdowns: countdownsStore.countdowns,
+  ledgerEntries: ledgerStore.entries,
+  ledgerCategories: ledgerStore.categories,
+  passwords: passwordsStore.passwords,
+  sites: sitesStore.sites
+}))
+
+function handleSpotlightSelect(action: SpotlightAction) {
+  spotlightOpen.value = false
+  if (action.kind === 'navigate') {
+    navigateTo(action.section)
+  } else if (action.kind === 'password') {
+    if (passwordsStore.isUnlocked) {
+      navigateTo('passwords')
+    } else {
+      toast.warning('请先在密码管理面板解锁密码库')
+    }
+  } else if (action.kind === 'site') {
+    window.open(action.url, '_blank')
+  }
+}
+
 // 实时时钟（每秒更新）
 const now = ref(new Date())
 let clockTimer: ReturnType<typeof setInterval> | undefined
@@ -96,7 +130,8 @@ onMounted(async () => {
     notesStore.loadNotes(),
     countdownsStore.loadCountdowns(),
     healthStore.loadHealth(),
-    ledgerStore.loadLedger()
+    ledgerStore.loadLedger(),
+    sitesStore.loadSites()
   ])
   // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
   await habitsStore.loadHabits()
@@ -237,6 +272,15 @@ async function handleImportFile(event: Event) {
           <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
           <span class="wb-menu-label">{{ item.label }}</span>
         </button>
+        <button
+          class="wb-menu-item wb-spotlight-open"
+          data-testid="wb-spotlight-open"
+          title="全局搜索 (Alt+K)"
+          @click="spotlightOpen = true"
+        >
+          <span class="wb-menu-icon"><Icon name="search" /></span>
+          <span class="wb-menu-label">全局搜索</span>
+        </button>
       </nav>
 
       <main class="wb-content">
@@ -251,6 +295,13 @@ async function handleImportFile(event: Event) {
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
       </main>
     </div>
+
+    <SpotlightOverlay
+      v-if="spotlightOpen"
+      :data="spotlightData"
+      @select="handleSpotlightSelect"
+      @close="spotlightOpen = false"
+    />
   </div>
 </template>
 
@@ -382,6 +433,11 @@ async function handleImportFile(event: Event) {
   background-color: var(--color-primary-light, #eff6ff);
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
+}
+
+/* 全局搜索入口固定在菜单底部（margin-top:auto 撑开与导航项间距） */
+.wb-menu-item.wb-spotlight-open {
+  margin-top: auto;
 }
 
 .wb-content {

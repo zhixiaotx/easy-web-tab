@@ -9,6 +9,7 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useAppSettingsStore } from '@/stores/settings'
 import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
@@ -16,6 +17,7 @@ import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
 import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
 import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
 import WorkbenchPomodoro from '@/components/workbench/WorkbenchPomodoro.vue'
+import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
@@ -29,15 +31,17 @@ const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
+const habitsStore = useWorkbenchHabitsStore()
 const settingsStore = useAppSettingsStore()
 
-// 左侧菜单导航白名单（8 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（9 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
   'countdowns',
   'pomodoro',
+  'habits',
   'passwords',
   'health',
   'ledger'
@@ -94,6 +98,8 @@ onMounted(async () => {
     healthStore.loadHealth(),
     ledgerStore.loadLedger()
   ])
+  // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
+  await habitsStore.loadHabits()
 })
 
 onUnmounted(() => {
@@ -239,6 +245,7 @@ async function handleImportFile(event: Event) {
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
         <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
+        <WorkbenchHabits v-else-if="activeSection === 'habits'" />
         <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
         <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />

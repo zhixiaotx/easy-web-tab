@@ -72,6 +72,13 @@ function navigateTo(section: string, tab?: string) {
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
 
+// 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
+const sidebarCollapsed = computed(() => settingsStore.workbenchSidebarCollapsed ?? false)
+
+function toggleSidebar() {
+  settingsStore.setWorkbenchSidebarCollapsed(!sidebarCollapsed.value)
+}
+
 // ===== 全局搜索（侧栏底部按钮 / Alt+K 打开）=====
 const spotlightOpen = ref(false)
 
@@ -259,7 +266,18 @@ async function handleImportFile(event: Event) {
 
     <!-- 主体：左菜单 + 右内容区 -->
     <div class="wb-body">
-      <nav class="wb-menu">
+      <nav class="wb-menu" :class="{ collapsed: sidebarCollapsed }">
+        <button
+          class="wb-sidebar-toggle"
+          data-testid="wb-sidebar-toggle"
+          :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+          @click="toggleSidebar"
+        >
+          <span class="wb-menu-icon">
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+          </span>
+          <span class="wb-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
+        </button>
         <button
           v-for="item in menuItems"
           :key="item.key"
@@ -391,6 +409,47 @@ async function handleImportFile(event: Event) {
   padding: 12px 8px;
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
+  transition: width 0.2s ease;
+}
+
+/* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
+.wb-menu.collapsed {
+  width: 56px;
+}
+
+.wb-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wb-sidebar-toggle:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+}
+
+.wb-menu.collapsed .wb-sidebar-toggle {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.wb-menu.collapsed .wb-menu-label {
+  display: none;
+}
+
+.wb-menu.collapsed .wb-menu-item {
+  justify-content: center;
+  padding: 10px 0;
 }
 
 .wb-menu-item {
@@ -482,6 +541,15 @@ async function handleImportFile(event: Event) {
   border-right-color: var(--border-color, #374151);
 }
 
+:root.dark .wb-sidebar-toggle {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .wb-sidebar-toggle:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
 :root.dark .wb-menu-item {
   color: var(--text-secondary, #d1d5db);
 }
@@ -524,6 +592,24 @@ async function handleImportFile(event: Event) {
     overflow-x: auto;
     border-right: none;
     border-bottom: 1px solid var(--color-border, #e2e8f0);
+  }
+
+  /* 移动端横排布局：忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
+  .wb-menu.collapsed {
+    width: 100%;
+  }
+
+  .wb-menu.collapsed .wb-menu-label {
+    display: inline;
+  }
+
+  .wb-menu.collapsed .wb-menu-item {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .wb-sidebar-toggle {
+    display: none;
   }
 
   .wb-menu-item {

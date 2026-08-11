@@ -10,6 +10,7 @@ import {
   incomeCategories,
   maskOrReveal,
   monthKeyOf,
+  nextPayday,
   normalizeLedgerData,
   normalizeLedgerEntry,
   planAutoCopy,
@@ -380,6 +381,46 @@ test('T23 maskOrReveal reveals amount when hide is false', () => {
 // T24 — maskOrReveal：空串也掩码
 test('T24 maskOrReveal masks empty string too', () => {
   assert.strictEqual(maskOrReveal('', true), '****')
+})
+
+// T25 — nextPayday happy：本月日序 ≤ 发薪日 → 本月；> 发薪日 → 下月；跨年进位
+test('T25 nextPayday happy path', () => {
+  const entries = [mkEntry('e1', '2026-07-15', 'salary', 10000)]
+  // today 12 日 ≤ 15 日 → 本月 2026-08-15
+  assert.equal(nextPayday(entries, '2026-08-12'), '2026-08-15')
+  // today 20 日 > 15 日 → 下月 2026-09-15
+  assert.equal(nextPayday(entries, '2026-08-20'), '2026-09-15')
+  // 跨年：12-31 > 15 → 下月 2027-01-15
+  assert.equal(nextPayday(entries, '2026-12-31'), '2027-01-15')
+  // today 恰为发薪日（15 日 ≤ 15 日）→ 本月当日
+  assert.equal(nextPayday(entries, '2026-08-15'), '2026-08-15')
+})
+
+// T26 — nextPayday failure/boundary：无 salary → null；31 日小月/2 月钳制（闰年 29）；多笔取最近一笔 day-of-month
+test('T26 nextPayday no salary + day-of-month clamp', () => {
+  // 无 salary 记录 → null
+  assert.equal(nextPayday([], '2026-08-12'), null)
+  assert.equal(nextPayday([mkEntry('e1', '2026-08-01', 'mortgage', 2450)], '2026-08-12'), null)
+  // 非 salary 分类（未知分类）也不计入 → null
+  assert.equal(nextPayday([mkEntry('e1', '2026-08-01', 'nonexistent', 100)], '2026-08-12'), null)
+
+  // 31 日钳制：2026-02 平年 28 天；2028-02 闰年 29 天；2026-04 小月 30 天
+  const e31 = [mkEntry('e1', '2026-01-31', 'salary', 10000)]
+  assert.equal(nextPayday(e31, '2026-02-12'), '2026-02-28')
+  assert.equal(nextPayday(e31, '2028-02-10'), '2028-02-29')
+  assert.equal(nextPayday(e31, '2026-04-05'), '2026-04-30')
+  // 31 日在小月：2026-09（30 天）钳制；today 恰为 31 日 → 本月当日（31 ≤ 31 走本月）
+  assert.equal(nextPayday(e31, '2026-09-05'), '2026-09-30')
+  assert.equal(nextPayday(e31, '2026-08-31'), '2026-08-31')
+
+  // 多笔 salary 记录 → 取最近一笔（date 降序）的 day-of-month：15 日最新 → 以 15 为准
+  const multi = [
+    mkEntry('e1', '2026-06-20', 'salary', 9000),
+    mkEntry('e2', '2026-07-15', 'salary', 11000)
+  ]
+  assert.equal(nextPayday(multi, '2026-08-12'), '2026-08-15')
+  // 非法 today / 非法 salary date 不抛错
+  assert.equal(nextPayday(multi, 'bad-date'), null)
 })
 
 let passed = 0

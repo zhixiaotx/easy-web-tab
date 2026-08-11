@@ -119,6 +119,35 @@ export function planAutoCopy(entries: LedgerEntry[], targetMonthKey: string): Au
   return drafts
 }
 
+/**
+ * 下次发薪日：取 categoryId 为 salary（AUTO_COPY_CATEGORY_IDS 中的 'salary'）的最近一笔记录的 day-of-month，
+ * 下一个发薪日 = 本月该日（today 的日序 ≤ 发薪日则本月，否则下月）。返回 'YYYY-MM-DD'；
+ * 31 日在小月/2 月按当月天数钳制（new Date(year, month+1, 0).getDate()）。无 salary 记录返回 null。
+ * 纯函数，不 mutate 入参；日期推算唯一来源，组件禁止内联重算。
+ */
+export function nextPayday(entries: LedgerEntry[], today: string): string | null {
+  if (!DATE_RE.test(today)) return null
+  const salaryId = AUTO_COPY_CATEGORY_IDS.find(id => id === 'salary') ?? 'salary'
+  const salaryEntries = entries.filter(e => e.categoryId === salaryId)
+  if (salaryEntries.length === 0) return null
+  // 最近一笔（date 降序，同日取 createdAt 新者，同 planAutoCopy 的取最近语义）
+  const latest = salaryEntries.sort((a, b) =>
+    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
+  )[0]
+  const payDay = Number(latest.date.slice(8, 10))
+  if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) return null
+
+  const [year, month] = today.split('-').map(Number)
+  const todayDay = Number(today.slice(8, 10))
+  // 本月（month-1）或下月（month）的月份序号（0-11），下月跨年自然进位
+  const targetSeq = month - 1 + (todayDay > payDay ? 1 : 0)
+  const targetYear = year + Math.floor(targetSeq / 12)
+  const targetMonth = ((targetSeq % 12) + 12) % 12
+  // 31 日在小月/2 月按当月实际天数钳制
+  const day = Math.min(payDay, new Date(targetYear, targetMonth + 1, 0).getDate())
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
 export interface MonthlyStats {
   income: number
   expense: number

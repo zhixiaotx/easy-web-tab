@@ -25,6 +25,7 @@ import Icon from '@/components/Icon.vue'
 import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
 import type { SpotlightData } from '@/composables/spotlightCore'
+import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
 import { useSitesStore } from '@/stores/sites'
 
 const router = useRouter()
@@ -107,6 +108,15 @@ function handleSpotlightSelect(action: SpotlightAction) {
     window.open(action.url, '_blank')
   }
 }
+
+// 工作台快捷键：Alt+K 打开全局搜索（输入框内跳过）、Ctrl+Alt+1..7 跳转菜单（跟随当前顺序）、
+// Ctrl+Alt+8 打开全局搜索、Ctrl+Alt+9 折叠/展开侧栏、Esc 关闭全局搜索（幂等）
+useWorkbenchShortcuts({
+  spotlightOpen,
+  getMenuKeys: () => menuItems.value.map((item) => item.key),
+  onNavigate: (key) => navigateTo(key as SectionKey),
+  onToggleSidebar: toggleSidebar
+})
 
 // 实时时钟（每秒更新）
 const now = ref(new Date())

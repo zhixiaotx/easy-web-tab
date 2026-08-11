@@ -15,6 +15,7 @@ import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
 import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
 import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
+import WorkbenchPomodoro from '@/components/workbench/WorkbenchPomodoro.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
@@ -30,12 +31,13 @@ const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 const settingsStore = useAppSettingsStore()
 
-// 左侧菜单 7 项
+// 左侧菜单导航白名单（8 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
   'countdowns',
+  'pomodoro',
   'passwords',
   'health',
   'ledger'
@@ -236,6 +238,7 @@ async function handleImportFile(event: Event) {
         <WorkbenchTodo v-else-if="activeSection === 'todos'" />
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
+        <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
         <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
         <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />

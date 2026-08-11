@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { reactive, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import {
   useAppSettingsStore,
   DIALOG_LABELS,
@@ -9,6 +9,7 @@ import {
 } from '@/stores/settings'
 import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
+import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import Icon from '@/components/Icon.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
@@ -23,6 +24,9 @@ const emit = defineEmits<{
 }>()
 
 const store = useAppSettingsStore()
+// 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
+const appSettings = useAppSettingsDialog()
+const cityInput = ref<HTMLInputElement | null>(null)
 
 // ========================================
 // 草稿状态：以字符串保存，允许输入框为空/未提交；
@@ -137,6 +141,14 @@ function revertMenuName(key: string): void {
   delete menuEditing[key]
 }
 
+// ========================================
+// 天气城市（仅工作台设置 tab）：v-model 直绑 store 显示用；change/blur 提交 setWorkbenchCity
+// （store 负责 trim 与空串=清除持久化；提交后显示值回落到规范值）
+// ========================================
+function commitCity(): void {
+  store.setWorkbenchCity(store.workbenchCity ?? '')
+}
+
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -145,12 +157,27 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+// 订阅「去设置」打开事件（useAppSettingsDialog 单例）：打开时切到工作台设置 tab 并聚焦城市输入框；
+// 一次性消费打开标志（closeAppSettings），避免后续挂载重复触发
+let stopWatchSettings: (() => void) | undefined
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  stopWatchSettings = watch(
+    () => appSettings.showAppSettings.value,
+    (open) => {
+      if (open) {
+        activeTab.value = 'wb'
+        nextTick(() => cityInput.value?.focus())
+        appSettings.closeAppSettings()
+      }
+    }
+  )
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  stopWatchSettings?.()
 })
 </script>
 
@@ -183,6 +210,23 @@ onUnmounted(() => {
         </div>
 
         <p class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+
+        <!-- 天气城市（仅工作台设置 tab）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
+        <div v-if="activeTab === 'wb'" class="wb-city-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">天气城市</h3>
+          </div>
+          <p class="wb-menu-hint">设置工作台天气卡显示的城市，留空表示未配置</p>
+          <input
+            ref="cityInput"
+            type="text"
+            class="wb-menu-name-input"
+            placeholder="如：北京"
+            data-testid="wb-city-input"
+            v-model="store.workbenchCity"
+            @change="commitCity"
+          />
+        </div>
 
         <!-- 工作台菜单（仅工作台设置 tab）：排序 + 改名 + 区块恢复默认；主页恒置顶不可动 -->
         <div v-if="activeTab === 'wb'" class="wb-menu-config">
@@ -533,8 +577,9 @@ onUnmounted(() => {
   background: var(--hover-bg, var(--color-bg-active));
 }
 
-/* 工作台菜单配置区块（独立于 .settings-grid，不复用其列定义——R6） */
-.wb-menu-config {
+/* 工作台菜单/城市配置区块（独立于 .settings-grid，不复用其列定义——R6） */
+.wb-menu-config,
+.wb-city-config {
   margin-bottom: 20px;
   padding: 14px;
   background-color: var(--bg-card, var(--color-bg-card));
@@ -629,7 +674,8 @@ onUnmounted(() => {
 }
 
 /* 暗色模式：沿用文件现有 :root.dark 变量覆盖惯例，确保区块文字可读 */
-:root.dark .wb-menu-config {
+:root.dark .wb-menu-config,
+:root.dark .wb-city-config {
   background-color: var(--bg-secondary, #1f2937);
   border-color: var(--border-color, #374151);
 }

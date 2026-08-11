@@ -174,13 +174,15 @@ export interface NoteData {
   notes: WorkbenchNote[]
 }
 
-// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度 + 工作台菜单顺序/名称
+// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度 + 工作台菜单顺序/名称 + 工作台城市/侧栏折叠态
 export interface AppSettingsData {
   dialogSizes: Record<string, { width: number; height: number }>
   buttonOpacity: number
   bgOpacity: number
   workbenchMenuOrder?: string[]
   workbenchMenuLabels?: Record<string, string>
+  workbenchCity?: string // 天气卡城市（trim 后非空；空串/undefined/null = 未配置）
+  workbenchSidebarCollapsed?: boolean // 工作台侧栏折叠态（非法/缺失 = 未配置即展开）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

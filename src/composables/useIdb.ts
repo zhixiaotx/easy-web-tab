@@ -1,6 +1,8 @@
 /**
  * 零依赖 IndexedDB 封装（工作台数据层）
- * DB: easy-web-tab v3；7 个 object store 均无 keyPath，统一使用 out-of-line 键 'items'
+ * DB: easy-web-tab v4；object store 均无 keyPath，统一使用 out-of-line 键 'items'
+ * 核心 7 store（导出/导入用）：todos/notes/countdowns/passwords/health/ledger/settings
+ * 辅助 3 store（v4 新增，不进备份导出）：pomodoro/habits/snapshots
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
@@ -10,11 +12,14 @@ import { emptyLedgerData } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 3
-export const IDB_STORES = ['todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger', 'settings'] as const
+export const DB_VERSION = 4
+/** 核心 7 store：随 JSON 备份导出/导入 */
+export const IDB_CORE_STORES = ['todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger', 'settings'] as const
+/** 辅助 3 store：v4 新增，仅本地使用，不参与备份导出 */
+export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
 export const IDB_KEY = 'items'
 
-export type IdbStore = (typeof IDB_STORES)[number]
+export type IdbStore = (typeof IDB_CORE_STORES)[number] | (typeof IDB_AUX_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -24,7 +29,8 @@ export function openIdb(): Promise<IDBDatabase> {
       const request = indexedDB.open(DB_NAME, DB_VERSION)
       request.onupgradeneeded = () => {
         const db = request.result
-        for (const name of IDB_STORES) {
+        // 幂等 contains 守卫：v3 旧库升级到 v4 时自动补建 3 个新 store，不清空旧数据
+        for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
           }
@@ -130,11 +136,17 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
   // settings 兼容 v1/v2/v3 备份（运行时无 settings 字段 → empty 兜底）；v4 备份原样透传
   data = { ...data, settings: data.settings ?? emptyAppSettingsData() }
   const db = await openIdb()
-  const tx = db.transaction([...IDB_STORES], 'readwrite')
-  for (const name of IDB_STORES) {
+  // 事务范围覆盖核心+辅助全部 store（循环只写 data 中存在的键，
+  // v1-v4 备份缺 pomodoro/habits/snapshots 字段 → 跳过写入，绝不 put undefined 进新 store）
+  // data 是解析后的备份 JSON：按任意 store 名动态取键需边界断言（WorkbenchData 无索引签名）
+  const backupFields = data as unknown as Record<string, unknown>
+  const tx = db.transaction([...IDB_CORE_STORES, ...IDB_AUX_STORES], 'readwrite')
+  for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES]) {
+    // 键存在性守卫：v1-v4 备份缺新 store 字段 → 跳过，绝不 put undefined
+    if (!(name in backupFields)) continue
     const store = tx.objectStore(name)
     store.clear()
-    store.put(data[name], IDB_KEY)
+    store.put(backupFields[name], IDB_KEY)
   }
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve()

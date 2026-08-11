@@ -26,6 +26,7 @@ import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
 import type { SpotlightData } from '@/composables/spotlightCore'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
+import { captureSnapshot } from '@/composables/useSnapshots'
 import { useSitesStore } from '@/stores/sites'
 
 const router = useRouter()
@@ -151,6 +152,8 @@ onMounted(async () => {
   ])
   // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
   await habitsStore.loadHabits()
+  // 进入工作台自动快照（fire-and-forget：非阻塞、静默失败，绝不阻塞渲染；同日去重由 captureSnapshot 处理）
+  captureSnapshot().catch(() => {})
 })
 
 onUnmounted(() => {

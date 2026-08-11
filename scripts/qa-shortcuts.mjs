@@ -5,7 +5,7 @@
  * Ctrl+Alt+3 → 便签面板（note-add-button 可见）→ Ctrl+Alt+1 → 主页（bento-card 可见）→
  * Alt+K → 全局搜索浮层打开（sp-overlay/sp-input）→ Esc → 浮层关闭 →
  * 焦点在便签搜索输入框内按 Alt+K → 浮层不打开（skip-input）→
- * Ctrl+Alt+8 → 浮层打开 → Esc 关闭 → Ctrl+Alt+9 两次 → 侧栏折叠/展开 →
+ * Ctrl+Alt+8 → 健康管理面板（hd-tabs 可见）→ Ctrl+Alt+9 → 记账面板（ld-add 可见）→
  * 截图存 .omo/evidence/workbench-improvements/task-20-workbench-improvements.png。
  *
  * 运行：node scripts/qa-shortcuts.mjs
@@ -149,21 +149,15 @@ try {
   const overlayCountInInput = await page.locator('[data-testid="sp-overlay"]').count()
   record('e) 输入框内 Alt+K 不打开浮层（skip-input）', overlayCountInInput === 0, { overlayCountInInput })
 
-  // ===== Ctrl+Alt+8 → 浮层打开 =====
+  // ===== Ctrl+Alt+8 → 健康管理面板（菜单 index 7 = health）=====
   await page.keyboard.press('Control+Alt+8')
-  await page.waitForSelector('[data-testid="sp-overlay"]', { state: 'visible', timeout: 10000 })
-  record('f) Ctrl+Alt+8 → 浮层打开', true, {})
+  await page.waitForSelector('[data-testid="hd-tabs"]', { state: 'visible', timeout: 10000 })
+  record('f) Ctrl+Alt+8 → 健康管理面板', true, {})
 
-  // ===== Esc 关闭后 Ctrl+Alt+9 → 侧栏折叠 / 再按 → 展开 =====
-  await page.keyboard.press('Escape')
-  await page.waitForFunction(() => !document.querySelector('[data-testid="sp-overlay"]'), { timeout: 5000 })
+  // ===== Ctrl+Alt+9 → 记账面板（菜单 index 8 = ledger）=====
   await page.keyboard.press('Control+Alt+9')
-  await page.waitForFunction(() => document.querySelector('.wb-menu')?.classList.contains('collapsed'), { timeout: 5000 })
-  const collapsedAfter9 = await page.evaluate(() => document.querySelector('.wb-menu')?.classList.contains('collapsed'))
-  await page.keyboard.press('Control+Alt+9')
-  await page.waitForFunction(() => !document.querySelector('.wb-menu')?.classList.contains('collapsed'), { timeout: 5000 })
-  const expandedAfter9 = !(await page.evaluate(() => document.querySelector('.wb-menu')?.classList.contains('collapsed')))
-  record('g) Ctrl+Alt+9 两次 → 折叠再展开', collapsedAfter9 && expandedAfter9, { collapsedAfter9, expandedAfter9 })
+  await page.waitForSelector('[data-testid="ld-add"]', { state: 'visible', timeout: 10000 })
+  record('g) Ctrl+Alt+9 → 记账面板', true, {})
 
   // ===== 证据截图（Alt+K 浮层打开态）=====
   await page.keyboard.press('Alt+k')

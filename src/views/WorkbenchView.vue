@@ -109,13 +109,12 @@ function handleSpotlightSelect(action: SpotlightAction) {
   }
 }
 
-// 工作台快捷键：Alt+K 打开全局搜索（输入框内跳过）、Ctrl+Alt+1..7 跳转菜单（跟随当前顺序）、
-// Ctrl+Alt+8 打开全局搜索、Ctrl+Alt+9 折叠/展开侧栏、Esc 关闭全局搜索（幂等）
+// 工作台快捷键：Alt+K 打开全局搜索（输入框内跳过）、Ctrl+Alt+1..9 跳转菜单（按设置 store 当前顺序）、
+// Esc 关闭全局搜索（幂等）
 useWorkbenchShortcuts({
   spotlightOpen,
   getMenuKeys: () => menuItems.value.map((item) => item.key),
-  onNavigate: (key) => navigateTo(key as SectionKey),
-  onToggleSidebar: toggleSidebar
+  onNavigate: (key) => navigateTo(key as SectionKey)
 })
 
 // 实时时钟（每秒更新）

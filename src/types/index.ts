@@ -188,7 +188,7 @@ export function emptyAppSettingsData(): AppSettingsData {
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 4
+export const WORKBENCH_DATA_VERSION = 5
 
 export interface WorkbenchData {
   version: number
@@ -200,6 +200,8 @@ export interface WorkbenchData {
   health: HealthData
   ledger: LedgerData
   settings: AppSettingsData
+  pomodoro?: unknown // v5 新增：番茄钟数据（后续 Todo 定义具体类型后收紧）
+  habits?: unknown // v5 新增：习惯打卡数据（后续 Todo 定义具体类型后收紧）
 }
 
 // ==================== 健康管理 ====================

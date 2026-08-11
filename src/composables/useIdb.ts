@@ -1,21 +1,23 @@
 /**
  * 零依赖 IndexedDB 封装（工作台数据层）
  * DB: easy-web-tab v4；object store 均无 keyPath，统一使用 out-of-line 键 'items'
- * 核心 7 store（导出/导入用）：todos/notes/countdowns/passwords/health/ledger/settings
- * 辅助 3 store（v4 新增，不进备份导出）：pomodoro/habits/snapshots
+ * 核心 7 store + 辅助 pomodoro/habits 参与 JSON 备份导出/导入（备份格式 v5 起）
+ * snapshots 仅本地使用，不参与备份导出/导入
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
 import type { AppSettingsData, Countdown, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
+import { emptyHabitsData } from './habitCore'
 import { emptyHealthData } from './healthCore'
 import { emptyLedgerData } from './ledgerCore'
 import { emptyNoteData, normalizeNoteData } from './noteCore'
+import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
 export const DB_VERSION = 4
 /** 核心 7 store：随 JSON 备份导出/导入 */
 export const IDB_CORE_STORES = ['todos', 'notes', 'countdowns', 'passwords', 'health', 'ledger', 'settings'] as const
-/** 辅助 3 store：v4 新增，仅本地使用，不参与备份导出 */
+/** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
 export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
 export const IDB_KEY = 'items'
 
@@ -83,14 +85,16 @@ export function idbClear(store: IdbStore): Promise<void> {
 }
 
 export async function idbExportAll(): Promise<WorkbenchData> {
-  const [todos, notes, countdowns, passwords, health, ledger, settings] = await Promise.all([
+  const [todos, notes, countdowns, passwords, health, ledger, settings, pomodoro, habits] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
     idbGet<NoteData>('notes'),
     idbGet<Countdown[]>('countdowns'),
     idbGet<string>('passwords'),
     idbGet<HealthData>('health'),
     idbGet<LedgerData>('ledger'),
-    idbGet<AppSettingsData>('settings')
+    idbGet<AppSettingsData>('settings'),
+    idbGet('pomodoro'),
+    idbGet('habits')
   ])
   return {
     version: WORKBENCH_DATA_VERSION,
@@ -101,12 +105,14 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     passwords: passwords ?? '',
     health: health ?? emptyHealthData(),
     ledger: ledger ?? emptyLedgerData(),
-    settings: settings ?? emptyAppSettingsData()
+    settings: settings ?? emptyAppSettingsData(),
+    pomodoro: pomodoro ?? emptyPomodoroData(),
+    habits: habits ?? emptyHabitsData()
   }
 }
 
 export async function idbImportAll(data: WorkbenchData): Promise<void> {
-  if (data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4) {
+  if (data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4 && data.version !== 5) {
     throw new Error('备份文件版本不兼容')
   }
   // notes 兼容旧数组（v1/v2 纯便签列表）与新对象（v3 NoteData）两种格式
@@ -135,14 +141,22 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
   data = { ...data, notes: normalizeNoteData(data.notes) }
   // settings 兼容 v1/v2/v3 备份（运行时无 settings 字段 → empty 兜底）；v4 备份原样透传
   data = { ...data, settings: data.settings ?? emptyAppSettingsData() }
+  // pomodoro/habits 兼容 v1-v4 备份（无该字段 → empty 兜底）；v5 备份原样透传。
+  // 兜底放在写入循环之前 → 键存在性守卫（下方）对 pomodoro/habits 恒有键可写；
+  // snapshots 永不进备份，缺键 → 循环跳过，绝不 put undefined
+  data = {
+    ...data,
+    pomodoro: data.pomodoro ?? emptyPomodoroData(),
+    habits: data.habits ?? emptyHabitsData()
+  }
   const db = await openIdb()
   // 事务范围覆盖核心+辅助全部 store（循环只写 data 中存在的键，
-  // v1-v4 备份缺 pomodoro/habits/snapshots 字段 → 跳过写入，绝不 put undefined 进新 store）
+  // v1-v5 备份缺 snapshots 字段 → 跳过写入，绝不 put undefined 进新 store）
   // data 是解析后的备份 JSON：按任意 store 名动态取键需边界断言（WorkbenchData 无索引签名）
   const backupFields = data as unknown as Record<string, unknown>
   const tx = db.transaction([...IDB_CORE_STORES, ...IDB_AUX_STORES], 'readwrite')
   for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES]) {
-    // 键存在性守卫：v1-v4 备份缺新 store 字段 → 跳过，绝不 put undefined
+    // 键存在性守卫：v1-v5 备份缺 snapshots 字段 → 跳过，绝不 put undefined
     if (!(name in backupFields)) continue
     const store = tx.objectStore(name)
     store.clear()

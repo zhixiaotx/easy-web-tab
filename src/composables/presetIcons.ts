@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-08-09T12:11:29.209Z
+ * 生成时间: 2026-08-12T05:23:54.120Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -33,6 +33,7 @@ export const PRESET_ICONS: PresetIcon[] = [
   { name: 'haoma', label: 'Haoma', ext: 'svg', category: '其他' },
   { name: 'jingdong', label: 'Jingdong', ext: 'svg', category: '其他' },
   { name: 'qq-mail', label: 'Qq-mail', ext: 'svg', category: '其他' },
+  { name: 'szbf', label: 'Szbf', ext: 'svg', category: '其他' },
 
 ]
 

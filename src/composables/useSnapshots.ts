@@ -11,6 +11,14 @@ import { makeSnapshotId, pushSnapshot } from './snapshotCore'
 import type { SnapshotRecord } from './snapshotCore'
 
 /**
+ * 快照来源标记（展示用，additive——不改变 snapshotCore 的 SnapshotRecord 契约）：
+ * 'auto' 进入工作台自动快照 / 'manual' 「立即备份」手动快照。
+ * 旧记录缺 source → 恢复入口展示回退「自动」。
+ */
+export type SnapshotSource = 'auto' | 'manual'
+export type SnapshotWithSource = SnapshotRecord & { source?: SnapshotSource }
+
+/**
  * 捕获一份工作台快照并写入 IDB store 'snapshots'。
  * @param force true 绕过同日去重（「立即备份」按钮用）；false 时若当天已有快照则跳过（进入工作台自动快照）。
  * 失败向上抛（调用方自行 try/catch 降级——自动快照静默、手动按钮 toast）。
@@ -31,11 +39,13 @@ export async function captureSnapshot(force = false): Promise<void> {
   const existing = (await idbGet<SnapshotRecord[]>('snapshots')) ?? []
   if (!force && existing.some((s) => s.date === today)) return
 
-  const snapshot: SnapshotRecord = {
+  const snapshot: SnapshotWithSource = {
     id: makeSnapshotId(today),
     date: today,
     data,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    // 来源标记：force=true 为「立即备份」手动，其余为进入工作台自动（恢复入口展示用）
+    source: force ? 'manual' : 'auto'
   }
 
   // pushSnapshot：同 id 幂等 + createdAt 降序 + 环形裁剪 MAX_SNAPSHOTS=10（返回新纯数组）

@@ -10,6 +10,21 @@ import {
 import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
+import { useToast } from '@/composables/useToast'
+import { idbGet, idbPut, idbImportAll } from '@/composables/useIdb'
+import { captureSnapshot } from '@/composables/useSnapshots'
+import type { SnapshotWithSource } from '@/composables/useSnapshots'
+import { normalizeSnapshotList } from '@/composables/snapshotCore'
+import type { SnapshotRecord } from '@/composables/snapshotCore'
+import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
+import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
+import { useCountdownsStore } from '@/stores/countdowns'
+import { usePasswordsStore } from '@/stores/passwords'
+import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
+import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
+import type { WorkbenchData } from '@/types'
 import Icon from '@/components/Icon.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
@@ -149,6 +164,111 @@ function commitCity(): void {
   store.setWorkbenchCity(store.workbenchCity ?? '')
 }
 
+// ========================================
+// 数据时光机（仅工作台设置 tab）：快照列表 + 立即备份 + 单条恢复
+// 数据存 IDB store 'snapshots'（不进 JSON 备份导出）；恢复流程镜像 WorkbenchView.handleImportFile
+// ========================================
+const toast = useToast()
+const snapshotList = ref<SnapshotWithSource[]>([])
+const snapshotBusy = ref(false)
+
+function snapshotTime(createdAt: string): string {
+  const d = new Date(createdAt)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+// 来源展示：手动快照/自动快照（旧记录缺 source 回退「自动」）
+function snapshotSourceLabel(s: SnapshotRecord): string {
+  return (s as SnapshotWithSource).source === 'manual' ? '手动' : '自动'
+}
+
+async function loadSnapshots(): Promise<void> {
+  try {
+    // 归一化走 snapshotCore（坏项剔除 + createdAt 降序），组件禁止内联列表管理
+    snapshotList.value = normalizeSnapshotList(await idbGet<SnapshotRecord[]>('snapshots')) as SnapshotWithSource[]
+  } catch (e) {
+    console.error('[AppSettings] loadSnapshots', e)
+    snapshotList.value = []
+  }
+}
+
+// 立即备份：force=true 绕过同日去重（手动快照，来源标记 manual）
+async function handleSnapshotNow(): Promise<void> {
+  if (snapshotBusy.value) return
+  snapshotBusy.value = true
+  try {
+    await captureSnapshot(true)
+    await loadSnapshots()
+    toast.success('已创建快照')
+  } catch (e) {
+    console.error('[AppSettings] snapshot now failed', e)
+    toast.error('备份失败')
+  } finally {
+    snapshotBusy.value = false
+  }
+}
+
+// 恢复快照：confirm → 密码双分支 → idbImportAll → 重载各 store → 清理更新快照 → toast
+// （镜像 WorkbenchView.handleImportFile：password-verification-v2 缺失时跳过密码恢复）
+async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
+  if (!confirm(`确定要恢复到 ${snapshotTime(snapshot.createdAt)} 的快照吗？当前工作台数据将被覆盖。`)) return
+  if (snapshotBusy.value) return
+  snapshotBusy.value = true
+  try {
+    // 密码分支先决：本设备没有 v2 主密码验证键（新设备）→ 快照密码 blob 无法解密，跳过
+    // （写空串 passwords:'' —— idbImportAll 校验 passwords 为 string，与 handleImportFile 一致）
+    const skipPasswords = localStorage.getItem('password-verification-v2') === null
+    // 快照来自 reactive ref（snapshotList.value），嵌套字段是 Vue proxy —— IDB 结构化克隆无法处理
+    // proxy（DataCloneError: could not be cloned），深拷贝脱 proxy 后再写 IDB（WorkbenchView
+    // handleImportFile 从文件读纯对象故无此问题；快照数据本身是 JSON 兼容纯数据，JSON 往返安全）
+    const rawData = JSON.parse(JSON.stringify(snapshot.data)) as WorkbenchData
+    await idbImportAll(skipPasswords ? { ...rawData, passwords: '' } : rawData)
+
+    // 重载各 store（内存与 IDB 同步；密码库不重载——恢复后若已解锁则强制锁定重新解锁）
+    const todosStore = useWorkbenchTodosStore()
+    const notesStore = useWorkbenchNotesStore()
+    const countdownsStore = useCountdownsStore()
+    const healthStore = useWorkbenchHealthStore()
+    const ledgerStore = useWorkbenchLedgerStore()
+    const pomodoroStore = useWorkbenchPomodoroStore()
+    const habitsStore = useWorkbenchHabitsStore()
+    const settingsStore = useAppSettingsStore()
+    await Promise.all([
+      todosStore.loadTodos(),
+      notesStore.loadNotes(),
+      countdownsStore.loadCountdowns(),
+      healthStore.loadHealth(),
+      ledgerStore.loadLedger(),
+      pomodoroStore.loadPomodoro(),
+      habitsStore.loadHabits(),
+      settingsStore.initSettings()
+    ])
+    const passwordsStore = usePasswordsStore()
+    if (passwordsStore.isUnlocked) passwordsStore.lock()
+
+    // 清理：删除 createdAt 晚于所恢复快照的快照（Date.parse 精确比较；
+    // 覆盖 wb-snapshot-now 同日多份场景，防下次进入工作台自动快照覆盖刚恢复的状态）。
+    // snapshots store 本身不恢复——列表不受恢复影响，仅此清理。
+    // trimmed 来自 reactive snapshotList.value（.filter() 元素仍为 Vue proxy），
+    // toRaw 只解最外层数组、元素 proxy 会让 IDB 结构化克隆抛 DataCloneError，故 JSON 深拷贝
+    const restoredTime = Date.parse(snapshot.createdAt)
+    const trimmed = snapshotList.value.filter((s) => Date.parse(s.createdAt) <= restoredTime)
+    if (trimmed.length !== snapshotList.value.length) {
+      await idbPut('snapshots', JSON.parse(JSON.stringify(trimmed)))
+    }
+    snapshotList.value = trimmed as SnapshotWithSource[]
+
+    toast.success('已恢复快照')
+    if (skipPasswords) toast.warning('快照中的密码数据无法在本设备解密（缺少加密密钥），已跳过密码恢复')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '恢复失败'
+    toast.error(`恢复失败：${msg}`)
+  } finally {
+    snapshotBusy.value = false
+  }
+}
+
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -163,6 +283,8 @@ let stopWatchSettings: (() => void) | undefined
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  // 弹窗打开即加载快照列表（对话框 v-if 挂载，onMounted = 打开时刻）
+  loadSnapshots()
   stopWatchSettings = watch(
     () => appSettings.showAppSettings.value,
     (open) => {
@@ -174,6 +296,14 @@ onMounted(() => {
     }
   )
 })
+
+// 切到工作台设置 tab 时刷新快照列表（弹窗保持打开状态下重新加载）
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (tab === 'wb') loadSnapshots()
+  }
+)
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
@@ -274,6 +404,43 @@ onUnmounted(() => {
                   @click="onMoveMenu(item.key, 'down')"
                 >下移</button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 数据时光机（仅工作台设置 tab）：快照列表 + 立即备份 + 单条恢复；数据存 IDB store 'snapshots' -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config wb-snapshot-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">数据时光机</h3>
+            <button
+              type="button"
+              class="row-reset"
+              data-testid="wb-snapshot-now"
+              :disabled="snapshotBusy"
+              @click="handleSnapshotNow"
+            >立即备份</button>
+          </div>
+          <p class="wb-menu-hint">进入工作台时自动备份当日数据（同日去重），环形保留最近 10 份；可随时恢复至历史快照</p>
+
+          <div v-if="snapshotList.length === 0" class="wb-snapshot-empty" data-testid="wb-snapshot-empty">
+            暂无快照
+          </div>
+          <div v-else class="wb-snapshot-list" data-testid="wb-snapshot-list">
+            <div
+              v-for="snap in snapshotList"
+              :key="snap.id"
+              class="wb-snapshot-row"
+              :data-testid="`wb-snapshot-${snap.id}`"
+            >
+              <span class="wb-snapshot-time">{{ snapshotTime(snap.createdAt) }}</span>
+              <span class="wb-snapshot-source">{{ snapshotSourceLabel(snap) }}快照</span>
+              <button
+                type="button"
+                class="wb-menu-btn wb-snapshot-restore"
+                :data-testid="`wb-snapshot-restore-${snap.id}`"
+                :disabled="snapshotBusy"
+                @click="handleRestoreSnapshot(snap)"
+              >恢复</button>
             </div>
           </div>
         </div>
@@ -673,6 +840,43 @@ onUnmounted(() => {
   opacity: 0.45;
 }
 
+/* 数据时光机区块（复用 .wb-menu-config 容器，仅补充快照专属样式） */
+.wb-snapshot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wb-snapshot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wb-snapshot-time {
+  font-size: 13px;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wb-snapshot-source {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.wb-snapshot-restore {
+  flex-shrink: 0;
+}
+
+.wb-snapshot-empty {
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
 /* 暗色模式：沿用文件现有 :root.dark 变量覆盖惯例，确保区块文字可读 */
 :root.dark .wb-menu-config,
 :root.dark .wb-city-config {
@@ -698,6 +902,15 @@ onUnmounted(() => {
   color: var(--text-secondary, #d1d5db);
   background-color: var(--bg-card, #1f2937);
   border-color: var(--border-color, #374151);
+}
+
+:root.dark .wb-snapshot-time {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .wb-snapshot-source,
+:root.dark .wb-snapshot-empty {
+  color: var(--text-muted, #9ca3af);
 }
 
 @media (max-width: 640px) {

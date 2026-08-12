@@ -15,6 +15,7 @@ scripts/
 ├── test-todo-core.ts         # todoCore.ts 纯函数测试（16 断言 T1-T16：归一化/筛选/dueInfo/categoryId 维度/未分类/移动/旧内置分类迁移/注册表清理；npm run test:todo）
 ├── test-health-core.ts       # healthCore.ts 纯函数测试（BMI 国标边界/达标率/睡眠时长/折线图坐标；npm run test:health）
 ├── test-ledger-core.ts       # ledgerCore.ts 纯函数测试（月统计/占比/归一化/内置分组防脏改；npm run test:ledger）
+├── test-note-markdown.ts     # noteMarkdown.ts 纯函数测试（18 断言 T1-T18：标题/加粗/breaks 换行/链接 target=_blank+rel/自动链接/XSS 转义/javascript: 链接抑制/空输入/列表/代码块/表格/引用/hr/图片/幂等；npm run test:note-markdown）
 └── test-workbench-menu-core.ts # workbenchMenuCore.ts 纯函数测试（13 断言 T1-T13：归一化/home 恒 index 0/移动 locked+boundary+中段交换/改名 empty+not-found+截断 12/解析回退默认+icon 查表/常量完整性；npm run test:menu）
 ```
 
@@ -25,7 +26,7 @@ scripts/
 | Regenerate preset icons | `generate-preset-icons.cjs` | Runs first in `npm run build`; also runnable standalone |
 | Serve production build | `serve-with-rewrites.cjs` | `npm run serve`; PORT 16718 hardcoded |
 | Add a game URL rewrite | `serve-with-rewrites.cjs` | if/else chain on `filePath`; redirects to trailing-slash for relative asset resolution |
-| 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心（countdownCore/todoCore/healthCore/ledgerCore/workbenchMenuCore）禁止 import vue/pinia |
+| 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心（countdownCore/todoCore/healthCore/ledgerCore/workbenchMenuCore/noteMarkdown）禁止 import vue/pinia |
 
 ## CONVENTIONS
 

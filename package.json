@@ -15,6 +15,7 @@
     "test:health": "node --experimental-strip-types scripts/test-health-core.ts",
     "test:ledger": "node --experimental-strip-types scripts/test-ledger-core.ts",
     "test:notes": "node --experimental-strip-types scripts/test-note-core.ts",
+    "test:note-markdown": "node --experimental-strip-types scripts/test-note-markdown.ts",
     "test:menu": "node --experimental-strip-types scripts/test-workbench-menu-core.ts",
     "test:spotlight": "node --experimental-strip-types scripts/test-spotlight-core.ts",
     "test:snapshot": "node --experimental-strip-types scripts/test-snapshot-core.ts",

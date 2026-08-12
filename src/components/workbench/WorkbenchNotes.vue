@@ -5,8 +5,18 @@ import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, no
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
+import { renderMarkdown } from '@/composables/noteMarkdown'
 
 const store = useWorkbenchNotesStore()
+
+// 便签/时光轴条目内容按 Markdown 渲染（renderer 纯函数，template 经 renderedContent 调用）
+const renderedContent = (md: string): string => renderMarkdown(md)
+
+// 内容内点击：锚点链接不冒泡到卡片 @click="startEdit"；其余区域照常打开编辑
+function onContentClick(e: MouseEvent): void {
+  const t = e.target as Element | null
+  if (t && t.closest('a')) e.stopPropagation()
+}
 const toast = useToast()
 
 // ===== 搜索表单（草稿 → 应用：输入控件绑定草稿，点「查询」才生效；「重置」一键清空）=====
@@ -498,7 +508,7 @@ onUnmounted(() => {
               <template v-else>
                 <div class="timeline-item-body">
                   <div class="timeline-item-time">{{ entry.datetime }}</div>
-                  <div class="timeline-item-content">{{ entry.content }}</div>
+                  <div class="timeline-item-content" v-html="renderedContent(entry.content)"></div>
                   <div class="timeline-item-actions">
                     <button
                       type="button"
@@ -583,7 +593,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="note.title" class="note-title">{{ note.title }}</div>
-          <div class="note-content">{{ note.content }}</div>
+          <div class="note-content" v-html="renderedContent(note.content)" @click="onContentClick"></div>
 
           <div class="note-card-footer">
             <span v-if="catNameOf(note)" class="note-cat-badge" :data-testid="`note-cat-badge-${note.id}`">
@@ -1002,12 +1012,19 @@ onUnmounted(() => {
 .note-content {
   font-size: 14px;
   line-height: 1.5;
-  white-space: pre-wrap;
   word-break: break-word;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 11;
   -webkit-box-orient: vertical;
+}
+
+.note-content > :first-child {
+  margin-top: 0;
+}
+
+.note-content > :last-child {
+  margin-bottom: 0;
 }
 
 .note-card-footer {
@@ -1199,7 +1216,6 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.5;
   word-break: break-word;
-  white-space: pre-wrap;
 }
 
 /* 条目 hover 出现编辑/删除按钮 */
@@ -1904,5 +1920,116 @@ onUnmounted(() => {
   .nt-field-grow .nt-field-keyword {
     width: 100%;
   }
+}
+
+/* ===== 便签/时光轴内容 Markdown 排版 =====
+   v-html 注入的子节点不带 data-v-* 属性，必须用 :deep() 匹配；
+   currentColor 自动继承 8 种卡片主题色与暗色覆盖，不逐主题覆盖。 */
+.note-content :deep(h1),
+.timeline-item-content :deep(h1) {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0.35em 0;
+}
+
+.note-content :deep(h2),
+.timeline-item-content :deep(h2) {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0.35em 0;
+}
+
+.note-content :deep(h3),
+.timeline-item-content :deep(h3) {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0.35em 0;
+}
+
+.note-content :deep(p),
+.timeline-item-content :deep(p) {
+  margin: 0.35em 0;
+}
+
+.note-content :deep(ul),
+.timeline-item-content :deep(ul),
+.note-content :deep(ol),
+.timeline-item-content :deep(ol) {
+  margin: 0.35em 0;
+  padding-left: 1.4em;
+}
+
+.note-content :deep(li),
+.timeline-item-content :deep(li) {
+  margin: 0.15em 0;
+}
+
+.note-content :deep(a),
+.timeline-item-content :deep(a) {
+  color: var(--accent-color, var(--color-primary));
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.note-content :deep(code),
+.timeline-item-content :deep(code) {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.9em;
+}
+
+.note-content :deep(pre),
+.timeline-item-content :deep(pre) {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  margin: 0.4em 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.note-content :deep(blockquote),
+.timeline-item-content :deep(blockquote) {
+  margin: 0.4em 0;
+  padding-left: 0.6em;
+  border-left: 3px solid color-mix(in srgb, currentColor 35%, transparent);
+  opacity: 0.85;
+}
+
+.note-content :deep(table),
+.timeline-item-content :deep(table) {
+  border-collapse: collapse;
+  margin: 0.4em 0;
+  font-size: 12px;
+  max-width: 100%;
+}
+
+.note-content :deep(th),
+.timeline-item-content :deep(th),
+.note-content :deep(td),
+.timeline-item-content :deep(td) {
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.note-content :deep(th),
+.timeline-item-content :deep(th) {
+  font-weight: 600;
+}
+
+.note-content :deep(hr),
+.timeline-item-content :deep(hr) {
+  border: none;
+  border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  margin: 0.5em 0;
+}
+
+.note-content :deep(img),
+.timeline-item-content :deep(img) {
+  max-width: 100%;
+  border-radius: 6px;
 }
 </style>

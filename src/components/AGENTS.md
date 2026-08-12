@@ -32,7 +32,7 @@ components/
 └── workbench/            # 个人工作台 12 SFC: 10 面板 + 健康管理 tabs 容器 + 定时提醒只读区块 (data persisted to IndexedDB via `useIdb.ts`)
     ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口，9 张概览卡：4 旧 + 健康/记账 5 新）
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选 + 分类筛选 tabs + ⚙️分类管理弹框（标签页显示勾选/改名/上移下移/删除/新增，失败走 useToast）+ 表单分类下拉 + 卡片分类徽标，data-testid 前缀 td-）
-    ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，data-testid 前缀 nt-）
+    ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，content 与时光轴条目经 noteMarkdown.renderMarkdown 渲染为 Markdown（v-html + :deep() 排版，链接 target=_blank、@click 锚点拦截不触发卡片编辑），data-testid 前缀 nt-）
     ├── WorkbenchCountdown.vue   # 倒计时面板（分类筛选 tabs + ⚙️分类管理弹框 + 规则/分类表单 + 徽标，data-testid 前缀 cd-）
     ├── WorkbenchPassword.vue    # 密码面板（主密码三态 + 新增/编辑弹窗 + 书签关联下拉 + 名称搜索，复用 usePasswordsStore / useCrypto.ts）
     ├── WorkbenchHealth.vue      # 健康管理 tabs 容器（受控组件：props activeTab + emit change；tab 栏前缀 hd-；内含运动/饮食/睡眠/体重 四面板）

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-26 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+27 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
@@ -25,7 +25,8 @@ composables/
 ├── useWeather.ts           # 天气数据获取（WorkbenchHome 天气卡 WeatherCard 消费）
 ├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData
 ├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/自动复制计划(salary/mortgage)/金额格式化/敏感金额掩码 + normalizeLedgerData
-├── noteCore.ts             # 便签纯逻辑引擎: normalizeNoteData(数组旧格式兼容)/sortNotes(置顶→updatedAt 降序)/filterNotes(type/categoryId/keyword，type='all' 不过滤)/partitionNotesByType({normal,timeline} 拆分)/sortTimelineEntries(datetime 升序→createdAt 升序)/findNoteCategory/tabCategoriesOf(showInTabs 过滤)/isUncategorized
+├── noteCore.ts               # 便签纯逻辑引擎: normalizeNoteData(数组旧格式兼容)/sortNotes(置顶→updatedAt 降序)/filterNotes(type/categoryId/keyword，type='all' 不过滤)/partitionNotesByType({normal,timeline} 拆分)/sortTimelineEntries(datetime 升序→createdAt 升序)/findNoteCategory/tabCategoriesOf(showInTabs 过滤)/isUncategorized
+├── noteMarkdown.ts           # 便签 Markdown 渲染纯函数引擎: renderMarkdown(markdown-it 懒单例，html:false+linkify:true+breaks:true；自定义 link_open 复跑 normalizeLink+validateLink 抑制 javascript: 等协议、注入 target=_blank+rel=noopener nofollow；空输入返回 '')
 ├── todoCore.ts             # 待办纯逻辑引擎: LEGACY_BUILTIN_TODO_CATEGORIES/normalizeTodo(categoryId trim 后空值剔除)/TODO_PRIORITIES/migrateLegacyBuiltinCategories(旧内置 work/life/study → 未分类)/purgeLegacyBuiltinCategories(注册表过滤 work/life/study，不改入参幂等返回新数组)/isTodoUncategorized/filterTodos(title/description/priority/status/categoryId)/localToday/dueInfo/moveCustomCategoryInList
 ├── spotlightCore.ts        # 全局搜索纯逻辑引擎（spotlight 分组/过滤/排序）
 ├── snapshotCore.ts         # 快照纯逻辑（WorkbenchHome 数据快照导出）
@@ -56,6 +57,7 @@ composables/
 | 健康纯逻辑 | `healthCore.ts` | `emptyHealthData`/`normalizeHealthData`/`calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`/`weightTarget`/`dietCalories`/`sleepDurationHours`(跨天 +24h、相等=24h)/`weightChartScale`/`weekKeyOf` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`maskOrReveal` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 便签纯逻辑 | `noteCore.ts` | `emptyNoteData`/`normalizeNoteData`(数组旧格式兼容，分类 showInTabs 仅布尔透传)/`normalizeNote`/`normalizeNotes`/`sortNotes`(置顶→updatedAt 降序)/`sortTimelineEntries`(datetime 升序→createdAt 升序)/`filterNotes`(type/categoryId/keyword，NoteFilter.type 接受 'all'=全部类型不过滤、categoryId='uncategorized' 匹配未分类)/`partitionNotesByType`(拆分过滤后便签为 {normal,timeline})/`findNoteCategory`/`tabCategoriesOf`(showInTabs!==false 过滤，返回新数组)/`isUncategorized` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
+| 便签 Markdown 渲染 | `noteMarkdown.ts` | `renderMarkdown(content)` — markdown-it 懒单例（html:false=原始 HTML 转义防 XSS、linkify:true=裸 URL 自动链接、breaks:true=单换行→`<br>` 保留原 pre-wrap 体验）；自定义 `link_open` 规则：复跑 `normalizeLink`+`validateLink`（无效协议如 javascript:/vbscript:/file: 渲染为空→锚点抑制为纯文本）并注入 `target="_blank" rel="noopener nofollow"`；空/null/undefined 输入返回 `''`；幂等确定性输出 — 纯函数零 vue 依赖，`node --experimental-strip-types` 可测（scripts/test-note-markdown.ts 18 断言），WorkbenchNotes.vue 卡面/时光轴条目经 `:deep()` 排版消费 |
 | 待办纯逻辑 | `todoCore.ts` | `LEGACY_BUILTIN_TODO_CATEGORIES`/`TODO_PRIORITIES`/`migrateLegacyBuiltinCategories`(旧内置 work/life/study → undefined 未分类，不改入参，幂等)/`purgeLegacyBuiltinCategories`(过滤 work/life/study 注册表名，不改入参、幂等、返回新数组)/`isTodoUncategorized`(falsy 即未分类)/`normalizeTodo`(categoryId trim 后空值剔除、color hex 校验)/`filterTodos`(title/description/priority/status/categoryId，categoryId='uncategorized' 字面量匹配未分类)/`localToday`(本地日期防 UTC 偏移)/`dueInfo`(剩余/今天/逾期)/`moveCustomCategoryInList`(自定义分类上移/下移一格，不改入参) — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 工作台菜单纯逻辑 | `workbenchMenuCore.ts` | `WORKBENCH_MENU_KEYS`(9 键 home/todos/notes/countdowns/pomodoro/habits/passwords/health/ledger，顺序即默认展示序)/`WORKBENCH_MENU_DEFAULT_ORDER`/`MENU_DEFAULT_LABELS`(默认名逐字一致，load-bearing)/`MENU_ICONS` + `normalizeWorkbenchMenu`(幂等：home 强制 index 0、未知 key 剔除、去重首次优先、缺失按默认序补全恒 9 项、labels 仅已知键 trim 去空截断 12 code point)/`moveMenuItem`(上移下移返回 `{ok, reason:'locked'|'boundary'|'not-found'|'ok', order?}`，home 恒 locked、不改入参)/`renameMenuLabel`(返回 `{ok, reason:'empty'|'not-found'|'ok', labels?}`，截断 12 code point)/`resolveMenuItems`(按 order 迭代 `{key,label,icon}[]`，label 回退默认名、icon 查表) — 纯函数，零 vue/pinia 运行时依赖，`node --experimental-strip-types` 可测 |
 

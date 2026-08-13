@@ -119,6 +119,35 @@ export function planAutoCopy(entries: LedgerEntry[], targetMonthKey: string): Au
   return drafts
 }
 
+/**
+ * 下次发薪日：取 categoryId 为 salary（AUTO_COPY_CATEGORY_IDS 中的 'salary'）的最近一笔记录的 day-of-month，
+ * 下一个发薪日 = 本月该日（today 的日序 ≤ 发薪日则本月，否则下月）。返回 'YYYY-MM-DD'；
+ * 31 日在小月/2 月按当月天数钳制（new Date(year, month+1, 0).getDate()）。无 salary 记录返回 null。
+ * 纯函数，不 mutate 入参；日期推算唯一来源，组件禁止内联重算。
+ */
+export function nextPayday(entries: LedgerEntry[], today: string): string | null {
+  if (!DATE_RE.test(today)) return null
+  const salaryId = AUTO_COPY_CATEGORY_IDS.find(id => id === 'salary') ?? 'salary'
+  const salaryEntries = entries.filter(e => e.categoryId === salaryId)
+  if (salaryEntries.length === 0) return null
+  // 最近一笔（date 降序，同日取 createdAt 新者，同 planAutoCopy 的取最近语义）
+  const latest = salaryEntries.sort((a, b) =>
+    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
+  )[0]
+  const payDay = Number(latest.date.slice(8, 10))
+  if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) return null
+
+  const [year, month] = today.split('-').map(Number)
+  const todayDay = Number(today.slice(8, 10))
+  // 本月（month-1）或下月（month）的月份序号（0-11），下月跨年自然进位
+  const targetSeq = month - 1 + (todayDay > payDay ? 1 : 0)
+  const targetYear = year + Math.floor(targetSeq / 12)
+  const targetMonth = ((targetSeq % 12) + 12) % 12
+  // 31 日在小月/2 月按当月实际天数钳制
+  const day = Math.min(payDay, new Date(targetYear, targetMonth + 1, 0).getDate())
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
 export interface MonthlyStats {
   income: number
   expense: number
@@ -216,3 +245,145 @@ export function incomeCategories(categories: LedgerCategory[]): LedgerCategory[]
 export function expenseCategories(categories: LedgerCategory[]): LedgerCategory[] {
   return categories.filter(c => c.type === 'expense')
 }
+
+/** 月度趋势序列：窗口内某个月的收入/支出（金额保留 2 位小数）。 */
+export interface TrendMonth {
+  monthKey: string
+  income: number
+  expense: number
+}
+
+/**
+ * 月度趋势序列：以 endMonthKey 为末月向前取 months 个月（跨年回退走 prevMonthKeyOf），
+ * 缺失月 0 填充，未知分类计入支出（与 calcMonthlyStats 同语义）。endMonthKey 非法 → []。
+ * 纯函数，不 mutate 入参。
+ */
+export function calcTrendSeries(
+  entries: LedgerEntry[],
+  endMonthKey: string,
+  categories: LedgerCategory[],
+  months = 6
+): TrendMonth[] {
+  if (!/^\d{4}-\d{2}$/.test(endMonthKey)) return []
+  // 升序月份键：末月出发回退 months-1 次
+  const keys: string[] = [endMonthKey]
+  for (let i = 1; i < months; i++) keys.unshift(prevMonthKeyOf(keys[0]))
+  // 单次遍历分桶（Map 存 月键 → 收入/支出）
+  const buckets = new Map<string, { income: number; expense: number }>()
+  for (const e of entries) {
+    const mk = monthKeyOf(e.date)
+    const b = buckets.get(mk) ?? { income: 0, expense: 0 }
+    const cat = findCategory(categories, e.categoryId)
+    if (cat && cat.type === 'income') b.income += e.amount
+    else b.expense += e.amount
+    buckets.set(mk, b)
+  }
+  return keys.map(key => {
+    const b = buckets.get(key)
+    return {
+      monthKey: key,
+      income: b ? Math.round(b.income * 100) / 100 : 0,
+      expense: b ? Math.round(b.expense * 100) / 100 : 0
+    }
+  })
+}
+
+/** 趋势柱：某月某类（income/expense）的坐标 + 值。 */
+export interface TrendChartBar {
+  monthKey: string
+  kind: 'income' | 'expense'
+  x: number
+  y: number
+  height: number
+  value: number
+}
+
+/** 趋势柱状图缩放结果：bars + 柱宽 + 顶值 + 网格线 + 月标签（全部确定性纯计算）。 */
+export interface TrendChartScale {
+  bars: TrendChartBar[]
+  barWidth: number
+  maxY: number
+  gridlines: { y: number; label: string }[]
+  monthLabels: { x: number; label: string; monthKey: string }[]
+}
+
+/**
+ * 趋势柱状图坐标：series 全 0 → null；maxY 取 {1,2,5}×10^k 的 nice 天花板（maxVal<1 → 1）；
+ * 每月两柱（income 先于 expense）；网格线 5 条升序 0..maxY；月标签取组中心。
+ * 纯函数，不 mutate 入参；组件/面板禁止重算坐标。
+ */
+export function trendChartScale(
+  series: TrendMonth[],
+  width: number,
+  height: number,
+  pad = 24
+): TrendChartScale | null {
+  const months = series.length
+  let maxVal = 0
+  for (const m of series) {
+    if (m.income > maxVal) maxVal = m.income
+    if (m.expense > maxVal) maxVal = m.expense
+  }
+  if (months === 0 || maxVal === 0) return null
+  // nice 天花板：{1,2,5}×10^k，仍不够则进位 10^(k+1)
+  const k = Math.floor(Math.log10(maxVal))
+  const maxY =
+    maxVal < 1 ? 1 : [1, 2, 5, 10].map(s => s * Math.pow(10, k)).find(s => s >= maxVal) ?? Math.pow(10, k + 1)
+  const inner = height - 2 * pad
+  const groupW = (width - 2 * pad) / months
+  const barWidth = groupW * 0.3
+  const gap = groupW * 0.12
+  const round2 = (n: number) => Math.round(n * 100) / 100
+
+  const bars: TrendChartBar[] = []
+  for (let i = 0; i < months; i++) {
+    const m = series[i]
+    const groupX = pad + groupW * i + (groupW - 2 * barWidth - gap) / 2
+    const values: [number, TrendChartBar['kind']][] = [
+      [m.income, 'income'],
+      [m.expense, 'expense']
+    ]
+    for (let j = 0; j < values.length; j++) {
+      const [v, kind] = values[j]
+      bars.push({
+        monthKey: m.monthKey,
+        kind,
+        x: round2(groupX + j * (barWidth + gap)),
+        y: round2(pad + (1 - v / maxY) * inner),
+        height: round2((v / maxY) * inner),
+        value: v
+      })
+    }
+  }
+
+  // 网格线 5 条：升序 0..maxY（底部基线 → 顶部），label 取网格值（整数去小数、非整数 1 位小数）
+  const gridlines: TrendChartScale['gridlines'] = []
+  for (let i = 4; i >= 0; i--) {
+    const value = ((4 - i) / 4) * maxY
+    gridlines.push({
+      y: pad + (i / 4) * inner,
+      label: Number.isInteger(value) ? String(value) : value.toFixed(1)
+    })
+  }
+
+  // 月标签：组中心 x，label = 月键
+  const monthLabels: TrendChartScale['monthLabels'] = series.map((m, i) => ({
+    x: pad + groupW * i + groupW / 2,
+    label: m.monthKey,
+    monthKey: m.monthKey
+  }))
+
+  return { bars, barWidth, maxY, gridlines, monthLabels }
+}
+
+/** 趋势柱状图分类配色：8 个暗色安全 hex 色（供图表渲染取色）。 */
+export const LEDGER_CATEGORY_COLORS: readonly string[] = [
+  '#10b981',
+  '#8b5cf6',
+  '#f59e0b',
+  '#ef4444',
+  '#06b6d4',
+  '#ec4899',
+  '#84cc16',
+  '#f97316'
+]

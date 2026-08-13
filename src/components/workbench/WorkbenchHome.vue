@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// 工作台主页概览仪表盘（T12）
+// 工作台主页概览仪表盘（T12，Wave 4 Todo 14 Bento 重构）
 // 只消费 4 个共享 store 的 state/computed，不新增 store、不直写 IDB。
 // 外壳通过 @navigate 接收面板跳转请求（WorkbenchView 已做白名单收窄）。
-import { computed } from 'vue'
+// Bento grid：问候/快捷添加/天气卡/锚点卡 + 统计卡区 + 双列表；统计数值一律走各 core/store。
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useCountdownsStore } from '@/stores/countdowns'
@@ -11,7 +12,11 @@ import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { calcBmi, calcDailyAttainment, calcExerciseAttainment, classifyBmi } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
+import { useToast } from '@/composables/useToast'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
+import Icon from '@/components/Icon.vue'
+import WeatherCard from '@/components/workbench/WeatherCard.vue'
+import CalendarAnchorCard from '@/components/workbench/CalendarAnchorCard.vue'
 
 const emit = defineEmits<{ navigate: [section: string, tab?: string] }>()
 
@@ -21,6 +26,49 @@ const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
+const toast = useToast()
+
+// ===== 问候 + 时间（按 now 时段问候：早上好/下午好/晚上好）=====
+const now = ref(new Date())
+let nowTimer = 0
+onMounted(() => {
+  nowTimer = window.setInterval(() => {
+    now.value = new Date()
+  }, 30000)
+})
+onUnmounted(() => {
+  window.clearInterval(nowTimer)
+})
+
+const greeting = computed(() => {
+  const h = now.value.getHours()
+  if (h < 12) return '早上好'
+  if (h < 18) return '下午好'
+  return '晚上好'
+})
+
+const timeText = computed(() =>
+  now.value.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+)
+
+const dateText = computed(() =>
+  now.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+)
+
+// ===== 快捷添加待办（回车 addTodo + toast，校验同 WorkbenchTodo.vue 表单）=====
+const quickTodoTitle = ref('')
+
+async function handleQuickAdd(): Promise<void> {
+  const title = quickTodoTitle.value.trim()
+  if (!title) return
+  if (title.length > 100) {
+    toast.warning('待办标题不能超过 100 字')
+    return
+  }
+  await todosStore.addTodo({ title, priority: 'medium' })
+  toast.success('待办已添加')
+  quickTodoTitle.value = ''
+}
 
 // ===== 逾期判断（同 WorkbenchTodo.vue）=====
 // 今天 = 本地日期 YYYY-MM-DD（不能用 toISOString，那是 UTC，会偏一天）
@@ -40,6 +88,13 @@ const todoStats = computed(() => ({
   active: todosStore.activeCount,
   overdue: todosStore.todos.filter(t => isOverdue(t)).length
 }))
+
+// 待办完成率（微可视化进度环，数值仅由 store 的 total/active 派生，不重算统计）
+const todoCompletionRate = computed(() => {
+  const total = todoStats.value.total
+  if (total === 0) return 0
+  return Math.round(((total - todoStats.value.active) / total) * 100)
+})
 
 const noteStats = computed(() => ({
   total: notesStore.notes.length,
@@ -161,21 +216,74 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
 <template>
   <div class="wb-home">
-    <!-- 统计卡片行 -->
-    <div class="stats-grid">
-      <div class="stat-card" data-testid="home-stats-todos">
+    <div class="bento-grid">
+      <!-- 问候条（全宽） -->
+      <section class="bento-card bento-greeting" data-testid="home-greeting">
+        <div class="greeting-info">
+          <h2 class="greeting-title">{{ greeting }}，欢迎回来</h2>
+          <p class="greeting-sub">把今天要做的事，一件一件完成吧</p>
+        </div>
+        <div class="greeting-clock">
+          <div class="greeting-time">{{ timeText }}</div>
+          <div class="greeting-date">{{ dateText }}</div>
+        </div>
+      </section>
+
+      <!-- 快捷添加待办 -->
+      <section class="bento-card bento-quick-add">
+        <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
+        <div class="quick-add-row">
+          <input
+            v-model="quickTodoTitle"
+            class="quick-add-input"
+            data-testid="home-quick-add-input"
+            type="text"
+            maxlength="100"
+            placeholder="输入待办标题，回车即可添加…"
+            @keyup.enter="handleQuickAdd"
+          />
+          <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">
+            添加
+          </button>
+        </div>
+      </section>
+
+      <!-- 天气卡（Todo 15，只读嵌入，未配置城市显示占位+去设置） -->
+      <WeatherCard class="bento-weather" />
+
+      <!-- 日历锚点卡（Todo 16，只读嵌入，发薪/纪念日倒计时） -->
+      <CalendarAnchorCard class="bento-anchor" />
+
+      <!-- 统计卡区（数值全部来自各 store / core 纯函数，此处只做布局） -->
+      <div class="bento-card bento-stat" data-testid="home-stats-todos">
         <div class="stat-header">
-          <span class="stat-icon">☑️</span>
+          <span class="stat-icon"><Icon name="todos" :size="18" /></span>
           <span class="stat-label">待办任务</span>
           <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
         </div>
-        <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
+        <div class="stat-body">
+          <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
+          <div class="ring-wrap" :title="`已完成 ${todoCompletionRate}%`">
+            <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="ring-track" cx="18" cy="18" r="15.9155" fill="none" />
+              <circle
+                class="ring-bar"
+                cx="18"
+                cy="18"
+                r="15.9155"
+                fill="none"
+                :stroke-dasharray="`${todoCompletionRate} 100`"
+              />
+            </svg>
+            <span class="ring-text">{{ todoCompletionRate }}%</span>
+          </div>
+        </div>
         <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-notes">
+      <div class="bento-card bento-stat" data-testid="home-stats-notes">
         <div class="stat-header">
-          <span class="stat-icon">📝</span>
+          <span class="stat-icon"><Icon name="notes" :size="18" /></span>
           <span class="stat-label">便签</span>
           <button class="nav-btn" data-testid="home-nav-notes" @click="emit('navigate', 'notes')">前往 →</button>
         </div>
@@ -183,9 +291,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-countdowns">
+      <div class="bento-card bento-stat" data-testid="home-stats-countdowns">
         <div class="stat-header">
-          <span class="stat-icon">⏳</span>
+          <span class="stat-icon"><Icon name="countdowns" :size="18" /></span>
           <span class="stat-label">定时提醒</span>
           <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
         </div>
@@ -193,9 +301,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-passwords">
+      <div class="bento-card bento-stat" data-testid="home-stats-passwords">
         <div class="stat-header">
-          <span class="stat-icon">🔑</span>
+          <span class="stat-icon"><Icon name="passwords" :size="18" /></span>
           <span class="stat-label">密码</span>
           <button class="nav-btn" data-testid="home-nav-passwords" @click="emit('navigate', 'passwords')">前往 →</button>
         </div>
@@ -205,9 +313,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub">{{ passwordsStore.isUnlocked ? '已解锁' : '未解锁' }}</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-exercise">
+      <div class="bento-card bento-stat" data-testid="home-stats-exercise">
         <div class="stat-header">
-          <span class="stat-icon">🏃</span>
+          <span class="stat-icon"><Icon name="exercise" :size="18" /></span>
           <span class="stat-label">运动</span>
           <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'health', 'exercise')">前往 →</button>
         </div>
@@ -215,9 +323,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-diet">
+      <div class="bento-card bento-stat" data-testid="home-stats-diet">
         <div class="stat-header">
-          <span class="stat-icon">🍽️</span>
+          <span class="stat-icon"><Icon name="diet" :size="18" /></span>
           <span class="stat-label">饮食</span>
           <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'health', 'diet')">前往 →</button>
         </div>
@@ -225,9 +333,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-sleep">
+      <div class="bento-card bento-stat" data-testid="home-stats-sleep">
         <div class="stat-header">
-          <span class="stat-icon">😴</span>
+          <span class="stat-icon"><Icon name="sleep" :size="18" /></span>
           <span class="stat-label">睡眠</span>
           <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'health', 'sleep')">前往 →</button>
         </div>
@@ -235,9 +343,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-weight">
+      <div class="bento-card bento-stat" data-testid="home-stats-weight">
         <div class="stat-header">
-          <span class="stat-icon">⚖️</span>
+          <span class="stat-icon"><Icon name="weight" :size="18" /></span>
           <span class="stat-label">体重</span>
           <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'health', 'weight')">前往 →</button>
         </div>
@@ -245,22 +353,20 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
       </div>
 
-      <div class="stat-card" data-testid="home-stats-ledger">
+      <div class="bento-card bento-stat" data-testid="home-stats-ledger">
         <div class="stat-header">
-          <span class="stat-icon">💰</span>
+          <span class="stat-icon"><Icon name="ledger" :size="18" /></span>
           <span class="stat-label">记账</span>
           <button class="nav-btn" data-testid="home-nav-ledger" @click="emit('navigate', 'ledger')">前往 →</button>
         </div>
         <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
         <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
       </div>
-    </div>
 
-    <!-- 下方两块列表 -->
-    <div class="panels-grid">
-      <section class="panel-card">
+      <!-- 下方两块列表 -->
+      <section class="bento-card bento-panel">
         <div class="panel-header">
-          <h3><span class="panel-icon">⏳</span>即将到期定时提醒</h3>
+          <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
           <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
         </div>
         <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
@@ -272,9 +378,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
         <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的定时提醒</div>
       </section>
 
-      <section class="panel-card">
+      <section class="bento-card bento-panel">
         <div class="panel-header">
-          <h3><span class="panel-icon">☑️</span>未完成待办</h3>
+          <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
           <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
         </div>
         <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
@@ -302,14 +408,23 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   gap: 16px;
 }
 
-/* ===== 统计卡片行 ===== */
-.stats-grid {
+/* ===== Bento Grid（12 列非对称布局：问候全宽、快捷添加+天气+锚点并排、统计卡 3 列、列表双列）===== */
+.bento-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(12, 1fr);
   gap: 16px;
+  align-items: start;
 }
 
-.stat-card {
+.bento-greeting { grid-column: span 12; }
+.bento-quick-add { grid-column: span 6; }
+.bento-weather { grid-column: span 3; }
+.bento-anchor { grid-column: span 3; }
+.bento-stat { grid-column: span 4; }
+.bento-panel { grid-column: span 6; }
+
+/* ===== 卡片基础（统一 .bento-card，替代原 .stat-card/.panel-card）===== */
+.bento-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -321,10 +436,120 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
-.stat-card:hover {
+.bento-card:hover {
   border-color: var(--accent-color, var(--color-primary));
 }
 
+/* ===== 问候条 ===== */
+.bento-greeting {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-color, #3b82f6) 8%, transparent), transparent),
+    var(--bg-card, var(--color-bg-card));
+}
+
+.greeting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.greeting-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+}
+
+.greeting-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.greeting-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.greeting-time {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent-color, var(--color-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.greeting-date {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+/* ===== 快捷添加待办 ===== */
+.bento-quick-add {
+  gap: 10px;
+}
+
+.quick-add-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.quick-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text-primary, var(--color-text));
+  outline: none;
+  transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.quick-add-input:focus {
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.quick-add-input::placeholder {
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.quick-add-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--accent-color, var(--color-primary));
+  border: 1px solid var(--accent-color, var(--color-primary));
+  color: #fff;
+  cursor: pointer;
+  transition: filter var(--transition-fast, 0.15s ease);
+}
+
+.quick-add-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* ===== 统计卡头部 ===== */
 .stat-header {
   display: flex;
   align-items: center;
@@ -332,8 +557,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 }
 
 .stat-icon {
-  font-size: 18px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -380,23 +606,54 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   color: var(--text-secondary, var(--color-text-secondary));
 }
 
-/* ===== 下方列表块 ===== */
-.panels-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-  align-items: start;
+/* ===== 待办完成率进度环（微可视化，数值来自 store）===== */
+.stat-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.panel-card {
+.ring-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.progress-ring {
+  width: 44px;
+  height: 44px;
+  transform: rotate(-90deg);
+}
+
+.ring-track {
+  stroke: var(--border-color, var(--color-border));
+  stroke-width: 3;
+}
+
+.ring-bar {
+  stroke: var(--accent-color, var(--color-primary));
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--transition-fast, 0.3s ease);
+}
+
+.ring-text {
+  position: absolute;
+  inset: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 列表面板 ===== */
+.bento-panel {
   gap: 12px;
-  padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
 .panel-header {
@@ -417,6 +674,8 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 }
 
 .panel-icon {
+  display: inline-flex;
+  align-items: center;
   margin-right: 4px;
 }
 
@@ -526,26 +785,44 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .stat-card,
-:root.dark .panel-card {
+:root.dark .bento-card {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
 }
 
+:root.dark .bento-greeting {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-color, #3b82f6) 12%, transparent), transparent),
+    var(--bg-secondary, #1f2937);
+}
+
+:root.dark .greeting-title,
 :root.dark .stat-value,
 :root.dark .panel-header h3,
 :root.dark .home-list-title {
   color: var(--text-primary, #f9fafb);
 }
 
+:root.dark .greeting-time {
+  color: #60a5fa;
+}
+
+:root.dark .greeting-sub,
 :root.dark .stat-label,
-:root.dark .stat-sub {
+:root.dark .stat-sub,
+:root.dark .ring-text {
   color: var(--text-secondary, #d1d5db);
 }
 
 :root.dark .home-list-item {
   background-color: var(--bg-card, #1f2937);
   border-color: var(--border-color, #374151);
+}
+
+:root.dark .quick-add-input {
+  background-color: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
+  color: var(--text-primary, #f9fafb);
 }
 
 :root.dark .nav-btn {
@@ -593,9 +870,46 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   color: #f87171;
 }
 
+/* ===== 响应式：平板 6 列 / 手机单列 ===== */
+@media (max-width: 1100px) {
+  .bento-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .bento-greeting,
+  .bento-quick-add,
+  .bento-panel {
+    grid-column: span 6;
+  }
+
+  .bento-weather,
+  .bento-anchor,
+  .bento-stat {
+    grid-column: span 3;
+  }
+}
+
 @media (max-width: 640px) {
-  .panels-grid {
+  .bento-grid {
     grid-template-columns: 1fr;
+  }
+
+  .bento-greeting,
+  .bento-quick-add,
+  .bento-weather,
+  .bento-anchor,
+  .bento-stat,
+  .bento-panel {
+    grid-column: span 1;
+  }
+
+  .bento-greeting {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .greeting-clock {
+    align-items: flex-start;
   }
 }
 </style>

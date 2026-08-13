@@ -9,15 +9,25 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useAppSettingsStore } from '@/stores/settings'
 import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
 import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
 import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
+import WorkbenchPomodoro from '@/components/workbench/WorkbenchPomodoro.vue'
+import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
+import Icon from '@/components/Icon.vue'
+import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
+import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
+import type { SpotlightData } from '@/composables/spotlightCore'
+import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
+import { captureSnapshot } from '@/composables/useSnapshots'
+import { useSitesStore } from '@/stores/sites'
 
 const router = useRouter()
 const toast = useToast()
@@ -27,14 +37,18 @@ const countdownsStore = useCountdownsStore()
 const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
+const habitsStore = useWorkbenchHabitsStore()
 const settingsStore = useAppSettingsStore()
+const sitesStore = useSitesStore()
 
-// 左侧菜单 7 项
+// 左侧菜单导航白名单（9 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
   'countdowns',
+  'pomodoro',
+  'habits',
   'passwords',
   'health',
   'ledger'
@@ -59,6 +73,50 @@ function navigateTo(section: string, tab?: string) {
 // 菜单渲染项：顺序/名称/图标一律来自设置 store（workbenchMenuItems 由 core 解析，home 恒居首）
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
+
+// 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
+const sidebarCollapsed = computed(() => settingsStore.workbenchSidebarCollapsed ?? false)
+
+function toggleSidebar() {
+  settingsStore.setWorkbenchSidebarCollapsed(!sidebarCollapsed.value)
+}
+
+// ===== 全局搜索（侧栏底部按钮 / Alt+K 打开）=====
+const spotlightOpen = ref(false)
+
+// 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
+const spotlightData = computed<SpotlightData>(() => ({
+  todos: todosStore.todos,
+  notes: notesStore.notes,
+  countdowns: countdownsStore.countdowns,
+  ledgerEntries: ledgerStore.entries,
+  ledgerCategories: ledgerStore.categories,
+  passwords: passwordsStore.passwords,
+  sites: sitesStore.sites
+}))
+
+function handleSpotlightSelect(action: SpotlightAction) {
+  spotlightOpen.value = false
+  if (action.kind === 'navigate') {
+    navigateTo(action.section)
+  } else if (action.kind === 'password') {
+    if (passwordsStore.isUnlocked) {
+      navigateTo('passwords')
+    } else {
+      toast.warning('请先在密码管理面板解锁密码库')
+    }
+  } else if (action.kind === 'site') {
+    window.open(action.url, '_blank')
+  }
+}
+
+// 工作台快捷键：Alt+K 打开全局搜索（输入框内跳过）、Ctrl+Alt+1..9 跳转菜单（按设置 store 当前顺序）、
+// Esc 关闭全局搜索（幂等）
+useWorkbenchShortcuts({
+  spotlightOpen,
+  getMenuKeys: () => menuItems.value.map((item) => item.key),
+  onNavigate: (key) => navigateTo(key as SectionKey)
+})
 
 // 实时时钟（每秒更新）
 const now = ref(new Date())
@@ -89,8 +147,13 @@ onMounted(async () => {
     notesStore.loadNotes(),
     countdownsStore.loadCountdowns(),
     healthStore.loadHealth(),
-    ledgerStore.loadLedger()
+    ledgerStore.loadLedger(),
+    sitesStore.loadSites()
   ])
+  // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
+  await habitsStore.loadHabits()
+  // 进入工作台自动快照（fire-and-forget：非阻塞、静默失败，绝不阻塞渲染；同日去重由 captureSnapshot 处理）
+  captureSnapshot().catch(() => {})
 })
 
 onUnmounted(() => {
@@ -215,7 +278,18 @@ async function handleImportFile(event: Event) {
 
     <!-- 主体：左菜单 + 右内容区 -->
     <div class="wb-body">
-      <nav class="wb-menu">
+      <nav class="wb-menu" :class="{ collapsed: sidebarCollapsed }">
+        <button
+          class="wb-sidebar-toggle"
+          data-testid="wb-sidebar-toggle"
+          :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+          @click="toggleSidebar"
+        >
+          <span class="wb-menu-icon">
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+          </span>
+          <span class="wb-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
+        </button>
         <button
           v-for="item in menuItems"
           :key="item.key"
@@ -225,8 +299,17 @@ async function handleImportFile(event: Event) {
           :data-testid="`wb-menu-${item.key}`"
           @click="navigateTo(item.key)"
         >
-          <span class="wb-menu-icon">{{ item.icon }}</span>
+          <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
           <span class="wb-menu-label">{{ item.label }}</span>
+        </button>
+        <button
+          class="wb-menu-item wb-spotlight-open"
+          data-testid="wb-spotlight-open"
+          title="全局搜索 (Alt+K)"
+          @click="spotlightOpen = true"
+        >
+          <span class="wb-menu-icon"><Icon name="search" /></span>
+          <span class="wb-menu-label">全局搜索</span>
         </button>
       </nav>
 
@@ -235,11 +318,20 @@ async function handleImportFile(event: Event) {
         <WorkbenchTodo v-else-if="activeSection === 'todos'" />
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
+        <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
+        <WorkbenchHabits v-else-if="activeSection === 'habits'" />
         <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
         <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
       </main>
     </div>
+
+    <SpotlightOverlay
+      v-if="spotlightOpen"
+      :data="spotlightData"
+      @select="handleSpotlightSelect"
+      @close="spotlightOpen = false"
+    />
   </div>
 </template>
 
@@ -329,6 +421,47 @@ async function handleImportFile(event: Event) {
   padding: 12px 8px;
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
+  transition: width 0.2s ease;
+}
+
+/* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
+.wb-menu.collapsed {
+  width: 56px;
+}
+
+.wb-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wb-sidebar-toggle:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+}
+
+.wb-menu.collapsed .wb-sidebar-toggle {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.wb-menu.collapsed .wb-menu-label {
+  display: none;
+}
+
+.wb-menu.collapsed .wb-menu-item {
+  justify-content: center;
+  padding: 10px 0;
 }
 
 .wb-menu-item {
@@ -347,8 +480,9 @@ async function handleImportFile(event: Event) {
 }
 
 .wb-menu-icon {
-  font-size: 15px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -370,6 +504,11 @@ async function handleImportFile(event: Event) {
   background-color: var(--color-primary-light, #eff6ff);
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
+}
+
+/* 全局搜索入口固定在菜单底部（margin-top:auto 撑开与导航项间距） */
+.wb-menu-item.wb-spotlight-open {
+  margin-top: auto;
 }
 
 .wb-content {
@@ -414,6 +553,15 @@ async function handleImportFile(event: Event) {
   border-right-color: var(--border-color, #374151);
 }
 
+:root.dark .wb-sidebar-toggle {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .wb-sidebar-toggle:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
 :root.dark .wb-menu-item {
   color: var(--text-secondary, #d1d5db);
 }
@@ -456,6 +604,24 @@ async function handleImportFile(event: Event) {
     overflow-x: auto;
     border-right: none;
     border-bottom: 1px solid var(--color-border, #e2e8f0);
+  }
+
+  /* 移动端横排布局：忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
+  .wb-menu.collapsed {
+    width: 100%;
+  }
+
+  .wb-menu.collapsed .wb-menu-label {
+    display: inline;
+  }
+
+  .wb-menu.collapsed .wb-menu-item {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .wb-sidebar-toggle {
+    display: none;
   }
 
   .wb-menu-item {

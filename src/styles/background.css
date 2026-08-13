@@ -106,6 +106,59 @@ body.app-has-background.image .container {
 }
 
 /* ========================================
+   个人工作台（WorkbenchView）：共享全局背景 + 统一玻璃卡片质感
+   选择器为普通全局 CSS（background.css 经 main.ts 全局引入，无 scoped 转换），
+   以 .wb-shell 前缀限定仅作用于工作台，避免与 .container 页面冲突。
+   ======================================== */
+
+/* 全局有背景（纯色/渐变/图片）时：外壳与内容区透明，让 body 固定背景透出 */
+html.app-has-background .wb-shell,
+html.app-has-background .wb-shell .wb-content {
+  background-color: transparent !important;
+}
+
+/* 图片背景 + 玻璃卡片：6 类卡片统一半透明 + 背景模糊（仅 .image 时 backdrop-filter 有意义） */
+html.app-has-background.image .wb-shell .bento-card,
+html.app-has-background.image .wb-shell .stat-card,
+html.app-has-background.image .wb-shell .cd-card,
+html.app-has-background.image .wb-shell .note-card,
+html.app-has-background.image .wb-shell .weather-card,
+html.app-has-background.image .wb-shell .anchor-card {
+  background-color: rgba(255, 255, 255, 0.62);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.1);
+}
+
+/* 边框柔化：仅非 cd-card（cd-card 左侧 4px 彩色 accent 需保留，border-color 会覆盖四边） */
+html.app-has-background.image .wb-shell .bento-card,
+html.app-has-background.image .wb-shell .stat-card,
+html.app-has-background.image .wb-shell .note-card,
+html.app-has-background.image .wb-shell .weather-card,
+html.app-has-background.image .wb-shell .anchor-card {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* 暗色模式玻璃卡片：深色半透明（dark 与 app-has-background.image 同在 html 元素上，用并联类选择器） */
+html.dark.app-has-background.image .wb-shell .bento-card,
+html.dark.app-has-background.image .wb-shell .stat-card,
+html.dark.app-has-background.image .wb-shell .cd-card,
+html.dark.app-has-background.image .wb-shell .note-card,
+html.dark.app-has-background.image .wb-shell .weather-card,
+html.dark.app-has-background.image .wb-shell .anchor-card {
+  background-color: rgba(17, 24, 39, 0.55);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+html.dark.app-has-background.image .wb-shell .bento-card,
+html.dark.app-has-background.image .wb-shell .stat-card,
+html.dark.app-has-background.image .wb-shell .note-card,
+html.dark.app-has-background.image .wb-shell .weather-card,
+html.dark.app-has-background.image .wb-shell .anchor-card {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ========================================
    预览区域样式
    ======================================== */
 .background-preview {

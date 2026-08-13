@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-21 Vue 3 SFCs in the root plus 12 workbench SFCs (10 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+23 Vue 3 SFCs in the root plus 16 workbench SFCs (12 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -32,7 +32,7 @@ components/
 └── workbench/            # 个人工作台 12 SFC: 10 面板 + 健康管理 tabs 容器 + 定时提醒只读区块 (data persisted to IndexedDB via `useIdb.ts`)
     ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口，9 张概览卡：4 旧 + 健康/记账 5 新）
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选 + 分类筛选 tabs + ⚙️分类管理弹框（标签页显示勾选/改名/上移下移/删除/新增，失败走 useToast）+ 表单分类下拉 + 卡片分类徽标，data-testid 前缀 td-）
-    ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，data-testid 前缀 nt-）
+    ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，content 与时光轴条目经 noteMarkdown.renderMarkdown 渲染为 Markdown（v-html + :deep() 排版，链接 target=_blank、@click 锚点拦截不触发卡片编辑），data-testid 前缀 nt-）
     ├── WorkbenchCountdown.vue   # 倒计时面板（分类筛选 tabs + ⚙️分类管理弹框 + 规则/分类表单 + 徽标，data-testid 前缀 cd-）
     ├── WorkbenchPassword.vue    # 密码面板（主密码三态 + 新增/编辑弹窗 + 书签关联下拉 + 名称搜索，复用 usePasswordsStore / useCrypto.ts）
     ├── WorkbenchHealth.vue      # 健康管理 tabs 容器（受控组件：props activeTab + emit change；tab 栏前缀 hd-；内含运动/饮食/睡眠/体重 四面板）
@@ -41,7 +41,7 @@ components/
     ├── WorkbenchDiet.vue        # 饮食面板（每日热量目标 + 四餐次记录，前缀 dt-）
     ├── WorkbenchSleep.vue       # 睡眠面板（每日时长目标 + 入睡/起床时间自动算时长 + 质量星标，前缀 sl-）
     ├── WorkbenchWeight.vue      # 体重面板（身高 + BMI 国标四档徽章 + 减肥建议 + 内联 SVG 折线图，前缀 wt-）
-    └── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 分类占比条 + 行式记录列表可折叠 + 分组管理，前缀 ld-）
+    └── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 近 6 月收支趋势柱状图（ld-trend-*，内联 SVG，坐标全走 trendChartScale）+ 支出分类占比环形图（ld-donut-*，R=90 周长不变量）+ 分类占比条 + 行式记录列表可折叠 + 分组管理，前缀 ld-）
 ```
 
 ## WHERE TO LOOK
@@ -62,8 +62,8 @@ components/
 | Loading states | `SkeletonCard.vue` + `SkeletonGrid.vue` | Shimmer placeholders |
 | Toast notifications | `Toast.vue` | Receives `toasts` array as prop from `useToast()` |
 | 工作台便签 | `workbench/WorkbenchNotes.vue` | 顶部工具栏（左：新增便签 `note-add-button` / 分类管理 `nt-cat-manager`；右：搜索表单 关键词 `nt-search-input` + 类型下拉 `nt-type-select`（全部类型默认 'all'/普通便签/时光轴便签）+ 查询 `nt-search-btn` / 重置 `nt-reset-btn`，草稿→应用模式：控件绑草稿 ref，查询/回车才生效，重置一键清空回默认）+ 操作栏下方分类筛选 tabs `nt-cat-all`/`nt-cat-uncategorized`/`nt-cat-<id>`（全部/未分类/可见分类=showInTabs!==false，即时过滤，公式走 `noteCore.tabCategoriesOf`）+ 表单 overlay 内 radio `nt-form-type-normal`/`nt-form-type-timeline`（切换保留 content+entries 数据）+ 分类管理弹窗（首区「标签页显示」勾选 `nt-catmgr-tab-<id>` 控制标签页可见性，取消勾选正激活的分类回退全部；改名/上移下移/删除、名称唯一、删除后该分类便签归未分类、正被筛选的分类重置为全部）+ 时光轴卡片（竖排时间轴 `nt-timeline-card`，快速追加 `nt-entry-add`，条目行内编辑/删除 `nt-entry-edit-<id>`/`nt-entry-del-<id>`）；datetime 校验 `^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$` + 范围检查（月 1-12/日 1-31/时 0-23/分 0-59，纯正则拒绝不了 '2026-13-99 25:61'）；条目排序走 `noteCore.sortTimelineEntries`，筛选走 `filterNotes`；'all' 双段渲染（普通网格 + 时光轴网格，经 `noteCore.partitionNotesByType` 拆分，仅含数据的段才渲染）；`hasActiveNoteFilter` 激活判定：默认 'all' 与显式 'normal' 均不算类型激活（仅 'timeline' 算类型激活），categoryId/keyword 非空仍计激活 |
-| 工作台面板 | `workbench/WorkbenchHome.vue` + `workbench/WorkbenchTodo.vue` + `workbench/WorkbenchNotes.vue` + `workbench/WorkbenchCountdown.vue` + `workbench/WorkbenchPassword.vue` + `workbench/WorkbenchHealth.vue` + `workbench/WorkbenchHealthReminders.vue` + `workbench/WorkbenchExercise.vue` + `workbench/WorkbenchDiet.vue` + `workbench/WorkbenchSleep.vue` + `workbench/WorkbenchWeight.vue` + `workbench/WorkbenchLedger.vue` | 个人工作台：左侧菜单 7 项（主页/待办/便签/倒计时/密码/健康管理/记账）；健康管理=WorkbenchHealth.vue tabs 容器（受控 activeTab+change，前缀 hd-，内含运动/饮食/睡眠/体重四面板）；运动/饮食/睡眠面板顶部挂 WorkbenchHealthReminders.vue 只读提醒区块（1:1 分类映射）；待办/便签走 `useWorkbenchTodosStore` / `useWorkbenchNotesStore`，健康走 `useWorkbenchHealthStore`，记账走 `useWorkbenchLedgerStore`，倒计时/密码复用既有 store，均经 `useIdb.ts` 持久化到 IndexedDB |
-| 工作台菜单设置（排序/改名/恢复默认） | `AppSettingsDialog.vue` | 「工作台设置」tab（activeTab==='wb'）body 内、弹窗尺寸表格上方 `.wb-menu-config` 区块：7 行来自 `store.workbenchMenuItems`（图标 + 改名 input `maxlength="12"`，blur/Enter 提交、Esc 还原、trim 空还原上值不调 store，提交前按 code point 校验 ≤12 防代理对截断 + 上移/下移按钮，home 恒 disabled + `aria-disabled`，index≤1 上移 / 末行下移达边界 disabled）；区块「恢复默认」→ `store.resetWorkbenchMenu()`；testid：`wbmenu-row-<key>`/`wbmenu-name-<key>`/`wbmenu-up-<key>`/`wbmenu-down-<key>`/`wbmenu-reset`；改名 input 直接绑 store 状态（`menuEditing` 仅暂存输入中文本，提交/还原后回落 computed label，无草稿机制——全局 resetAll 后自动刷新不残留旧值）；store 返回 ok:false（locked/boundary/not-found）静默忽略无 toast（有意偏离「可用+toast」惯例） |
+| 工作台面板 | `workbench/WorkbenchHome.vue` + `workbench/WorkbenchTodo.vue` + `workbench/WorkbenchNotes.vue` + `workbench/WorkbenchCountdown.vue` + `workbench/WorkbenchPomodoro.vue` + `workbench/WorkbenchHabits.vue` + `workbench/WorkbenchPassword.vue` + `workbench/WorkbenchHealth.vue` + `workbench/WorkbenchHealthReminders.vue` + `workbench/WorkbenchExercise.vue` + `workbench/WorkbenchDiet.vue` + `workbench/WorkbenchSleep.vue` + `workbench/WorkbenchWeight.vue` + `workbench/WorkbenchLedger.vue` + `workbench/WeatherCard.vue` + `workbench/CalendarAnchorCard.vue` | 个人工作台：左侧菜单 9 项（主页/待办/便签/倒计时/番茄钟/习惯打卡/密码/健康管理/记账）；健康管理=WorkbenchHealth.vue tabs 容器（受控 activeTab+change，前缀 hd-，内含运动/饮食/睡眠/体重四面板）；运动/饮食/睡眠面板顶部挂 WorkbenchHealthReminders.vue 只读提醒区块（1:1 分类映射）；待办/便签走 `useWorkbenchTodosStore` / `useWorkbenchNotesStore`，健康走 `useWorkbenchHealthStore`，记账走 `useWorkbenchLedgerStore`，倒计时/密码复用既有 store，均经 `useIdb.ts` 持久化到 IndexedDB |
+| 工作台菜单设置（排序/改名/恢复默认） | `AppSettingsDialog.vue` | 「工作台设置」tab（activeTab==='wb'）body 内、弹窗尺寸表格上方 `.wb-menu-config` 区块：9 行来自 `store.workbenchMenuItems`（图标 + 改名 input `maxlength="12"`，blur/Enter 提交、Esc 还原、trim 空还原上值不调 store，提交前按 code point 校验 ≤12 防代理对截断 + 上移/下移按钮，home 恒 disabled + `aria-disabled`，index≤1 上移 / 末行下移达边界 disabled）；区块「恢复默认」→ `store.resetWorkbenchMenu()`；testid：`wbmenu-row-<key>`/`wbmenu-name-<key>`/`wbmenu-up-<key>`/`wbmenu-down-<key>`/`wbmenu-reset`；改名 input 直接绑 store 状态（`menuEditing` 仅暂存输入中文本，提交/还原后回落 computed label，无草稿机制——全局 resetAll 后自动刷新不残留旧值）；store 返回 ok:false（locked/boundary/not-found）静默忽略无 toast（有意偏离「可用+toast」惯例） |
 | 工作台左菜单渲染 | `src/views/WorkbenchView.vue` | 菜单渲染自 `settingsStore.workbenchMenuItems`（computed 由 `workbenchMenuCore.resolveMenuItems` 解析，顺序/改名经设置弹窗调整后在此直接生效，视图禁止内联重算）；每项按钮 `data-testid="wb-menu-<key>"` + `:title="item.label"` 全名；label 溢出省略作用于内部 `.wb-menu-label` span（min-width:0 + overflow:hidden + text-overflow:ellipsis + white-space:nowrap，对按钮本身设 ellipsis 不截断子 span 文本）；`SECTION_KEYS`/`navigateTo`/内容 switch 仍 key 驱动不动 |
 
 ## CONVENTIONS
@@ -75,6 +75,7 @@ components/
 - No state management inside components — delegate to stores or composables
 - **WorkbenchNotes.vue testid 约定**：工具栏 搜索输入 `nt-search-input`、分类筛选 tabs `nt-cat-all`/`nt-cat-uncategorized`/`nt-cat-<id>`、类型下拉 `nt-type-select`（选项：全部类型默认 'all'/普通便签/时光轴便签）、查询 `nt-search-btn`、重置 `nt-reset-btn`、新增 `note-add-button`、分类管理入口 `nt-cat-manager`（弹窗行 `nt-catmgr-*`，含标签页显示勾选 `nt-catmgr-tab-<id>`）、表单 overlay 类型 radio `nt-form-type-normal`/`nt-form-type-timeline`、时光轴快速追加 `nt-entry-add`、条目行内编辑/删除 `nt-entry-edit-<id>`/`nt-entry-del-<id>`、空态 `note-empty`（普通）/`note-timeline-empty`（时光轴）；其余表单 `note-*` / `nt-form-*` 前缀
 - **WorkbenchTodo.vue testid 约定**：分类筛选 tabs `td-cat-all`/`td-cat-<分类名>`（点击即时过滤，与查询条件叠加，重置恢复全部）、表单分类下拉 `td-form-category`（未分类 + store.allCategories）、卡片分类徽标 `td-cat-badge-<todoId>`、分类管理入口 `td-cat-manager`（弹窗 `td-cat-dialog`：标签页显示勾选 `td-catmgr-tab-<分类名>`、改名 `td-catmgr-name-<分类名>` blur/Enter 提交 Esc 还原、上移下移 `td-catmgr-up-<分类名>`/`td-catmgr-down-<分类名>`、删除 `td-catmgr-del-<分类名>` 带 confirm、新增 `td-catmgr-new-input`/`td-catmgr-add-btn`，失败走 useToast、删除/隐藏激活分类回退「全部」）；其余表单 `td-*` 前缀
+- **WorkbenchLedger.vue testid 约定**：趋势卡 `ld-trend`「近 6 月收支趋势」（坐标全走 `ledgerCore.trendChartScale`，组件零重算；柱 `ld-trend-bar-<月索引>-<income|expense>` 6 月×2=12 根、网格线 `.ld-trend-gridline` 5 条 + axis-label、maxY 标签 `ld-trend-max`、月标签 `ld-trend-month-<i>` 6 个、空态 `ld-trend-empty`「暂无收支数据」当 scale null；收入柱=accent 主色、支出柱=`LEDGER_CATEGORY_COLORS[1]`）；分类占比容器保持 `ld-ratio-block`（v-if 当月 expense>0，标题「支出分类占比」）+ svg `ld-donut`（viewBox 220×220、R=90、C=2π×90≈565.4867、rotate(-90 110 110)、stroke-width 16）+ 段 `ld-donut-seg-<idx>`（stroke-dasharray=`${dashLen} ${C-dashLen}`、dashoffset 累积、首段 `is-accent`=应用主色、后续轮循 `LEDGER_CATEGORY_COLORS`、linecap ≤3 段 round / >3 段 butt）+ 中心 `ld-donut-center`（当月支出总额经 `masked()` 掩码 `****`）+ 图例行 `ld-donut-legend-<categoryId>`（未知分类 id='unknown' 名=未知，含色点 `ld-donut-dot` + 名称 + `masked(formatYuan) · masked(percentLabel)`）；几何不变量：所有段 dasharray 第一个数之和 ≈ RING_C（QA 断言）
 
 ## ANTI-PATTERNS
 

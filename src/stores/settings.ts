@@ -188,6 +188,15 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   const menu = normalizeWorkbenchMenu(data.workbenchMenuOrder, data.workbenchMenuLabels)
   out.workbenchMenuOrder = menu.order
   out.workbenchMenuLabels = menu.labels
+  // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
+  // （清除城市后重载不复活旧值，非法值回退默认即未配置）
+  if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
+    out.workbenchCity = data.workbenchCity.trim()
+  }
+  // 侧栏折叠态：仅采纳布尔；非法/缺失回退默认（未配置即展开）
+  if (typeof data.workbenchSidebarCollapsed === 'boolean') {
+    out.workbenchSidebarCollapsed = data.workbenchSidebarCollapsed
+  }
   return out
 }
 
@@ -203,6 +212,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const workbenchMenuOrder = ref<string[]>([...WORKBENCH_MENU_DEFAULT_ORDER])
   const workbenchMenuLabels = ref<Record<string, string>>({})
 
+  // 工作台城市（天气卡显示城市）与侧栏折叠态：默认未配置（undefined = 无城市 / 不折叠）
+  const workbenchCity = ref<string | undefined>(undefined)
+  const workbenchSidebarCollapsed = ref<boolean | undefined>(undefined)
+
   // ========================================
   // 持久化
   // ========================================
@@ -214,7 +227,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       buttonOpacity: buttonOpacity.value,
       bgOpacity: bgOpacity.value,
       workbenchMenuOrder: toRaw(workbenchMenuOrder.value),
-      workbenchMenuLabels: toRaw(workbenchMenuLabels.value)
+      workbenchMenuLabels: toRaw(workbenchMenuLabels.value),
+      workbenchCity: toRaw(workbenchCity.value),
+      workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
@@ -292,6 +307,18 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       }
       if (Number.isFinite(effective.buttonOpacity)) buttonOpacity.value = clampOpacity(effective.buttonOpacity)
       if (Number.isFinite(effective.bgOpacity)) bgOpacity.value = clampOpacity(effective.bgOpacity)
+      // 工作台城市/侧栏折叠态：仅采纳合法值（城市 trim 后非空、折叠态布尔），
+      // 空串/undefined/非法一律回退未配置（清除后重载不复活旧值）
+      if (typeof effective.workbenchCity === 'string' && effective.workbenchCity.trim() !== '') {
+        workbenchCity.value = effective.workbenchCity.trim()
+      } else {
+        workbenchCity.value = undefined
+      }
+      if (typeof effective.workbenchSidebarCollapsed === 'boolean') {
+        workbenchSidebarCollapsed.value = effective.workbenchSidebarCollapsed
+      } else {
+        workbenchSidebarCollapsed.value = undefined
+      }
       // 归一化结果写回 IDB（fire-and-forget）：保证导出/导入往返幂等，镜像迁移分支的 idbPut
       persist()
     }
@@ -320,6 +347,19 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 工作台城市：trim 后空串/全空白 = 清除（存 undefined，重载不复活旧值）；非空存 trim 后规范值
+  function setWorkbenchCity(name: string) {
+    const trimmed = name.trim()
+    workbenchCity.value = trimmed === '' ? undefined : trimmed
+    persist()
+  }
+
+  // 工作台侧栏折叠态：纯布尔（undefined 仅由非法/缺失回退产生，不主动写入）
+  function setWorkbenchSidebarCollapsed(v: boolean) {
+    workbenchSidebarCollapsed.value = v
+    persist()
+  }
+
   // ========================================
   // 恢复默认：还原状态 → 移除全部弹窗 CSS 变量（不 set 默认值）→ 清除存储（IDB + localStorage 快照）
   // ========================================
@@ -329,6 +369,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     bgOpacity.value = 1
     workbenchMenuOrder.value = [...WORKBENCH_MENU_DEFAULT_ORDER]
     workbenchMenuLabels.value = {}
+    workbenchCity.value = undefined
+    workbenchSidebarCollapsed.value = undefined
     const root = document.documentElement
     for (const id of DIALOG_IDS) {
       root.style.removeProperty(DIALOG_VARS[id].widthVar)
@@ -389,11 +431,15 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchMenuOrder,
     workbenchMenuLabels,
     workbenchMenuItems,
+    workbenchCity,
+    workbenchSidebarCollapsed,
     initSettings,
     applySettings,
     setDialogSize,
     setButtonOpacity,
     setBgOpacity,
+    setWorkbenchCity,
+    setWorkbenchSidebarCollapsed,
     resetDefaults,
     moveWorkbenchMenuItem,
     renameWorkbenchMenuItem,

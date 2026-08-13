@@ -1,0 +1,2484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>孙子兵法 - 古籍阅读</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-paper: #f5f0e6;
+            --bg-dark: #2c2416;
+            --text-primary: #3d2e1e;
+            --text-light: #6b5a47;
+            --accent-gold: #b8860b;
+            --accent-red: #8b0000;
+            --shadow-soft: rgba(60, 40, 20, 0.15);
+            --shadow-hard: rgba(60, 40, 20, 0.4);
+            --page-width: 800px;
+            --spine-width: 30px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.9;
+            overflow-x: hidden;
+            position: relative;
+            /* 国学风背景 — 宣纸底色 + 暗纹 + 淡墨渲染 */
+            background:
+                /* 顶部书卷气光线 */
+                radial-gradient(ellipse 80% 25% at 50% 0%, rgba(184, 134, 11, 0.07) 0%, transparent 70%),
+                /* 底部淡墨 */
+                radial-gradient(ellipse 80% 25% at 50% 100%, rgba(139, 0, 0, 0.04) 0%, transparent 70%),
+                /* 左侧笔触渲染 */
+                radial-gradient(ellipse 35% 70% at 0% 50%, rgba(139, 115, 85, 0.05) 0%, transparent 60%),
+                /* 右侧笔触渲染 */
+                radial-gradient(ellipse 35% 70% at 100% 50%, rgba(139, 115, 85, 0.05) 0%, transparent 60%),
+                /* 宣纸纹理 */
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 2px,
+                    rgba(139, 115, 85, 0.015) 2px,
+                    rgba(139, 115, 85, 0.015) 3px
+                ),
+                /* 全局宣纸暖色底 */
+                linear-gradient(180deg, #f5f0e6 0%, #ede5d8 30%, #e8dfd1 60%, #f0e8da 100%);
+        }
+
+        /* 书脊装饰 */
+        .book-spine {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: var(--spine-width);
+            height: 100vh;
+            background: linear-gradient(90deg, 
+                var(--bg-dark) 0%, 
+                #4a3c28 30%, 
+                #6b5a47 50%, 
+                #4a3c28 70%, 
+                var(--bg-dark) 100%);
+            box-shadow: 
+                inset 0 0 30px rgba(0,0,0,0.5),
+                2px 0 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .book-spine::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            bottom: 20px;
+            width: 2px;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                var(--accent-gold) 10%, 
+                var(--accent-gold) 90%, 
+                transparent 100%);
+            transform: translateX(-50%);
+        }
+
+        .book-spine::after {
+            content: '兵';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 14px;
+            color: var(--accent-gold);
+            letter-spacing: 8px;
+            text-shadow: 0 0 10px rgba(184, 134, 11, 0.5);
+        }
+
+        /* 书籍容器 */
+        .book-container {
+            margin-left: var(--spine-width);
+            padding: 20px;
+            perspective: 2000px;
+            position: relative;
+        }
+
+        /* 书后暖光晕 */
+        .book-container::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 800px;
+            height: 600px;
+            transform: translate(-50%, -55%);
+            background: radial-gradient(ellipse at center,
+                rgba(184,134,11,0.04) 0%,
+                rgba(184,134,11,0.02) 40%,
+                transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .book {
+            max-width: 1120px;
+            margin: 0 auto;
+            background: var(--bg-paper);
+            border-radius: 8px;
+            box-shadow: 
+                0 0 0 1px rgba(139, 115, 85, 0.3),
+                0 4px 20px var(--shadow-soft),
+                0 12px 40px rgba(60, 40, 20, 0.25),
+                0 30px 80px rgba(60, 40, 20, 0.18),
+                inset 0 0 80px rgba(139, 115, 85, 0.1);
+            position: relative;
+            min-height: auto;
+        }
+
+        /* 书页纹理 */
+        .book::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 100px,
+                    rgba(139, 115, 85, 0.03) 100px,
+                    rgba(139, 115, 85, 0.03) 101px
+                );
+            pointer-events: none;
+            border-radius: 8px;
+        }
+
+        /* 侧边目录 */
+        .toc-sidebar {
+            position: fixed;
+            top: 0;
+            left: calc(var(--spine-width) + 20px);
+            width: 320px;
+            max-height: 100vh;
+            background: linear-gradient(135deg, 
+                rgba(245, 240, 230, 0.98) 0%, 
+                rgba(240, 235, 220, 0.98) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 0 12px 12px 0;
+            box-shadow: 
+                5px 0 30px var(--shadow-hard),
+                inset 0 0 0 1px rgba(139, 115, 85, 0.2);
+            padding: 25px;
+            overflow-y: auto;
+            z-index: 50;
+            transform: translateX(-120%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: calc(100vh - 40px);
+            margin-top: 20px;
+        }
+
+        .toc-sidebar.active {
+            transform: translateX(0);
+        }
+
+        .toc-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .toc-sidebar::-webkit-scrollbar-track {
+            background: rgba(139, 115, 85, 0.1);
+            border-radius: 3px;
+        }
+
+        .toc-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(139, 115, 85, 0.4);
+            border-radius: 3px;
+        }
+
+        .toc-header {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 28px;
+            color: var(--accent-red);
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--accent-gold);
+            position: relative;
+        }
+
+        .toc-header::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+        }
+
+        .toc-section {
+            margin-bottom: 25px;
+        }
+
+        .toc-section-title {
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: 16px;
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            padding-left: 10px;
+            border-left: 3px solid var(--accent-red);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toc-section-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-red);
+            border-radius: 50%;
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-item {
+            margin-bottom: 6px;
+        }
+
+        .toc-link {
+            display: block;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toc-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: linear-gradient(90deg, 
+                rgba(184, 134, 11, 0.15), 
+                rgba(184, 134, 11, 0.05));
+            transition: width 0.3s ease;
+        }
+
+        .toc-link:hover::before {
+            width: 100%;
+        }
+
+        .toc-link:hover {
+            color: var(--accent-red);
+            padding-left: 18px;
+        }
+
+        .toc-link .chapter-num {
+            color: var(--accent-gold);
+            margin-right: 8px;
+            font-weight: 600;
+        }
+
+/* 主内容区 */
+.content-area {
+    padding: 30px 40px;
+}
+
+/* 封面页：缩小顶部间距 */
+.cover-page .content-area {
+    padding-top: 10px;
+}
+
+        /* 顶部导航 */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 20px;
+            z-index: 200;
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, 
+                var(--bg-paper) 0%, 
+                #e8e0d0 100%);
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 
+                0 4px 15px var(--shadow-soft),
+                inset 0 0 0 1px rgba(139, 115, 85, 0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 8px 25px var(--shadow-hard),
+                inset 0 0 0 1px rgba(139, 115, 85, 0.3);
+        }
+
+        /* ===== 底部翻页导航 ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(245, 240, 230, 0.88);
+            backdrop-filter: blur(4px);
+            border-radius: 30px;
+            border: 1px solid rgba(139, 115, 85, 0.12);
+            box-shadow: 0 2px 12px rgba(60, 40, 20, 0.1);
+            z-index: 500;
+            font-family: 'Noto Serif SC', serif;
+            user-select: none;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        body.cover-page .bottom-nav {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(20px);
+        }
+        .bottom-nav .nav-arrow {
+            background: none;
+            border: 1px solid rgba(139, 115, 85, 0.18);
+            color: var(--text-primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0.7;
+        }
+        .bottom-nav .nav-arrow:hover:not(:disabled) {
+            background: rgba(139, 0, 0, 0.06);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            opacity: 1;
+        }
+        .bottom-nav .nav-arrow:disabled {
+            opacity: 0.2;
+            cursor: default;
+        }
+        .bottom-nav .page-indicator {
+            color: rgba(61, 46, 30, 0.4);
+            font-size: 12px;
+            min-width: 40px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .nav-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .nav-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+
+
+        /* 书页样式 */
+        .book-page {
+            display: none;
+        }
+
+        .book-page.active {
+            display: block;
+        }
+
+
+        .cover-decoration {
+            width: 100px;
+            height: 100px;
+            border: 2px solid var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(184, 134, 11, 0.3); }
+            50% { box-shadow: 0 0 0 20px rgba(184, 134, 11, 0); }
+        }
+
+        .cover-decoration::before {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border: 1px solid var(--accent-gold);
+            border-radius: 50%;
+        }
+
+        .cover-decoration span {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 48px;
+            color: var(--accent-gold);
+        }
+
+        .cover-title {
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: 60px;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 4px rgba(139, 115, 85, 0.3);
+            letter-spacing: 18px;
+        }
+
+        .cover-subtitle {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 18px;
+            color: var(--text-light);
+            margin-bottom: 24px;
+            letter-spacing: 8px;
+        }
+
+        .cover-author {
+            font-size: 16px;
+            color: var(--text-light);
+            margin-bottom: 28px;
+        }
+
+        .cover-author span {
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        .start-reading {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, var(--accent-red) 0%, #6b0000 100%);
+            color: var(--bg-paper);
+            text-decoration: none;
+            border-radius: 30px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(139, 0, 0, 0.3);
+        }
+
+        .start-reading:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(139, 0, 0, 0.4);
+        }
+
+        /* 内容页样式 */
+        .chapter-header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid rgba(184, 134, 11, 0.3);
+            position: relative;
+        }
+
+        .chapter-header::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: var(--accent-gold);
+            border-radius: 2px;
+        }
+
+        .chapter-num-display {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 16px;
+            color: var(--accent-gold);
+            letter-spacing: 5px;
+            margin-bottom: 15px;
+        }
+
+        .chapter-title {
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: 36px;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .content-section {
+            margin-bottom: 40px;
+        }
+
+        /* 原文样式 */
+        .original-text {
+            background: linear-gradient(135deg, 
+                rgba(139, 115, 85, 0.08) 0%, 
+                rgba(139, 115, 85, 0.03) 100%);
+            padding: 25px 30px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-red);
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .original-text::before {
+            content: '原文';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--bg-paper);
+            padding: 0 10px;
+            font-size: 12px;
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        .original-text p {
+            font-size: 17px;
+            line-height: 2.2;
+            text-align: justify;
+            text-indent: 2em;
+            margin-bottom: 15px;
+        }
+
+        .original-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 译文样式 */
+        .translation-text {
+            background: linear-gradient(135deg, 
+                rgba(184, 134, 11, 0.08) 0%, 
+                rgba(184, 134, 11, 0.03) 100%);
+            padding: 25px 30px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-gold);
+            position: relative;
+        }
+
+        .translation-text::before {
+            content: '译文';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--bg-paper);
+            padding: 0 10px;
+            font-size: 12px;
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .translation-text p {
+            font-size: 16px;
+            line-height: 2;
+            text-align: justify;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .translation-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 章节分隔 */
+        .chapter-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 60px 0;
+            gap: 20px;
+        }
+
+        .chapter-divider::before,
+        .chapter-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--accent-gold), 
+                transparent);
+        }
+
+        .chapter-divider span {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 20px;
+            color: var(--accent-gold);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .toc-sidebar {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .book-spine {
+                display: none;
+            }
+
+            .book-container {
+                margin-left: 0;
+            }
+
+            .content-area {
+                padding: 40px 30px;
+            }
+
+            .cover-title {
+                font-size: 48px;
+                letter-spacing: 10px;
+            }
+
+            .chapter-title {
+                font-size: 28px;
+            }
+
+            .top-nav {
+                padding: 15px;
+            }
+
+            .nav-btn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .toc-sidebar {
+                width: 85%;
+                max-width: 350px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .content-area {
+                padding: 30px 20px;
+            }
+
+            .cover-title {
+                font-size: 36px;
+                letter-spacing: 5px;
+            }
+
+            .cover-subtitle {
+                font-size: 16px;
+                letter-spacing: 5px;
+            }
+
+            .original-text,
+            .translation-text {
+                padding: 20px;
+            }
+
+            .original-text p,
+            .translation-text p {
+                font-size: 15px;
+                text-indent: 1.5em;
+            }
+
+        }
+
+        /* 翻页动画 */
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(139, 115, 85, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 115, 85, 0.4);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 115, 85, 0.6);
+        }
+
+        /* 高亮当前章节 */
+        .toc-link.active {
+            background: rgba(184, 134, 11, 0.15);
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        /* 装饰图案 */
+        .corner-decoration {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            opacity: 0.3;
+        }
+
+        .corner-decoration.top-left {
+            top: 20px;
+            left: 20px;
+            border-top: 2px solid var(--accent-gold);
+            border-left: 2px solid var(--accent-gold);
+        }
+
+        .corner-decoration.top-right {
+            top: 20px;
+            right: 20px;
+            border-top: 2px solid var(--accent-gold);
+            border-right: 2px solid var(--accent-gold);
+        }
+
+        .corner-decoration.bottom-left {
+            bottom: 20px;
+            left: 20px;
+            border-bottom: 2px solid var(--accent-gold);
+            border-left: 2px solid var(--accent-gold);
+        }
+
+        .corner-decoration.bottom-right {
+            bottom: 20px;
+            right: 20px;
+            border-bottom: 2px solid var(--accent-gold);
+            border-right: 2px solid var(--accent-gold);
+        }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-dark);
+            color: var(--bg-paper);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 300;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ============================================
+           3D 书本效果 — 古籍样式
+           ============================================ */
+
+        /* ===== 全局透视容器 ===== */
+        .book-wrapper {
+            perspective: 2000px;
+            transform-style: preserve-3d;
+            min-height: 100vh;
+        }
+
+        /* ===== 闭合书本（封面） ===== */
+        .book-cover-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: auto;
+            text-align: center;
+            padding: 30px 30px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            /* 书本封面厚边效果 */
+            border: 12px double var(--accent-gold);
+            background: linear-gradient(135deg, #f5f0e6 0%, #e8ddd0 100%);
+            box-shadow:
+                inset 0 0 80px rgba(139, 115, 85, 0.10),
+                /* 书脊底部厚边 */
+                0 2px 0 rgba(139, 115, 85, 0.08),
+                0 4px 0 rgba(139, 115, 85, 0.06),
+                0 6px 0 rgba(139, 115, 85, 0.04),
+                0 8px 0 rgba(139, 115, 85, 0.03),
+                /* 投影 */
+                0 12px 30px rgba(60, 40, 20, 0.20),
+                0 20px 60px rgba(60, 40, 20, 0.12);
+            /* 封面微微后仰 */
+            transform: perspective(2000px) rotateX(0.8deg);
+            border-radius: 2px;
+        }
+
+        .book-cover-view:hover {
+            transform: perspective(2000px) rotateX(1.5deg) rotateY(-2deg) scale(1.01);
+            box-shadow:
+                inset 0 0 80px rgba(139, 115, 85, 0.12),
+                0 2px 0 rgba(139, 115, 85, 0.08),
+                0 4px 0 rgba(139, 115, 85, 0.06),
+                0 6px 0 rgba(139, 115, 85, 0.04),
+                0 8px 0 rgba(139, 115, 85, 0.03),
+                0 15px 40px rgba(60, 40, 20, 0.25),
+                0 25px 70px rgba(60, 40, 20, 0.15);
+        }
+
+        /* 封面左侧书脊装饰 */
+        .cover-spine {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 22px;
+            background: linear-gradient(90deg,
+                rgba(60, 40, 20, 0.15) 0%,
+                rgba(139, 115, 85, 0.08) 40%,
+                transparent 100%);
+            border-right: 1px solid rgba(139, 115, 85, 0.15);
+        }
+
+        .cover-spine::before {
+            content: '孙子兵法';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 11px;
+            color: var(--accent-gold);
+            letter-spacing: 6px;
+            white-space: nowrap;
+            opacity: 0.5;
+        }
+
+        /* 封面装饰外框 */
+        .cover-frame {
+            border: 1px solid var(--accent-gold);
+            padding: 20px 36px;
+            position: relative;
+            max-width: 440px;
+            width: 100%;
+        }
+
+        .cover-frame::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid rgba(184, 134, 11, 0.4);
+            pointer-events: none;
+        }
+
+        /* 封面四角装饰（内框角） */
+        .cover-corner {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-color: var(--accent-gold);
+            border-style: solid;
+        }
+        .cover-corner.tl { top: 5px; left: 5px; border-width: 2px 0 0 2px; }
+        .cover-corner.tr { top: 5px; right: 5px; border-width: 2px 2px 0 0; }
+        .cover-corner.bl { bottom: 5px; left: 5px; border-width: 0 0 2px 2px; }
+        .cover-corner.br { bottom: 5px; right: 5px; border-width: 0 2px 2px 0; }
+
+        /* 封面四角装饰（外框角）— 复用已有 .corner-decoration 增强 */
+        .corner-decoration {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            opacity: 0.4;
+            z-index: 2;
+        }
+        .corner-decoration.top-left {
+            top: 15px;
+            left: 15px;
+            border-top: 2px solid var(--accent-gold);
+            border-left: 2px solid var(--accent-gold);
+        }
+        .corner-decoration.top-right {
+            top: 15px;
+            right: 15px;
+            border-top: 2px solid var(--accent-gold);
+            border-right: 2px solid var(--accent-gold);
+        }
+        .corner-decoration.bottom-left {
+            bottom: 15px;
+            left: 15px;
+            border-bottom: 2px solid var(--accent-gold);
+            border-left: 2px solid var(--accent-gold);
+        }
+        .corner-decoration.bottom-right {
+            bottom: 15px;
+            right: 15px;
+            border-bottom: 2px solid var(--accent-gold);
+            border-right: 2px solid var(--accent-gold);
+        }
+
+        /* 封面顶部装饰线 */
+        .cover-decoration-top {
+            width: 80px;
+            height: 2px;
+            background: var(--accent-gold);
+            margin: 0 auto 30px;
+            position: relative;
+        }
+        .cover-decoration-top::before,
+        .cover-decoration-top::after {
+            content: '◈';
+            position: absolute;
+            font-size: 0.7em;
+            color: var(--accent-gold);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .cover-decoration-top::before { left: -20px; }
+        .cover-decoration-top::after { right: -20px; }
+
+        /* 封面底部装饰线 */
+        .cover-decoration-bottom {
+            width: 50px;
+            height: 1px;
+            background: var(--accent-gold);
+            margin: 30px auto 0;
+            position: relative;
+            opacity: 0.6;
+        }
+        .cover-decoration-bottom::before,
+        .cover-decoration-bottom::after {
+            content: '❦';
+            position: absolute;
+            font-size: 0.8em;
+            color: var(--accent-gold);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .cover-decoration-bottom::before { left: -18px; }
+        .cover-decoration-bottom::after { right: -18px; }
+
+        /* ===== 打开书本（内容页） ===== */
+        .book-opened {
+            display: none;
+            min-height: 100vh;
+            padding: 20px 30px 80px;
+        }
+
+        .book-opened.active {
+            display: block;
+            animation: bookOpen 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes bookOpen {
+            0% {
+                opacity: 0;
+                transform: perspective(2000px) rotateY(5deg) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: perspective(2000px) rotateY(0deg) scale(1);
+            }
+        }
+
+        /* 书本展开区域 */
+        .book-area {
+            position: relative;
+            padding: 20px 10px 30px;
+            perspective-origin: center 20%;
+        }
+
+        /* 双页展开 */
+        .book-spread {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 0;
+            max-width: 1120px;
+            max-height: calc(70vh + 150px);
+            margin: 0 auto;
+            position: relative;
+            transform: perspective(1200px) rotateX(1.8deg);
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 320px;
+        }
+
+        .book-spread:hover {
+            transform: perspective(1200px) rotateX(1.2deg) rotateY(-0.5deg);
+        }
+
+        /* 书本底部投影 */
+        .book-spread::after {
+            content: '';
+            position: absolute;
+            bottom: -28px;
+            left: 3%;
+            right: 3%;
+            height: 40px;
+            background: radial-gradient(ellipse at center 50%,
+                rgba(60, 40, 20, 0.15) 0%,
+                rgba(60, 40, 20, 0.07) 40%,
+                transparent 70%);
+            z-index: -5;
+            pointer-events: none;
+        }
+
+        /* ===== 左右页面 ===== */
+        .book-spread .page {
+            flex: 1;
+            min-height: 380px;
+            max-width: 540px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 32px 44px;
+            background-color: var(--bg-paper);
+            /* 古籍纸纹 — 横向纹理 */
+            background-image:
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 3px,
+                    rgba(0, 0, 0, 0.008) 3px,
+                    rgba(0, 0, 0, 0.008) 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent 0px,
+                    transparent 20px,
+                    rgba(0, 0, 0, 0.004) 20px,
+                    rgba(0, 0, 0, 0.004) 21px
+                );
+        }
+
+        /* 页面层叠效果 — 模拟纸张厚度 */
+        .book-spread .page::before {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            background: var(--bg-paper);
+            border: 1px solid rgba(139, 115, 85, 0.18);
+            border-radius: 2px;
+            pointer-events: none;
+        }
+
+        .book-spread .page::after {
+            content: '';
+            position: absolute;
+            z-index: -2;
+            background: var(--bg-paper);
+            border: 1px solid rgba(139, 115, 85, 0.12);
+            border-radius: 2px;
+            pointer-events: none;
+        }
+
+        /* 左页层叠 */
+        .book-spread .page-left::before {
+            top: 3px; left: -4px; right: 1px; bottom: -4px;
+            box-shadow: -1px 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        .book-spread .page-left::after {
+            top: 6px; left: -7px; right: 2px; bottom: -7px;
+            box-shadow: -2px 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 右页层叠 */
+        .book-spread .page-right::before {
+            top: 3px; left: 1px; right: -4px; bottom: -4px;
+            box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        .book-spread .page-right::after {
+            top: 6px; left: 2px; right: -7px; bottom: -7px;
+            box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 左右页边线 */
+        .book-spread .page-left {
+            border-right: 1px solid rgba(139, 115, 85, 0.15);
+            border-radius: 2px 0 0 2px;
+            box-shadow:
+                -3px 0 8px rgba(0, 0, 0, 0.04),
+                inset 3px 0 10px rgba(0, 0, 0, 0.03);
+        }
+        .book-spread .page-right {
+            border-left: 1px solid rgba(139, 115, 85, 0.15);
+            border-radius: 0 2px 2px 0;
+            box-shadow:
+                3px 0 8px rgba(0, 0, 0, 0.04),
+                inset -3px 0 10px rgba(0, 0, 0, 0.03);
+        }
+
+        /* 页面内容区 */
+        .book-spread .page-content {
+            flex: 1;
+            overflow-y: auto;
+            line-height: 1.9;
+            max-height: calc(70vh + 50px);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(139, 115, 85, 0.25) transparent;
+            padding-top: 14px;
+        }
+
+        .book-spread .page-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .book-spread .page-content::-webkit-scrollbar-track {
+            background: rgba(139, 115, 85, 0.05);
+            border-radius: 2px;
+        }
+        .book-spread .page-content::-webkit-scrollbar-thumb {
+            background: rgba(139, 115, 85, 0.2);
+            border-radius: 2px;
+        }
+
+        /* 页码 */
+        .book-spread .page-number {
+            position: absolute;
+            bottom: 14px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.78em;
+            color: var(--text-light);
+            font-feature-settings: "tnum";
+            pointer-events: none;
+            letter-spacing: 2px;
+        }
+
+        /* ===== 书脊（中缝） ===== */
+        .book-fold {
+            width: 6px;
+            min-height: 500px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(to right,
+                rgba(60, 40, 20, 0.04) 0%,
+                rgba(60, 40, 20, 0.10) 15%,
+                rgba(60, 40, 20, 0.16) 30%,
+                rgba(60, 40, 20, 0.20) 48%,
+                rgba(60, 40, 20, 0.25) 50%,
+                rgba(60, 40, 20, 0.20) 52%,
+                rgba(60, 40, 20, 0.16) 70%,
+                rgba(60, 40, 20, 0.10) 85%,
+                rgba(60, 40, 20, 0.04) 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow:
+                1px 0 3px rgba(0, 0, 0, 0.03),
+                -1px 0 3px rgba(0, 0, 0, 0.03);
+        }
+
+        /* 书脊高光线 */
+        .book-fold::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom,
+                transparent 0%,
+                rgba(255, 255, 255, 0.10) 20%,
+                rgba(255, 255, 255, 0.15) 50%,
+                rgba(255, 255, 255, 0.10) 80%,
+                transparent 100%);
+        }
+
+        .fold-title {
+            writing-mode: vertical-rl;
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 12px;
+            color: var(--accent-gold);
+            letter-spacing: 5px;
+            opacity: 0.5;
+            text-shadow: 0 0 6px rgba(184, 134, 11, 0.2);
+            white-space: nowrap;
+        }
+
+        /* ===== 封面进入按钮 ===== */
+        .enter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 35px;
+            padding: 14px 48px;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1em;
+            letter-spacing: 0.3em;
+            background: linear-gradient(135deg, var(--accent-red) 0%, #6b0000 100%);
+            color: var(--bg-paper);
+            border: 2px solid var(--accent-red);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(139, 0, 0, 0.3);
+        }
+
+        .enter-btn::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            bottom: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            pointer-events: none;
+        }
+
+        .enter-btn:hover {
+            background: linear-gradient(135deg, #a00000 0%, #8b0000 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(139, 0, 0, 0.4);
+        }
+
+        .enter-btn:active {
+            transform: translateY(-1px);
+        }
+
+        /* ===== 章节头部适配书本样式 ===== */
+        .book-spread .chapter-header {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+        }
+
+        .book-spread .chapter-title {
+            font-size: 26px;
+        }
+
+        .book-spread .chapter-num-display {
+            font-size: 13px;
+        }
+
+        .book-spread .original-text,
+        .book-spread .translation-text {
+            padding: 16px 20px;
+        }
+
+        .book-spread .original-text p {
+            font-size: 16px;
+            line-height: 2;
+        }
+
+        .book-spread .translation-text p {
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .book-spread .content-section {
+            margin-bottom: 0;
+        }
+
+        /* ===== 内容页面导航（适配打开的书本） ===== */
+        .book-opened .top-nav {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 15px;
+            z-index: 200;
+            display: flex;
+            gap: 12px;
+        }
+
+        .book-opened .toc-sidebar {
+            z-index: 50;
+        }
+
+        /* ===== 页角翻页按钮 ===== */
+        .page-turn-btn {
+            display: none;
+        }
+
+
+        /* ===== 响应式适配 ===== */
+        @media (max-width: 900px) {
+            .book-spread {
+                max-height: calc(75vh + 150px);
+            }
+            .book-spread .page {
+                padding: 24px 20px 40px;
+                min-height: 300px;
+            }
+            .book-fold {
+                min-height: 300px;
+            }
+            .book-spread .chapter-title {
+                font-size: 22px;
+            }
+            .book-opened {
+                padding: 15px 15px 80px;
+            }
+            .cover-frame {
+                padding: 18px 20px;
+            }
+            .cover-title {
+                font-size: 44px !important;
+                letter-spacing: 10px !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .book-spread {
+                flex-direction: column;
+                align-items: center;
+                transform: none;
+            }
+            .book-spread:hover {
+                transform: none;
+            }
+            .book-fold {
+                width: 100%;
+                min-height: 6px;
+                height: 6px;
+                background: linear-gradient(to bottom,
+                    rgba(60, 40, 20, 0.04) 0%,
+                    rgba(60, 40, 20, 0.16) 50%,
+                    rgba(60, 40, 20, 0.04) 100%
+                );
+            }
+            .fold-title {
+                writing-mode: horizontal-tb;
+                font-size: 10px;
+                letter-spacing: 3px;
+            }
+            .book-fold::before {
+                width: 100%;
+                height: 1px;
+                top: 50%;
+                left: 0;
+                transform: translateY(-50%);
+                background: linear-gradient(to right,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.12) 50%,
+                    transparent 100%);
+            }
+            .book-spread .page {
+                max-width: 100%;
+                min-height: 350px;
+                border: 1px solid rgba(139, 115, 85, 0.15);
+                border-radius: 2px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            }
+            .book-spread .page-left::before,
+            .book-spread .page-left::after,
+            .book-spread .page-right::before,
+            .book-spread .page-right::after {
+                display: none;
+            }
+            .book-spread .page-number {
+                position: static;
+                margin-top: 8px;
+            }
+            .book-spread::after {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .book-spread .page {
+                padding: 20px 16px 36px;
+                min-height: 300px;
+            }
+            .book-spread .original-text,
+            .book-spread .translation-text {
+                padding: 12px 14px;
+            }
+            .book-spread .original-text p {
+                font-size: 15px;
+            }
+            .book-spread .translation-text p {
+                font-size: 14px;
+            }
+            .book-cover-view {
+                padding: 20px 10px;
+                border-width: 6px;
+            }
+            .cover-frame {
+                padding: 14px 14px;
+            }
+            .cover-frame::before {
+                top: 6px; left: 6px; right: 6px; bottom: 6px;
+            }
+            .cover-title {
+                font-size: 32px !important;
+                letter-spacing: 8px !important;
+            }
+            .book-opened {
+                padding: 10px 8px 70px;
+            }
+        }
+
+        /* 封面页隐藏导航和目录 */
+        body.cover-page .top-nav,
+        body.cover-page .toc-sidebar {
+            display: none !important;
+        }
+
+        /* ===== 拼音标注 ===== */
+        ruby {
+            ruby-align: center;
+            ruby-position: over;
+        }
+        rt {
+            font-size: 0.45em;
+            color: var(--accent-red);
+            font-weight: 400;
+            user-select: none;
+            letter-spacing: 0;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            line-height: 1.2;
+        }
+        body.pinyin-off rt {
+            display: none;
+        }
+
+        /* 拼音切换按钮 */
+        .pinyin-btn {
+            width: auto;
+            min-width: 44px;
+            height: 44px;
+            padding: 0 14px;
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 22px;
+            background: var(--bg-paper);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: 'Noto Serif SC', serif;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--shadow-soft);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            opacity: 0.7;
+            user-select: none;
+            line-height: 1;
+        }
+        .pinyin-btn:hover {
+            opacity: 1;
+            border-color: var(--accent-red);
+            box-shadow: 0 4px 12px var(--shadow-soft);
+        }
+        .pinyin-btn.active {
+            background: var(--accent-red);
+            color: #f5f0e6;
+            border-color: var(--accent-red);
+            opacity: 1;
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+        }
+
+        @media (max-width: 900px) {
+            .pinyin-btn {
+                min-width: 40px;
+                height: 40px;
+                font-size: 12px;
+                padding: 0 12px;
+            }
+        }
+        @media (max-width: 600px) {
+            .pinyin-btn {
+                min-width: 36px;
+                height: 36px;
+                font-size: 11px;
+                padding: 0 10px;
+            }
+        }
+
+        /* 拼音模式：放大字体，为拼音标注留出空间 */
+        body.pinyin-on .original-text p {
+            font-size: 21px;
+            line-height: 2.5;
+        }
+        body.pinyin-on .translation-text p {
+            font-size: 20px;
+            line-height: 2.3;
+        }
+        body.pinyin-on .book-spread .original-text p {
+            font-size: 20px;
+            line-height: 2.3;
+        }
+        body.pinyin-on .book-spread .translation-text p {
+            font-size: 19px;
+            line-height: 2.1;
+        }
+        @media (max-width: 900px) {
+            body.pinyin-on .original-text p,
+            body.pinyin-on .translation-text p {
+                font-size: 18px;
+                line-height: 2.2;
+            }
+        }
+        @media (max-width: 600px) {
+            body.pinyin-on .book-spread .original-text p {
+                font-size: 18px;
+                line-height: 2.2;
+            }
+            body.pinyin-on .book-spread .translation-text p {
+                font-size: 17px;
+                line-height: 2.1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="top-nav" id="topNav">
+        <button class="nav-btn" id="tocToggle" title="目录">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+        <button class="pinyin-btn" id="pinyinToggle" title="拼音标注">拼 音</button>
+        <button class="nav-btn" id="homeBtn" title="返回封面">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="book-wrapper">
+    <!-- 侧边目录 -->
+    <nav class="toc-sidebar" id="tocSidebar">
+        <div class="toc-header">孙子兵法</div>
+        
+        <div class="toc-section">
+            <div class="toc-section-title">原文</div>
+            <ul class="toc-list">
+                <li class="toc-item"><a class="toc-link" href="#original-1">计篇第一</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-2">作战篇第二</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-3">谋攻篇第三</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-4">形篇第四</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-5">势篇第五</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-6">虚实篇第六</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-7">军争篇第七</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-8">九变篇第八</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-9">行军篇第九</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-10">地形篇第十</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-11">九地篇第十一</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-12">火攻篇第十二</a></li>
+                <li class="toc-item"><a class="toc-link" href="#original-13">用间篇第十三</a></li>
+            </ul>
+        </div>
+
+        <div class="toc-section">
+            <div class="toc-section-title">译文</div>
+            <ul class="toc-list">
+                <li class="toc-item"><a class="toc-link" href="#translation-1">计篇第一</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-2">作战篇第二</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-3">谋攻篇第三</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-4">形篇第四</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-5">势篇第五</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-6">虚实篇第六</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-7">军争篇第七</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-8">九变篇第八</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-9">行军篇第九</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-10">地形篇第十</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-11">九地篇第十一</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-12">火攻篇第十二</a></li>
+                <li class="toc-item"><a class="toc-link" href="#translation-13">用间篇第十三</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 书籍容器 -->
+    <div class="book-container">
+        <div class="book">
+            <div class="content-area">
+                <!-- 封面页 - 闭合书本样式 -->
+                <div class="book-page" id="page-cover">
+                    <div class="book-cover-view">
+                        <div class="cover-spine"></div>
+                        <div class="corner-decoration top-left"></div>
+                        <div class="corner-decoration top-right"></div>
+                        <div class="corner-decoration bottom-left"></div>
+                        <div class="corner-decoration bottom-right"></div>
+                        <div class="cover-content" style="position:relative;z-index:1;max-width:520px;width:100%;">
+                            <div class="cover-frame">
+                                <div class="cover-corner tl"></div>
+                                <div class="cover-corner tr"></div>
+                                <div class="cover-corner bl"></div>
+                                <div class="cover-corner br"></div>
+                                <div class="cover-decoration-top"></div>
+                                <div class="cover-decoration">
+                                    <span>兵</span>
+                                </div>
+                                <h1 class="cover-title">孙子兵法</h1>
+                                <p class="cover-subtitle">中国古代兵法瑰宝</p>
+                                <p class="cover-author">作者：<span>孙武</span>（春秋时期）</p>
+                                <div class="cover-decoration-bottom"></div>
+                                <button class="enter-btn" id="startReading">
+                                    开始阅读
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第一篇 -->
+                <div class="book-page" id="page-1">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 一 篇</div>
+                                    <h2 class="chapter-title" id="original-1">计篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：兵者，国之大事，死生之地，存亡之道，不可不察也。</p>
+                                        <p>故经之以五事，校之以计，而索其情：一曰道，二曰天，三曰地，四曰将，五曰法。道者，令民与上同意，可与之死，可与之生，而不畏危也。天者，阴阳、寒暑、时制也。地者，远近、险易、广狭、死生也。将者，智、信、仁、勇、严也。法者，曲制、官道、主用也。凡此五者，将莫不闻，知之者胜，不知者不胜。故校之以计，而索其情，曰：主孰有道？将孰有能？天地孰得？法令孰行？兵众孰强？士卒孰练？赏罚孰明？吾以此知胜负矣。</p>
+                                        <p>将听吾计，用之必胜，留之；将不听吾计，用之必败，去之。</p>
+                                        <p>计利以听，乃为之势，以佐其外。势者，因利而制权也。</p>
+                                        <p>兵者，诡道也。故能而示之不能，用而示之不用，近而示之远，远而示之近。利而诱之，乱而取之，实而备之，强而避之，怒而挠之，卑而骄之，佚而劳之，亲而离之。攻其无备，出其不意。此兵家之胜，不可先传也。</p>
+                                        <p>夫未战而庙算胜者，得算多也；未战而庙算不胜者，得算少也。多算胜，少算不胜，而况于无算乎！吾以此观之，胜负见矣。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 1 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：战争，乃国家头等大事，关乎军民生死、社稷存亡，不可不审慎考察、深入探究。</p>
+                                        <p>因此，须从五个根本方面加以衡量，通过详细核算来比较双方实力，以研判战争胜负之形势。这五个方面是：一曰"道"，二曰"天"，三曰"地"，四曰"将"，五曰"法"。所谓"道"，是指使民众与国君同心同德，愿共生死而不畏任何艰险。所谓"天"，乃昼夜阴晴、寒冬酷暑、四时节令等自然条件。所谓"地"，即路程远近、地势险易、战场广狭，以及死地与生地的判别。所谓"将"，指将领须具备智谋、威信、仁爱、勇敢、严明五种素质。所谓"法"，涵盖军队编制、将吏管理、军需供应等制度。此五者，为将者莫不闻之，然唯深悟精通者方能取胜，一知半解者必败无疑。</p>
+                                        <p>将领若能贯彻我之谋略，用之必胜，则留用；若不能领会我之谋略，用之必败，则罢免。</p>
+                                        <p>有利之战略方针既已采纳，尚须营造有利态势，以辅助军事行动。所谓"势"，即根据有利条件灵活应变、掌握主动权。</p>
+                                        <p>用兵之道，以诡诈为根本。因此，能打却装作不能打；想打却装作不想打；欲攻近处却佯攻远处；欲攻远处却佯攻近处。敌人贪利，则以利诱之；敌人混乱，则趁机取之；敌人充实，则严加防备；敌人强大，则暂避锋芒；敌人暴躁，则挑逗扰乱；敌人卑慎，则诱其骄纵；敌人安逸，则使其疲劳奔波；敌人团结，则离间分化。总之，攻其无备，出其不意。此乃兵家制胜之要诀，不可预先教条规定，全赖临机应变。</p>
+                                        <p>战前于庙堂之上周密筹算而预知能胜者，因取胜条件充分；战前筹算而预知不能胜者，因取胜条件不足。筹算充分则胜，筹算不足则败，何况根本不加筹算、毫无取胜条件者乎？吾以此观之，胜负昭然矣。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 2 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二篇 -->
+                <div class="book-page" id="page-2">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 二 篇</div>
+                                    <h2 class="chapter-title" id="original-2">作战篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡用兵之法，驰车千驷，革车千乘，带甲十万，千里馈粮，则内外之费，宾客之用，胶漆之材，车甲之奉，日费千金，然后十万之师举矣。</p>
+                                        <p>其用战也胜，久则钝兵挫锐，攻城则力屈，久暴师则国用不足。夫钝兵挫锐，屈力殚货，则诸侯乘其弊而起，虽有智者，不能善其后矣。故兵闻拙速，未睹巧之久也。夫兵久而国利者，未之有也。故不尽知用兵之害者，则不能尽知用兵之利也。</p>
+                                        <p>善用兵者，役不再籍，粮不三载；取用于国，因粮于敌，故军食可足也。</p>
+                                        <p>国之贫于师者远输，远输则百姓贫。近于师者贵卖，贵卖则百姓财竭，财竭则急于丘役。力屈、财殚，中原内虚于家。百姓之费，十去其七；公家之费，破车罢马，甲胄矢弩，戟楯蔽橹，丘牛大车，十去其六。</p>
+                                        <p>故智将务食于敌，食敌一钟，当吾二十钟；萁秆一石，当吾二十石。</p>
+                                        <p>故杀敌者，怒也；取敌之利者，货也。故车战，得车十乘已上，赏其先得者，而更其旌旗，车杂而乘之，卒善而养之，是谓胜敌而益强。</p>
+                                        <p>故兵贵胜，不贵久。</p>
+                                        <p>故知兵之将，生民之司命，国家安危之主也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 3 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：大凡用兵之法，通常须出动轻型战车千辆、重型战车千辆、全副武装的士兵十万人，且须千里迢迢运送粮饷。如此，前方后方各项开支——招待使节宾客之费用、胶漆等维修器材之供应、车辆盔甲之补充保养——每日消耗已逾千金。凡此种种准备就绪，十万大军方可出动。</p>
+                                        <p>如此庞大之军队作战，关键在于速战速决。若战事旷日持久，则军队疲惫、锐气挫伤；攻城则力量耗尽；长期在外用兵，则国家财政拮据。一旦兵疲、锐挫、力竭、财空，列国诸侯必乘虚而入。彼时虽有智谋之士，亦难善其后矣。故用兵只闻以朴素之法求速胜，未见以巧饰之术拖久战而能取胜者。战争久拖不决而有利于国家，自古未尝有也。因此，不尽知用兵之危害者，亦不能尽知用兵之利益。</p>
+                                        <p>善于用兵者，兵员不征第二次，粮草不运第三次。武器装备取用于国内，粮食饲料则从敌国夺取——如此，军队粮饷供应便可充足。</p>
+                                        <p>国家因战争而陷于贫困，主因在于远途运输。远途运输则百姓穷困。军队驻扎之地，物价必定飞涨；物价飞涨则百姓财力枯竭；财力枯竭则官府急征赋税徭役。人力耗尽、财力枯竭，国内家家户户均告空虚。百姓之财产，十成耗去七成；公家之财产——战车损坏、战马疲惫、盔甲弓箭、戟盾蔽橹以及辎重牛车——十成亦耗去六成。</p>
+                                        <p>故明智之将帅务求从敌国获取粮草。消耗敌粮一钟，抵得上从本国运送二十钟；消耗敌草一石，抵得上从本国运送二十石。</p>
+                                        <p>要使士兵奋勇杀敌，须激发其同仇敌忾之心；要使士兵勇于夺取敌人物资，须以财物奖赏激励。因此车战之中，凡缴获敌车十辆以上者，赏赐最先夺取之人；然后更换车上旗帜，将缴获之战车编入我军序列使用；对俘虏之敌兵则善待并加以收编。此所谓既战胜敌人而又增强自身力量。</p>
+                                        <p>故用兵贵在速胜，而不贵于持久。</p>
+                                        <p>因此，真正懂得用兵之将领，实乃民众命运之掌管者、国家安危之主宰者。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 4 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第三篇 -->
+                <div class="book-page" id="page-3">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 三 篇</div>
+                                    <h2 class="chapter-title" id="original-3">谋攻篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡用兵之法，全国为上，破国次之；全军为上，破军次之；全旅为上，破旅次之；全卒为上，破卒次之；全伍为上，破伍次之。是故百战百胜，非善之善者也；不战而屈人之兵，善之善者也。</p>
+                                        <p>故上兵伐谋，其次伐交，其次伐兵，其下攻城。攻城之法，为不得已。修橹轒辒，具器械，三月而后成；距堙，又三月而后已。将不胜其忿而蚁附之，杀士三分之一而城不拔者，此攻之灾也。</p>
+                                        <p>故善用兵者，屈人之兵而非战也，拔人之城而非攻也，毁人之国而非久也。必以全争于天下，故兵不顿而利可全，此谋攻之法也。</p>
+                                        <p>故用兵之法，十则围之，五则攻之，倍则分之，敌则能战之，少则能逃之，不若则能避之。故小敌之坚，大敌之擒也。</p>
+                                        <p>夫将者，国之辅也，辅周则国必强，辅隙则国必弱。</p>
+                                        <p>故君之所以患于军者三：不知军之不可以进而谓之进，不知军之不可以退而谓之退，是谓縻军；不知三军之事而同三军之政者，则军士惑矣；不知三军之权而同三军之任，则军士疑矣。三军既惑且疑，则诸侯之难至矣，是谓乱军引胜。</p>
+                                        <p>故知胜有五：知可以战与不可以战者胜，识众寡之用者胜，上下同欲者胜，以虞待不虞者胜，将能而君不御者胜。此五者，知胜之道也。</p>
+                                        <p>故曰：知彼知己，百战不殆；不知彼而知己，一胜一负；不知彼不知己，每战必殆。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 5 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：用兵之法，使敌国完整归降为上策，击破敌国则次一等；使敌军完整归降为上策，击破敌军则次一等；使敌旅完整归降为上策，击破敌旅则次一等；使敌卒完整归降为上策，击破敌卒则次一等；使敌伍完整归降为上策，击破敌伍则次一等。因此，百战百胜尚非高明中之最高明者；不经交战而使敌军屈服，方为高明中之最高明者。</p>
+                                        <p>故上策乃挫败敌人之谋略，其次为瓦解敌人之外交，再次为直接与敌军交战，最下策则是攻打敌人城池。攻城之法，实为不得已而为之。制造攻城盾牌与战车，备齐攻城器械，须三个月方能完成；堆筑攻城土山，又须三个月始可完工。将帅若按捺不住愤怒，令士卒如蚂蚁般攀梯强攻，结果伤亡三分之一而城池仍未攻克——此乃攻城之灾难。</p>
+                                        <p>故善于用兵者，使敌军屈服不靠硬仗，夺取城池不靠强攻，毁灭敌国不靠持久。务求以"全胜"之策争胜于天下，如此我力不损而利益可全得——此即谋攻之法。</p>
+                                        <p>用兵之基本原则：十倍于敌则包围之，五倍于敌则进攻之，两倍于敌则分割之，势均力敌则敢于正面交战，兵力少于敌则善于摆脱，实力不如敌则避免交锋。故弱小之军若一味硬拼，必为强敌所擒。</p>
+                                        <p>将帅者，国之辅佐也。辅佐周全则国家必强，辅佐疏漏则国家必弱。</p>
+                                        <p>国君为害军队者有三：不知军队不可前进而强令前进，不知军队不可后退而强令后退——此谓束缚军队；不知军中事务而干涉军队行政——则将士迷惑；不懂军事权变而干涉军队指挥——则将士疑虑。三军既迷惑又疑虑，则诸侯乘乱来犯之祸患至矣——此谓自乱阵脚、拱手送胜于敌。</p>
+                                        <p>预判胜利有五种情形：知可战与不可战者胜，懂兵力多寡之运用者胜，上下同心同德者胜，以有备对无备者胜，将帅有才能而君主不掣肘者胜。此五者，乃预知胜利之法则。</p>
+                                        <p>故曰：知己知彼，百战不殆。不知彼而知己，一胜一负。不知彼不知己，每战必殆。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 6 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第四篇 -->
+                <div class="book-page" id="page-4">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 四 篇</div>
+                                    <h2 class="chapter-title" id="original-4">形篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：昔之善战者，先为不可胜，以待敌之可胜。不可胜在己，可胜在敌。故善战者，能为不可胜，不能使敌之可胜。故曰：胜可知，而不可为。</p>
+                                        <p>不可胜者，守也；可胜者，攻也。守则不足，攻则有余。善守者，藏于九地之下；善攻者，动于九天之上，故能自保而全胜也。</p>
+                                        <p>见胜不过众人之所知，非善之善者也；战胜而天下曰善，非善之善者也。故举秋毫不为多力，见日月不为明目，闻雷霆不为聪耳。古之所谓善战者，胜于易胜者也。故善战者之胜也，无智名，无勇功。故其战胜不忒，不忒者，其所措必胜，胜已败者也。故善战者，立于不败之地，而不失敌之败也。是故胜兵先胜而后求战，败兵先战而后求胜。善用兵者，修道而保法，故能为胜败之政。</p>
+                                        <p>兵法：一曰度，二曰量，三曰数，四曰称，五曰胜。地生度，度生量，量生数，数生称，称生胜。故胜兵若以镒称铢，败兵若以铢称镒。胜者之战民也，若决积水于千仞之谿者，形也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 7 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：从前善于用兵之人，先使自己立于不败之地，以等待可战胜敌人之时机。不被敌人战胜，主动权在我；能否战胜敌人，则取决于敌人是否出现破绽。故善于用兵者，能做到使自己不可被战胜，却不能迫使敌人必定被我战胜。所以说：胜利可以预知，但不可强求。</p>
+                                        <p>不可被战胜，靠的是防守；可以战胜敌人，靠的是进攻。防守，是因为兵力不足；进攻，是因为兵力有余。善于防守者，如同深藏于地下深处，使敌人莫测高深；善于进攻者，如同自九天而降，使敌人猝不及防。如此，既能保全自己，又能取得全胜。</p>
+                                        <p>能预见胜利却不过是一般人也能看出的水平，算不得最高明；通过激战获胜而天下人交口称赞，也算不得最高明。正如能举起秋毫算不上力气大，能看见日月算不上眼力好，能听见雷声算不上耳朵灵。古时所谓善于用兵者，其所战胜的，不过是已经暴露弱点的敌人罢了。因此，善于用兵者之胜利，既无智谋超群之名，亦无勇猛杀敌之功。其取胜必然无误——之所以无误，因其举措已确保必胜，所战胜者实为已处必败之敌。故善战者先使自己立于不败之地，同时不放过任何击败敌人之机会。是故，胜兵先创造必胜条件而后求战，败兵先仓促开战而后侥幸求胜。善于用兵者，修明政治、确保法度，故能掌握胜败之主动权。</p>
+                                        <p>兵法有五项递进范畴：一曰"度"——国土幅员之大小；二曰"量"——物资资源之丰歉；三曰"数"——可动员兵员之多少；四曰"称"——军事实力之比对；五曰"胜"——胜负结局之判定。地缘格局生"度"，度生"量"，量生"数"，数生"称"，称生"胜"。故胜军之于败军，若以镒称铢，实力悬殊；败军之于胜军，若以铢称镒，不可同日而语。胜利者指挥军队作战，犹如决开万丈高山之积水，势不可挡——此即军事实力之"形"也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 8 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第五篇 -->
+                <div class="book-page" id="page-5">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 五 篇</div>
+                                    <h2 class="chapter-title" id="original-5">势篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡治众如治寡，分数是也；斗众如斗寡，形名是也；三军之众，可使必受敌而无败者，奇正是也；兵之所加，如以碫投卵者，虚实是也。</p>
+                                        <p>凡战者，以正合，以奇胜。故善出奇者，无穷如天地，不竭如江河。终而复始，日月是也；死而复生，四时是也。声不过五，五声之变，不可胜听也；色不过五，五色之变，不可胜观也；味不过五，五味之变，不可胜尝也；战势不过奇正，奇正之变，不可胜穷也。奇正相生，如循环之无端，孰能穷之？</p>
+                                        <p>激水之疾，至于漂石者，势也；鸷鸟之疾，至于毁折者，节也。是故善战者，其势险，其节短。势如彍弩，节如发机。</p>
+                                        <p>纷纷纭纭，斗乱而不可乱也；浑浑沌沌，形圆而不可败也。乱生于治，怯生于勇，弱生于强。治乱，数也；勇怯，势也；强弱，形也。故善动敌者，形之，敌必从之；予之，敌必取之。以利动之，以卒待之。</p>
+                                        <p>故善战者，求之于势，不责于人，故能择人而任势。任势者，其战人也，如转木石。木石之性，安则静，危则动，方则止，圆则行。故善战人之势，如转圆石于千仞之山者，势也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 9 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：治理大部队如同治理小部队，靠的是组织编制；指挥大军作战如同指挥小部队作战，靠的是指挥信号；统率三军之众，可使其遭受敌人攻击而立于不败之地，靠的是"奇正"战术之灵活运用；军队进攻如同以石击卵、势如破竹，靠的是以实击虚。</p>
+                                        <p>大凡作战，以正兵正面接敌，以奇兵出奇制胜。故善于出奇制胜者，其战术变化如天地运行之无穷、如江河奔流之不竭。终而复始，如日月之升落；死而复生，如四季之更替。音阶不过宫商角徵羽五种，而五种音阶之变化，却可谱出听之不尽的美妙乐章；颜色不过青赤黄白黑五种，而五种颜色之调配，却可绘出观之不尽之绚丽画卷；味道不过酸甜苦辣咸五种，而五种味道之调和，却可烹出尝之不尽之美味佳肴；作战之基本形式不过奇与正两种，而奇正之组合变化，却是无穷无尽。奇正相生相化，如同圆环旋转无始无终——谁又能穷尽其变化呢？</p>
+                                        <p>湍急之水奔流至能将巨石冲走，此乃"势"之力；猛禽疾扑至能将猎物一举撕碎，此乃"节"之准。故善于用兵者，其所造之势险峻逼人，其所发之节奏短促凌厉。势如拉满之强弓，节如扣动之弩机。</p>
+                                        <p>旗帜纷扬、人马杂沓，于看似混乱之中须保持阵法不紊；战局混沌、形势迷蒙，须阵形圆融以使敌人无隙可乘。在一定条件下，混乱可由严整中产生，怯懦可由勇敢中产生，弱小可由强大中产生。严整还是混乱，取决于编制；勇敢还是怯懦，取决于态势；强大还是弱小，取决于实力。故善于调动敌人者，以假象示之，敌必信从；以利益诱之，敌必来取。以小利调动敌人，以重兵严阵以待。</p>
+                                        <p>故善于用兵者，致力于营造有利态势而非苛责部下，因此能善选人才、善用态势。善于运用态势者，指挥士兵作战如同转动木头和石头。木石之特性：置于平坦安稳处则静止，置于倾斜陡峭处则滚动；方正者易止，圆滑者易行。故善于用兵者所造之势，犹如于万丈高山之上滚落圆石——势不可挡也。此即"势"之真谛。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 10 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第六篇 -->
+                <div class="book-page" id="page-6">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 六 篇</div>
+                                    <h2 class="chapter-title" id="original-6">虚实篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡先处战地而待敌者佚，后处战地而趋战者劳。故善战者，致人而不致于人。</p>
+                                        <p>能使敌人自至者，利之也；能使敌人不得至者，害之也。故敌佚能劳之，饱能饥之，安能动之。</p>
+                                        <p>出其所不趋，趋其所不意。行千里而不劳者，行于无人之地也。攻而必取者，攻其所不守也；守而必固者，守其所不攻也。故善攻者，敌不知其所守；善守者，敌不知其所攻。微乎微乎，至于无形；神乎神乎，至于无声，故能为敌之司命。</p>
+                                        <p>进而不可御者，冲其虚也；退而不可追者，速而不可及也。故我欲战，敌虽高垒深沟，不得不与我战者，攻其所必救也；我不欲战，画地而守之，敌不得与我战者，乖其所之也。</p>
+                                        <p>故形人而我无形，则我专而敌分。我专为一，敌分为十，是以十攻其一也，则我众而敌寡。能以众击寡者，则吾之所与战者约矣。吾所与战之地不可知，不可知，则敌所备者多；敌所备者多，则吾所与战者寡矣。故备前则后寡，备后则前寡，备左则右寡，备右则左寡，无所不备，则无所不寡。寡者，备人者也；众者，使人备己者也。</p>
+                                        <p>故知战之地，知战之日，则可千里而会战。不知战地，不知战日，则左不能救右，右不能救左，前不能救后，后不能救前，而况远者数十里，近者数里乎？以吾度之，越人之兵虽多，亦奚益于胜败哉？故曰：胜可为也。敌虽众，可使无斗。</p>
+                                        <p>故策之而知得失之计，作之而知动静之理，形之而知死生之地，角之而知有余不足之处。故形兵之极，至于无形；无形，则深间不能窥，智者不能谋。因形而错胜于众，众不能知；人皆知我所以胜之形，而莫知吾所以制胜之形。故其战胜不复，而应形于无穷。</p>
+                                        <p>夫兵形象水，水之形，避高而趋下；兵之形，避实而击虚。水因地而制流，兵因敌而制胜。故兵无常势，水无常形，能因敌变化而取胜者，谓之神。故五行无常胜，四时无常位，日有短长，月有死生。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 11 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：凡先到达战场、占据有利位置以逸待劳者从容主动，后到达战场、仓促应战者疲惫被动。故善于用兵者，永远调动支配敌人，而不为敌人所调动支配。</p>
+                                        <p>能使敌人自动前来，乃以利诱之；能使敌人不敢前来，乃以害阻之。故敌人安逸，我可使其疲劳；敌人饱足，我可使其饥饿；敌人安稳，我可使其躁动。</p>
+                                        <p>出兵指向敌人无法救援之处，急行奔向敌人意料不到之方向。行军千里而不疲劳，因行于无敌人防守之地；进攻而必然取胜，因攻击敌人未设防之处；防守而必然稳固，因扼守敌人不敢进攻之地。故善于进攻者，敌人不知从何处防守；善于防守者，敌人不知从何处进攻。微妙啊，微妙到不见形迹；神奇啊，神奇到不闻声息——如此方能成为敌人命运之主宰。</p>
+                                        <p>进攻时敌人无法抵御，因冲击其虚弱之处；撤退时敌人无法追赶，因行动迅疾令其不及。故我军欲战，敌人纵有高垒深沟也不得不与我交战——因我攻其必救之处；我军不欲战，即使画地而守，敌人亦无法与我交战——因我将其引向他方。</p>
+                                        <p>设法使敌人暴露兵力布署而我方隐而不露，则我军得以集中而敌人被迫分散。我军集中为一处，敌人分散为十处——这便相当于以十倍兵力攻击敌人之一部，形成以众击寡之局部优势。能以众击寡，则与我正面交锋之敌便十分有限了。我军欲攻之地使敌无从知晓，敌军需要防备之方向便多；防备之方向愈多，则每个方向上之兵力愈薄。故防备前面则后面薄弱，防备后面则前面薄弱，防备左边则右边薄弱，防备右边则左边薄弱，处处防备则处处薄弱。兵力薄弱，是因为处处设防；兵力雄厚，是因为使敌人处处防备我。</p>
+                                        <p>能预知交战之地、预知交战之时，则虽千里之遥亦可赴约会战。不能预知交战之地、不能预知交战之时，则左不能救右、右不能救左、前不能救后、后不能救前，何况远者数十里、近者数里乎？以我观之，越国之兵虽多，对胜负之数又有何益？故曰：胜利是可以争取的。敌人虽多，可使其无法投入有效战斗。</p>
+                                        <p>通过认真分析可推知敌人谋划之得失；通过挑动试探可摸清敌人活动之规律；通过引诱示形可判明敌人所处之地利优劣；通过小规模较量可知敌人兵力之虚实强弱。故以假象迷惑敌人之最高境界，是达到无形可窥。无形，则隐藏再深之间谍也探不到虚实，再聪明之敌将也想不出对策。将胜利之果置于众人面前，众人莫明其所以然；人们都知我获胜之战术，却不知我因何灵活运用这些战术出奇制胜。故每次获胜皆非机械重复老路，而是针对无穷变化之敌情做出无穷之应对。</p>
+                                        <p>用兵之规律如同流水——水之性避高而趋下，兵之性避实而击虚。水因地形而决定流向，兵因敌情而决定制胜之策。故用兵无常势，水无常形。能依敌情之变化而灵活应变以取胜者，可谓用兵如神。是故五行相克无恒胜，四季更替无定位，日有长短之变，月有圆缺之化——一切皆处于永恒变化之中。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 12 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第七篇 -->
+                <div class="book-page" id="page-7">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 七 篇</div>
+                                    <h2 class="chapter-title" id="original-7">军争篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡用兵之法，将受命于君，合军聚众，交和而舍，莫难于军争。军争之难者，以迂为直，以患为利。故迂其途，而诱之以利，后人发，先人至，此知迂直之计者也。</p>
+                                        <p>故军争为利，军争为危。举军而争利，则不及；委军而争利，则辎重捐。是故卷甲而趋，日夜不处，倍道兼行，百里而争利，则擒三将军，劲者先，疲者后，其法十一而至；五十里而争利，则蹶上将军，其法半至；三十里而争利，则三分之二至。是故军无辎重则亡，无粮食则亡，无委积则亡。</p>
+                                        <p>故不知诸侯之谋者，不能豫交；不知山林、险阻、沮泽之形者，不能行军；不用乡导者，不能得地利。故兵以诈立，以利动，以分合为变者也。故其疾如风，其徐如林，侵掠如火，不动如山，难知如阴，动如雷震。掠乡分众，廓地分利，悬权而动。先知迂直之计者胜，此军争之法也。</p>
+                                        <p>《军政》曰："言不相闻，故为金鼓；视不相见，故为旌旗。"夫金鼓旌旗者，所以一人之耳目也。人既专一，则勇者不得独进，怯者不得独退，此用众之法也。故夜战多火鼓，昼战多旌旗，所以变人之耳目也。</p>
+                                        <p>故三军可夺气，将军可夺心。是故朝气锐，昼气惰，暮气归。故善用兵者，避其锐气，击其惰归，此治气者也。以治待乱，以静待哗，此治心者也。以近待远，以佚待劳，以饱待饥，此治力者也。无邀正正之旗，勿击堂堂之陈，此治变者也。</p>
+                                        <p>故用兵之法：高陵勿向，背丘勿逆，佯北勿从，锐卒勿攻，饵兵勿食，归师勿遏，围师必阙，穷寇勿迫。此用兵之法也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 13 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：大凡用兵之法，从将帅接受国君之命、集结军队动员民众、至两军对垒安营扎寨，其中最难莫过于"军争"——争夺战场先机之利。军争之难，难在将迂回弯曲之途变为直路，将不利之条件转化为有利。故意绕远路迂回前进，且以利诱敌使之迟滞——如此，后于敌出发却能先于敌到达。能做到这一点，方称得上真正懂得"以迂为直"之计者也。</p>
+                                        <p>故军争既有其利，亦有其险。若全军携带辎重争利，则行动迟缓、无法及时抵达；若丢弃辎重轻装争利，则辎重装备尽失。卷甲急行、昼夜不息、倍道兼程——如此奔袭百里去争利，则三军将帅均有被擒之虞：健壮者先到，疲弱者掉队，结果仅有十分之一兵力能按时到达；奔袭五十里去争利，则先头部队之将帅必遭挫败，兵力仅半数能到；奔袭三十里去争利，亦仅有三分之二能到。是故军队无辎重则亡，无粮食则亡，无物资储备则亡。</p>
+                                        <p>不了解列国之政治图谋，便不可与之结交联合；不熟悉山林、险阻、沼泽等地形，便不可行军；不用当地向导，便不能占据地利。故用兵以诡诈为立足之本，以利益为行动之驱动，以兵力之分散与集中为变化之手段。其行动迅疾如风，其列阵从容如林，其进攻掳掠猛烈如火，其按兵不动沉稳如山，其隐蔽难测如阴云蔽日，其发动突击迅疾如雷霆霹雳。掠取乡邑则分兵数路，开拓疆土则分配利益，权衡利害而后相机而动。先懂得"以迂为直"之策略者胜——此即军争之法则。</p>
+                                        <p>《军政》曰："战场之上言语相闻，故设金鼓以传号令；动作不相见，故设旌旗以指示方向。"金鼓旌旗者，乃统一全军视听之工具。全军视听统一，则勇者不得独进，怯者不得独退——此即指挥大部队作战之法。故夜间作战多用火光与鼓声，白天作战多用旌旗旗帜——皆为适应军士耳目之变化而设。</p>
+                                        <p>三军之锐气可被摧折，主将之决心可被动摇。一般来说，军队初战之时气锐不可当，中战时渐趋懈怠，末战时则气竭思归。故善于用兵者，必避敌初来之锐气，待其懈怠衰竭之时再行攻击——此乃掌握士气之方法。以我之严整待敌之混乱，以我之镇静待敌之喧哗——此乃掌握军心之方法。以我之近道待敌之远途，以我之安逸待敌之疲劳，以我之饱足待敌之饥饿——此乃掌握体力之方法。不拦截旗帜整齐之敌军，不攻击阵容盛大之敌阵——此乃掌握应变之方法。</p>
+                                        <p>用兵之基本原则：敌军占据高地，不可仰攻；敌军背靠山丘，不可正面迎击；敌军假意败退，不可追击；敌军精锐之师，不可强攻；敌军抛之诱饵，不可贪取；敌军班师回国，不可阻截；包围敌军须留缺口；穷途末路之敌不可逼之大甚。此乃用兵之法则。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 14 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第八篇 -->
+                <div class="book-page" id="page-8">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 八 篇</div>
+                                    <h2 class="chapter-title" id="original-8">九变篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡用兵之法，将受命于君，合军聚众。圮地无舍，衢地交合，绝地无留，围地则谋，死地则战。塗有所不由，军有所不击，城有所不攻，地有所不争，君命有所不受。</p>
+                                        <p>故将通于九变之地利者，知用兵矣；将不通于九变之利者，虽知地形，不能得地之利矣。治兵不知九变之术，虽知五利，不能得人之用矣。</p>
+                                        <p>是故智者之虑，必杂于利害。杂于利，而务可信也；杂于害，而患可解也。</p>
+                                        <p>是故屈诸侯者以害，役诸侯者以业，趋诸侯者以利。</p>
+                                        <p>故用兵之法，无恃其不来，恃吾有以待也；无恃其不攻，恃吾有所不可攻也。</p>
+                                        <p>故将有五危：必死，可杀也；必生，可虏也；忿速，可侮也；廉洁，可辱也；爱民，可烦也。凡此五者，将之过也，用兵之灾也。覆军杀将，必以五危，不可不察也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 15 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：大凡用兵之法，将帅接受国君之命，集结军队动员民众。在难以通行之"圮地"不可驻扎，在四通八达之"衢地"应与邻国结交，在难以生存之"绝地"不可停留，在易被包围之"围地"须巧设计谋，在走投无路之"死地"则须拼死奋战。有些道路不宜通行，有些敌军不宜攻击，有些城邑不宜攻取，有些地盘不宜争夺，国君之某些命令亦可不接受。</p>
+                                        <p>将帅能精通以上各种应变策略之运用者，方可谓懂得用兵；不能精通变通之利者，虽知地形亦不能充分利用地利。治兵而不知变通之术者，虽知上述五种利害，亦不能充分发挥军队之战斗力。</p>
+                                        <p>是故智者之思虑，必兼顾利与害两个方面。充分考虑到有利之条件，事情才能顺利推进；充分预见到有害之因素，祸患才能化解。</p>
+                                        <p>使诸侯屈服，须以其所畏惧之事相威胁；使诸侯为我所用，须以纷繁事务劳烦之；使诸侯归附趋从，须以利益引诱之。</p>
+                                        <p>故用兵之法：不寄望于敌人不来，而依靠自己做好准备严阵以待；不寄望于敌人不进攻，而依靠自己拥有敌人不可攻破之实力。</p>
+                                        <p>将帅有五种致命弱点：只知死拼硬打者，可诱杀之；一味贪生怕死者，可俘虏之；急躁易怒者，可凌辱激怒之；过于爱惜名誉者，可污辱使其失去理智；一味仁慈爱民者，可烦扰使其奔波疲惫。此五者，乃将帅之过失、用兵之灾害。军队覆没、将帅殒命，皆由这五种致命弱点所致——不可不认真审察。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 16 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第九篇 -->
+                <div class="book-page" id="page-9">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 九 篇</div>
+                                    <h2 class="chapter-title" id="original-9">行军篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡处军、相敌：绝山依谷，视生处高，战隆无登，此处山之军也。绝水必远水；客绝水而来，勿迎之于水内，令半济而击之，利；欲战者，无附于水而迎客；视生处高，无迎水流，此处水上之军也。绝斥泽，惟亟去无留；若交军于斥泽之中，必依水草而背众树，此处斥泽之军也。平陆处易，而右背高，前死后生，此处平陆之军也。凡此四军之利，黄帝之所以胜四帝也。</p>
+                                        <p>凡军好高而恶下，贵阳而贱阴，养生而处实，军无百疾，是谓必胜。丘陵堤防，必处其阳，而右背之。此兵之利，地之助也。上雨，水沫至，欲涉者，待其定也。凡地有绝涧、天井、天牢、天罗、天陷、天隙，必亟去之，勿近也。吾远之，敌近之；吾迎之，敌背之。军行有险阻、潢井、葭苇、山林、蘙荟者，必谨复索之，此伏奸之所处也。</p>
+                                        <p>敌近而静者，恃其险也；远而挑战者，欲人之进也；其所居易者，利也。众树动者，来也；众草多障者，疑也；鸟起者，伏也；兽骇者，覆也；尘高而锐者，车来也；卑而广者，徒来也；散而条达者，樵采也；少而往来者，营军也。辞卑而益备者，进也；辞强而进驱者，退也；轻车先出居其侧者，陈也；无约而请和者，谋也；奔走而陈兵车者，期也；半进半退者，诱也。杖而立者，饥也；汲而先饮者，渴也；见利而不进者，劳也；鸟集者，虚也；夜呼者，恐也；军扰者，将不重也；旌旗动者，乱也；吏怒者，倦也；粟马肉食，军无悬缻，不返其舍者，穷寇也；谆谆翕翕，徐与人言者，失众也；数赏者，窘也；数罚者，困也；先暴而后畏其众者，不精之至也；来委谢者，欲休息也。兵怒而相迎，久而不合，又不相去，必谨察之。</p>
+                                        <p>兵非益多也，惟无武进，足以并力、料敌、取人而已。夫惟无虑而易敌者，必擒于人。</p>
+                                        <p>卒未亲附而罚之，则不服，不服则难用也。卒已亲附而罚不行，则不可用也。故令之以文，齐之以武，是谓必取。令素行以教其民，则民服；令不素行以教其民，则民不服。令素行者，与众相得也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 17 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：凡处置军队、观察判断敌情，应遵循以下原则——穿越山地，须沿溪谷行进，驻扎于向阳高地，若敌已据高地则不可仰攻。此乃山地行军作战之原则。横渡江河后须远离水域驻扎；敌军渡水而来，不可于水中迎击，待其半渡之时发起攻击最为有利；若欲决战，不可紧贴水畔迎敌；须占据向阳高地，且不可处于敌人下游。此乃江河地带行军作战之原则。经过盐碱沼泽地带，须迅速通过勿停留；若于沼泽之中与敌遭遇，务必依傍水草、背靠树林扎营。此乃沼泽地带行军作战之原则。于平原地带应择平坦开阔之处扎营，侧翼与背后依托高地，呈前低后高之势。此乃平原地带行军作战之原则。以上四种地利之运用，乃当年黄帝之所以战胜四方部落的原因。</p>
+                                        <p>凡驻军，皆好高而恶低，喜阳而厌阴，择便于生活、坚实稳固之地——如此则军无疾病，此乃必胜之保证。于丘陵堤防之地，必据向阳一侧，令侧后依托之。此皆借用地形之助也。若上游降雨，水面有泡沫流下，欲涉水渡河须待水势平稳。凡遇绝涧、天井、天牢、天罗、天陷、天隙等险恶地形，务必速离勿近。我军远之而让敌人近之，我军面向之而让敌人背靠之。行军途中遇险阻、积水、芦苇、山林、草木繁密之处，须谨慎反复搜索——此乃易于埋伏奸细与伏兵之所在。</p>
+                                        <p>观察敌情之法：敌人距我很近却保持安静，是依仗有险可守；敌人距我很远却前来挑战，是引诱我军前进；敌人驻于平坦之地，必然是有所图谋。林木摇动，是敌军前来；草丛中遍布障碍，是故布疑阵；鸟雀惊飞，其下有伏兵；野兽惊奔，敌人大举来袭；尘土高扬而尖锐，是战车驶来；尘土低平而宽广，是步兵开进；尘土散乱而细长断续，是敌人在砍柴拖柴；尘土稀少而时起时落，是敌人在安营扎寨。使者言辞谦卑却加紧备战，是准备进攻；使者言辞强硬而作出进攻姿态，是准备撤退。轻车先出动部署于两侧，是在布阵；无故请和，必有阴谋。急速奔跑而摆开战车列阵，是等待与我决战；半进半退，是引诱我军。敌兵拄着兵器站立，是饥饿了；取水者先自饮，是干渴了；见到利益却不向前争夺，是疲劳过度了。敌营之上群鸟聚集，是空营；夜间惊慌叫喊，是恐惧；军营骚乱，是将帅无威望；旗帜摇动不整，是军心混乱；军官易怒，是全军疲惫。以粮喂马、杀牲为食、军中不悬炊具、不返营舍，是穷途末路之"穷寇"；低声下气、吞吞吐吐与部下说话，是将帅已失人心；一再悬赏，是处境窘迫；一再处罚，是陷入困境；先粗暴待下后又畏惧部下，是将帅最不精明的表现；派使者带礼物前来谢罪，是想休战。敌军气势汹汹前来对阵却久不交锋也不撤退，必须谨慎观察其真正意图。</p>
+                                        <p>兵力并非愈多愈好，只要不轻敌冒进、能够集中力量、正确判明敌情、善用人才即可。那些既无深谋远虑而又轻敌之人，必为敌人所擒。</p>
+                                        <p>士卒尚未亲近归附即施惩罚，则其不服，不服则难以使用；士卒业已亲近归附而该罚不罚，则队伍亦不可使用。故应以仁德教化使其心服，以严明军纪使其整齐——此谓必胜之道。平时一贯以严格法令管理教育士卒，则士卒信服；平时法令废弛、不能贯彻执行，则士卒不信服。平时法令执行有素者，乃因将领与士卒之间已建立深厚信任、配合默契之故也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 18 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第十篇 -->
+                <div class="book-page" id="page-10">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 十 篇</div>
+                                    <h2 class="chapter-title" id="original-10">地形篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：地形有通者，有挂者，有支者，有隘者，有险者，有远者。我可以往，彼可以来，曰通；通形者，先居高阳，利粮道，以战则利。可以往，难以返，曰挂；挂形者，敌无备，出而胜之；敌若有备，出而不胜，难以返，不利。我出而不利，彼出而不利，曰支；支形者，敌虽利我，我无出也；引而去之，令敌半出而击之，利。隘形者，我先居之，必盈之以待敌；若敌先居之，盈而勿从，不盈而从之。险形者，我先居之，必居高阳以待敌；若敌先居之，引而去之，勿从也。远形者，势均，难以挑战，战而不利。凡此六者，地之道也；将之至任，不可不察也。</p>
+                                        <p>故兵有走者，有弛者，有陷者，有崩者，有乱者，有北者。凡此六者，非天之灾，将之过也。夫势均，以一击十，曰走；卒强吏弱，曰弛；吏强卒弱，曰陷；大吏怒而不服，遇敌怼而自战，将不知其能，曰崩；将弱不严，教道不明，吏卒无常，陈兵纵横，曰乱；将不能料敌，以少合众，以弱击强，兵无选锋，曰北。凡此六者，败之道也；将之至任，不可不察也。</p>
+                                        <p>夫地形者，兵之助也。料敌制胜，计险阨远近，上将之道也。知此而用战者必胜，不知此而用战者必败。故战道必胜，主曰无战，必战可也；战道不胜，主曰必战，无战可也。故进不求名，退不避罪，唯人是保，而利合于主，国之宝也。</p>
+                                        <p>视卒如婴儿，故可与之赴深谿；视卒如爱子，故可与之俱死。厚而不能使，爱而不能令，乱而不能治，譬若骄子，不可用也。</p>
+                                        <p>知吾卒之可以击，而不知敌之不可击，胜之半也；知敌之可击，而不知吾卒之不可以击，胜之半也；知敌之可击，知吾卒之可以击，而不知地形之不可以战，胜之半也。故知兵者，动而不迷，举而不穷。故曰：知彼知己，胜乃不殆；知天知地，胜乃不穷。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 19 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：地形有六类——曰"通"、曰"挂"、曰"支"、曰"隘"、曰"险"、曰"远"。我军可往、敌军亦来之地形，谓之"通"。在通形地带，应抢先占据向阳高地，保障粮道畅通，如此作战方有利。便于前进而难以撤退之地形，谓之"挂"。在挂形地带，若敌无备，突然出击可胜；若敌有备，出击不胜且退路艰难，则大为不利。我军出击不利、敌军出击亦不利之地形，谓之"支"。在支形地带，敌虽以利诱我，亦不可出击；应佯装撤退，诱敌半出之时回头攻击，最为有利。狭窄险要之隘形地带，若我军先占据，应以重兵堵塞隘口以待敌；若敌先占据而以重兵把守，则不可强攻；若敌虽据之但兵力未满，则可攻之。险要之地带，若我军先占据，须占据向阳高地以待敌；若敌先占据，应引兵撤离，不可强攻。双方势均力敌之远形地带，难以主动挑战，勉强交战则不利。以上六条，乃利用地形之基本原则——此乃将帅之重大职责，不可不认真研究。</p>
+                                        <p>军队有六种必败之情形——曰"走"、曰"弛"、曰"陷"、曰"崩"、曰"乱"、曰"北"。此六种败象，非天降之灾，乃将帅之过失所致。双方条件相当而以一击十者，谓之"走"。士卒强悍而军官懦弱者，谓之"弛"。军官强悍而士卒软弱者，谓之"陷"。副将心怀怨怒不服主将，遇敌擅自出战而主将不知其能、不能控制者，谓之"崩"。主将软弱无威、管教不明、官兵无规矩约束、布阵杂乱无章者，谓之"乱"。主将不能正确判明敌情，以少击众、以弱击强，军中又无精锐之选锋者，谓之"北"。以上六种情况，乃导致失败之根源——此乃将帅之重大职责，不可不认真研究。</p>
+                                        <p>地形，乃用兵之辅助条件。正确判明敌情以制定取胜之策，研究计算地形之险易与路程之远近——此乃优秀将帅之职责。懂得这些并用于作战者必胜，不懂而贸然开战者必败。故依据战争规律确有必胜把握之时，即使国君命令不打，坚持打也是可以的；依据战争规律不可能取胜之时，即使国君命令必打，不打也是可以的。故进攻不为求功名，撤退不避受责罚——一切只为保全民众，且符合国君之根本利益。如此之将帅，方为国家之宝贵财富。</p>
+                                        <p>将帅对待士卒如婴儿，士卒便可与之共赴深渊；对待士卒如爱子，士卒便可与之同生共死。但若厚待而不能合理使用，溺爱而不能正确指挥，违法乱纪而不能严肃整治——则如同骄纵惯坏之子，不可用来作战。</p>
+                                        <p>只知己军可打而不知敌军不可打，取胜之可能仅一半；知敌军可打而不知己军不可打，取胜之可能亦仅一半；知敌军可打、己军可打，而不知地形不利于作战，取胜之可能仍仅一半。故真正懂得用兵者，行动果断不迷惘，战法变化不穷竭。故曰：知己知彼，胜乃不败；知天知地，胜乃无穷。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 20 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第十一篇 -->
+                <div class="book-page" id="page-11">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 十 一 篇</div>
+                                    <h2 class="chapter-title" id="original-11">九地篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：用兵之法，有散地，有轻地，有争地，有交地，有衢地，有重地，有圮地，有围地，有死地。诸侯自战其地，为散地。入人之地而不深者，为轻地。我得则利，彼得亦利者，为争地。我可以往，彼可以来者，为交地。诸侯之地三属，先至而得天下之众者，为衢地。入人之地深，背城邑多者，为重地。行山林、险阻、沮泽，凡难行之道者，为圮地。所由入者隘，所从归者迂，彼寡可以击吾之众者，为围地。疾战则存，不疾战则亡者，为死地。是故散地则无战，轻地则无止，争地则无攻，交地则无绝，衢地则合交，重地则掠，圮地则行，围地则谋，死地则战。</p>
+                                        <p>所谓古之善用兵者，能使敌人前后不相及，众寡不相恃，贵贱不相救，上下不相收，卒离而不集，兵合而不齐。合于利而动，不合于利而止。敢问："敌众整而将来，待之若何？"曰："先夺其所爱，则听矣。"兵之情主速，乘人之不及，由不虞之道，攻其所不戒也。</p>
+                                        <p>凡为客之道：深入则专，主人不克；掠于饶野，三军足食；谨养而勿劳，并气积力；运兵计谋，为不可测。投之无所往，死且不北，死焉不得，士人尽力。兵士甚陷则不惧，无所往则固，深入则拘，不得已则斗。是故其兵不修而戒，不求而得，不约而亲，不令而信。禁祥去疑，至死无所之。吾士无余财，非恶货也；无余命，非恶寿也。令发之日，士卒坐者涕沾襟，偃卧者涕交颐。投之无所往者，诸、刿之勇也。</p>
+                                        <p>故善用兵者，譬如率然；率然者，常山之蛇也。击其首则尾至，击其尾则首至，击其中则首尾俱至。敢问："兵可使如率然乎？"曰："可。"夫吴人与越人相恶也，当其同舟而济，遇风，其相救也如左右手。是故方马埋轮，未足恃也；齐勇若一，政之道也；刚柔皆得，地之理也。故善用兵者，携手若使一人，不得已也。</p>
+                                        <p>将军之事：静以幽，正以治。能愚士卒之耳目，使之无知。易其事，革其谋，使人无识；易其居，迂其途，使人不得虑。帅与之期，如登高而去其梯；帅与之深入诸侯之地，而发其机，焚舟破釜；若驱群羊，驱而往，驱而来，莫知所之。聚三军之众，投之于险，此谓将军之事也。九地之变，屈伸之利，人情之理，不可不察。</p>
+                                        <p>凡为客之道：深则专，浅则散。去国越境而师者，绝地也；四达者，衢地也；入深者，重地也；入浅者，轻地也；背固前隘者，围地也；无所往者，死地也。是故散地，吾将一其志；轻地，吾将使之属；争地，吾将趋其后；交地，吾将谨其守；衢地，吾将固其结；重地，吾将继其食；圮地，吾将进其塗；围地，吾将塞其阙；死地，吾将示之以不活。故兵之情：围则御，不得已则斗，过则从。</p>
+                                        <p>是故不知诸侯之谋者，不能预交；不知山林、险阻、沮泽之形者，不能行军；不用乡导者，不能得地利。四五者，不知一，非霸王之兵也。夫霸王之兵，伐大国，则其众不得聚；威加于敌，则其交不得合。是故不争天下之交，不养天下之权，信己之私，威加于敌，故其城可拔，其国可隳。施无法之赏，悬无政之令，犯三军之众，若使一人。犯之以事，勿告以言；犯之以利，勿告以害。投之亡地然后存，陷之死地然后生。夫众陷于害，然后能为胜败。故为兵之事，在于顺详敌之意，并敌一向，千里杀将，此谓巧能成事者也。</p>
+                                        <p>是故政举之日，夷关折符，无通其使；厉于廊庙之上，以诛其事。敌人开阖，必亟入之。先其所爱，微与之期。践墨随敌，以决战事。是故始如处女，敌人开户；后如脱兔，敌不及拒。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 21 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：根据用兵之法则，战场地域可分为九种——散地、轻地、争地、交地、衢地、重地、圮地、围地、死地。诸侯在本国境内作战者，为"散地"。进入敌境未深者，为"轻地"。我军据之有利、敌军据之亦有利者，为"争地"。我军可往、敌军亦可来者，为"交地"。处于多国交界、先至者可得周边各国援助者，为"衢地"。深入敌国腹地、背后遍布敌国城邑者，为"重地"。行进于山林、险阻、沼泽等难以通行之处者，为"圮地"。进入之道路狭窄、退出之道迂回遥远，敌可凭少量兵力攻击我大军者，为"围地"。速战则存、不速战则亡者，为"死地"。因此，散地不宜作战，轻地不可停留，争地若敌已据则不可强攻，交地则各部衔接不可中断，衢地则广结外交联盟，重地则夺取敌人物资以补给，圮地则快速通过，围地则巧设计谋以脱身，死地则拼死血战以求生。</p>
+                                        <p>古代善于用兵者，能使敌前后部队不能呼应，主力与分队不能相互依托，官兵之间不能相互救援，上下级之间不能收拢集结，士卒溃散后无法重新聚合，即使聚合也阵形不整。有利则动，不利则止。试问："若敌军人数众多、阵势严整且将向我进攻，如何应对？"答曰："先夺取敌人最为珍视之要害，则敌不得不听从我之摆布。"用兵之道，贵在神速——趁敌人措手不及，经由其意料不到之道路，攻击其未曾戒备之处。</p>
+                                        <p>凡进入敌国作战之规律：深入敌境愈深，士卒愈能专心致志，敌军愈难抵挡。于富饶之地夺取粮草，使全军给养充足；休养士卒勿使疲劳，凝聚士气、积聚力量；部署兵力、设定计谋，使敌难以揣测。将部队置于无路可走之绝境，则士卒死战而不败逃——既不怕死，何事不可为？人人皆可拼尽全力。士卒深陷危境反而无所畏惧，走投无路反而军心稳固，深入敌境反而团结凝聚，迫不得已反而拼死搏斗。是故如此之师，不待整顿而自戒备，不待强求而自竭力，不待约束而自亲和，不待三令五申而自守纪律。禁绝迷信猜疑，至死亦无逃心。我军士卒并无多余之财物——并非厌恶财富也；他们拼上性命——并非不想长寿也。作战命令下达之时，坐者泪湿衣襟，卧者泪流满面。然而一旦将其投至无路可走之地，则人人皆有专诸、曹刿之勇。</p>
+                                        <p>善于用兵者，可使部队如"率然"一般。率然者，常山之蛇也——击其首则尾至，击其尾则首至，击其中部则首尾俱至。试问："可使军队如率然般相互策应乎？"答曰："可。"夫吴人与越人本为仇敌，然同舟共渡遇风之时，其相互救援如左右手。故将战马并排拴住、将车轮埋入地下以求稳定军心，实不足恃也。使全军同心奋勇如一人——此乃统率管理之正道；使强者弱者各尽其力——此乃善用地形之原理。故善于用兵者，能使全军上下携手如一人——盖因将部队置于不得不然之境地也。</p>
+                                        <p>为将统帅之道：沉着冷静而深不可测，公正严明而治理有方。能蒙蔽士卒之耳目，使其对军事计划一无所知。变化部署、变更加计谋，使人无从识别；变换驻地、绕行迂回，使人无从揣度。向下属布置任务，如令人登高后撤去梯子——使其只能向前、不能后退；率军深入诸侯之地，如扣动弩机之箭矢——令其有进无退，焚舟破釜以示必死之心；如驱赶羊群——驱之往、驱之来，士卒只知服从而不知最终指向何方。集结三军之众，将其投入最危险之境——此乃将帅统军之职分。九种地形之应变法则、进退攻守之利害取舍、士卒心理变化之规律——不可不细心考察。</p>
+                                        <p>出国作战之规律：入敌愈深则士卒愈专注，入敌愈浅则士卒愈涣散。去国越境者，为"绝地"；四通八达者，为"衢地"；深入者，为"重地"；浅入者，为"轻地"；背有险固、前有隘路者，为"围地"；无处可走者，为"死地"。故散地，吾将统一部队之意志；轻地，吾将使各部紧密衔接；争地，吾将从后急速进军；交地，吾将严密戒备防守；衢地，吾将巩固外交关系；重地，吾将保障粮草接济；圮地，吾将迅速通过行军；围地，吾将堵塞缺口使敌无路可入；死地，吾将向士卒昭示必死之决心。士卒之心理规律：被围则尽力抵御，迫不得已则拼死斗争，深陷绝境则听从指挥。</p>
+                                        <p>故不明各国诸侯之图谋者，不可与之结交；不熟悉山林、险阻、沼泽等地形者，不可行军；不用当地向导者，不可得地利。以上几条，有一条不明——则非霸王之兵。霸王之兵，攻伐大国则使其军民来不及集结；兵威压境则使其外交联盟无法形成。故不必急于与天下诸侯争外交，不必忙于培植各方势力——只需施展本国之战略意图，使兵威凌驾于敌国之上，则其城可拔、其国可毁。施行超越常规之奖赏，颁布打破常规之号令，指挥三军之众如指挥一人。授以任务，只告知其做什么，不必解释为何如此；使其看到有利之面，不必告知危险之面。置之亡地而后存，陷之死地而后生。部队陷入极端危境，方能转败为胜。故用兵之道，在于审慎洞察敌人之意图，集中兵力攻其要害，千里奔袭以斩其将——此所谓以巧成事也。</p>
+                                        <p>是故决定举兵之日，须封锁关卡、废除通行凭证、断绝与敌国使节往来；于庙堂之上反复筹划谋算，以决断军国大计。一旦发现敌人露出破绽，须迅速攻入。先夺取敌人最珍视之关键部位，切勿按常规与敌约定交战日期。既要遵循既定之计划方针，又要根据敌情之变化灵活执行。故战前当如处女般沉静柔弱，诱使敌人放松戒备、开启门户；决战之瞬间则如脱兔般疾速奔袭，使敌人猝不及防、无法抵抗。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 22 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第十二篇 -->
+                <div class="book-page" id="page-12">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 十 二 篇</div>
+                                    <h2 class="chapter-title" id="original-12">火攻篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡火攻有五：一曰火人，二曰火积，三曰火辎，四曰火库，五曰火队。行火必有因，烟火必素具。发火有时，起火有日。时者，天之燥也；日者，月在箕、壁、翼、轸也。凡此四宿者，风起之日也。</p>
+                                        <p>凡火攻，必因五火之变而应之。火发于内，则早应之于外。火发兵静者，待而勿攻，极其火力，可从而从之，不可从而止。火可发于外，无待于内，以时发之。火发上风，无攻下风。昼风久，夜风止。凡军必知有五火之变，以数守之。</p>
+                                        <p>故以火佐攻者明，以水佐攻者强。水可以绝，不可以夺。</p>
+                                        <p>夫战胜攻取，而不修其功者凶，命曰"费留"。故曰：明主虑之，良将修之。非利不动，非得不用，非危不战。主不可以怒而兴师，将不可以愠而致战；合于利而动，不合于利而止。怒可以复喜，愠可以复悦，亡国不可以复存，死者不可以复生。故明君慎之，良将警之，此安国全军之道也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 23 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：火攻之形式有五种：一曰焚烧敌军兵士营寨，二曰焚烧敌军粮草积聚，三曰焚烧敌军辎重装备，四曰焚烧敌军武库仓库，五曰焚烧敌军运输通道。实施火攻须有条件，火攻之器具必须平时备妥。放火须选择恰当之时机，点火须选择恰当之日。所谓时机，乃天气干燥之时；所谓恰当之日，乃月亮运行至箕、壁、翼、轸四星宿之位时——此四星宿出现之日，即是起风之日。</p>
+                                        <p>凡火攻，须根据五种火攻所引起之情势变化而派兵策应配合。若从敌营内部放火，则须及早从外部派兵接应。火已烧起而敌营仍保持镇静，则应观察等待，不可急于进攻；待火势烧至最旺时，可进攻则进攻，不可进攻则停止。若可从外部直接放火，则不必等待内应，时机合适即可施放。从上风放火，不可从下风进攻。白天风刮久了，晚风便会停止。凡统军作战，须懂得五种火攻之变化，按气象之规律把握火攻之时机。</p>
+                                        <p>以火助攻者，其效果显著；以水助攻者，其威力强大。水可以分割隔绝敌军，但不能像火一样烧毁敌军之物资装备。</p>
+                                        <p>凡打了胜仗、攻取城池土地，却不能巩固胜利成果以建立功业者，后果危险——此谓"费留"。故明智之君主须深加思虑，优秀之将帅须认真对待。无利可图则不动，没有把握则不用，不到危急则不开战。君主不可因一时愤怒而兴师，将帅不可因一时恼怒而出战。对国家有利则行动，无利则停止。愤怒过后可再欢喜，恼怒过后可再愉悦——然而，国家灭亡了不能再复生，人死了不能再复生。故英明之君对此慎之又慎，优秀之将对此警之又警。此乃安定国家、保全军队之根本大道。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 24 —</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第十三篇 -->
+                <div class="book-page" id="page-13">
+                    <div class="book-spread">
+                        <div class="page page-left">
+                            <div class="page-content">
+                                <div class="chapter-header">
+                                    <div class="chapter-num-display">第 十 三 篇</div>
+                                    <h2 class="chapter-title" id="original-13">用间篇</h2>
+                                </div>
+                                <div class="content-section">
+                                    <div class="original-text">
+                                        <p>孙子曰：凡兴师十万，出征千里，百姓之费，公家之奉，日费千金；内外骚动，怠于道路，不得操事者，七十万家。相守数年，以争一日之胜，而爱爵禄百金，不知敌之情者，不仁之至也，非人之将也，非主之佐也，非胜之主也。故明君贤将，所以动而胜人，成功出于众者，先知也。先知者，不可取于鬼神，不可象于事，不可验于度，必取于人，知敌之情者也。</p>
+                                        <p>故用间有五：有因间，有内间，有反间，有死间，有生间。五间俱起，莫知其道，是谓神纪，人君之宝也。因间者，因其乡人而用之。内间者，因其官人而用之。反间者，因其敌间而用之。死间者，为诳事于外，令吾间知之，而传于敌间也。生间者，反报也。</p>
+                                        <p>故三军之事，莫亲于间，赏莫厚于间，事莫密于间。非圣智不能用间，非仁义不能使间，非微妙不能得间之实。微哉！微哉！无所不用间也。间事未发，而先闻者，间与所告者皆死。</p>
+                                        <p>凡军之所欲击，城之所欲攻，人之所欲杀，必先知其守将、左右、谒者、门者、舍人之姓名，令吾间必索知之。必索敌人之间来间我者，因而利之，导而舍之，故反间可得而用也。因是而知之，故乡间、内间可得而使也；因是而知之，故死间为诳事可使告敌；因是而知之，故生间可使如期。五间之事，主必知之，知之必在于反间，故反间不可不厚也。</p>
+                                        <p>昔殷之兴也，伊挚在夏；周之兴也，吕牙在殷。故惟明君贤将，能以上智为间者，必成大功。此兵之要，三军之所恃而动也。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 25 —</div>
+                        </div>
+                        <div class="book-fold"><div class="fold-title">孙子兵法</div></div>
+                        <div class="page page-right">
+                            <div class="page-content">
+                                <div class="content-section">
+                                    <div class="translation-text">
+                                        <p>孙子说：凡兴师十万、出征千里，百姓之耗费、公家之开支，日费千金；举国上下骚动不安，百姓于道路之上疲惫奔波，不能从事正常农业生产者多达七十万家。敌我相持数年，只为争夺最后一日之胜利。若吝惜爵位俸禄与区区金钱，不愿下功夫以掌握敌情——此乃不仁之至，实非合格之将帅，非贤能之辅佐，非胜利之主宰。故英明之君主、贤能之将帅，其所以一出兵便能战胜敌人、成功超乎常人者，在于事先掌握敌情。掌握敌情之方法，不可依赖鬼神占卜而得，不可凭类似事件推测而得，不可借观测天象度数验证而得——必须从人身上获取，从了解敌情之人那里获取。</p>
+                                        <p>使用间谍之法有五：有"因间"，有"内间"，有"反间"，有"死间"，有"生间"。五种间谍同时并用，使敌人无法摸清我用间之规律——此谓神妙莫测之手段，乃国君之制胜法宝。所谓因间，乃利用敌方当地之普通百姓为间谍；内间，乃收买敌方之官吏为间谍；反间，乃收买敌方派来之间谍使其反过来为我所用；死间，乃故意散布假情报使我方间谍得知后传给敌方；生间，乃潜入敌境侦察后能活着回来报告情报者。</p>
+                                        <p>故三军之各项事务中，没有比间谍更亲密者，赏赐没有比间谍更优厚者，事务没有比用间更机密者。非智慧超凡者不能善用间谍，非仁义之人不能驱使间谍，非精微巧妙者不能从间谍处获取真实情报。微妙啊微妙——无处不可用间！用间之事尚未实施而机密先行泄露者，则间谍本人与听到机密者均须处死。</p>
+                                        <p>凡我军欲攻击之敌军、欲攻取之城池、欲刺杀之敌将，必须先查清守城将领、左右亲信、传达官员、守门者及门客幕僚之姓名——令我方间谍务必搜罗查明。必须查出敌方派来我方从事间谍活动者，收买利用之，诱导安置之——如此，反间便可为我所用。由反间之情报获知敌方情况，则因间、内间亦可配合使用；由反间之情报获知敌方情况，则可使死间将假情报传给敌人；由反间之情报获知敌方情况，则可使生间按约定时间返回报告。五种间谍之事务，君主必须掌握——而掌握之关键，在于反间，故对反间不可不给予特别优厚之待遇。</p>
+                                        <p>昔日殷商之兴起，因伊挚曾在夏朝为间；周朝之兴起，因姜尚曾在殷商为间。故唯英明之君主、贤能之将帅，能用智慧最高超之人为间谍者，必能成就大功。此乃用兵之关键所在——三军之行动皆依赖于间谍所提供之情报。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="page-number">— 26 —</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 底部翻页导航 -->
+    <div class="bottom-nav" id="bottomNav">
+        <button class="nav-arrow" id="prevPage">◀ 上一页</button>
+        <span class="page-indicator" id="pageIndicator">封面</span>
+        <button class="nav-arrow" id="nextPage">下一页 ▶</button>
+    </div>
+    </div><!-- .book-wrapper -->
+
+    <script>
+        // 页面状态管理
+        const state = {
+            currentPage: 0,
+            totalPages: 14
+        };
+
+        // DOM 元素
+        const pages = document.querySelectorAll('.book-page');
+        const tocToggle = document.getElementById('tocToggle');
+        const tocSidebar = document.getElementById('tocSidebar');
+        const homeBtn = document.getElementById('homeBtn');
+        const startReading = document.getElementById('startReading');
+        const toast = document.getElementById('toast');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        const pageIndicator = document.getElementById('pageIndicator');
+        const pinyinToggleBtn = document.getElementById('pinyinToggle');
+
+        // 初始化
+        function init() {
+            updateNavigation();
+            updatePageIndicator();
+            setupEventListeners();
+            // 默认显示封面
+            showPage(0);
+        }
+
+        // 显示页面
+        function showPage(index) {
+            if (index < 0 || index >= state.totalPages) return;
+            
+            pages.forEach((page, i) => {
+                page.classList.remove('active');
+                if (i === index) {
+                    page.classList.add('active');
+                }
+            });
+            
+            state.currentPage = index;
+            updateNavigation();
+            updatePageIndicator();
+            
+            // 封面页隐藏导航，内容页显示导航
+            if (index === 0) {
+                document.body.classList.add('cover-page');
+            } else {
+                document.body.classList.remove('cover-page');
+            }
+            
+            // 关闭侧边目录
+            tocSidebar.classList.remove('active');
+        }
+
+        // 更新导航状态
+        function updateNavigation() {
+            prevBtn.disabled = state.currentPage === 0;
+            nextBtn.disabled = state.currentPage === state.totalPages - 1;
+        }
+
+        // 更新页数指示器
+        function updatePageIndicator() {
+            if (state.currentPage === 0) {
+                pageIndicator.textContent = '封面';
+            } else {
+                pageIndicator.textContent = state.currentPage + ' / ' + (state.totalPages - 1);
+            }
+        }
+
+        // 显示 Toast 提示
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // ===== 拼音标注 =====
+        const PINYIN_CDN = 'https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js';
+        const pinyinState = {
+            enabled: localStorage.getItem('sz-pinyin') === 'true',
+            processed: false,
+            libLoaded: false
+        };
+        // 初始化按钮视觉状态（从 localStorage 恢复）
+        if (pinyinState.enabled) pinyinToggleBtn.classList.add('active');
+
+        async function loadPinyinLib() {
+            if (pinyinState.libLoaded) return true;
+            try {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = PINYIN_CDN;
+                    s.onload = resolve;
+                    s.onerror = reject;
+                    document.head.appendChild(s);
+                });
+                pinyinState.libLoaded = true;
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function processTextsForPinyin() {
+            document.querySelectorAll('.original-text, .translation-text').forEach(container => {
+                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+                    acceptNode: n => {
+                        if (n.parentNode?.tagName === 'RUBY' || n.parentNode?.closest?.('ruby')) return NodeFilter.FILTER_REJECT;
+                        return /[\u3400-\u9fff]/.test(n.textContent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                    }
+                });
+                const nodes = [];
+                while (walker.nextNode()) nodes.push(walker.currentNode);
+                nodes.forEach(tn => {
+                    const text = tn.textContent;
+                    const frag = document.createDocumentFragment();
+                    for (const char of text) {
+                        if (/[\u3400-\u9fff]/.test(char)) {
+                            const ruby = document.createElement('ruby');
+                            ruby.textContent = char;
+                            const rt = document.createElement('rt');
+                            rt.textContent = pinyinPro.pinyin(char);
+                            ruby.appendChild(rt);
+                            frag.appendChild(ruby);
+                        } else {
+                            frag.appendChild(document.createTextNode(char));
+                        }
+                    }
+                    tn.parentNode.replaceChild(frag, tn);
+                });
+            });
+            pinyinState.processed = true;
+        }
+
+        function togglePinyin() {
+            if (!pinyinState.libLoaded) {
+                // 库未加载：首次点击或从 localStorage 恢复——都加载库并开启拼音
+                showToast('加载拼音库...');
+                loadPinyinLib().then(ok => {
+                    if (ok) {
+                        pinyinState.libLoaded = true;
+                        pinyinState.enabled = true;
+                        localStorage.setItem('sz-pinyin', 'true');
+                        if (!pinyinState.processed) processTextsForPinyin();
+                        document.body.classList.remove('pinyin-off');
+                        document.body.classList.add('pinyin-on');
+                        pinyinToggleBtn.classList.add('active');
+                        showToast('拼音标注已开启');
+                    } else {
+                        showToast('拼音库加载失败，请检查网络');
+                    }
+                });
+                return;
+            }
+            // 库已加载：正常切换
+            pinyinState.enabled = !pinyinState.enabled;
+            localStorage.setItem('sz-pinyin', pinyinState.enabled);
+            document.body.classList.toggle('pinyin-off', !pinyinState.enabled);
+            document.body.classList.toggle('pinyin-on', pinyinState.enabled);
+            pinyinToggleBtn.classList.toggle('active', pinyinState.enabled);
+            showToast(pinyinState.enabled ? '拼音标注已开启' : '拼音标注已关闭');
+        }
+
+        // 设置事件监听
+        function setupEventListeners() {
+            // 目录切换
+            tocToggle.addEventListener('click', () => {
+                tocSidebar.classList.toggle('active');
+            });
+
+            // 拼音切换
+            pinyinToggleBtn.addEventListener('click', togglePinyin);
+
+            // 点击目录外部关闭
+            document.addEventListener('click', (e) => {
+                if (!tocSidebar.contains(e.target) && !tocToggle.contains(e.target)) {
+                    tocSidebar.classList.remove('active');
+                }
+            });
+
+            // 底部翻页导航按钮（直接绑定，最可靠）
+            prevBtn.addEventListener('click', () => showPage(state.currentPage - 1));
+            nextBtn.addEventListener('click', () => showPage(state.currentPage + 1));
+
+            // 目录链接点击
+            document.querySelectorAll('.toc-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const href = link.getAttribute('href');
+                    const anchorId = href.substring(1);
+                    
+                    // 根据链接找到对应章节
+                    const chapterMap = {
+                        'original-1': 1, 'translation-1': 1,
+                        'original-2': 2, 'translation-2': 2,
+                        'original-3': 3, 'translation-3': 3,
+                        'original-4': 4, 'translation-4': 4,
+                        'original-5': 5, 'translation-5': 5,
+                        'original-6': 6, 'translation-6': 6,
+                        'original-7': 7, 'translation-7': 7,
+                        'original-8': 8, 'translation-8': 8,
+                        'original-9': 9, 'translation-9': 9,
+                        'original-10': 10, 'translation-10': 10,
+                        'original-11': 11, 'translation-11': 11,
+                        'original-12': 12, 'translation-12': 12,
+                        'original-13': 13, 'translation-13': 13
+                    };
+                    
+                    const pageNum = chapterMap[anchorId];
+                    if (pageNum) {
+                        showPage(pageNum);
+                        // 滚动到对应章节
+                        setTimeout(() => {
+                            const element = document.getElementById(anchorId);
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 100);
+                    }
+                    
+                    tocSidebar.classList.remove('active');
+                });
+            });
+
+            // 封面开始阅读
+            startReading.addEventListener('click', () => {
+                showPage(1);
+                showToast('欢迎阅读孙子兵法');
+            });
+
+            // 返回封面
+            homeBtn.addEventListener('click', () => {
+                showPage(0);
+            });
+
+            // 键盘导航
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    showPage(state.currentPage - 1);
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                    e.preventDefault();
+                    showPage(state.currentPage + 1);
+                } else if (e.key === 'Home') {
+                    showPage(0);
+                } else if (e.key === 'End') {
+                    showPage(state.totalPages - 1);
+                } else if (e.key === 'Escape') {
+                    tocSidebar.classList.remove('active');
+                }
+            });
+
+            // 滚动监听，更新目录高亮
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.id;
+                        document.querySelectorAll('.toc-link').forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === '#' + id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            // 观察所有章节标题
+            document.querySelectorAll('[id^="original-"], [id^="translation-"]').forEach(el => {
+                observer.observe(el);
+            });
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>

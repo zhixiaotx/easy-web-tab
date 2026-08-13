@@ -1,4 +1,12 @@
 [
+{
+    "id": "szbf",
+    "name": "孙子兵法",
+    "path": "/games/sunzibingfa/index.html",
+    "description": "孙子兵法",
+    "icon": "/icons/szbf.svg",
+    "category": "books"
+  },
   {
     "id": "tetris",
     "name": "俄罗斯方块",

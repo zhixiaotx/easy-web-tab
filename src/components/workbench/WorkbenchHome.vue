@@ -10,7 +10,7 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
-import { calcBmi, calcDailyAttainment, calcExerciseAttainment, classifyBmi } from '@/composables/healthCore'
+import { calcBmi, calcDailyAttainment, calcExerciseAttainment } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
@@ -131,7 +131,7 @@ const exerciseStats = computed(() => {
 const dietStats = computed(() => {
   const at = calcDailyAttainment(healthStore.records.diet, healthStore.plans.diet, localToday())
   if (!at) return { value: '未设定目标', sub: '点击前往设置' }
-  return { value: `${at.current}/${at.target} 千卡`, sub: '今日 · 千卡' }
+  return { value: `${at.current}/${at.target}`, sub: '今日 · 千卡' }
 })
 
 // 睡眠：今日时长（今日无记录但有计划 → '—'）
@@ -143,16 +143,8 @@ const sleepStats = computed(() => {
   const at = calcDailyAttainment(healthStore.records.sleep, plan, today)
   // 计划存在且今日有记录 → at 必非 null（calcDailyAttainment 仅无计划/模块非 diet|sleep 时返回 null）
   if (!at) return { value: '—', sub: '今日暂无记录' }
-  return { value: `${at.current}/${at.target} 小时`, sub: '今日 · 小时' }
+  return { value: `${at.current}/${at.target}`, sub: '今日 · 小时' }
 })
-
-// BMI 状态标签（国标 WS/T 428-2013）
-const BMI_LABEL: Record<ReturnType<typeof classifyBmi>, string> = {
-  under: '偏瘦',
-  normal: '正常',
-  overweight: '超重',
-  obese: '肥胖'
-}
 
 // 体重：最近一条（date 降序，同日取 createdAt 新者）+ 身高 → BMI
 const weightStats = computed(() => {
@@ -163,16 +155,50 @@ const weightStats = computed(() => {
   if (latest === undefined || height === undefined) return { value: '—', sub: '点击前往设置' }
   const bmi = calcBmi(latest.weightKg, height)
   if (bmi === null) return { value: '—', sub: '点击前往设置' }
-  return { value: `BMI ${bmi.toFixed(1)} ${BMI_LABEL[classifyBmi(bmi)]}`, sub: `最近 ${latest.weightKg} kg` }
+  return { value: `BMI ${bmi.toFixed(1)}`, sub: `最近 ${latest.weightKg} kg` }
 })
 
-// 记账：本月收入/支出/结余（金额走掩码：默认隐藏 ****，跟随记账面板可见性开关实时联动）
+// 记账：本月收入/支出（金额走掩码：默认隐藏 ****，跟随记账面板可见性开关实时联动；结余由记账面板承载）
 const ledgerStats = computed(() => {
   const stats = calcMonthlyStats(ledgerStore.entries, monthKeyOf(localToday()), ledgerStore.categories)
   return {
     value: `支出 ¥${maskOrReveal(formatYuan(stats.expense), !ledgerStore.showAmount)}`,
-    sub: `收入 ¥${maskOrReveal(formatYuan(stats.income), !ledgerStore.showAmount)} · 结余 ¥${maskOrReveal(formatYuan(stats.balance), !ledgerStore.showAmount)}`
+    sub: `收入 ¥${maskOrReveal(formatYuan(stats.income), !ledgerStore.showAmount)}`
   }
+})
+
+// ===== 概览折叠区状态（默认折叠，localStorage 记住，'1'=折叠 / '0'=展开；不随备份导出，与 store 偏好同策略）=====
+const OVERVIEW_KEY = 'user-home-overview-collapsed'
+
+function readOverviewCollapsed(): boolean {
+  try {
+    return localStorage.getItem(OVERVIEW_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+const overviewCollapsed = ref(readOverviewCollapsed())
+
+function toggleOverview(): void {
+  overviewCollapsed.value = !overviewCollapsed.value
+  localStorage.setItem(OVERVIEW_KEY, overviewCollapsed.value ? '1' : '0')
+}
+
+// ===== 概览可见统计卡（纯占位隐藏：无数据的卡不渲染；有目标但 0 值的卡保留）=====
+const visibleStatCards = computed<string[]>(() => {
+  const keys: string[] = []
+  const height = healthStore.height
+  if (todosStore.todos.length > 0) keys.push('todos')
+  if (notesStore.notes.length > 0) keys.push('notes')
+  if (countdownsStore.countdowns.length > 0) keys.push('countdowns')
+  if (passwordsStore.isUnlocked && passwordsStore.passwords.length > 0) keys.push('passwords')
+  if (healthStore.plans.exercise) keys.push('exercise')
+  if (healthStore.plans.diet) keys.push('diet')
+  if (healthStore.plans.sleep) keys.push('sleep')
+  if (height !== undefined && height > 0 && healthStore.records.weight.length > 0) keys.push('weight')
+  if (ledgerStore.entries.length > 0) keys.push('ledger')
+  return keys
 })
 
 // ===== 即将到期倒计时：itemsWithRemaining 中未过期的前 3 条（已按 store 排序）=====
@@ -254,116 +280,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
       <!-- 日历锚点卡（Todo 16，只读嵌入，发薪/纪念日倒计时） -->
       <CalendarAnchorCard class="bento-anchor" />
 
-      <!-- 统计卡区（数值全部来自各 store / core 纯函数，此处只做布局） -->
-      <div class="bento-card bento-stat" data-testid="home-stats-todos">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="todos" :size="18" /></span>
-          <span class="stat-label">待办任务</span>
-          <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
-        </div>
-        <div class="stat-body">
-          <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
-          <div class="ring-wrap" :title="`已完成 ${todoCompletionRate}%`">
-            <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
-              <circle class="ring-track" cx="18" cy="18" r="15.9155" fill="none" />
-              <circle
-                class="ring-bar"
-                cx="18"
-                cy="18"
-                r="15.9155"
-                fill="none"
-                :stroke-dasharray="`${todoCompletionRate} 100`"
-              />
-            </svg>
-            <span class="ring-text">{{ todoCompletionRate }}%</span>
-          </div>
-        </div>
-        <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-notes">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="notes" :size="18" /></span>
-          <span class="stat-label">便签</span>
-          <button class="nav-btn" data-testid="home-nav-notes" @click="emit('navigate', 'notes')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-notes">{{ noteStats.total }}</div>
-        <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-countdowns">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="countdowns" :size="18" /></span>
-          <span class="stat-label">定时提醒</span>
-          <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
-        <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-passwords">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="passwords" :size="18" /></span>
-          <span class="stat-label">密码</span>
-          <button class="nav-btn" data-testid="home-nav-passwords" @click="emit('navigate', 'passwords')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-passwords">
-          {{ passwordsStore.isUnlocked ? `${passwordsStore.passwords.length} 条` : '🔒 解锁后可见' }}
-        </div>
-        <div class="stat-sub">{{ passwordsStore.isUnlocked ? '已解锁' : '未解锁' }}</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-exercise">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="exercise" :size="18" /></span>
-          <span class="stat-label">运动</span>
-          <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'health', 'exercise')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
-        <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-diet">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="diet" :size="18" /></span>
-          <span class="stat-label">饮食</span>
-          <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'health', 'diet')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
-        <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-sleep">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="sleep" :size="18" /></span>
-          <span class="stat-label">睡眠</span>
-          <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'health', 'sleep')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
-        <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-weight">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="weight" :size="18" /></span>
-          <span class="stat-label">体重</span>
-          <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'health', 'weight')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
-        <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
-      </div>
-
-      <div class="bento-card bento-stat" data-testid="home-stats-ledger">
-        <div class="stat-header">
-          <span class="stat-icon"><Icon name="ledger" :size="18" /></span>
-          <span class="stat-label">记账</span>
-          <button class="nav-btn" data-testid="home-nav-ledger" @click="emit('navigate', 'ledger')">前往 →</button>
-        </div>
-        <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
-        <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
-      </div>
-
-      <!-- 下方两块列表 -->
+      <!-- 下方两块列表（行动台：面板提升到统计卡区之前，6+6 双列主舞台） -->
       <section class="bento-card bento-panel">
         <div class="panel-header">
           <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
@@ -395,6 +312,130 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
           </li>
         </ul>
         <div v-else class="home-empty" data-testid="home-todo-empty">暂无未完成待办</div>
+      </section>
+
+      <!-- 概览折叠区（统计卡默认折叠，点击 toggle 展开；卡按 visibleStatCards 隐藏纯占位，全空时整区不渲染） -->
+      <section class="bento-overview" data-testid="home-overview" v-if="visibleStatCards.length > 0" aria-label="数据概览">
+        <button
+          type="button"
+          class="bento-card bento-overview-toggle"
+          data-testid="home-overview-toggle"
+          :aria-expanded="!overviewCollapsed"
+          @click="toggleOverview"
+        >
+          <span>📊 概览</span>
+          <span class="overview-count">{{ visibleStatCards.length }} 项</span>
+          <span class="overview-chevron" data-testid="home-overview-chevron" :class="{ open: !overviewCollapsed }">▾</span>
+        </button>
+        <template v-if="!overviewCollapsed">
+          <div class="bento-card bento-stat" data-testid="home-stats-todos" v-if="visibleStatCards.includes('todos')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="todos" :size="16" /></span>
+              <span class="stat-label">待办任务</span>
+              <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
+            </div>
+            <div class="stat-body">
+              <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
+              <div class="ring-wrap" :title="`已完成 ${todoCompletionRate}%`">
+                <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle class="ring-track" cx="18" cy="18" r="15.9155" fill="none" />
+                  <circle
+                    class="ring-bar"
+                    cx="18"
+                    cy="18"
+                    r="15.9155"
+                    fill="none"
+                    :stroke-dasharray="`${todoCompletionRate} 100`"
+                  />
+                </svg>
+                <span class="ring-text">{{ todoCompletionRate }}%</span>
+              </div>
+            </div>
+            <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-notes" v-if="visibleStatCards.includes('notes')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="notes" :size="16" /></span>
+              <span class="stat-label">便签</span>
+              <button class="nav-btn" data-testid="home-nav-notes" @click="emit('navigate', 'notes')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-notes">{{ noteStats.total }}</div>
+            <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-countdowns" v-if="visibleStatCards.includes('countdowns')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="countdowns" :size="16" /></span>
+              <span class="stat-label">定时提醒</span>
+              <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
+            <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-passwords" v-if="visibleStatCards.includes('passwords')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="passwords" :size="16" /></span>
+              <span class="stat-label">密码</span>
+              <button class="nav-btn" data-testid="home-nav-passwords" @click="emit('navigate', 'passwords')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-passwords">
+              {{ passwordsStore.isUnlocked ? `${passwordsStore.passwords.length} 条` : '🔒 解锁后可见' }}
+            </div>
+            <div class="stat-sub">{{ passwordsStore.isUnlocked ? '已解锁' : '未解锁' }}</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-exercise" v-if="visibleStatCards.includes('exercise')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="exercise" :size="16" /></span>
+              <span class="stat-label">运动</span>
+              <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'health', 'exercise')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
+            <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-diet" v-if="visibleStatCards.includes('diet')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="diet" :size="16" /></span>
+              <span class="stat-label">饮食</span>
+              <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'health', 'diet')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
+            <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-sleep" v-if="visibleStatCards.includes('sleep')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="sleep" :size="16" /></span>
+              <span class="stat-label">睡眠</span>
+              <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'health', 'sleep')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
+            <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-weight" v-if="visibleStatCards.includes('weight')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="weight" :size="16" /></span>
+              <span class="stat-label">体重</span>
+              <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'health', 'weight')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
+            <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
+          </div>
+
+          <div class="bento-card bento-stat" data-testid="home-stats-ledger" v-if="visibleStatCards.includes('ledger')">
+            <div class="stat-header">
+              <span class="stat-icon"><Icon name="ledger" :size="16" /></span>
+              <span class="stat-label">记账</span>
+              <button class="nav-btn" data-testid="home-nav-ledger" @click="emit('navigate', 'ledger')">前往 →</button>
+            </div>
+            <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
+            <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
+          </div>
+        </template>
       </section>
     </div>
   </div>
@@ -438,6 +479,46 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
 .bento-card:hover {
   border-color: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 概览折叠区（统计卡收进可折叠概览；内层网格镜像外层 12 列，卡片保持 span 4/3/1）===== */
+.bento-overview {
+  grid-column: span 12;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* toggle 复用 .bento-card 基础外观（暗色背景随 :root.dark .bento-card 继承），
+   文字色显式声明（R3：原生 button 无 color: inherit）、font 继承（R5） */
+.bento-overview-toggle {
+  grid-column: span 12;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary, var(--color-text));
+}
+
+.overview-count {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.overview-chevron {
+  transition: transform 0.15s ease;
+}
+
+.overview-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* 统计卡瘦身：padding 覆盖（12px 14px），不改共享 .bento-card 的 16px */
+.bento-stat {
+  padding: 12px 14px;
 }
 
 /* ===== 问候条 ===== */
@@ -553,7 +634,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 .stat-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .stat-icon {
@@ -576,7 +657,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
 .nav-btn {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding: 3px 8px;
   font-size: 12px;
   border-radius: var(--radius-full, 999px);
   background: var(--bg-secondary, var(--color-bg-hover));
@@ -594,16 +675,24 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 }
 
 .stat-value {
-  font-size: 26px;
+  min-width: 0;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-sub {
-  font-size: 13px;
+  min-width: 0;
+  font-size: 12px;
   color: var(--text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ===== 待办完成率进度环（微可视化，数值来自 store）===== */
@@ -887,6 +976,19 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   .bento-stat {
     grid-column: span 3;
   }
+
+  .bento-overview {
+    grid-column: span 6;
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .bento-overview-toggle {
+    grid-column: span 6;
+  }
+
+  .bento-overview .bento-stat {
+    grid-column: span 3;
+  }
 }
 
 @media (max-width: 640px) {
@@ -900,6 +1002,16 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   .bento-anchor,
   .bento-stat,
   .bento-panel {
+    grid-column: span 1;
+  }
+
+  .bento-overview {
+    grid-column: span 1;
+    grid-template-columns: 1fr;
+  }
+
+  .bento-overview .bento-stat,
+  .bento-overview-toggle {
     grid-column: span 1;
   }
 

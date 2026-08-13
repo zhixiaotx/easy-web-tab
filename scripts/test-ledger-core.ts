@@ -3,19 +3,23 @@ import {
   AUTO_COPY_CATEGORY_IDS,
   calcDepositTotal,
   calcMonthlyStats,
+  calcTrendSeries,
   emptyLedgerData,
   expenseCategories,
   findCategory,
   formatYuan,
   incomeCategories,
+  LEDGER_CATEGORY_COLORS,
   maskOrReveal,
   monthKeyOf,
   nextPayday,
   normalizeLedgerData,
   normalizeLedgerEntry,
   planAutoCopy,
-  prevMonthKeyOf
+  prevMonthKeyOf,
+  trendChartScale
 } from '../src/composables/ledgerCore.ts'
+import type { TrendMonth } from '../src/composables/ledgerCore.ts'
 import { DEFAULT_LEDGER_CATEGORIES } from '../src/types/index.ts'
 import type { LedgerCategory, LedgerEntry } from '../src/types'
 
@@ -421,6 +425,135 @@ test('T26 nextPayday no salary + day-of-month clamp', () => {
   assert.equal(nextPayday(multi, '2026-08-12'), '2026-08-15')
   // 非法 today / 非法 salary date 不抛错
   assert.equal(nextPayday(multi, 'bad-date'), null)
+})
+
+// T27 — calcTrendSeries：跨年 6 个月窗口，末月收入正确、其余 0 填充、窗外流水忽略
+test('T27 calcTrendSeries window + cross-year', () => {
+  const entries = [
+    mkEntry('e1', '2026-02-05', 'salary', 10000),
+    mkEntry('e2', '2026-02-20', 'salary', 500),
+    mkEntry('e3', '2026-03-01', 'salary', 999) // 窗外（endMonthKey 之后），忽略
+  ]
+  const series = calcTrendSeries(entries, '2026-02', DEFAULT_LEDGER_CATEGORIES)
+  assert.deepEqual(
+    series.map(m => m.monthKey),
+    ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']
+  )
+  assert.equal(series.length, 6)
+  assert.equal(series[5].income, 10500)
+  assert.equal(series[5].expense, 0)
+  for (let i = 0; i < 5; i++) {
+    assert.equal(series[i].income, 0, `${series[i].monthKey} income 0 填充`)
+    assert.equal(series[i].expense, 0, `${series[i].monthKey} expense 0 填充`)
+  }
+})
+
+// T28 — calcTrendSeries：收入/支出分桶，未知分类计入支出，months 窗口过滤
+test('T28 calcTrendSeries bucketing income/expense/unknown', () => {
+  const entries = [
+    mkEntry('e1', '2026-08-05', 'salary', 1000),
+    mkEntry('e2', '2026-08-06', 'lunch', 100),
+    mkEntry('e3', '2026-08-07', 'bogus', 50), // 未知分类 → 支出
+    mkEntry('e4', '2026-07-10', 'salary', 500),
+    mkEntry('e5', '2026-09-01', 'dinner', 25) // months=3 窗外 → 忽略
+  ]
+  const series = calcTrendSeries(entries, '2026-08', DEFAULT_LEDGER_CATEGORIES, 3)
+  assert.deepEqual(
+    series.map(m => m.monthKey),
+    ['2026-06', '2026-07', '2026-08']
+  )
+  assert.deepEqual(series[0], { monthKey: '2026-06', income: 0, expense: 0 })
+  assert.deepEqual(series[1], { monthKey: '2026-07', income: 500, expense: 0 })
+  assert.deepEqual(series[2], { monthKey: '2026-08', income: 1000, expense: 150 })
+})
+
+// T29 — calcTrendSeries：非法 endMonthKey → []；months 参数生效（默认 6）
+test('T29 calcTrendSeries invalid key + months param', () => {
+  const cats = DEFAULT_LEDGER_CATEGORIES
+  assert.deepEqual(calcTrendSeries([], 'bad-key', cats), [])
+  assert.deepEqual(calcTrendSeries([], '2026-8', cats), []) // 月份非两位
+  assert.deepEqual(calcTrendSeries([], '2026-08-15', cats), []) // 带日
+  assert.equal(calcTrendSeries([], '2026-08', cats).length, 6) // 默认 months=6
+  assert.equal(calcTrendSeries([], '2026-08', cats, 3).length, 3)
+  assert.equal(calcTrendSeries([], '2026-08', cats, 1).length, 1)
+  assert.deepEqual(calcTrendSeries([], '2026-08', cats, 1), [
+    { monthKey: '2026-08', income: 0, expense: 0 }
+  ])
+})
+
+// T30 — trendChartScale：全 0 → null；6 个月 × 2 类 = 12 bars；x 逐月升序、同月 income 在前；y 在 [pad, height-pad]；值大柱高
+test('T30 trendChartScale bars geometry', () => {
+  const zero: TrendMonth[] = [
+    { monthKey: '2026-01', income: 0, expense: 0 },
+    { monthKey: '2026-02', income: 0, expense: 0 }
+  ]
+  assert.equal(trendChartScale(zero, 400, 200), null, '全 0 序列 → null')
+
+  const series: TrendMonth[] = [
+    { monthKey: '2026-01', income: 0, expense: 0 },
+    { monthKey: '2026-02', income: 0, expense: 0 },
+    { monthKey: '2026-03', income: 1000, expense: 500 },
+    { monthKey: '2026-04', income: 0, expense: 0 },
+    { monthKey: '2026-05', income: 0, expense: 0 },
+    { monthKey: '2026-06', income: 0, expense: 0 }
+  ]
+  const scale = trendChartScale(series, 400, 200, 24)
+  assert.ok(scale, '非全 0 序列应返回 scale')
+  assert.equal(scale.bars.length, 12)
+  assert.equal(scale.maxY, 1000)
+  assert.ok(scale.barWidth > 0)
+  // x 排序：按月升序，同月 income 先于 expense
+  for (let i = 0; i < 6; i++) {
+    const inc = scale.bars[i * 2]
+    const exp = scale.bars[i * 2 + 1]
+    assert.equal(inc.monthKey, series[i].monthKey)
+    assert.equal(inc.kind, 'income')
+    assert.equal(exp.monthKey, series[i].monthKey)
+    assert.equal(exp.kind, 'expense')
+    assert.ok(inc.x < exp.x, `同月 income x < expense x（month ${i}）`)
+    if (i > 0) assert.ok(inc.x > scale.bars[i * 2 - 1].x, '下一月 income 在本月 expense 之后')
+  }
+  // 每个 bar y 在 [pad, height-pad] 内，height 非负
+  for (const b of scale.bars) {
+    assert.ok(b.y >= 24 - 0.01 && b.y <= 176 + 0.01, `bar y=${b.y} 应在 [24,176]`)
+    assert.ok(b.height >= -0.01, `bar height=${b.height} 非负`)
+  }
+  // 值大 → 柱高（income 1000 > expense 500）
+  const incMar = scale.bars.find(b => b.monthKey === '2026-03' && b.kind === 'income')!
+  const expMar = scale.bars.find(b => b.monthKey === '2026-03' && b.kind === 'expense')!
+  assert.equal(incMar.value, 1000)
+  assert.equal(expMar.value, 500)
+  assert.ok(incMar.height > expMar.height, 'income 1000 柱高应大于 expense 500')
+})
+
+// T31 — trendChartScale：maxY nice 天花板（9999→10000）；5 条网格线升序 0..maxY（底部基线→顶部）；整数标签无小数、非整数 1 位小数
+test('T31 trendChartScale niceCeil + gridlines + labels', () => {
+  const series: TrendMonth[] = [
+    { monthKey: '2026-01', income: 9999, expense: 0 },
+    { monthKey: '2026-02', income: 0, expense: 0 }
+  ]
+  const scale = trendChartScale(series, 400, 200, 24)
+  assert.ok(scale)
+  assert.equal(scale.maxY, 10000)
+  assert.equal(scale.gridlines.length, 5)
+  // 升序 0..maxY：第一条在底部基线（y = pad + inner = 176），最后一条在顶部（y = pad = 24）
+  assert.equal(scale.gridlines[0].y, 176)
+  assert.equal(scale.gridlines[4].y, 24)
+  assert.deepEqual(scale.gridlines.map(g => g.label), ['0', '2500', '5000', '7500', '10000'])
+
+  // 非整数网格值 → 1 位小数（maxVal=3 → maxY=5，网格 0/1.25/2.5/3.75/5）
+  const small = trendChartScale([{ monthKey: '2026-01', income: 3, expense: 0 }], 400, 200)
+  assert.ok(small)
+  assert.equal(small.maxY, 5)
+  assert.deepEqual(small.gridlines.map(g => g.label), ['0', '1.3', '2.5', '3.8', '5'])
+})
+
+// T32 — LEDGER_CATEGORY_COLORS：至少 8 个 6 位 hex 深色安全色
+test('T32 LEDGER_CATEGORY_COLORS palette', () => {
+  assert.ok(LEDGER_CATEGORY_COLORS.length >= 8)
+  for (const c of LEDGER_CATEGORY_COLORS) {
+    assert.match(c, /^#[0-9a-f]{6}$/i, `颜色 ${c} 应为 6 位 hex`)
+  }
 })
 
 let passed = 0

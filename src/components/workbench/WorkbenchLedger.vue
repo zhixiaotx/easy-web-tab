@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
-import { calcDepositTotal, calcMonthlyStats, findCategory, formatYuan, localDateStr, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
+import {
+  calcDepositTotal,
+  calcMonthlyStats,
+  calcTrendSeries,
+  findCategory,
+  formatYuan,
+  LEDGER_CATEGORY_COLORS,
+  localDateStr,
+  maskOrReveal,
+  monthKeyOf,
+  trendChartScale
+} from '@/composables/ledgerCore'
+import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
 import type { LedgerCategory, LedgerEntry } from '@/types'
 
@@ -49,6 +61,66 @@ const ratioText = computed(() => (monthStats.value.expenseRatio === null ? '—'
 function masked(t: string): string {
   return t === '—' ? t : maskOrReveal(t, !store.showAmount)
 }
+
+// ===== 近 6 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
+// endMonthKey：store 无「当前展示月」状态 → 取当月（today），series 默认 6 个月
+const TREND_W = 600
+const TREND_H = 220
+
+const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories))
+const trendScale = computed<TrendChartScale | null>(() => trendChartScale(trendSeries.value, TREND_W, TREND_H))
+
+// 网格线/柱/柱宽派生态（全 0 序列 trendChartScale → null → 空数组，走 ld-trend-empty 空态）
+const trendGridlines = computed(() => trendScale.value?.gridlines ?? [])
+const trendBars = computed(() => trendScale.value?.bars ?? [])
+const trendBarWidth = computed(() => trendScale.value?.barWidth ?? 0)
+
+// 月标签短格式（'2026-08' → '8月'），x 坐标来自 scale.monthLabels（几何唯一来源）
+const trendMonthLabels = computed(() =>
+  (trendScale.value?.monthLabels ?? []).map(l => ({
+    x: l.x,
+    monthKey: l.monthKey,
+    label: `${Number(l.monthKey.slice(5, 7))}月`
+  }))
+)
+
+// ===== 支出分类占比环形图（ring 常量同 WorkbenchPomodoro：R=90，C=2π×90；占比数据来自 monthStats.byCategory）=====
+const RING_R = 90
+const RING_C = 2 * Math.PI * RING_R
+
+interface DonutSegment {
+  categoryId: string
+  name: string
+  total: number
+  percent: number
+  color: string
+  dashLen: number
+  dashOffset: number
+  linecap: 'round' | 'butt'
+}
+
+const donutSegments = computed<DonutSegment[]>(() => {
+  const byCategory = monthStats.value.byCategory
+  const total = monthStats.value.expense
+  if (byCategory.length === 0 || total <= 0) return []
+  let acc = 0
+  return byCategory.map((item, idx) => {
+    const dashLen = (item.total / total) * RING_C
+    const seg: DonutSegment = {
+      categoryId: item.categoryId,
+      name: item.categoryId === 'unknown' ? '未知' : catNameOf(item.categoryId),
+      total: item.total,
+      percent: item.percent,
+      color:
+        idx === 0 ? 'var(--accent-color, var(--color-primary))' : LEDGER_CATEGORY_COLORS[idx % LEDGER_CATEGORY_COLORS.length],
+      dashLen,
+      dashOffset: -acc,
+      linecap: byCategory.length <= 3 ? 'round' : 'butt'
+    }
+    acc += dashLen
+    return seg
+  })
+})
 
 // ===== 月内记录列表（date 降序，同日 createdAt 降序）=====
 const monthEntries = computed(() =>
@@ -281,20 +353,119 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 支出分类占比明细条（当月 expense>0 才显示整块） -->
+    <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
+    <section class="ld-card" data-testid="ld-trend">
+      <h3 class="ld-card-title">近 6 月收支趋势</h3>
+      <svg
+        v-if="trendScale"
+        viewBox="0 0 600 220"
+        width="100%"
+        height="220"
+        preserveAspectRatio="xMidYMid meet"
+        class="ld-trend-svg"
+      >
+        <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
+        <g>
+          <line
+            v-for="(g, gi) in trendGridlines"
+            :key="'grid-' + gi"
+            class="ld-trend-gridline"
+            x1="0"
+            x2="600"
+            :y1="g.y"
+            :y2="g.y"
+          />
+          <text
+            v-for="(g, gi) in trendGridlines"
+            :key="'val-' + gi"
+            class="ld-trend-axis-label"
+            x="6"
+            :y="g.y + 4"
+            font-size="11"
+            text-anchor="start"
+            :data-testid="gi === trendGridlines.length - 1 ? 'ld-trend-max' : undefined"
+          >
+            {{ g.label }}
+          </text>
+        </g>
+
+        <!-- 每根柱：data-testid=ld-trend-bar-<月索引>-<income|expense>（同月两柱并排，income 先于 expense） -->
+        <rect
+          v-for="(b, idx) in trendBars"
+          :key="b.monthKey + '-' + b.kind"
+          :data-testid="`ld-trend-bar-${Math.floor(idx / 2)}-${b.kind}`"
+          class="ld-trend-bar"
+          :class="b.kind === 'income' ? 'is-income' : 'is-expense'"
+          :x="b.x"
+          :y="b.y"
+          :width="trendBarWidth"
+          :height="b.height"
+          rx="2"
+        />
+
+        <!-- 月标签：data-testid=ld-trend-month-<月索引> -->
+        <text
+          v-for="(l, li) in trendMonthLabels"
+          :key="l.monthKey"
+          :data-testid="`ld-trend-month-${li}`"
+          class="ld-trend-axis-label"
+          :x="l.x"
+          y="214"
+          font-size="11"
+          text-anchor="middle"
+        >
+          {{ l.label }}
+        </text>
+      </svg>
+      <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
+    </section>
+
+    <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
     <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
       <div class="ld-ratio-title">支出分类占比</div>
-      <div v-for="item in monthStats.byCategory" :key="item.categoryId" class="ld-ratio-row">
-        <div class="ld-ratio-head">
-          <span class="ld-ratio-name">{{ catNameOf(item.categoryId) }}</span>
-          <span class="ld-ratio-val">{{ masked(formatYuan(item.total)) }} · {{ masked(percentLabel(item.percent)) }}</span>
+      <div class="ld-donut-layout">
+        <div class="ld-donut-wrap">
+          <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
+            <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
+            <circle
+              v-for="(seg, idx) in donutSegments"
+              :key="seg.categoryId"
+              class="ld-donut-seg"
+              :class="{ 'is-accent': idx === 0 }"
+              cx="110"
+              cy="110"
+              :r="RING_R"
+              :stroke="idx === 0 ? undefined : seg.color"
+              :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
+              :stroke-dashoffset="seg.dashOffset"
+              :stroke-linecap="seg.linecap"
+              :data-testid="`ld-donut-seg-${idx}`"
+              transform="rotate(-90 110 110)"
+            />
+          </svg>
+          <div class="ld-donut-center" data-testid="ld-donut-center">
+            {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
+          </div>
         </div>
-        <div class="ld-ratio-track">
+        <div class="ld-donut-legend">
           <div
-            class="ld-ratio-fill"
-            :data-testid="`ld-bar-${item.categoryId}`"
-            :style="{ width: percentOf(item.percent) + '%' }"
-          ></div>
+            v-for="(seg, idx) in donutSegments"
+            :key="seg.categoryId"
+            class="ld-donut-legend-row"
+            :data-testid="`ld-donut-legend-${seg.categoryId}`"
+          >
+            <span
+              class="ld-donut-dot"
+              :class="{ 'is-accent': idx === 0 }"
+              :style="idx === 0 ? undefined : { background: seg.color }"
+            ></span>
+            <div class="ld-ratio-head">
+              <span class="ld-ratio-name">{{ seg.name }}</span>
+              <span class="ld-ratio-val">
+                {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -603,12 +774,6 @@ onUnmounted(() => {
   color: var(--text-secondary, var(--color-text-secondary));
 }
 
-.ld-ratio-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .ld-ratio-head {
   display: flex;
   align-items: center;
@@ -627,18 +792,129 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.ld-ratio-track {
-  height: 8px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  overflow: hidden;
+/* ===== 近 6 月收支趋势（内联 SVG 分组柱状图）===== */
+.ld-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.ld-ratio-fill {
-  height: 100%;
+.ld-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.ld-trend-svg {
+  display: block;
+  width: 100%;
+  height: 220px;
+}
+
+.ld-trend-gridline {
+  stroke: var(--border-color, #e2e8f0);
+  stroke-dasharray: 4 4;
+}
+
+.ld-trend-axis-label {
+  fill: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 收入柱 = 应用主色；支出柱 = LEDGER_CATEGORY_COLORS[1] */
+.ld-trend-bar.is-income {
+  fill: var(--accent-color, var(--color-primary));
+}
+
+.ld-trend-bar.is-expense {
+  fill: #8b5cf6;
+}
+
+.ld-trend-empty {
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-muted, var(--color-text-muted));
+  font-size: 14px;
+}
+
+/* ===== 支出分类占比环形图（ring 常量同 WorkbenchPomodoro：R=90, C=2π×90）===== */
+.ld-donut-layout {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ld-donut-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+}
+
+.ld-donut-svg {
+  display: block;
+  width: 220px;
+  height: 220px;
+}
+
+.ld-donut-track {
+  fill: none;
+  stroke: var(--bg-secondary, var(--color-bg-hover));
+  stroke-width: 16;
+}
+
+.ld-donut-seg {
+  fill: none;
+  stroke-width: 16;
+}
+
+.ld-donut-seg.is-accent {
+  stroke: var(--accent-color, var(--color-primary));
+}
+
+.ld-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.ld-donut-legend {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ld-donut-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ld-donut-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
   border-radius: var(--radius-full, 999px);
+}
+
+.ld-donut-dot.is-accent {
   background: var(--accent-color, var(--color-primary));
-  transition: width var(--transition-fast, 0.15s ease);
 }
 
 /* ===== 操作栏 ===== */
@@ -1085,7 +1361,8 @@ onUnmounted(() => {
 }
 
 :root.dark .stat-card,
-:root.dark .ld-ratio-block {
+:root.dark .ld-ratio-block,
+:root.dark .ld-card {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
 }
@@ -1156,8 +1433,8 @@ onUnmounted(() => {
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .ld-ratio-track {
-  background-color: var(--input-bg, #374151);
+:root.dark .ld-donut-track {
+  stroke: var(--input-bg, #374151);
 }
 
 :root.dark .ld-cat-row {
@@ -1225,6 +1502,16 @@ onUnmounted(() => {
   /* 窄屏：行保持 5 列不塌，列表横向滚动（.ld-list 已开 overflow-x: auto） */
   .ld-item {
     min-width: 640px;
+  }
+
+  /* 窄屏：环形图与图例纵向堆叠 */
+  .ld-donut-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .ld-donut-legend {
+    width: 100%;
   }
 }
 </style>

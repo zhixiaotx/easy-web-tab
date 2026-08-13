@@ -41,7 +41,7 @@ components/
     ├── WorkbenchDiet.vue        # 饮食面板（每日热量目标 + 四餐次记录，前缀 dt-）
     ├── WorkbenchSleep.vue       # 睡眠面板（每日时长目标 + 入睡/起床时间自动算时长 + 质量星标，前缀 sl-）
     ├── WorkbenchWeight.vue      # 体重面板（身高 + BMI 国标四档徽章 + 减肥建议 + 内联 SVG 折线图，前缀 wt-）
-    └── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 分类占比条 + 行式记录列表可折叠 + 分组管理，前缀 ld-）
+    └── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 近 6 月收支趋势柱状图（ld-trend-*，内联 SVG，坐标全走 trendChartScale）+ 支出分类占比环形图（ld-donut-*，R=90 周长不变量）+ 分类占比条 + 行式记录列表可折叠 + 分组管理，前缀 ld-）
 ```
 
 ## WHERE TO LOOK
@@ -75,6 +75,7 @@ components/
 - No state management inside components — delegate to stores or composables
 - **WorkbenchNotes.vue testid 约定**：工具栏 搜索输入 `nt-search-input`、分类筛选 tabs `nt-cat-all`/`nt-cat-uncategorized`/`nt-cat-<id>`、类型下拉 `nt-type-select`（选项：全部类型默认 'all'/普通便签/时光轴便签）、查询 `nt-search-btn`、重置 `nt-reset-btn`、新增 `note-add-button`、分类管理入口 `nt-cat-manager`（弹窗行 `nt-catmgr-*`，含标签页显示勾选 `nt-catmgr-tab-<id>`）、表单 overlay 类型 radio `nt-form-type-normal`/`nt-form-type-timeline`、时光轴快速追加 `nt-entry-add`、条目行内编辑/删除 `nt-entry-edit-<id>`/`nt-entry-del-<id>`、空态 `note-empty`（普通）/`note-timeline-empty`（时光轴）；其余表单 `note-*` / `nt-form-*` 前缀
 - **WorkbenchTodo.vue testid 约定**：分类筛选 tabs `td-cat-all`/`td-cat-<分类名>`（点击即时过滤，与查询条件叠加，重置恢复全部）、表单分类下拉 `td-form-category`（未分类 + store.allCategories）、卡片分类徽标 `td-cat-badge-<todoId>`、分类管理入口 `td-cat-manager`（弹窗 `td-cat-dialog`：标签页显示勾选 `td-catmgr-tab-<分类名>`、改名 `td-catmgr-name-<分类名>` blur/Enter 提交 Esc 还原、上移下移 `td-catmgr-up-<分类名>`/`td-catmgr-down-<分类名>`、删除 `td-catmgr-del-<分类名>` 带 confirm、新增 `td-catmgr-new-input`/`td-catmgr-add-btn`，失败走 useToast、删除/隐藏激活分类回退「全部」）；其余表单 `td-*` 前缀
+- **WorkbenchLedger.vue testid 约定**：趋势卡 `ld-trend`「近 6 月收支趋势」（坐标全走 `ledgerCore.trendChartScale`，组件零重算；柱 `ld-trend-bar-<月索引>-<income|expense>` 6 月×2=12 根、网格线 `.ld-trend-gridline` 5 条 + axis-label、maxY 标签 `ld-trend-max`、月标签 `ld-trend-month-<i>` 6 个、空态 `ld-trend-empty`「暂无收支数据」当 scale null；收入柱=accent 主色、支出柱=`LEDGER_CATEGORY_COLORS[1]`）；分类占比容器保持 `ld-ratio-block`（v-if 当月 expense>0，标题「支出分类占比」）+ svg `ld-donut`（viewBox 220×220、R=90、C=2π×90≈565.4867、rotate(-90 110 110)、stroke-width 16）+ 段 `ld-donut-seg-<idx>`（stroke-dasharray=`${dashLen} ${C-dashLen}`、dashoffset 累积、首段 `is-accent`=应用主色、后续轮循 `LEDGER_CATEGORY_COLORS`、linecap ≤3 段 round / >3 段 butt）+ 中心 `ld-donut-center`（当月支出总额经 `masked()` 掩码 `****`）+ 图例行 `ld-donut-legend-<categoryId>`（未知分类 id='unknown' 名=未知，含色点 `ld-donut-dot` + 名称 + `masked(formatYuan) · masked(percentLabel)`）；几何不变量：所有段 dasharray 第一个数之和 ≈ RING_C（QA 断言）
 
 ## ANTI-PATTERNS
 

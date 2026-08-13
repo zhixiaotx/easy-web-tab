@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { idbExportAll, idbImportAll } from '@/composables/useIdb'
@@ -11,6 +11,7 @@ import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useAppSettingsStore } from '@/stores/settings'
+import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
@@ -81,8 +82,9 @@ function toggleSidebar() {
   settingsStore.setWorkbenchSidebarCollapsed(!sidebarCollapsed.value)
 }
 
-// ===== 全局搜索（侧栏底部按钮 / Alt+K 打开）=====
+// ===== 全局搜索（右上角按钮 / Alt+K 打开）=====
 const spotlightOpen = ref(false)
+const showSettingsDialog = ref(false)
 
 // 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
 const spotlightData = computed<SpotlightData>(() => ({
@@ -118,10 +120,6 @@ useWorkbenchShortcuts({
   onNavigate: (key) => navigateTo(key as SectionKey)
 })
 
-// 实时时钟（每秒更新）
-const now = ref(new Date())
-let clockTimer: ReturnType<typeof setInterval> | undefined
-
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
@@ -130,18 +128,7 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-function formatClock(d: Date): string {
-  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
-  const weekday = d.toLocaleDateString('zh-CN', { weekday: 'long' })
-  return `${formatDate(d)} ${time} ${weekday}`
-}
-
-const clockText = computed(() => formatClock(now.value))
-
 onMounted(async () => {
-  clockTimer = setInterval(() => {
-    now.value = new Date()
-  }, 1000)
   await Promise.all([
     todosStore.loadTodos(),
     notesStore.loadNotes(),
@@ -154,10 +141,6 @@ onMounted(async () => {
   await habitsStore.loadHabits()
   // 进入工作台自动快照（fire-and-forget：非阻塞、静默失败，绝不阻塞渲染；同日去重由 captureSnapshot 处理）
   captureSnapshot().catch(() => {})
-})
-
-onUnmounted(() => {
-  if (clockTimer !== undefined) clearInterval(clockTimer)
 })
 
 // 导出：读取全部 4 store 打包为 JSON 下载
@@ -256,16 +239,17 @@ async function handleImportFile(event: Event) {
 
 <template>
   <div class="wb-shell">
-    <!-- 头部：左 = 返回 + 标题；右 = 时钟 + 导入导出 -->
+    <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 设置 + 导入导出 -->
     <header class="wb-header">
       <div class="wb-header-left">
         <button class="wb-btn" @click="router.back()">← 返回</button>
         <h1>工作台</h1>
       </div>
       <div class="wb-header-right">
-        <span class="wb-clock" data-testid="wb-clock">{{ clockText }}</span>
         <button class="wb-btn" @click="handleImportClick">导入</button>
         <button class="wb-btn" @click="handleExport">导出</button>
+        <button class="wb-btn" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true"><Icon name="search" /> 全局搜索</button>
+        <button class="wb-btn" title="设置" @click="showSettingsDialog = true">⚙️ 设置</button>
         <input
           ref="importInput"
           type="file"
@@ -302,15 +286,6 @@ async function handleImportFile(event: Event) {
           <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
           <span class="wb-menu-label">{{ item.label }}</span>
         </button>
-        <button
-          class="wb-menu-item wb-spotlight-open"
-          data-testid="wb-spotlight-open"
-          title="全局搜索 (Alt+K)"
-          @click="spotlightOpen = true"
-        >
-          <span class="wb-menu-icon"><Icon name="search" /></span>
-          <span class="wb-menu-label">全局搜索</span>
-        </button>
       </nav>
 
       <main class="wb-content">
@@ -331,6 +306,10 @@ async function handleImportFile(event: Event) {
       :data="spotlightData"
       @select="handleSpotlightSelect"
       @close="spotlightOpen = false"
+    />
+    <AppSettingsDialog
+      v-if="showSettingsDialog"
+      @close="showSettingsDialog = false"
     />
   </div>
 </template>
@@ -377,14 +356,6 @@ async function handleImportFile(event: Event) {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.wb-clock {
-  font-size: 14px;
-  color: var(--color-text-secondary, #64748b);
-  font-variant-numeric: tabular-nums;
-  margin-right: 8px;
-  white-space: nowrap;
 }
 
 .wb-btn {
@@ -506,11 +477,6 @@ async function handleImportFile(event: Event) {
   font-weight: 600;
 }
 
-/* 全局搜索入口固定在菜单底部（margin-top:auto 撑开与导航项间距） */
-.wb-menu-item.wb-spotlight-open {
-  margin-top: auto;
-}
-
 .wb-content {
   flex: 1;
   padding: 20px;
@@ -530,10 +496,6 @@ async function handleImportFile(event: Event) {
 
 :root.dark .wb-header-left h1 {
   color: var(--text-primary, #f9fafb);
-}
-
-:root.dark .wb-clock {
-  color: var(--text-secondary, #d1d5db);
 }
 
 :root.dark .wb-btn {

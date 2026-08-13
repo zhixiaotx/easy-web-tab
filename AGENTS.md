@@ -66,7 +66,7 @@ easy-web-tab/
 | Game list | `public/games/manifest.json` | 4 entries loaded by `useGames.ts` |
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
-| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 9 项（主页/待办/便签/倒计时/番茄钟/习惯打卡/密码/健康管理/记账）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；运动/饮食/睡眠面板含只读定时提醒区块（WorkbenchHealthReminders.vue）；便签面板 WorkbenchNotes.vue 支持类型切换（普通/时光轴）+ 分类筛选 + 时光轴条目；数据经 `useIdb.ts` 存 IndexedDB |
+| 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 9 项（主页/待办/便签/倒计时/番茄钟/习惯打卡/密码/健康管理/记账）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；运动/饮食/睡眠面板含只读定时提醒区块（WorkbenchHealthReminders.vue）；便签面板 WorkbenchNotes.vue 支持类型切换（普通/时光轴）+ 分类筛选 + 时光轴条目；主页 WorkbenchHome.vue=行动台布局（9 张统计卡收进可折叠「📊 概览」区 home-overview，默认折叠、localStorage user-home-overview-collapsed 记住，空数据按 visibleStatCards 隐藏，两行动面板前置统计卡之前）；数据经 `useIdb.ts` 存 IndexedDB |
 
 ## CODE MAP
 
@@ -158,6 +158,7 @@ npm run test:notes      # Pure-function tests for noteCore.ts (归一化/排序/
 npm run test:note-markdown  # Pure-function tests for noteMarkdown.ts (18 断言 T1-T18: markdown 渲染/breaks 换行/链接 target+rel/XSS 转义/javascript: 链接抑制/空输入, node --experimental-strip-types)
 npm run test:menu       # Pure-function tests for workbenchMenuCore.ts (13 断言 T1-T13: 归一化/home 恒 0/移动/改名/解析/常量完整性, node --experimental-strip-types)
 node scripts/qa-ledger-charts.mjs  # Playwright UI QA: 记账图表契约 S1-S7（后台 vite dev 16718-16726 + 注入 IndexedDB ledger 数据 → 趋势柱/环形图/回归断言 + 明暗全页截图存 .omo/evidence/ledger-charts/）
+node scripts/qa-workbench-home.mjs  # Playwright UI QA: 主页概览折叠契约 S1-S8（后台/复用 vite dev 16718-16726 → /workbench 主页 UI 播种待办 → 折叠默认态/展开持久化/空数据隐藏/面板顺序/作用域 nav/视觉瘦身/移动端 375 无横向滚动 + 明暗全页截图存 .omo/evidence/workbench-home/）
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

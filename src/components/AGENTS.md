@@ -30,7 +30,7 @@ components/
 ├── SkeletonGrid.vue      # Loading skeleton (grid)
 ├── Toast.vue             # Notification toast (receives `toasts` array as prop)
 └── workbench/            # 个人工作台 12 SFC: 10 面板 + 健康管理 tabs 容器 + 定时提醒只读区块 (data persisted to IndexedDB via `useIdb.ts`)
-    ├── WorkbenchHome.vue        # 工作台首页（聚合概览入口，9 张概览卡：4 旧 + 健康/记账 5 新）
+    ├── WorkbenchHome.vue        # 工作台首页（行动台布局：9 张统计卡收进可折叠「📊 概览」区 section.bento-overview（testid home-overview，默认折叠，toggle home-overview-toggle 含数量徽标 + chevron home-overview-chevron，localStorage user-home-overview-collapsed '1'/'0' 记住、不随备份导出；卡按 visibleStatCards computed 纯占位隐藏，9 卡全空整区不渲染）；两行动面板（即将到期/未完成待办）前置统计卡之前；统计卡视觉瘦身（.bento-stat padding 12px 14px、.stat-value 20px、.stat-sub 12px、.nav-btn padding 3px 8px font 12px、.stat-header gap 6px，单行省略防溢出）+ 文案收敛（ledger 去「结余」、diet/sleep 值去单位、weight 去 BMI 状态标签）；既有 home-* testid 全保留）
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选 + 分类筛选 tabs + ⚙️分类管理弹框（标签页显示勾选/改名/上移下移/删除/新增，失败走 useToast）+ 表单分类下拉 + 卡片分类徽标，data-testid 前缀 td-）
     ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除，content 与时光轴条目经 noteMarkdown.renderMarkdown 渲染为 Markdown（v-html + :deep() 排版，链接 target=_blank、@click 锚点拦截不触发卡片编辑），data-testid 前缀 nt-）
     ├── WorkbenchCountdown.vue   # 倒计时面板（分类筛选 tabs + ⚙️分类管理弹框 + 规则/分类表单 + 徽标，data-testid 前缀 cd-）

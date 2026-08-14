@@ -324,6 +324,7 @@ async function handleImportFile(event: Event) {
 <style scoped>
 /* 亮色基础样式（沿用 --color-* 全局 token） */
 .wb-shell {
+  height: 100dvh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -488,6 +489,8 @@ async function handleImportFile(event: Event) {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   background-color: var(--color-bg, #f8fafc);
 }
 
@@ -556,7 +559,16 @@ async function handleImportFile(event: Event) {
   }
 }
 
+/* 桌面一屏契约：面板根钉满内容区（flex-stretch，不用百分比高度） */
+@media (min-width: 769px) {
+  .wb-content { overflow: hidden; }
+  .wb-content > * { flex: 1; min-height: 0; }
+}
+
 @media (max-width: 768px) {
+  .wb-content { overflow-y: auto; }
+  .wb-content > * { flex: none; }
+
   .wb-header {
     flex-direction: column;
     align-items: flex-start;

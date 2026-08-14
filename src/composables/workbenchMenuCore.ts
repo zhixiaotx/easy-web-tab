@@ -1,4 +1,4 @@
-// 工作台菜单纯逻辑模块：9 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
+// 工作台菜单纯逻辑模块：10 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
 // 零 vue/pinia 运行时依赖（node --experimental-strip-types 可运行），无 DOM，纯函数。
 // 默认名称逐字一致（qa-notes-tabs.spec.ts 按文本「个人便签」定位菜单，改动会破坏回归）。
 
@@ -7,6 +7,7 @@ export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'home',
   'todos',
   'notes',
+  'diary',
   'countdowns',
   'pomodoro',
   'habits',
@@ -23,6 +24,7 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   home: '主页',
   todos: '工作待办',
   notes: '个人便签',
+  diary: '日记本',
   countdowns: '定时提醒',
   pomodoro: '番茄钟',
   habits: '习惯打卡',
@@ -36,6 +38,7 @@ export const MENU_ICONS: Record<string, string> = {
   home: 'home',
   todos: 'todos',
   notes: 'notes',
+  diary: 'diary',
   countdowns: 'countdowns',
   pomodoro: 'pomodoro',
   habits: 'habits',
@@ -70,7 +73,7 @@ export interface WorkbenchMenuItem {
 /**
  * 归一化菜单顺序与名称（幂等）：
  * order → 仅保留已知键、去重（首次出现优先）、home 强制 index 0（缺失则前插、后置则前移）、
- *         缺失已知键按默认序补全 → 恒 9 项；
+ *         缺失已知键按默认序补全 → 恒 10 项；
  * labels → 仅保留已知键、trim、去空、截断 12 code point。
  * 非数组 / 非对象输入按缺省处理（兜底默认）。
  */

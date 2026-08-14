@@ -419,7 +419,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     return { ok: true, reason: 'ok' as const }
   }
 
-  // 菜单渲染项（label 回退默认名，icon 查表）——默认态恒 7 项、home 首位
+  // 菜单渲染项（label 回退默认名，icon 查表）——默认态恒 10 项、home 首位
   const workbenchMenuItems = computed<WorkbenchMenuItem[]>(() =>
     resolveMenuItems(workbenchMenuOrder.value, workbenchMenuLabels.value)
   )

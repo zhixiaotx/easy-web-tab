@@ -10,6 +10,7 @@ import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
+import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useAppSettingsStore } from '@/stores/settings'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
@@ -22,6 +23,7 @@ import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
+import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
 import Icon from '@/components/Icon.vue'
 import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
@@ -39,14 +41,16 @@ const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
+const diaryStore = useWorkbenchDiaryStore()
 const settingsStore = useAppSettingsStore()
 const sitesStore = useSitesStore()
 
-// 左侧菜单导航白名单（9 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（10 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
+  'diary',
   'countdowns',
   'pomodoro',
   'habits',
@@ -132,6 +136,7 @@ onMounted(async () => {
   await Promise.all([
     todosStore.loadTodos(),
     notesStore.loadNotes(),
+    diaryStore.loadDiary(),
     countdownsStore.loadCountdowns(),
     healthStore.loadHealth(),
     ledgerStore.loadLedger(),
@@ -208,6 +213,7 @@ async function handleImportFile(event: Event) {
     await Promise.all([
       todosStore.loadTodos(),
       notesStore.loadNotes(),
+      diaryStore.loadDiary(),
       countdownsStore.loadCountdowns(),
       healthStore.loadHealth(),
       ledgerStore.loadLedger(),
@@ -224,13 +230,13 @@ async function handleImportFile(event: Event) {
       }
     }
 
-    // 成功 toast：仅统计 todos/notes/countdowns/健康/记账（密码不解密不计条数）
+    // 成功 toast：仅统计 todos/notes/diary/countdowns/健康/记账（密码不解密不计条数）
     const healthCount =
       healthStore.records.exercise.length +
       healthStore.records.diet.length +
       healthStore.records.sleep.length +
       healthStore.records.weight.length
-    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，倒计时 ${countdownsStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledgerStore.entries.length} 笔`
+    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，日记 ${diaryStore.entries.length} 篇，倒计时 ${countdownsStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledgerStore.entries.length} 笔`
     toast.success(skipPasswords ? `${countMsg}（密码已跳过）` : `${countMsg}；密码库已导入`)
   }
   reader.readAsText(file)
@@ -292,6 +298,7 @@ async function handleImportFile(event: Event) {
         <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
         <WorkbenchTodo v-else-if="activeSection === 'todos'" />
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
+        <WorkbenchDiary v-else-if="activeSection === 'diary'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
         <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
         <WorkbenchHabits v-else-if="activeSection === 'habits'" />

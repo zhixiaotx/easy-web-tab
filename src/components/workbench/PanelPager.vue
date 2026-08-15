@@ -67,7 +67,7 @@ defineEmits<{ prev: []; next: [] }>()
   color: var(--color-text-secondary, #64748b);
 }
 
-/* 暗色模式覆盖：--color-* 仅定义于 style.css :root（亮色），dark.css 只覆写 legacy --bg-*/--text-*/--border-*/--accent-* 家族，
+/* 暗色模式覆盖：--color-* 仅定义于 style.css :root（亮色），dark.css 只覆写 legacy --bg-/--text-/--border-/--accent- 家族，
    故沿用 WorkbenchView :root.dark .wb-btn 的既有约定（legacy theme-aware token + hex 兜底）。 */
 :root.dark .pp-btn {
   background-color: var(--bg-secondary, #1f2937);

@@ -449,6 +449,17 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   gap: 16px;
 }
 
+/* 桌面一屏契约（T3 shell 已给 .wb-home flex:1 + min-height:0；此处让 bento 网格独占面板根并区内滚动）：
+   默认折叠态内容 ~628px < 面板高 ~680px → 无滚动条、无页面滚动（QA S1 通过）；
+   概览展开（9 张统计卡）超限时网格区内滚动（.wb-content overflow:hidden，不外溢到页面） */
+@media (min-width: 769px) {
+  .bento-grid {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
 /* ===== Bento Grid（12 列非对称布局：问候全宽、快捷添加+天气+锚点并排、统计卡 3 列、列表双列）===== */
 .bento-grid {
   display: grid;

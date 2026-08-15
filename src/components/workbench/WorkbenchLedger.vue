@@ -378,117 +378,120 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
-    <section class="ld-card" data-testid="ld-trend">
-      <h3 class="ld-card-title">近 6 月收支趋势</h3>
-      <svg
-        v-if="trendScale"
-        viewBox="0 0 600 220"
-        width="100%"
-        height="220"
-        preserveAspectRatio="xMidYMid meet"
-        class="ld-trend-svg"
-      >
-        <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
-        <g>
-          <line
-            v-for="(g, gi) in trendGridlines"
-            :key="'grid-' + gi"
-            class="ld-trend-gridline"
-            x1="0"
-            x2="600"
-            :y1="g.y"
-            :y2="g.y"
-          />
-          <text
-            v-for="(g, gi) in trendGridlines"
-            :key="'val-' + gi"
-            class="ld-trend-axis-label"
-            x="6"
-            :y="g.y + 4"
-            font-size="11"
-            text-anchor="start"
-            :data-testid="gi === trendGridlines.length - 1 ? 'ld-trend-max' : undefined"
-          >
-            {{ g.label }}
-          </text>
-        </g>
-
-        <!-- 每根柱：data-testid=ld-trend-bar-<月索引>-<income|expense>（同月两柱并排，income 先于 expense） -->
-        <rect
-          v-for="(b, idx) in trendBars"
-          :key="b.monthKey + '-' + b.kind"
-          :data-testid="`ld-trend-bar-${Math.floor(idx / 2)}-${b.kind}`"
-          class="ld-trend-bar"
-          :class="b.kind === 'income' ? 'is-income' : 'is-expense'"
-          :x="b.x"
-          :y="b.y"
-          :width="trendBarWidth"
-          :height="b.height"
-          rx="2"
-        />
-
-        <!-- 月标签：data-testid=ld-trend-month-<月索引> -->
-        <text
-          v-for="(l, li) in trendMonthLabels"
-          :key="l.monthKey"
-          :data-testid="`ld-trend-month-${li}`"
-          class="ld-trend-axis-label"
-          :x="l.x"
-          y="214"
-          font-size="11"
-          text-anchor="middle"
+    <!-- 图表区：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），≥1600px 上下堆叠 -->
+    <div class="ld-charts-row">
+      <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
+      <section class="ld-card" data-testid="ld-trend">
+        <h3 class="ld-card-title">近 6 月收支趋势</h3>
+        <svg
+          v-if="trendScale"
+          viewBox="0 0 600 220"
+          width="100%"
+          height="220"
+          preserveAspectRatio="xMidYMid meet"
+          class="ld-trend-svg"
         >
-          {{ l.label }}
-        </text>
-      </svg>
-      <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
-    </section>
+          <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
+          <g>
+            <line
+              v-for="(g, gi) in trendGridlines"
+              :key="'grid-' + gi"
+              class="ld-trend-gridline"
+              x1="0"
+              x2="600"
+              :y1="g.y"
+              :y2="g.y"
+            />
+            <text
+              v-for="(g, gi) in trendGridlines"
+              :key="'val-' + gi"
+              class="ld-trend-axis-label"
+              x="6"
+              :y="g.y + 4"
+              font-size="11"
+              text-anchor="start"
+              :data-testid="gi === trendGridlines.length - 1 ? 'ld-trend-max' : undefined"
+            >
+              {{ g.label }}
+            </text>
+          </g>
 
-    <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
-    <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
-      <div class="ld-ratio-title">支出分类占比</div>
-      <div class="ld-donut-layout">
-        <div class="ld-donut-wrap">
-          <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
-            <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
-            <circle
+          <!-- 每根柱：data-testid=ld-trend-bar-<月索引>-<income|expense>（同月两柱并排，income 先于 expense） -->
+          <rect
+            v-for="(b, idx) in trendBars"
+            :key="b.monthKey + '-' + b.kind"
+            :data-testid="`ld-trend-bar-${Math.floor(idx / 2)}-${b.kind}`"
+            class="ld-trend-bar"
+            :class="b.kind === 'income' ? 'is-income' : 'is-expense'"
+            :x="b.x"
+            :y="b.y"
+            :width="trendBarWidth"
+            :height="b.height"
+            rx="2"
+          />
+
+          <!-- 月标签：data-testid=ld-trend-month-<月索引> -->
+          <text
+            v-for="(l, li) in trendMonthLabels"
+            :key="l.monthKey"
+            :data-testid="`ld-trend-month-${li}`"
+            class="ld-trend-axis-label"
+            :x="l.x"
+            y="214"
+            font-size="11"
+            text-anchor="middle"
+          >
+            {{ l.label }}
+          </text>
+        </svg>
+        <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
+      </section>
+
+      <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
+      <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
+        <div class="ld-ratio-title">支出分类占比</div>
+        <div class="ld-donut-layout">
+          <div class="ld-donut-wrap">
+            <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
+              <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
+              <circle
+                v-for="(seg, idx) in donutSegments"
+                :key="seg.categoryId"
+                class="ld-donut-seg"
+                :class="{ 'is-accent': idx === 0 }"
+                cx="110"
+                cy="110"
+                :r="RING_R"
+                :stroke="idx === 0 ? undefined : seg.color"
+                :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
+                :stroke-dashoffset="seg.dashOffset"
+                :stroke-linecap="seg.linecap"
+                :data-testid="`ld-donut-seg-${idx}`"
+                transform="rotate(-90 110 110)"
+              />
+            </svg>
+            <div class="ld-donut-center" data-testid="ld-donut-center">
+              {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
+            </div>
+          </div>
+          <div class="ld-donut-legend">
+            <div
               v-for="(seg, idx) in donutSegments"
               :key="seg.categoryId"
-              class="ld-donut-seg"
-              :class="{ 'is-accent': idx === 0 }"
-              cx="110"
-              cy="110"
-              :r="RING_R"
-              :stroke="idx === 0 ? undefined : seg.color"
-              :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
-              :stroke-dashoffset="seg.dashOffset"
-              :stroke-linecap="seg.linecap"
-              :data-testid="`ld-donut-seg-${idx}`"
-              transform="rotate(-90 110 110)"
-            />
-          </svg>
-          <div class="ld-donut-center" data-testid="ld-donut-center">
-            {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
-          </div>
-        </div>
-        <div class="ld-donut-legend">
-          <div
-            v-for="(seg, idx) in donutSegments"
-            :key="seg.categoryId"
-            class="ld-donut-legend-row"
-            :data-testid="`ld-donut-legend-${seg.categoryId}`"
-          >
-            <span
-              class="ld-donut-dot"
-              :class="{ 'is-accent': idx === 0 }"
-              :style="idx === 0 ? undefined : { background: seg.color }"
-            ></span>
-            <div class="ld-ratio-head">
-              <span class="ld-ratio-name">{{ seg.name }}</span>
-              <span class="ld-ratio-val">
-                {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
-              </span>
+              class="ld-donut-legend-row"
+              :data-testid="`ld-donut-legend-${seg.categoryId}`"
+            >
+              <span
+                class="ld-donut-dot"
+                :class="{ 'is-accent': idx === 0 }"
+                :style="idx === 0 ? undefined : { background: seg.color }"
+              ></span>
+              <div class="ld-ratio-head">
+                <span class="ld-ratio-name">{{ seg.name }}</span>
+                <span class="ld-ratio-val">
+                  {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1555,6 +1558,21 @@ onUnmounted(() => {
   /* 列表区滚动兜底：仅 !fitsOnePage（一屏放不下）时由模板类绑定启用（R7） */
   .ld-list-scroll {
     overflow-y: auto;
+  }
+}
+
+/* ===== 桌面中低宽度（769-1599px）：图表区并排压缩纵向占用（R1 一屏契约，1366×768 ledger 头部溢出修复；≥1600px 保持上下堆叠）===== */
+@media (min-width: 769px) and (max-width: 1599px) {
+  .ld-charts-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .ld-charts-row > .ld-card,
+  .ld-charts-row > .ld-ratio-block {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>

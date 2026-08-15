@@ -109,7 +109,7 @@ const listEl = ref<HTMLElement | null>(null)
 const paging = reactive(
   usePanelPaging({
     items: () => sortedRecords.value,
-    rowHeight: 118, // row-heights.json: exercise = 118（MAX 115.98 + 2px，R4）
+    rowHeight: 533, // row-heights.json: exercise = 533（6 列卡片实测 MAX 530.84 + 2px，R4）
     maxRows: 1, // 6 列卡片网格契约：每页最多 1 行（6 张卡），行数钳制走 clampMaxRows
     containerRef: listEl,
     gridRef: listEl // 同元素：测高 + 实测 gridTemplateColumns 列数（M-1：独立 if 非 else-if）

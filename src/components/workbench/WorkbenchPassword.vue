@@ -78,7 +78,7 @@ const listEl = ref<HTMLElement | null>(null)
 const paging = reactive(
   usePanelPaging({
     items: () => filteredPasswords.value,
-    rowHeight: 77, // row-heights.json: password = 77 (MAX 74.8 + 2px)
+    rowHeight: 116, // row-heights.json: password = 116（6 列卡片实测 MAX 113.17 + 2px，R4）
     containerRef: listEl,
     gridRef: listEl, // 与 containerRef 同元素：getComputedStyle(gridTemplateColumns) 实测列数 → 6
     maxRows: 3 // 6 列 × 3 行 = 18 卡/页（行数经 clampMaxRows 钳制）

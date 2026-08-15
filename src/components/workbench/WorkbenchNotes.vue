@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from './PanelPager.vue'
 
 const store = useWorkbenchNotesStore()
 
@@ -36,12 +38,17 @@ function applyFilters(): void {
   searchKeyword.value = searchDraft.value.trim()
   activeType.value = typeDraft.value
   activeCategoryId.value = categoryDraft.value === '' ? undefined : categoryDraft.value
+  // 筛选变化 → 双段分页回第 1 页（R8 两个实例独立，但关键词/类型/分类影响两段，均需归位）
+  normalPaging.goto(1)
+  timelinePaging.goto(1)
 }
 
 // 分类筛选标签页：点击即时生效（与倒计时面板一致）；同步草稿 ref，保证「查询」不覆盖、重置/删分类回退逻辑一致
 function selectCategoryTab(id: string | undefined): void {
   categoryDraft.value = id ?? ''
   activeCategoryId.value = id
+  normalPaging.goto(1)
+  timelinePaging.goto(1)
 }
 
 // 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
@@ -73,6 +80,24 @@ const filteredNotes = computed<WorkbenchNote[]>(() =>
 const filteredPartition = computed(() => partitionNotesByType(filteredNotes.value))
 const filteredNormal = computed(() => filteredPartition.value.normal)
 const filteredTimeline = computed(() => filteredPartition.value.timeline)
+
+// ===== 自适应分页（R1/R3/R7/R8）：普通/时光轴两个独立实例（'all' 视图双段各翻各的）=====
+// rowHeight 来自 .omo/evidence/workbench-onescreen/row-heights.json 实测（MAX + 2px margin，R4）
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+const normalGridEl = ref<HTMLElement | null>(null)
+const timelineGridEl = ref<HTMLElement | null>(null)
+const normalPaging = reactive(usePanelPaging({
+  items: () => filteredNormal.value,
+  rowHeight: 287, // row-heights.json: notes = 287 (MAX 285 + 2px)
+  containerRef: normalGridEl,
+  gridRef: normalGridEl
+}))
+const timelinePaging = reactive(usePanelPaging({
+  items: () => filteredTimeline.value,
+  rowHeight: 2343, // row-heights.json: timeline = 2343 — 时光轴卡片整卡高度（含全部条目）
+  containerRef: timelineGridEl,
+  gridRef: timelineGridEl
+}))
 
 // 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
 const hasActiveFilter = computed(() =>
@@ -307,6 +332,9 @@ async function handleDeleteCat(cat: NoteCategory): Promise<void> {
   // 当前正按该分类筛选（应用值或草稿值）时重置为「全部」
   if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
   if (categoryDraft.value === cat.id) categoryDraft.value = ''
+  // 分类删除 → 该分类便签归未分类，筛选列表变化 → 双段分页回第 1 页
+  normalPaging.goto(1)
+  timelinePaging.goto(1)
 }
 
 // 标签页显示勾选：写 store（showInTabs）；取消勾选的分类若正被激活筛选 → 回退「全部」（镜像 handleDeleteCat 的回退逻辑）
@@ -319,6 +347,9 @@ async function handleToggleTab(cat: NoteCategory, checked: boolean): Promise<voi
   if (!checked) {
     if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
     if (categoryDraft.value === cat.id) categoryDraft.value = ''
+    // 隐藏正激活筛选的分类 → 筛选回退「全部」，双段分页回第 1 页
+    normalPaging.goto(1)
+    timelinePaging.goto(1)
   }
 }
 
@@ -430,9 +461,14 @@ onUnmounted(() => {
 
     <!-- 时光轴（类型下拉=时光轴/'all' 双段渲染之一）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
     <template v-if="activeType !== 'normal'">
-      <div v-if="filteredTimeline.length > 0" class="notes-grid timeline-grid">
+      <div
+        v-if="filteredTimeline.length > 0"
+        ref="timelineGridEl"
+        class="notes-grid timeline-grid"
+        :class="{ 'timeline-grid-scroll': !timelinePaging.fitsOnePage }"
+      >
         <div
-          v-for="note in filteredTimeline"
+          v-for="note in timelinePaging.pageItems"
           :key="note.id"
           class="note-card timeline-card"
           :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
@@ -561,17 +597,28 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      <PanelPager
+        :page="timelinePaging.currentPage"
+        :total="timelinePaging.totalPages"
+        @prev="timelinePaging.prev()"
+        @next="timelinePaging.next()"
+      />
 
-      <div v-else-if="activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
+      <div v-if="filteredTimeline.length === 0 && activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
         {{ emptyText }}
       </div>
     </template>
 
     <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
     <template v-if="activeType !== 'timeline'">
-      <div v-if="filteredNormal.length > 0" class="notes-grid">
+      <div
+        v-if="filteredNormal.length > 0"
+        ref="normalGridEl"
+        class="notes-grid"
+        :class="{ 'notes-grid-scroll': !normalPaging.fitsOnePage }"
+      >
         <div
-          v-for="note in filteredNormal"
+          v-for="note in normalPaging.pageItems"
           :key="note.id"
           class="note-card"
           :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
@@ -606,8 +653,14 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      <PanelPager
+        :page="normalPaging.currentPage"
+        :total="normalPaging.totalPages"
+        @prev="normalPaging.prev()"
+        @next="normalPaging.next()"
+      />
 
-      <div v-else-if="activeType === 'normal' || filteredTimeline.length === 0" class="empty-state" data-testid="note-empty">
+      <div v-if="filteredNormal.length === 0 && (activeType === 'normal' || filteredTimeline.length === 0)" class="empty-state" data-testid="note-empty">
         {{ emptyText }}
       </div>
     </template>
@@ -1919,6 +1972,28 @@ onUnmounted(() => {
 
   .nt-field-grow .nt-field-keyword {
     width: 100%;
+  }
+}
+
+/* ===== 桌面（≥769px）一屏布局：网格区 flex 占满 + 分页（R1/R2/R7）=====
+   仅桌面作用域；移动端保持原状（页面滚动、全量渲染，composable 惰性不切片）。
+   flex:1 + min-height:0 让网格区占满可用高度（RO 测量基准）；!fitsOnePage 退化时区内滚动兜底（R7）；
+   timeline-card 整卡含全部条目（R8 不翻条目），超高时卡内滚动（min-height:0 允许 grid item 收缩）。 */
+@media (min-width: 769px) {
+  .notes-grid,
+  .timeline-grid {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .notes-grid-scroll,
+  .timeline-grid-scroll {
+    overflow-y: auto;
+  }
+
+  .timeline-card {
+    overflow-y: auto;
+    min-height: 0;
   }
 }
 

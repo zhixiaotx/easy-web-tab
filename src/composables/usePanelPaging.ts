@@ -3,9 +3,10 @@
 // 设计契约（计划 R1-R9）：pageSize = rowsPerPage × colsPerRow；列数经 gridRef 实时测
 // gridTemplateColumns（auto-fill minmax 网格）；≤768px 分页惰性（渲染全量、不切片）；
 // fitsOnePage 驱动列表区 overflow-y:auto 兜底（R7）；区域未渲染时 RO 不挂、分页惰性（R8）。
+// maxRows 行数上限（可选）：密码 3 行、运动/饮食/睡眠 1 行，其余面板不传不受限（行数钳制走 clampMaxRows）。
 // 多实例安全（普通工厂函数；便签面板 'all' 视图会用 2 个实例）。
 import { computed, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue'
-import { calcRowsPerPage, clampPage, slicePage } from './panelPagingCore'
+import { calcRowsPerPage, clampMaxRows, clampPage, slicePage } from './panelPagingCore'
 
 /** 桌面断点：≥769px 启用自适应分页；≤768px（移动端）分页惰性（R2）。 */
 const DESKTOP_MEDIA_QUERY = '(min-width: 769px)'
@@ -23,6 +24,8 @@ export interface PanelPagingOptions<T> {
   rowHeight: number
   /** 行间距 px，默认 12。 */
   gap?: number
+  /** 每页行数上限（可选）：经 clampMaxRows 归一化后钳制 calcRowsPerPage 结果；未传/Infinity 不限制（其余面板不变）。密码 maxRows:3、运动/饮食/睡眠 maxRows:1。 */
+  maxRows?: number
   /** flex:1 列表区 DOM（ResizeObserver 测量可用高度）；条件渲染列表未挂载时为 null → 分页惰性（R8）。 */
   containerRef: Ref<HTMLElement | null>
   /** 可选：网格元素（auto-fill minmax 网格），实时读取真实列数（R3）；行式列表不传 → colsPerRow 恒 1。 */
@@ -114,7 +117,7 @@ export function usePanelPaging<T>(opts: PanelPagingOptions<T>): PanelPaging<T> {
         // 用独立 if 而非 else-if，保证同元素时「测高」与「重读列数」都执行（M-1）
         if (entry.target === observedContainer) {
           availHeight.value = entry.contentRect.height
-          rowsPerPage.value = calcRowsPerPage(entry.contentRect.height, opts.rowHeight, gap)
+          rowsPerPage.value = calcRowsPerPage(entry.contentRect.height, opts.rowHeight, gap, opts.maxRows)
         }
         if (entry.target === observedGrid && observedGrid) {
           colsPerRow.value = readGridCols(observedGrid) // 宽度变化（列数变化）→ 重读列数
@@ -144,7 +147,7 @@ export function usePanelPaging<T>(opts: PanelPagingOptions<T>): PanelPaging<T> {
         return
       }
       if (!roAvailable) {
-        rowsPerPage.value = FALLBACK_ROWS_PER_PAGE // RO 不可用 → 兜底常量
+        rowsPerPage.value = Math.min(FALLBACK_ROWS_PER_PAGE, clampMaxRows(opts.maxRows)) // RO 不可用 → 兜底常量（受 maxRows 上限钳制，如密码 3/健康 1）
         return
       }
       rowsPerPage.value = 0 // RO 回调前保持惰性（回调在渲染前送达，首帧不可见）

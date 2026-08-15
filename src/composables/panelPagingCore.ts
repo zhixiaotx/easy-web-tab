@@ -1,24 +1,47 @@
 // 工作台面板自适应分页纯逻辑模块。
 // 零 vue/pinia/DOM 依赖（node --experimental-strip-types 可运行）：
-// calcRowsPerPage 按可用高度/行高算每页行数 → clampPage 钳制页码 → slicePage 切片。
+// calcRowsPerPage 按可用高度/行高算每页行数（支持 maxRows 行数上限）→ clampPage 钳制页码 → slicePage 切片。
+// clampMaxRows 归一化行数上限：undefined/NaN/±Infinity → Infinity（不限制），其余向下取整且保底 ≥1。
 // 运行期仅用 Math 与 Array.prototype.slice，无任何浏览器 API。
 // 组件/视图禁止内联重算这些公式（usePanelPaging 统一消费）。
+
+/**
+ * 归一化每页行数上限（calcRowsPerPage 第 4 参的钳制值来源）。
+ *
+ * undefined/NaN/±Infinity → Infinity（不设上限）；其余向下取整且保底 ≥1
+ * （`Math.max(1, Math.floor(maxRows))`，0/负数 → 1，小数向下取整）。
+ *
+ * @param maxRows 每页行数上限（可选；默认不限制）
+ * @returns 有效上限，恒 >= 1 或 Infinity
+ */
+export function clampMaxRows(maxRows?: number): number {
+  if (maxRows === undefined || !Number.isFinite(maxRows)) return Infinity
+  return Math.max(1, Math.floor(maxRows))
+}
 
 /**
  * 计算每页可容纳的行数（自适应分页核心公式）。
  *
  * 行槽高度 = rowHeight + gap（末行无需 gap 仍能放下，故分子加 gap）：
  * `Math.max(1, Math.floor((availableHeight + gap) / (rowHeight + gap)))`。
- * availableHeight <= 0 时返回 1（保证渲染区域至少容纳 1 行）。
+ * availableHeight <= 0 时返回 1（保证渲染区域至少容纳 1 行，忽略 maxRows）。
+ * maxRows 经 clampMaxRows 归一化后钳制自然行数（上限 < 自然行数时生效）。
  *
  * @param availableHeight 列表区可用高度（px，来自 ResizeObserver contentRect.height）
  * @param rowHeight 每行（卡片/行条目）最大外高（px）
  * @param gap 行间距（px），默认 12
+ * @param maxRows 每页行数上限（可选）；未传/Infinity/NaN 不限制；钳到 ≥1
  * @returns 每页行数，恒 >= 1
  */
-export function calcRowsPerPage(availableHeight: number, rowHeight: number, gap = 12): number {
+export function calcRowsPerPage(
+  availableHeight: number,
+  rowHeight: number,
+  gap = 12,
+  maxRows?: number
+): number {
   if (availableHeight <= 0) return 1
-  return Math.max(1, Math.floor((availableHeight + gap) / (rowHeight + gap)))
+  const natural = Math.max(1, Math.floor((availableHeight + gap) / (rowHeight + gap)))
+  return Math.min(natural, clampMaxRows(maxRows))
 }
 
 /**

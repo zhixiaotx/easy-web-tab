@@ -1,7 +1,7 @@
-// panelPagingCore.ts 纯函数测试（15 断言 T1-T15：calcRowsPerPage/clampPage/slicePage；npm run test:paging）
+// panelPagingCore.ts 纯函数测试（15 断言 T1-T20：calcRowsPerPage/clampPage/slicePage + 新增 maxRows 行数上限 + clampMaxRows；npm run test:paging）
 // 结构镜像 scripts/test-diary-core.ts（node:assert/strict Proxy 计数 + test 注册表 + 汇总退出码）
 import assert from 'node:assert/strict'
-import { calcRowsPerPage, clampPage, slicePage } from '../src/composables/panelPagingCore.ts'
+import { calcRowsPerPage, clampMaxRows, clampPage, slicePage } from '../src/composables/panelPagingCore.ts'
 
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) {
@@ -128,6 +128,46 @@ test('T15 slicePage no mutation + generic', () => {
   a.deepEqual(page, ['c', 'd'])
   a.deepEqual(items, snapshot) // 入参未被修改
   a.notEqual(page, items) // 返回新数组（slice 语义）
+})
+
+// T16 — calcRowsPerPage maxRows 上限低于自然行数 → 钳制到上限（第 4 参生效）
+test('T16 calcRowsPerPage maxRows cap below natural', () => {
+  a.equal(calcRowsPerPage(480, 48, 12, 3), 3) // 自然 8 行 → 上限 3
+  a.equal(calcRowsPerPage(228, 48, 12, 2), 2) // 自然 4 行 → 上限 2
+  a.equal(calcRowsPerPage(5000, 48, 12, 1), 1) // 自然 83 行 → 上限 1
+})
+
+// T17 — calcRowsPerPage maxRows 上限高于自然 / 缺省 / Infinity / NaN → 自然行数不变
+test('T17 calcRowsPerPage maxRows above natural or absent', () => {
+  a.equal(calcRowsPerPage(228, 48, 12, 20), 4) // 上限 20 > 自然 4
+  a.equal(calcRowsPerPage(228, 48, 12), 4) // 缺省上限 = Infinity
+  a.equal(calcRowsPerPage(228, 48, 12, Infinity), 4) // Infinity 不设上限
+  a.equal(calcRowsPerPage(228, 48, 12, NaN), 4) // NaN 不设上限
+})
+
+// T18 — calcRowsPerPage 退化 maxRows（0/负/小数）→ 至少 1 行，小数向下取整
+test('T18 calcRowsPerPage degenerate maxRows', () => {
+  a.equal(calcRowsPerPage(480, 48, 12, 0), 1) // 上限 0 → 保底 1
+  a.equal(calcRowsPerPage(480, 48, 12, -3), 1) // 负上限 → 保底 1
+  a.equal(calcRowsPerPage(480, 48, 12, 2.9), 2) // 2.9 → floor 2
+  a.equal(calcRowsPerPage(480, 48, 12, 3.9), 3) // 3.9 → floor 3
+})
+
+// T19 — calcRowsPerPage availableHeight <= 0 忽略上限 → 恒 1（区域至少 1 行兜底优先）
+test('T19 calcRowsPerPage height <= 0 ignores maxRows', () => {
+  a.equal(calcRowsPerPage(0, 48, 12, 3), 1)
+  a.equal(calcRowsPerPage(-50, 48, 12, 1), 1)
+})
+
+// T20 — clampMaxRows 独立纯函数：undefined/Infinity/NaN → Infinity；0/负 → 1；小数向下取整
+test('T20 clampMaxRows unit', () => {
+  a.equal(clampMaxRows(undefined), Infinity)
+  a.equal(clampMaxRows(5), 5)
+  a.equal(clampMaxRows(0), 1)
+  a.equal(clampMaxRows(-3), 1)
+  a.equal(clampMaxRows(3.7), 3)
+  a.equal(clampMaxRows(Infinity), Infinity)
+  a.equal(clampMaxRows(NaN), Infinity)
 })
 
 let passed = 0

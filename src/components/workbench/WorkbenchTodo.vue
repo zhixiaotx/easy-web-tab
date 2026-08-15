@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { filterTodos, dueInfo } from '@/composables/todoCore'
 import type { TodoFilterCriteria } from '@/composables/todoCore'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
 import { TODO_COLOR_PRESETS, DEFAULT_TODO_COLOR } from '@/types'
 import { useToast } from '@/composables/useToast'
+import PanelPager from './PanelPager.vue'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchTodosStore()
 
@@ -21,6 +23,7 @@ const activeCategoryId = ref('')
 
 function selectCategoryTab(name: string): void {
   activeCategoryId.value = name
+  paging.goto(1)
 }
 
 const hasActiveFilter = computed(() =>
@@ -38,6 +41,7 @@ function applySearch(): void {
     priority: searchPriority.value,
     status: searchStatus.value
   }
+  paging.goto(1)
 }
 
 function resetSearch(): void {
@@ -47,6 +51,7 @@ function resetSearch(): void {
   searchStatus.value = ''
   activeCategoryId.value = ''
   appliedFilters.value = {}
+  paging.goto(1)
 }
 
 // 列表渲染用筛选后的数据（标签页与查询条件叠加）；排序由 store 的 sortedTodos 保证
@@ -68,6 +73,17 @@ function heroOf(todo: WorkbenchTodo): TodoHero | null {
 }
 
 const viewTodos = computed(() => filteredTodos.value.map(todo => ({ todo, hero: heroOf(todo) })))
+
+// ===== 自适应分页（Wave-2 T5）：≥769px 分页；≤768px 惰性（全量渲染、pager 隐藏，R2）=====
+const gridEl = ref<HTMLElement | null>(null)
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+// （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证）
+const paging = reactive(usePanelPaging({
+  items: () => viewTodos.value,
+  rowHeight: 214, // row-heights.json: todo = 214（两视口 MAX 211.56 + 2px，R4）
+  containerRef: gridEl,
+  gridRef: gridEl
+}))
 
 // ===== 表单状态机（新增/编辑共用，弹框承载）=====
 const showDialog = ref(false)
@@ -142,6 +158,7 @@ async function handleSave(): Promise<void> {
       color: formColor.value,
       categoryId: formCategoryId.value || undefined
     })
+    paging.goto(1) // 新增条目回第 1 页（复用日记分页惯例）
   }
   cancelForm()
 }
@@ -200,7 +217,10 @@ async function handleToggleTab(cat: string, checked: boolean): Promise<void> {
     toast.error('分类更新失败')
     return
   }
-  if (!checked && activeCategoryId.value === cat) activeCategoryId.value = ''
+  if (!checked && activeCategoryId.value === cat) {
+    activeCategoryId.value = ''
+    paging.goto(1)
+  }
 }
 
 // 改名：@change（失焦）或回车提交；空名/重名被 store 拒绝 → toast + 还原草稿；成功同步正激活的筛选 tab
@@ -215,7 +235,10 @@ async function commitCatName(oldName: string): Promise<void> {
     next[draft] = draft
     catDrafts.value = next
     // 正按旧名筛选 → 同步到新名，避免筛选悬空
-    if (activeCategoryId.value === oldName) activeCategoryId.value = draft
+    if (activeCategoryId.value === oldName) {
+      activeCategoryId.value = draft
+      paging.goto(1)
+    }
   } else {
     catDrafts.value[oldName] = oldName
   }
@@ -246,7 +269,10 @@ async function handleDeleteCat(cat: string): Promise<void> {
     const next = { ...catDrafts.value }
     delete next[cat]
     catDrafts.value = next
-    if (activeCategoryId.value === cat) activeCategoryId.value = ''
+    if (activeCategoryId.value === cat) {
+      activeCategoryId.value = ''
+      paging.goto(1)
+    }
   }
   catErrorToast(result)
 }
@@ -377,9 +403,9 @@ onUnmounted(() => {
       <button class="btn-cancel" @click="resetSearch">重置查询</button>
     </div>
 
-    <div v-else class="td-grid">
+    <div v-else ref="gridEl" class="td-grid" :class="{ 'td-grid-scroll': !paging.fitsOnePage }">
       <div
-        v-for="v in viewTodos"
+        v-for="v in paging.pageItems"
         :key="v.todo.id"
         class="td-card"
         data-testid="td-item"
@@ -435,6 +461,8 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
 
     <!-- 新增/编辑弹框 -->
     <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
@@ -1536,6 +1564,20 @@ onUnmounted(() => {
   .td-field-title,
   .td-field-grow {
     width: 100%;
+  }
+}
+
+/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T5，R1/R2/R7）===== */
+@media (min-width: 769px) {
+  /* flex 列内可收缩占满剩余高度（T3 shell 契约 .wb-content > * flex:1 min-height:0 已在视图层就位） */
+  .td-grid {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区滚动兜底：仅 !fitsOnePage（一屏放不下）时由模板类绑定启用（R7） */
+  .td-grid-scroll {
+    overflow-y: auto;
   }
 }
 </style>

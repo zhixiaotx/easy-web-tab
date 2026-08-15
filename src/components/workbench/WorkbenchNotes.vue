@@ -222,6 +222,37 @@ function sortedEntriesOf(note: WorkbenchNote): TimelineEntry[] {
   return sortTimelineEntries(note.entries ?? [])
 }
 
+// ===== 时光轴卡内联条目上限 5 + 「+N 条」全量浮层（S4：卡内只内联前 5 条，超限按钮开浮层看全量，浮层内列表滚动）=====
+const TIMELINE_INLINE_LIMIT = 5
+
+// 当前展开全量条目的时光轴便签 id（null = 无展开）；浮层可滚动看全量、支持行内编辑/删除
+const timelineExpandNoteId = ref<string | null>(null)
+
+// 卡片内联展示条目：前 5 条（排序已走 sortedEntriesOf，禁止重复排序公式）
+function inlineEntriesOf(note: WorkbenchNote): TimelineEntry[] {
+  return sortedEntriesOf(note).slice(0, TIMELINE_INLINE_LIMIT)
+}
+
+// 超限隐藏条数：> 0 时显示「+N 条」按钮
+function hiddenEntryCount(note: WorkbenchNote): number {
+  return Math.max(0, sortedEntriesOf(note).length - TIMELINE_INLINE_LIMIT)
+}
+
+// 浮层目标便签（读 store 快照；关闭即清空）
+const expandedTimelineNote = computed<WorkbenchNote | null>(() => {
+  const id = timelineExpandNoteId.value
+  if (!id) return null
+  return store.notes.find(n => n.id === id) ?? null
+})
+
+function openTimelineExpand(noteId: string): void {
+  timelineExpandNoteId.value = noteId
+}
+
+function closeTimelineExpand(): void {
+  timelineExpandNoteId.value = null
+}
+
 // 时光轴卡片渲染时给未初始化草稿补默认 datetime（本地当前时间）；追加成功后也重置为当前时间
 watch(
   () => filteredNotes.value,
@@ -500,10 +531,10 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序） -->
+          <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序），卡片内联前 5 条（S4），超限经「+N 条」开浮层看全量 -->
           <div class="timeline-list" data-testid="nt-timeline-list">
             <div
-              v-for="entry in sortedEntriesOf(note)"
+              v-for="entry in inlineEntriesOf(note)"
               :key="entry.id"
               class="timeline-item"
               :data-testid="`nt-entry-${entry.id}`"
@@ -568,6 +599,17 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- 超限「+N 条」按钮（S4）：点击开全量条目浮层 -->
+          <button
+            v-if="hiddenEntryCount(note) > 0"
+            type="button"
+            class="timeline-more-btn"
+            :data-testid="`nt-entry-more-${note.id}`"
+            @click.stop="openTimelineExpand(note.id)"
+          >
+            +{{ hiddenEntryCount(note) }} 条
+          </button>
+
           <!-- 卡片底部快速追加行：datetime（默认本地当前时间）+ content + 添加按钮 -->
           <div class="timeline-add-row">
             <input
@@ -608,6 +650,86 @@ onUnmounted(() => {
         {{ emptyText }}
       </div>
     </template>
+
+    <!-- 时光轴全量条目浮层（S4：「+N 条」开浮层看全量，列表区内滚动；复用 note-overlay 遮罩样式） -->
+    <div v-if="expandedTimelineNote" class="note-overlay timeline-expand-overlay" data-testid="nt-entry-overlay" @click.self="closeTimelineExpand">
+      <div class="timeline-expand-panel">
+        <div class="timeline-expand-head">
+          <span class="timeline-title">{{ expandedTimelineNote.title || '时光轴便签' }}</span>
+          <button type="button" class="btn-cancel" data-testid="nt-entry-overlay-close" @click="closeTimelineExpand">
+            关闭
+          </button>
+        </div>
+        <div class="timeline-expand-list">
+          <div
+            v-for="entry in sortedEntriesOf(expandedTimelineNote)"
+            :key="entry.id"
+            class="timeline-item"
+            :data-testid="`nt-entry-${entry.id}`"
+          >
+            <span class="timeline-dot"></span>
+            <template
+              v-if="editingEntry && editingEntry.noteId === expandedTimelineNote.id && editingEntry.entryId === entry.id"
+            >
+              <div class="timeline-item-edit">
+                <input
+                  v-model="entryEditDatetime"
+                  type="text"
+                  class="form-input"
+                  :data-testid="`nt-entry-edit-dt-${entry.id}`"
+                  placeholder="YYYY-MM-DD HH:mm"
+                />
+                <input
+                  v-model="entryEditContent"
+                  type="text"
+                  class="form-input"
+                  :data-testid="`nt-entry-edit-content-${entry.id}`"
+                  placeholder="记录内容"
+                />
+                <div class="timeline-item-actions">
+                  <button
+                    type="button"
+                    class="btn-save"
+                    :disabled="!canSaveEntry()"
+                    :data-testid="`nt-entry-save-${entry.id}`"
+                    @click="handleSaveEntry(expandedTimelineNote.id, entry.id)"
+                  >
+                    保存
+                  </button>
+                  <button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
+                    取消
+                  </button>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="timeline-item-body">
+                <div class="timeline-item-time">{{ entry.datetime }}</div>
+                <div class="timeline-item-content" v-html="renderedContent(entry.content)"></div>
+                <div class="timeline-item-actions">
+                  <button
+                    type="button"
+                    class="btn-edit"
+                    :data-testid="`nt-entry-edit-${entry.id}`"
+                    @click.stop="startEditEntry(expandedTimelineNote.id, entry)"
+                  >
+                    编辑
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-delete"
+                    :data-testid="`nt-entry-del-${entry.id}`"
+                    @click.stop="handleDeleteEntry(expandedTimelineNote.id, entry.id)"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
     <template v-if="activeType !== 'timeline'">
@@ -1220,6 +1342,24 @@ onUnmounted(() => {
   margin: 4px 0 2px;
 }
 
+/* 「+N 条」按钮（S4）：卡片内联条目超限时显示，点击开全量条目浮层 */
+.timeline-more-btn {
+  margin: 2px 0 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 8%, transparent);
+  color: var(--accent-color, var(--color-primary));
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.timeline-more-btn:hover {
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 16%, transparent);
+}
+
 .timeline-item {
   position: relative;
   display: flex;
@@ -1356,6 +1496,40 @@ onUnmounted(() => {
   justify-content: center;
   padding: 20px;
   background: rgba(0, 0, 0, 0.5);
+}
+
+/* 时光轴全量条目浮层（S4）：复用 note-overlay 遮罩，面板内列表滚动看全量 */
+.timeline-expand-overlay {
+  z-index: 1100;
+}
+
+.timeline-expand-panel {
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+}
+
+.timeline-expand-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.timeline-expand-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .note-form {
@@ -1843,6 +2017,10 @@ onUnmounted(() => {
   background-color: var(--bg-secondary, #1f2937);
 }
 
+:root.dark .timeline-expand-panel {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
 :root.dark .empty-state {
   background-color: var(--bg-secondary, #1f2937);
 }
@@ -1978,7 +2156,7 @@ onUnmounted(() => {
 /* ===== 桌面（≥769px）一屏布局：网格区 flex 占满 + 分页（R1/R2/R7）=====
    仅桌面作用域；移动端保持原状（页面滚动、全量渲染，composable 惰性不切片）。
    flex:1 + min-height:0 让网格区占满可用高度（RO 测量基准）；!fitsOnePage 退化时区内滚动兜底（R7）；
-   timeline-card 整卡含全部条目（R8 不翻条目），超高时卡内滚动（min-height:0 允许 grid item 收缩）。 */
+   timeline-card 卡内只内联前 5 条（S4），超限经「+N 条」开全量浮层（浮层内列表滚动），超高时卡内滚动兜底（min-height:0 允许 grid item 收缩）。 */
 @media (min-width: 769px) {
   .notes-grid,
   .timeline-grid {

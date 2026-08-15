@@ -80,7 +80,8 @@ const paging = reactive(
     items: () => filteredPasswords.value,
     rowHeight: 77, // row-heights.json: password = 77 (MAX 74.8 + 2px)
     containerRef: listEl,
-    gridRef: undefined
+    gridRef: listEl, // 与 containerRef 同元素：getComputedStyle(gridTemplateColumns) 实测列数 → 6
+    maxRows: 3 // 6 列 × 3 行 = 18 卡/页（行数经 clampMaxRows 钳制）
   })
 )
 
@@ -349,36 +350,19 @@ onUnmounted(() => {
         {{ searchQuery ? '没有找到匹配的密码' : '暂无保存的密码' }}
       </div>
 
-      <!-- 条目列表 -->
+      <!-- 条目列表（6 列卡片网格：桌面 3 行 × 6 列 = 18 卡/页；移动端 2 列全量渲染） -->
       <div v-else class="pwd-list" :class="{ 'pwd-list-scroll': !paging.fitsOnePage }" ref="listEl">
         <div v-for="entry in paging.pageItems" :key="entry.id" class="pwd-item" data-testid="pwd-item">
-          <div class="pwd-info">
-            <div class="pwd-item-header">
-              <img
-                v-if="getSiteIcon(entry.url)"
-                :src="getSiteIcon(entry.url)"
-                class="pwd-site-icon"
-                alt=""
-                loading="lazy"
-                @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
-              />
-              <span class="pwd-site-name">{{ entry.siteName }}</span>
-              <a
-                class="pwd-site-url"
-                :href="entry.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                :title="entry.url"
-              >{{ entry.url }}</a>
-            </div>
-            <div class="pwd-details">
-              <span class="pwd-username">👤 {{ entry.username }}</span>
-              <span class="pwd-masked">
-                🔑 {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
-              </span>
-            </div>
-          </div>
-          <div class="pwd-actions">
+          <div class="pwd-card-head">
+            <img
+              v-if="getSiteIcon(entry.url)"
+              :src="getSiteIcon(entry.url)"
+              class="pwd-site-icon"
+              alt=""
+              loading="lazy"
+              @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
+            />
+            <span class="pwd-site-name" :title="entry.siteName">{{ entry.siteName }}</span>
             <a
               class="pwd-icon-btn pwd-open"
               :href="entry.url"
@@ -387,6 +371,14 @@ onUnmounted(() => {
               title="打开网站"
               :data-testid="`pwd-open-${entry.id}`"
             >↗</a>
+          </div>
+          <div class="pwd-details">
+            <span class="pwd-username" :title="entry.username">👤 {{ entry.username }}</span>
+            <span class="pwd-masked" :title="isPasswordVisible(entry.id) ? entry.password : ''">
+              🔑 {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
+            </span>
+          </div>
+          <div class="pwd-actions">
             <button
               class="pwd-icon-btn"
               :title="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
@@ -418,7 +410,7 @@ onUnmounted(() => {
               title="删除"
               :data-testid="`pwd-delete-${entry.id}`"
               @click="handleDelete(entry.id)"
-            >🗑️            </button>
+            >🗑️</button>
           </div>
         </div>
       </div>
@@ -674,11 +666,12 @@ onUnmounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-/* ===== 列表 ===== */
+/* ===== 列表（卡片网格）===== */
 .pwd-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
 }
 
 /* 桌面（≥769px）自适应分页：列表区 flex:1 撑满剩余高度供 RO 测量；一屏放不下时 overflow-y:auto 兜底（R7） */
@@ -693,12 +686,19 @@ onUnmounted(() => {
   }
 }
 
+/* 移动端（≤768px）分页惰性（全量渲染）：网格收窄为 2 列 */
+@media (max-width: 768px) {
+  .pwd-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .pwd-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
@@ -710,60 +710,47 @@ onUnmounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-.pwd-info {
-  flex: 1;
+.pwd-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
-.pwd-item-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
 .pwd-site-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   object-fit: contain;
   flex-shrink: 0;
   background: var(--bg-secondary, var(--color-bg-hover));
 }
 
 .pwd-site-name {
-  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
-  max-width: 40%;
-}
-
-.pwd-site-url {
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-decoration: none;
-  flex: 1;
-  min-width: 0;
-}
-
-.pwd-site-url:hover {
-  color: var(--accent-color, var(--color-primary));
-  text-decoration: underline;
 }
 
 .pwd-details {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 13px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
   color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.pwd-username,
+.pwd-masked {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pwd-masked {
@@ -773,15 +760,18 @@ onUnmounted(() => {
 .pwd-actions {
   display: flex;
   gap: 2px;
-  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color, var(--color-border));
 }
 
 .pwd-icon-btn {
-  padding: 6px 7px;
+  padding: 3px 4px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1;
   opacity: 0.6;
   transition: opacity var(--transition-fast, 0.15s ease);
   border-radius: var(--radius-sm, 6px);
@@ -1029,7 +1019,6 @@ onUnmounted(() => {
   color: var(--text-primary, #f9fafb);
 }
 
-:root.dark .pwd-site-url,
 :root.dark .pwd-details {
   color: var(--text-secondary, #d1d5db);
 }
@@ -1059,15 +1048,5 @@ onUnmounted(() => {
 :root.dark .pwd-btn-primary:disabled {
   background-color: var(--input-bg, #374151);
   color: var(--text-muted, #9ca3af);
-}
-
-@media (max-width: 640px) {
-  .pwd-item {
-    flex-wrap: wrap;
-  }
-
-  .pwd-actions {
-    margin-left: auto;
-  }
 }
 </style>

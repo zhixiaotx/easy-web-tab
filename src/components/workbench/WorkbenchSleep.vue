@@ -95,8 +95,9 @@ const paging = reactive(
   usePanelPaging({
     items: () => sortedRecords.value,
     rowHeight: 118, // row-heights.json: sleep = 118（MAX 115.98 + 2px，R4）
+    maxRows: 1, // 6 列卡片网格契约：每页最多 1 行（6 张卡），行数钳制走 clampMaxRows
     containerRef: listEl,
-    gridRef: undefined
+    gridRef: listEl // 同元素：测高 + 实测 gridTemplateColumns 列数（M-1：独立 if 非 else-if）
   })
 )
 
@@ -534,10 +535,10 @@ onUnmounted(() => {
   background-color: var(--accent-hover, var(--color-primary-hover));
 }
 
-/* ===== 记录列表 ===== */
+/* ===== 记录列表（6 列卡片网格：桌面 6 卡/行 × maxRows 1 = 6 卡/页）===== */
 .ex-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -925,6 +926,13 @@ onUnmounted(() => {
   .field-type,
   .field-time {
     width: 100%;
+  }
+}
+
+/* ===== 移动端 ≤768px：分页惰性（全量渲染、无切片、无 pager），网格自适应列数 ===== */
+@media (max-width: 768px) {
+  .ex-list {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
 

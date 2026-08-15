@@ -110,10 +110,13 @@ export function usePanelPaging<T>(opts: PanelPagingOptions<T>): PanelPaging<T> {
   function attachRo(el: HTMLElement): void {
     ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
+        // 容器与网格可能是同一元素（Todo/Notes/Diary/Countdown 传同一 gridEl）：
+        // 用独立 if 而非 else-if，保证同元素时「测高」与「重读列数」都执行（M-1）
         if (entry.target === observedContainer) {
           availHeight.value = entry.contentRect.height
           rowsPerPage.value = calcRowsPerPage(entry.contentRect.height, opts.rowHeight, gap)
-        } else if (entry.target === observedGrid && observedGrid) {
+        }
+        if (entry.target === observedGrid && observedGrid) {
           colsPerRow.value = readGridCols(observedGrid) // 宽度变化（列数变化）→ 重读列数
         }
       }

@@ -6,6 +6,8 @@ import { localToday } from '@/composables/todoCore'
 import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
 import type { HabitFrequency } from '@/composables/habitCore'
 import { TODO_COLOR_PRESETS } from '@/types'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from './PanelPager.vue'
 
 const store = useWorkbenchHabitsStore()
 const toast = useToast()
@@ -41,6 +43,16 @@ const viewHabits = computed(() =>
     week: store.weeklyAttainmentOf(h.id, h.frequency, today)
   }))
 )
+
+// ===== 自适应分页（R4/R7：rowHeight 82 = row-heights.json MAX 79.58 + 2px；行式列表无 gridRef → colsPerRow 1）=====
+const listEl = ref<HTMLElement | null>(null)
+const paging = usePanelPaging({
+  items: () => viewHabits.value,
+  rowHeight: 82, // row-heights.json: habits = 82 (MAX 79.58 + 2px)
+  containerRef: listEl
+})
+// usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供列表变化回页 1）
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
 // ===== 新增/编辑表单状态机（编辑复用同一表单，提交/取消后回新增态）=====
 const formName = ref('')
@@ -79,12 +91,18 @@ async function handleAddOrSave(): Promise<void> {
       frequency: formFrequency.value,
       color: formColor.value
     })
-    if (result.ok) resetForm()
+    if (result.ok) {
+      resetForm()
+      goto(1)
+    }
     habitErrorToast(result)
     return
   }
   const result = await store.addHabit(name, formFrequency.value, formColor.value)
-  if (result.ok) resetForm()
+  if (result.ok) {
+    resetForm()
+    goto(1)
+  }
   habitErrorToast(result)
 }
 
@@ -108,7 +126,10 @@ async function handleDelete(id: string): Promise<void> {
   const h = store.habits.find(x => x.id === id)
   if (!confirm(`确定要删除习惯「${h?.name ?? ''}」吗？删除后打卡记录一并清除。`)) return
   const result = await store.deleteHabit(id)
-  if (result.ok && editingId.value === id) resetForm()
+  if (result.ok) {
+    if (editingId.value === id) resetForm()
+    goto(1)
+  }
   habitErrorToast(result)
 }
 
@@ -210,9 +231,9 @@ onMounted(() => {
       📌 还没有习惯，先在上方添加一个吧
     </div>
 
-    <div v-else class="hb-list">
+    <div v-else class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
       <div
-        v-for="v in viewHabits"
+        v-for="v in pageItems"
         :key="v.habit.id"
         class="hb-card"
         :class="{ 'is-checked': v.checked }"
@@ -247,6 +268,8 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
   </div>
 </template>
 
@@ -629,6 +652,18 @@ onMounted(() => {
 
   .hb-card-actions {
     margin-left: auto;
+  }
+}
+
+/* ===== 桌面自适应分页（一屏布局 Wave-2 T8：R1/R4/R7 契约；面板根 max-width 560px 保留居中单列）===== */
+@media (min-width: 769px) {
+  .hb-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .hb-list-scroll {
+    overflow-y: auto;
   }
 }
 </style>

@@ -1562,7 +1562,10 @@ onUnmounted(() => {
 }
 
 /* ===== 桌面中低宽度（769-1599px）：图表区并排压缩纵向占用（R1 一屏契约，1366×768 ledger 头部溢出修复；≥1600px 保持上下堆叠）===== */
-@media (min-width: 769px) and (max-width: 1599px) {
+@media (min-width: 769px) and (max-width: 1599px),
+  (min-width: 1600px) and (max-height: 900px) {
+  /* M-3：≥1600px 且视口较矮时图表堆叠会压塌 .ld-list（列表区高度趋近 0），
+     此带宽下保持并排以保住列表区可用高度（QA 仅覆盖 1366×768 与 1920×1080） */
   .ld-charts-row {
     display: flex;
     gap: 16px;

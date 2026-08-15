@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
 import { useToast } from '@/composables/useToast'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
+import PanelPager from './PanelPager.vue'
 
 const passwordsStore = usePasswordsStore()
 const sitesStore = useSitesStore()
@@ -69,6 +71,21 @@ const filteredPasswords = computed<PasswordEntry[]>(() => {
   if (!searchQuery.value) return passwordsStore.passwords
   return passwordsStore.searchPasswords(searchQuery.value)
 })
+
+// ===== 自适应分页（桌面 ≥769px；锁定/未解锁时列表不渲染 → containerRef 为 null → 分页惰性 R8）=====
+const listEl = ref<HTMLElement | null>(null)
+// reactive() 包裹：模板访问 paging.currentPage/pageItems/totalPages/fitsOnePage 时 ref 自动解包（PanelPager 消费契约）
+const paging = reactive(
+  usePanelPaging({
+    items: () => filteredPasswords.value,
+    rowHeight: 77, // row-heights.json: password = 77 (MAX 74.8 + 2px)
+    containerRef: listEl,
+    gridRef: undefined
+  })
+)
+
+// 搜索变化 → 回第 1 页（输入与清除按钮两条路径都经 searchQuery 变化触发）
+watch(searchQuery, () => paging.goto(1))
 
 // ===== 新增/编辑弹窗（共用表单，四字段全部必填）=====
 const showForm = ref(false)
@@ -333,8 +350,8 @@ onUnmounted(() => {
       </div>
 
       <!-- 条目列表 -->
-      <div v-else class="pwd-list">
-        <div v-for="entry in filteredPasswords" :key="entry.id" class="pwd-item" data-testid="pwd-item">
+      <div v-else class="pwd-list" :class="{ 'pwd-list-scroll': !paging.fitsOnePage }" ref="listEl">
+        <div v-for="entry in paging.pageItems" :key="entry.id" class="pwd-item" data-testid="pwd-item">
           <div class="pwd-info">
             <div class="pwd-item-header">
               <img
@@ -401,10 +418,13 @@ onUnmounted(() => {
               title="删除"
               :data-testid="`pwd-delete-${entry.id}`"
               @click="handleDelete(entry.id)"
-            >🗑️</button>
+            >🗑️            </button>
           </div>
         </div>
       </div>
+
+      <!-- 自适应分页（仅已解锁列表可见时渲染；totalPages>1 才显示） -->
+      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </div>
 
     <!-- 新增/编辑弹窗 -->
@@ -659,6 +679,18 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* 桌面（≥769px）自适应分页：列表区 flex:1 撑满剩余高度供 RO 测量；一屏放不下时 overflow-y:auto 兜底（R7） */
+@media (min-width: 769px) {
+  .pwd-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pwd-list-scroll {
+    overflow-y: auto;
+  }
 }
 
 .pwd-item {

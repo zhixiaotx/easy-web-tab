@@ -22,8 +22,15 @@
  *  - 截图：10 个菜单面板明/暗全页截图 → .omo/evidence/workbench-onescreen/<panel>-<light|dark>-<viewport>.png
  *  - 清理：结束杀掉自起的 dev server + 关闭 browser；与其它 QA 脚本禁止并行（同端口域）
  *
- * 本脚本只负责「脚手架 + 测量」，不实现最终的一屏无滚动断言（scrollHeight<=clientHeight+1 等）——
- * 那是 Wave-3 T13 的扩展点（本文件同路径继续扩展）。
+ * 本脚本负责「脚手架 + 测量 + 一屏契约断言」：行高测量写 row-heights.json 后，
+ * 追加 Wave-3 T13 的 S1-S8 断言波（record()/guard() + 真实 Playwright 交互）：
+ *   S1 桌面两视口 × 明暗 × 10 面板（健康 4 子面板并入）无纵向滚动 + 主页概览默认折叠
+ *   S2 分页条可见 + 边界禁用 + 翻页内容变化
+ *   S3 筛选/分类/月份切换后 goto(1) 回第 1 页
+ *   S4 时光轴卡内联 5 条 + 「+N 条」全量浮层（WorkbenchNotes 时光轴折叠）
+ *   S5 日记 ≥1100px 双栏 + dj-page-* 分页
+ *   S6 375×667 移动端分页惰性 + 页面滚动保留 + 无横向溢出
+ *   S7 明暗双主题 × 两视口 × 10 面板无横向溢出
  *
  * 运行：node scripts/qa-workbench-onescreen.mjs
  */
@@ -494,6 +501,373 @@ async function setDark(page, dark) {
   await page.evaluate((d) => document.documentElement.classList.toggle('dark', d), dark)
 }
 
+// ===== Wave-3 T13：S1-S8 一屏契约断言（record()/guard() + 真实交互）=====
+
+// 10 个菜单面板：wait=进入面板后的首屏 testid；toggle/item 用于展开默认收起的列表（健康子面板/记账）后实测「有数据时仍一屏」
+const CONTRACT_PANELS = [
+  { key: 'home', menu: 'home', wait: '[data-testid="home-greeting"]' },
+  { key: 'todos', menu: 'todos', wait: '[data-testid="td-item"]' },
+  { key: 'notes', menu: 'notes', wait: '[data-testid="note-card"]' },
+  { key: 'diary', menu: 'diary', wait: '.dj-card' },
+  { key: 'countdowns', menu: 'countdowns', wait: '[data-testid="cd-item"]' },
+  { key: 'pomodoro', menu: 'pomodoro', wait: '[data-testid="pm-timer-ring"]' },
+  { key: 'habits', menu: 'habits', wait: '.hb-card' },
+  { key: 'passwords', menu: 'passwords', wait: '[data-testid="pwd-item"]' },
+  {
+    key: 'ledger',
+    menu: 'ledger',
+    wait: '[data-testid="ld-toggle-list"]',
+    toggle: '[data-testid="ld-toggle-list"]',
+    item: '[data-testid="ld-item"]'
+  },
+  { key: 'health', menu: 'health', wait: '[data-testid="hd-tabs"]' }
+]
+
+// 健康 tabs 容器 4 个子面板（同一菜单项，逐 tab 实测展开态）
+const CONTRACT_HEALTH_TABS = [
+  { key: 'exercise', tab: 'exercise', toggle: '[data-testid="ex-toggle-list"]', item: '[data-testid="ex-item"]' },
+  { key: 'diet', tab: 'diet', toggle: '[data-testid="dt-toggle-list"]', item: '[data-testid="dt-item"]' },
+  { key: 'sleep', tab: 'sleep', toggle: '[data-testid="sl-toggle-list"]', item: '[data-testid="sl-item"]' },
+  { key: 'weight', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-item"]' }
+]
+
+async function navPanel(page, menu) {
+  await page.click(`[data-testid="wb-menu-${menu}"]`)
+  await page.waitForTimeout(120)
+}
+
+/** .wb-content 与 document 的滚动/尺寸度量（S1/S6/S7 共用）。 */
+async function metricsOf(page) {
+  return page.evaluate(() => {
+    const wc = document.querySelector('.wb-content')
+    const doc = document.documentElement
+    const cs = wc ? getComputedStyle(wc) : null
+    return {
+      wcScrollH: wc ? wc.scrollHeight : 0,
+      wcClientH: wc ? wc.clientHeight : 0,
+      wcScrollW: wc ? wc.scrollWidth : 0,
+      wcClientW: wc ? wc.clientWidth : 0,
+      docScrollH: doc.scrollHeight,
+      docClientH: doc.clientHeight,
+      docScrollW: doc.scrollWidth,
+      docClientW: doc.clientWidth,
+      wcOverflowY: cs ? cs.overflowY : ''
+    }
+  })
+}
+
+/** 读取 PanelPager 状态：无分页条（total≤1）→ null；否则 {page, total, text}。 */
+async function getPagerState(page) {
+  const pager = page.locator('[data-testid="panel-pager"]')
+  if ((await pager.count()) === 0) return null
+  const info = ((await page.locator('[data-testid="panel-pager-info"]').textContent()) || '').trim()
+  const m = info.match(/第\s*(\d+)\s*\/\s*(\d+)\s*页/)
+  return m ? { page: Number(m[1]), total: Number(m[2]), text: info } : { page: 0, total: 0, text: info }
+}
+
+/** 确保列表处于展开态（SPA 内切换面板列表状态持久化，重复点击会误收起——先探测再点）。 */
+async function ensureExpanded(page, toggleSel, itemSel) {
+  const visible = await page.locator(itemSel).first().isVisible().catch(() => false)
+  if (!visible) {
+    await page.click(toggleSel)
+    await page.waitForTimeout(120)
+  }
+  await page.waitForSelector(itemSel, { state: 'visible', timeout: 10000 })
+  await page.waitForTimeout(100)
+}
+
+async function runContractAssertions(page) {
+  // ===== S1+S7：桌面两视口 × 明暗 × 10 面板（健康 4 子面板并入）无纵向滚动 + 无横向溢出；主页断言概览默认折叠 =====
+  for (const vp of VIEWPORTS) {
+    for (const theme of ['light', 'dark']) {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await setDark(page, theme === 'dark')
+      await page.waitForTimeout(150)
+      for (const panel of CONTRACT_PANELS) {
+        await guard(`S1 ${panel.key} @ ${vp.label}/${theme} 无纵向滚动`, async () => {
+          await navPanel(page, panel.menu)
+          await page.waitForSelector(panel.wait, { state: 'visible', timeout: 10000 })
+          if (panel.toggle) await ensureExpanded(page, panel.toggle, panel.item)
+          await page.waitForTimeout(120)
+          const m = await metricsOf(page)
+          const ok = m.wcScrollH <= m.wcClientH + 1 && m.docScrollH <= m.docClientH + 1
+          record(`S1 ${panel.key} @ ${vp.label}/${theme} 无纵向滚动`, ok, {
+            wc: `${m.wcScrollH}/${m.wcClientH}`,
+            doc: `${m.docScrollH}/${m.docClientH}`
+          })
+          if (panel.key === 'home') {
+            const collapsed = await page.evaluate(() => {
+              const chev = document.querySelector('[data-testid="home-overview-chevron"]')
+              return !chev || !chev.classList.contains('open')
+            })
+            record(`S1 home @ ${vp.label}/${theme} 概览默认折叠`, collapsed, {})
+          }
+        })
+        await guard(`S7 ${panel.key} @ ${vp.label}/${theme} 无横向溢出`, async () => {
+          const m = await metricsOf(page)
+          const ok = m.wcScrollW <= m.wcClientW + 1 && m.docScrollW <= m.docClientW + 1
+          record(`S7 ${panel.key} @ ${vp.label}/${theme} 无横向溢出`, ok, {
+            wc: `${m.wcScrollW}/${m.wcClientW}`,
+            doc: `${m.docScrollW}/${m.docClientW}`
+          })
+        })
+      }
+      for (const sub of CONTRACT_HEALTH_TABS) {
+        await guard(`S1 health/${sub.key} @ ${vp.label}/${theme} 无纵向滚动`, async () => {
+          await navPanel(page, 'health')
+          await page.waitForSelector('[data-testid="hd-tabs"]', { state: 'visible', timeout: 10000 })
+          await page.click(`[data-testid="hd-tab-${sub.tab}"]`)
+          await page.waitForTimeout(100)
+          await ensureExpanded(page, sub.toggle, sub.item)
+          await page.waitForTimeout(120)
+          const m = await metricsOf(page)
+          const ok = m.wcScrollH <= m.wcClientH + 1 && m.docScrollH <= m.docClientH + 1
+          record(`S1 health/${sub.key} @ ${vp.label}/${theme} 无纵向滚动`, ok, {
+            wc: `${m.wcScrollH}/${m.wcClientH}`,
+            doc: `${m.docScrollH}/${m.docClientH}`
+          })
+        })
+        await guard(`S7 health/${sub.key} @ ${vp.label}/${theme} 无横向溢出`, async () => {
+          const m = await metricsOf(page)
+          const ok = m.wcScrollW <= m.wcClientW + 1 && m.docScrollW <= m.docClientW + 1
+          record(`S7 health/${sub.key} @ ${vp.label}/${theme} 无横向溢出`, ok, {
+            wc: `${m.wcScrollW}/${m.wcClientW}`,
+            doc: `${m.docScrollW}/${m.docClientW}`
+          })
+        })
+      }
+    }
+  }
+
+  // ===== S2：待办分页条可见 + 边界禁用 + 翻页内容变化（15 条 @ 1366x768 必多页）=====
+  await page.setViewportSize({ width: 1366, height: 768 })
+  await setDark(page, false)
+  await page.waitForTimeout(150)
+  await guard('S2 待办分页条：可见 + 边界禁用 + 翻页变化', async () => {
+    await navPanel(page, 'todos')
+    await page.waitForSelector('[data-testid="td-item"]', { state: 'visible', timeout: 10000 })
+    await page.click('[data-testid="td-search-reset"]')
+    await page.waitForTimeout(120)
+    const p0 = await getPagerState(page)
+    if (!p0 || p0.total < 2) {
+      record('S2 待办分页条（跳过：数据不足一页）', true, { pager: p0 })
+      return
+    }
+    const prevDisabled0 = await page.locator('[data-testid="panel-pager-prev"]').isDisabled()
+    const nextDisabled0 = await page.locator('[data-testid="panel-pager-next"]').isDisabled()
+    const first0 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
+    record(`S2 初始第 ${p0.page} / ${p0.total} 页（prev=${prevDisabled0} next=${nextDisabled0}）`, p0.page === 1 && prevDisabled0 && !nextDisabled0, { p0 })
+    await page.locator('[data-testid="panel-pager-next"]').click()
+    await page.waitForTimeout(120)
+    const p1 = await getPagerState(page)
+    const prevDisabled1 = await page.locator('[data-testid="panel-pager-prev"]').isDisabled()
+    const first1 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
+    record(`S2 下一页 → 第 ${p1 ? p1.page : '?'} 页 + 首条变化`, p1 && p1.page === 2 && !prevDisabled1 && first1 !== first0, { p1, first1 })
+    await page.locator('[data-testid="panel-pager-prev"]').click()
+    await page.waitForTimeout(120)
+    const p2 = await getPagerState(page)
+    const first2 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
+    record(`S2 上一页 → 第 ${p2 ? p2.page : '?'} 页 + 首条还原`, p2 && p2.page === 1 && first2 === first0, { p2 })
+    let guardN = 0
+    while (guardN < 12) {
+      const cur = await getPagerState(page)
+      if (!cur || cur.page >= cur.total) break
+      await page.locator('[data-testid="panel-pager-next"]').click()
+      await page.waitForTimeout(100)
+      guardN++
+    }
+    const pLast = await getPagerState(page)
+    const nextDisabledLast = await page.locator('[data-testid="panel-pager-next"]').isDisabled()
+    record(`S2 末页 next 禁用（第 ${pLast ? pLast.page : '?'} / ${pLast ? pLast.total : '?'} 页）`, pLast && pLast.page === pLast.total && nextDisabledLast, { pLast })
+  })
+
+  // ===== S3：筛选/分类/月份切换后 goto(1) 回第 1 页 =====
+  await guard('S3 待办搜索 goto(1)', async () => {
+    await navPanel(page, 'todos')
+    await page.waitForSelector('[data-testid="td-item"]', { state: 'visible', timeout: 10000 })
+    await page.click('[data-testid="td-search-reset"]')
+    await page.waitForTimeout(100)
+    const p0 = await getPagerState(page)
+    if (!p0 || p0.total < 2) {
+      record('S3 待办搜索 goto(1)（跳过：无分页）', true, {})
+      return
+    }
+    await page.locator('[data-testid="panel-pager-next"]').click()
+    await page.waitForTimeout(100)
+    // 「待办任务 1」命中 td_1 + td_10..td_15 共 7 条 → 仍 2 页 → 断言回第 1 页
+    await page.fill('[data-testid="td-search-title"]', '待办任务 1')
+    await page.click('[data-testid="td-search-btn"]')
+    await page.waitForTimeout(150)
+    const p1 = await getPagerState(page)
+    const itemCount = await page.locator('[data-testid="td-item"]').count()
+    const ok = itemCount > 0 && (!p1 || p1.page === 1)
+    record(`S3 待办搜索 goto(1)（搜索后第 ${p1 ? p1.page : '—'} 页 / 命中 ${itemCount} 条）`, ok, { p1, itemCount })
+  })
+  await guard('S3 待办分类 tab goto(1)', async () => {
+    const p0 = await getPagerState(page)
+    if (!p0 || p0.total < 2) {
+      record('S3 待办分类 tab goto(1)（跳过：无分页）', true, {})
+    } else {
+      await page.locator('[data-testid="panel-pager-next"]').click()
+      await page.waitForTimeout(100)
+      await page.click('[data-testid="td-cat-all"]')
+      await page.waitForTimeout(120)
+      const p1 = await getPagerState(page)
+      const itemCount = await page.locator('[data-testid="td-item"]').count()
+      const ok = itemCount > 0 && (!p1 || p1.page === 1)
+      record(`S3 待办分类 tab goto(1)（点击后第 ${p1 ? p1.page : '—'} 页 / ${itemCount} 条）`, ok, { p1, itemCount })
+    }
+    await page.click('[data-testid="td-search-reset"]')
+    await page.waitForTimeout(100)
+  })
+  await guard('S3 倒计时搜索 goto(1)', async () => {
+    await navPanel(page, 'countdowns')
+    await page.waitForSelector('[data-testid="cd-item"]', { state: 'visible', timeout: 10000 })
+    const p0 = await getPagerState(page)
+    if (!p0 || p0.total < 2) {
+      record('S3 倒计时搜索 goto(1)（跳过：无分页）', true, {})
+    } else {
+      await page.locator('[data-testid="panel-pager-next"]').click()
+      await page.waitForTimeout(100)
+      // 「倒计时事件 1」命中 cd_1 + cd_10 共 2 条 → 单页 → 分页条隐藏且条目仍在（页若卡在第 2 页则列表空）
+      await page.fill('[data-testid="cd-search-name"]', '倒计时事件 1')
+      await page.click('[data-testid="cd-search-btn"]')
+      await page.waitForTimeout(150)
+      const p1 = await getPagerState(page)
+      const itemCount = await page.locator('[data-testid="cd-item"]').count()
+      const ok = itemCount > 0 && (!p1 || p1.page === 1)
+      record(`S3 倒计时搜索 goto(1)（搜索后第 ${p1 ? p1.page : '—'} 页 / 命中 ${itemCount} 条）`, ok, { p1, itemCount })
+      await page.click('[data-testid="cd-search-reset"]')
+      await page.waitForTimeout(100)
+    }
+  })
+  await guard('S3 记账月份切换 goto(1)', async () => {
+    await navPanel(page, 'ledger')
+    await page.waitForSelector('[data-testid="ld-toggle-list"]', { state: 'visible', timeout: 10000 })
+    await ensureExpanded(page, '[data-testid="ld-toggle-list"]', '[data-testid="ld-item"]')
+    const p0 = await getPagerState(page)
+    if (!p0 || p0.total < 2) {
+      record('S3 记账月份切换 goto(1)（跳过：无分页）', true, {})
+    } else {
+      await page.locator('[data-testid="panel-pager-next"]').click()
+      await page.waitForTimeout(100)
+      await page.click('[data-testid="ld-prev"]')
+      await page.waitForTimeout(150)
+      const p1 = await getPagerState(page)
+      record(`S3 记账上月切换 goto(1)（第 ${p1 ? p1.page : '—'} 页）`, !p1 || p1.page === 1, { p1 })
+      await page.click('[data-testid="ld-today"]')
+      await page.waitForTimeout(150)
+      const p2 = await getPagerState(page)
+      record(`S3 记账本月切换 goto(1)（第 ${p2 ? p2.page : '—'} 页）`, !p2 || p2.page === 1, { p2 })
+    }
+  })
+
+  // ===== S4：时光轴卡内联 5 条 + 「+15 条」全量浮层（WorkbenchNotes S4 修复契约）=====
+  await guard('S4 时光轴卡内联 5 条 + 「+15 条」浮层', async () => {
+    await navPanel(page, 'notes')
+    await page.waitForSelector('[data-testid="nt-timeline-card"]', { state: 'visible', timeout: 10000 })
+    // 类型切「时光轴」+ 查询应用，保证只渲染 1 张时光轴卡（'all' 视图也会渲染时光轴段）
+    await page.selectOption('[data-testid="nt-type-select"]', 'timeline')
+    await page.click('[data-testid="nt-search-btn"]')
+    await page.waitForTimeout(150)
+    await page.waitForSelector('[data-testid="nt-timeline-card"]', { state: 'visible', timeout: 10000 })
+    const inlineCount = await page.locator('.timeline-card .timeline-item').count()
+    record('S4 时光轴卡内联条目 == 5', inlineCount === 5, { inlineCount })
+    const moreBtn = page.locator('[data-testid="nt-entry-more-nt_timeline_1"]')
+    const moreVisible = await moreBtn.isVisible().catch(() => false)
+    const moreText = moreVisible ? ((await moreBtn.textContent()) || '').trim() : ''
+    record('S4 「+N 条」按钮文案 == +15 条', moreVisible && moreText.includes('15'), { moreText })
+    if (moreVisible) {
+      await moreBtn.click()
+      await page.waitForSelector('[data-testid="nt-entry-overlay"]', { state: 'visible', timeout: 10000 })
+      await page.waitForTimeout(150)
+      const overlayCount = await page.locator('[data-testid="nt-entry-overlay"] .timeline-item').count()
+      record('S4 浮层全量条目 == 20', overlayCount === 20, { overlayCount })
+      const scroll = await page.evaluate(() => {
+        const list = document.querySelector('[data-testid="nt-entry-overlay"] .timeline-expand-list')
+        return list ? { sh: list.scrollHeight, ch: list.clientHeight } : { sh: 0, ch: 0 }
+      })
+      record('S4 浮层列表区内滚动', scroll.sh > scroll.ch, scroll)
+      await page.click('[data-testid="nt-entry-overlay-close"]')
+      await page.waitForSelector('[data-testid="nt-entry-overlay"]', { state: 'detached' })
+      record('S4 浮层关闭', true, {})
+    }
+  })
+
+  // ===== S5：日记 ≥1100px 双栏 + dj-page-* 分页 =====
+  for (const vp of VIEWPORTS) {
+    await guard(`S5 日记双栏 @ ${vp.label}`, async () => {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await page.waitForTimeout(150)
+      await navPanel(page, 'diary')
+      await page.waitForSelector('.dj-card', { state: 'visible', timeout: 10000 })
+      await page.waitForTimeout(150)
+      const pos = await page.evaluate(() => {
+        const ed = document.querySelector('.dj-editor')
+        const hist = document.querySelector('.dj-history')
+        if (!ed || !hist) return null
+        const r1 = ed.getBoundingClientRect()
+        const r2 = hist.getBoundingClientRect()
+        return { edX: r1.x, histX: r2.x, edY: r1.y, histY: r2.y, edW: r1.width, histW: r2.width }
+      })
+      const ok = Boolean(pos && pos.histX > pos.edX && Math.abs(pos.edY - pos.histY) < 20)
+      record(
+        `S5 日记双栏 @ ${vp.label}（编辑器 ${Math.round((pos && pos.edX) || 0)}px < 历史 ${Math.round((pos && pos.histX) || 0)}px）`,
+        ok,
+        pos
+      )
+    })
+  }
+  await guard('S5 日记 dj-page-* 分页 @ 1366x768', async () => {
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await page.waitForTimeout(150)
+    await navPanel(page, 'diary')
+    await page.waitForSelector('.dj-card', { state: 'visible', timeout: 10000 })
+    await page.waitForTimeout(150)
+    const pagerCount = await page.locator('[data-testid="dj-page-info"]').count()
+    if (pagerCount === 0) {
+      record('S5 日记 dj-page-*（跳过：单页）', true, {})
+    } else {
+      const info = ((await page.locator('[data-testid="dj-page-info"]').textContent()) || '').trim()
+      const prevDisabled = await page.locator('[data-testid="dj-page-prev"]').isDisabled()
+      const nextDisabled = await page.locator('[data-testid="dj-page-next"]').isDisabled()
+      const m = info.match(/第\s*(\d+)\s*\/\s*(\d+)\s*页/)
+      const ok = Boolean(m && Number(m[1]) === 1 && Number(m[2]) >= 2 && prevDisabled && !nextDisabled)
+      record(`S5 日记 dj-page-* @ 1366x768（${info}，prev=${prevDisabled} next=${nextDisabled}）`, ok, { info })
+    }
+  })
+
+  // ===== S6：375×667 移动端分页惰性 + 页面滚动保留（.wb-content overflow-y auto）+ 无横向溢出 =====
+  await guard('S6 移动端 375×667：待办全量渲染 + 无分页条 + 滚动保留', async () => {
+    await page.setViewportSize({ width: 375, height: 667 })
+    await page.waitForTimeout(200)
+    await navPanel(page, 'todos')
+    await page.waitForSelector('[data-testid="td-item"]', { state: 'visible', timeout: 10000 })
+    await page.click('[data-testid="td-search-reset"]')
+    await page.waitForTimeout(120)
+    const todoCount = await page.locator('[data-testid="td-item"]').count()
+    const pagerCount = await page.locator('[data-testid="panel-pager"]').count()
+    const m = await metricsOf(page)
+    const overflowAuto = m.wcOverflowY === 'auto'
+    const scrollable = m.wcScrollH > m.wcClientH
+    const noHOverflow = m.wcScrollW <= m.wcClientW + 1 && m.docScrollW <= m.docClientW + 1
+    record(
+      `S6 待办 @ 375×667（全量 ${todoCount} 条 / 分页条 ${pagerCount} / overflow-y=${m.wcOverflowY} / 可滚动=${scrollable} / 无横向溢出=${noHOverflow}）`,
+      todoCount === 15 && pagerCount === 0 && overflowAuto && scrollable && noHOverflow,
+      { todoCount, pagerCount, overflowY: m.wcOverflowY, scrollable, noHOverflow }
+    )
+  })
+  await guard('S6 移动端 375×667：记账展开列表无分页条 + 无横向溢出', async () => {
+    await navPanel(page, 'ledger')
+    await page.waitForSelector('[data-testid="ld-toggle-list"]', { state: 'visible', timeout: 10000 })
+    await ensureExpanded(page, '[data-testid="ld-toggle-list"]', '[data-testid="ld-item"]')
+    const pagerCount = await page.locator('[data-testid="panel-pager"]').count()
+    const m = await metricsOf(page)
+    const noHOverflow = m.wcScrollW <= m.wcClientW + 1 && m.docScrollW <= m.docClientW + 1
+    record(`S6 记账 @ 375×667（分页条 ${pagerCount} / 无横向溢出=${noHOverflow}）`, pagerCount === 0 && noHOverflow, { pagerCount, m })
+  })
+}
+
 let browser
 let qaFailed = false
 const screenshotCount = { n: 0 }
@@ -564,6 +938,9 @@ try {
   record(`截图完成（${SCREENSHOT_PANELS.length} 面板 × 明/暗 × ${VIEWPORTS.length} 视口）`, true, {
     count: screenshotCount.n
   })
+
+  // 7. Wave-3 T13：S1-S8 一屏契约断言（真实交互 + record()/guard()）
+  await runContractAssertions(page)
 
   qaFailed = results.some((r) => !r.ok)
 } catch (err) {

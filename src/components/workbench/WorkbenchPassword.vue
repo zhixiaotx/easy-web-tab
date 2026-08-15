@@ -524,6 +524,14 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+/* 已解锁主体（工具栏 + 列表 + 分页条）：flex 列，让 .pwd-list 的 flex:1 撑满剩余高度供 RO 测量
+   （缺此规则时 .pwd-main 为块级，.pwd-list flex:1 失效 → RO 只测到 1 行内容高 → rowsPerPage=1） */
+.pwd-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* ===== 认证区（设置/解锁共用）===== */
 .pwd-auth {
   display: flex;
@@ -674,8 +682,14 @@ onUnmounted(() => {
   align-content: start;
 }
 
-/* 桌面（≥769px）自适应分页：列表区 flex:1 撑满剩余高度供 RO 测量；一屏放不下时 overflow-y:auto 兜底（R7） */
+/* 桌面（≥769px）自适应分页：主体撑满面板高度，列表区 flex:1 撑满剩余高度供 RO 测量；
+   一屏放不下时 overflow-y:auto 兜底（R7） */
 @media (min-width: 769px) {
+  .pwd-main {
+    flex: 1;
+    min-height: 0;
+  }
+
   .pwd-list {
     flex: 1;
     min-height: 0;

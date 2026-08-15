@@ -4,13 +4,15 @@
  *
  *  S1 全新 profile：dj-empty 可见（空态契约「还没有日记…」，0 条）
  *  S2 注入 IndexedDB（easy-web-tab v5 / store 'diary' / 键 'items'，值 = DiaryData {entries} 9 条含今天）
- *     → reload → 第 1 页恰好 8 张 dj-card / 第 1 / 2 页 / next 可用 prev 禁用 /
+ *     → reload → 第 1 页恰为 pageSize 张 dj-card（自适应分页：页大小由可用高度/列数决定，
+ *     不再固定 8 卡/页；断言 pageInfo「第 1 / N 页」的 N == ceil(9/pageSize)）/ next 可用 prev 禁用 /
  *     至少一个 dj-card-date-* 含中文星期（diaryDateLabel 输出「周X」）/ 今天卡显示 dj-card-today-* = 今天
- *  S3 分页：next → 1 卡 + 第 2 / 2 页 + next 禁用 prev 可用；prev → 回 8 卡
+ *  S3 分页：next → 第 2 / N 页 + 内容变化 + prev 可用（末页时 next 禁用）；prev → 回第 1 页 + prev 禁用
  *  S4 保存流（date=今天 默认，upsert 今天条目）：填 Markdown → dj-char-count 更新 →
  *     保存 → toast「日记已保存」→ 今天卡仍在第 1 页带徽标 → reload 后持久化（卡片+徽标+新内容仍在）
  *  S5 空保存守卫：清空 → 保存 → toast「内容为空，未保存」+ 卡片数不变
- *  S6 删除流：点击今天卡 → dj-delete-btn 出现 → 删除（confirm 自动接受）→ 卡片消失
+ *  S6 删除流：点击今天卡 → dj-delete-btn 出现 → 删除（confirm 自动接受）→ 卡片消失 + 页码钳制
+ *     （9→8 条，第 1 页仍满 pageSize 张，pageInfo 变为 第 1 / ceil(8/pageSize) 页）
  *  S7 明/暗全页截图 + JSON 日志 → .omo/evidence/workbench-diary/
  *
  * 注入形状 = store.saveDiary 实际写入的 DiaryData { entries: toRaw(entries.value) }（非裸数组——
@@ -248,6 +250,7 @@ try {
     await pageB.waitForSelector('[data-testid="wb-menu-diary"]', { state: 'visible', timeout: 15000 })
 
     let injected = false
+    let diaryPageSize = 0 // 自适应分页实际页大小（第 1 页卡片数，S2b 捕获，供 S3/S6 推导期望总页数）
     await guard('S2a) 注入 IndexedDB（easy-web-tab v5 / diary / items，ARRAY 9 条含今天）', async () => {
       injected = await injectDiaryArray(pageB, diaryEntries)
       if (injected !== true) throw new Error(`inject 返回 ${injected}`)
@@ -258,19 +261,33 @@ try {
       })
     })
 
-    await guard('S2b) reload 后第 1 页恰好 8 张卡片 + 第 1 / 2 页 + next 可用 + prev 禁用', async () => {
+    await guard('S2b) reload 后第 1 页恰为 pageSize 张卡片（自适应）+ 第 1 / N 页 + next 可用 + prev 禁用', async () => {
       await pageB.reload({ waitUntil: 'networkidle' })
       await pageB.waitForSelector('[data-testid="wb-menu-diary"]', { state: 'visible', timeout: 15000 })
       await pageB.locator('[data-testid="wb-menu-diary"]').click()
       await pageB.waitForSelector('[data-testid="dj-page-info"]', { state: 'visible', timeout: 15000 })
       const p1Cards = await cardIds(pageB)
+      diaryPageSize = p1Cards.length // 自适应页大小 = 第 1 页实际卡片数（9 条 > pageSize 时第 1 页必满页）
       const pageInfo = (await pageB.locator('[data-testid="dj-page-info"]').textContent()).trim()
       const nextDisabled = await pageB.locator('[data-testid="dj-page-next"]').isDisabled()
       const prevDisabled = await pageB.locator('[data-testid="dj-page-prev"]').isDisabled()
+      // 期望总页数 = ceil(9 / pageSize)；第 1 页必须满页（否则总页数推导失真）
+      const expectedTotal = Math.ceil(diaryEntries.length / diaryPageSize)
       record(
-        'S2b) reload 后第 1 页恰好 8 张卡片 + 第 1 / 2 页 + next 可用 + prev 禁用',
-        injected === true && p1Cards.length === 8 && pageInfo === '第 1 / 2 页' && !nextDisabled && prevDisabled,
-        { cardCount: p1Cards.length, pageInfo, nextDisabled, prevDisabled, firstCardIds: p1Cards.slice(0, 3) }
+        'S2b) reload 后第 1 页恰为 pageSize 张卡片（自适应）+ 第 1 / N 页 + next 可用 + prev 禁用',
+        injected === true &&
+          diaryPageSize > 0 &&
+          pageInfo === `第 1 / ${expectedTotal} 页` &&
+          !nextDisabled &&
+          prevDisabled,
+        {
+          cardCount: p1Cards.length,
+          pageInfo,
+          expectedTotal,
+          nextDisabled,
+          prevDisabled,
+          firstCardIds: p1Cards.slice(0, 3)
+        }
       )
     })
 
@@ -295,35 +312,46 @@ try {
       })
     })
 
-    // ===================== S3 分页 =====================
-    await guard('S3a) 点击下一页 → 1 张卡片 + 第 2 / 2 页 + next 禁用 + prev 可用', async () => {
+    // ===================== S3 分页（自适应）=====================
+    await guard('S3a) 点击下一页 → 页码 +1 + 内容变化 + prev 可用（末页时 next 禁用）', async () => {
+      const firstBefore = (await cardIds(pageB))[0]
       await pageB.locator('[data-testid="dj-page-next"]').click()
       await pageB.waitForFunction(() => {
         const info = document.querySelector('[data-testid="dj-page-info"]')
-        return !!info && info.textContent.includes('第 2 / 2 页')
+        return !!info && /第\s*2\s*\/\s*\d+\s*页/.test(info.textContent)
       }, { timeout: 5000 })
       const cards = await cardIds(pageB)
       const pageInfo = (await pageB.locator('[data-testid="dj-page-info"]').textContent()).trim()
       const nextDisabled = await pageB.locator('[data-testid="dj-page-next"]').isDisabled()
       const prevDisabled = await pageB.locator('[data-testid="dj-page-prev"]').isDisabled()
+      // 期望总页数（S2b 已捕获 pageSize）；第 2 页非末页 ⇔ total > 2（此时 next 可用）
+      const expectedTotal = Math.ceil(diaryEntries.length / diaryPageSize)
+      const contentChanged = cards[0] !== firstBefore || cards.length !== diaryPageSize
       record(
-        'S3a) 点击下一页 → 1 张卡片 + 第 2 / 2 页 + next 禁用 + prev 可用',
-        cards.length === 1 && pageInfo === '第 2 / 2 页' && nextDisabled && !prevDisabled,
-        { cardCount: cards.length, pageInfo, nextDisabled, prevDisabled, lastCardIds: cards }
+        'S3a) 点击下一页 → 页码 +1 + 内容变化 + prev 可用（末页时 next 禁用）',
+        cards.length > 0 &&
+          pageInfo === `第 2 / ${expectedTotal} 页` &&
+          contentChanged &&
+          !prevDisabled &&
+          (expectedTotal === 2 ? nextDisabled : !nextDisabled),
+        { cardCount: cards.length, pageInfo, expectedTotal, nextDisabled, prevDisabled, lastCardIds: cards }
       )
     })
 
-    await guard('S3b) 点击上一页 → 回到 8 张卡片 + 第 1 / 2 页', async () => {
+    await guard('S3b) 点击上一页 → 回到第 1 页 + pageSize 张卡片 + prev 禁用', async () => {
       await pageB.locator('[data-testid="dj-page-prev"]').click()
       await pageB.waitForFunction(() => {
         const info = document.querySelector('[data-testid="dj-page-info"]')
-        return !!info && info.textContent.includes('第 1 / 2 页')
+        return !!info && info.textContent.includes('第 1 /')
       }, { timeout: 5000 })
       const cards = await cardIds(pageB)
       const pageInfo = (await pageB.locator('[data-testid="dj-page-info"]').textContent()).trim()
-      record('S3b) 点击上一页 → 回到 8 张卡片 + 第 1 / 2 页', cards.length === 8 && pageInfo === '第 1 / 2 页', {
+      const prevDisabled = await pageB.locator('[data-testid="dj-page-prev"]').isDisabled()
+      const expectedTotal = Math.ceil(diaryEntries.length / diaryPageSize)
+      record('S3b) 点击上一页 → 回到第 1 页 + pageSize 张卡片 + prev 禁用', cards.length === diaryPageSize && pageInfo === `第 1 / ${expectedTotal} 页` && prevDisabled, {
         cardCount: cards.length,
-        pageInfo
+        pageInfo,
+        prevDisabled
       })
     })
 
@@ -409,15 +437,22 @@ try {
         .catch(() => {})
       const after = (await cardIds(pageB)).length
       const gone = (await pageB.locator('[data-testid="dj-card-dy_qa_today"]').count()) === 0
-      // 9 条（8 在第 1 页 + 1 在第 2 页）删除今天条目后剩 8 条 → 第 1 页仍满 8 张（第 2 页溢出回填），
-      // 但总页数 2→1：断言「卡片消失 + 第 1 / 1 页」，不能断言 after === before - 1（回填使 after 恒等于 before）
+      // 9 条 → 删除今天条目后剩 8 条；第 1 页仍满 pageSize 张（第 2 页溢出回填），
+      // 总页数由 ceil(8/pageSize) 决定：断言「卡片消失 + 第 1 / ceil(8/pageSize) 页」，
+      // 不能断言 after === before - 1（回填使 after 恒等于 before）
       const pageInfo = ((await pageB.locator('[data-testid="dj-page-info"]').textContent()) ?? '').trim()
-      record('S6) 删除流：点击今天卡 → dj-delete-btn 出现 → 删除（confirm 自动接受）→ 卡片消失', gone && pageInfo === '第 1 / 1 页', {
-        before,
-        after,
-        gone,
-        pageInfo
-      })
+      const expectedTotal = Math.ceil((diaryEntries.length - 1) / diaryPageSize)
+      record(
+        'S6) 删除流：点击今天卡 → dj-delete-btn 出现 → 删除（confirm 自动接受）→ 卡片消失 + 页码钳制',
+        gone && pageInfo === `第 1 / ${expectedTotal} 页`,
+        {
+          before,
+          after,
+          gone,
+          pageInfo,
+          expectedTotal
+        }
+      )
     })
 
     // ===================== S7 明/暗全页截图 =====================

@@ -452,7 +452,7 @@ onUnmounted(() => {
       <button class="btn-cancel" @click="resetSearch">重置查询</button>
     </div>
 
-    <div v-else class="cd-grid" :class="{ 'cd-grid-scroll': !fitsOnePage }">
+    <div v-else ref="gridEl" class="cd-grid" :class="{ 'cd-grid-scroll': !fitsOnePage }">
       <div
         v-for="item in pageItems"
         :key="item.id"

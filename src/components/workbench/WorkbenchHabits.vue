@@ -231,7 +231,7 @@ onMounted(() => {
       📌 还没有习惯，先在上方添加一个吧
     </div>
 
-    <div v-else class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
+    <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
       <div
         v-for="v in pageItems"
         :key="v.habit.id"

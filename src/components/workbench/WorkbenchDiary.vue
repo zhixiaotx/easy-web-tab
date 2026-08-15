@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { dateKeyOf, diaryDateLabel, findDiaryByDate } from '@/composables/diaryCore'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 import { useToast } from '@/composables/useToast'
 import type { WorkbenchDiary } from '@/types'
 
 const store = useWorkbenchDiaryStore()
 const toast = useToast()
 
-// 历史卡片网格：8 条/页
-const PAGE_SIZE = 8
 // 今天日期键（dateKeyOf 本地日期，防 UTC 偏移；会话内不变，无需响应式）
 const todayKey = dateKeyOf(new Date())
 
@@ -29,20 +28,17 @@ const isDirty = computed(() => draft.value !== (selectedEntry.value?.content ?? 
 const charCount = computed(() => draft.value.length)
 
 // ===== 历史分页（消费 store.sortedEntries：date 降序 → createdAt 降序，排序公式属 diaryCore）=====
-const totalPages = computed(() => Math.max(1, Math.ceil(store.sortedEntries.length / PAGE_SIZE)))
-const currentPage = ref(1)
-const pageEntries = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return store.sortedEntries.slice(start, start + PAGE_SIZE)
-})
-
-// 删除/编辑导致总页数变化时自动钳制 currentPage（页码越界回退）
-watch(
-  () => store.sortedEntries.length,
-  () => {
-    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
-  }
-)
+// 自适应分页：rowHeight 192 = row-heights.json diary (MAX 190 + 2px，R4)；grid 元素 flex:1 min-height:0
+// 高度受限，ResizeObserver 测得的是可用高度而非内容高度（R3）；≤768px 惰性（全量渲染、pager 隐藏，R2）
+const historyGridEl = ref<HTMLElement | null>(null)
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+// （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证；与 Todo/Password 面板同构）
+const paging = reactive(usePanelPaging({
+  items: () => store.sortedEntries,
+  rowHeight: 192, // row-heights.json: diary = 192 (MAX 190 + 2px)
+  containerRef: historyGridEl,
+  gridRef: historyGridEl
+}))
 
 // ===== 日期切换（统一脏检查入口：日期输入 / 今日按钮 / 卡片点击）=====
 function selectDate(dateKey: string): void {
@@ -85,7 +81,7 @@ async function handleSave(): Promise<void> {
   // 与持久化内容对齐（store 保存时 trim），避免尾随空格造成永久脏态
   draft.value = trimmed
   // 新增条目 → 回第 1 页（更新已有条目保持当前页）
-  if (wasNew) currentPage.value = 1
+  if (wasNew) paging.goto(1)
   toast.success('日记已保存')
 }
 
@@ -94,9 +90,10 @@ async function handleDelete(): Promise<void> {
   if (!entry) return
   if (!confirm('确定要删除这篇日记吗？')) return
   await store.deleteEntry(entry.id)
-  // 选中日期已无条目：清空草稿（与空内容一致，不误判脏态）；页码越界由 watch 自动钳制
+  // 选中日期已无条目：清空草稿（与空内容一致，不误判脏态）；删除后回第 1 页（页码越界亦有 composable 钳制兜底）
   draft.value = ''
   previewMode.value = false
+  paging.goto(1)
 }
 </script>
 
@@ -134,65 +131,70 @@ async function handleDelete(): Promise<void> {
       </div>
     </div>
 
-    <!-- 编辑器 / Markdown 预览（切换保留草稿） -->
-    <textarea
-      v-if="!previewMode"
-      v-model="draft"
-      class="form-input dj-content-input"
-      data-testid="dj-content-input"
-      placeholder="写下今天的心情…"
-    ></textarea>
-    <div
-      v-else
-      class="dj-preview"
-      data-testid="dj-preview"
-      v-html="renderMarkdown(draft)"
-    ></div>
-
-    <!-- 历史区：卡片网格 + 左右翻页 -->
-    <div class="dj-history">
-      <h3 class="dj-history-title">历史日记</h3>
-
-      <div v-if="store.sortedEntries.length === 0" class="dj-empty" data-testid="dj-empty">
-        还没有日记，写下今天的第一篇吧
+    <!-- 主区：编辑器列 + 历史列（≥1100px 双栏 R9；≤1099px 单列堆叠） -->
+    <div class="dj-main">
+      <!-- 编辑器 / Markdown 预览（切换保留草稿） -->
+      <div class="dj-editor">
+        <textarea
+          v-if="!previewMode"
+          v-model="draft"
+          class="form-input dj-content-input"
+          data-testid="dj-content-input"
+          placeholder="写下今天的心情…"
+        ></textarea>
+        <div
+          v-else
+          class="dj-preview"
+          data-testid="dj-preview"
+          v-html="renderMarkdown(draft)"
+        ></div>
       </div>
 
-      <template v-else>
-        <div class="dj-grid">
-          <div
-            v-for="entry in pageEntries"
-            :key="entry.id"
-            class="dj-card"
-            :data-testid="`dj-card-${entry.id}`"
-            @click="handleCardClick(entry)"
-          >
-            <div class="dj-card-head">
-              <span class="dj-card-date" :data-testid="`dj-card-date-${entry.id}`">{{ diaryDateLabel(entry.date) }}</span>
-              <span v-if="entry.date === todayKey" class="dj-card-today" :data-testid="`dj-card-today-${entry.id}`">今天</span>
-            </div>
-            <div class="dj-card-preview" :data-testid="`dj-card-preview-${entry.id}`" v-html="renderMarkdown(entry.content)" @click="onCardPreviewClick"></div>
-            <div class="dj-card-words">{{ entry.content.length }} 字</div>
-          </div>
+      <!-- 历史区：卡片网格 + 左右翻页 -->
+      <div class="dj-history">
+        <h3 class="dj-history-title">历史日记</h3>
+
+        <div v-if="store.sortedEntries.length === 0" class="dj-empty" data-testid="dj-empty">
+          还没有日记，写下今天的第一篇吧
         </div>
 
-        <div class="dj-pagination">
-          <button
-            type="button"
-            class="page-btn"
-            :disabled="currentPage <= 1"
-            data-testid="dj-page-prev"
-            @click="currentPage--"
-          >‹ 上一页</button>
-          <span class="dj-page-info" data-testid="dj-page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-          <button
-            type="button"
-            class="page-btn"
-            :disabled="currentPage >= totalPages"
-            data-testid="dj-page-next"
-            @click="currentPage++"
-          >下一页 ›</button>
-        </div>
-      </template>
+        <template v-else>
+          <div ref="historyGridEl" class="dj-grid" :class="{ 'dj-grid-scroll': !paging.fitsOnePage }">
+            <div
+              v-for="entry in paging.pageItems"
+              :key="entry.id"
+              class="dj-card"
+              :data-testid="`dj-card-${entry.id}`"
+              @click="handleCardClick(entry)"
+            >
+              <div class="dj-card-head">
+                <span class="dj-card-date" :data-testid="`dj-card-date-${entry.id}`">{{ diaryDateLabel(entry.date) }}</span>
+                <span v-if="entry.date === todayKey" class="dj-card-today" :data-testid="`dj-card-today-${entry.id}`">今天</span>
+              </div>
+              <div class="dj-card-preview" :data-testid="`dj-card-preview-${entry.id}`" v-html="renderMarkdown(entry.content)" @click="onCardPreviewClick"></div>
+              <div class="dj-card-words">{{ entry.content.length }} 字</div>
+            </div>
+          </div>
+
+          <div v-if="paging.totalPages > 1" class="dj-pagination">
+            <button
+              type="button"
+              class="page-btn"
+              :disabled="paging.currentPage <= 1"
+              data-testid="dj-page-prev"
+              @click="paging.prev()"
+            >‹ 上一页</button>
+            <span class="dj-page-info" data-testid="dj-page-info">第 {{ paging.currentPage }} / {{ paging.totalPages }} 页</span>
+            <button
+              type="button"
+              class="page-btn"
+              :disabled="paging.currentPage >= paging.totalPages"
+              data-testid="dj-page-next"
+              @click="paging.next()"
+            >下一页 ›</button>
+          </div>
+        </template>
+      </div>
     </div>
   </div>
 </template>
@@ -593,5 +595,71 @@ async function handleDelete(): Promise<void> {
 .dj-card-preview :deep(img) {
   max-width: 100%;
   border-radius: 6px;
+}
+
+/* ===== 桌面 769-1099px：单列堆叠、历史网格高度受限（自适应分页测量基准，R3）===== */
+@media (min-width: 769px) and (max-width: 1099.98px) {
+  /* dj-main 纵向铺满工具栏以下剩余高度；历史列 flex:1、网格 flex:1 → RO 测得的是可用高度而非内容高度 */
+  .dj-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dj-history {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .dj-grid {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* ===== 桌面 ≥1100px：编辑器 | 历史 双栏（R9）===== */
+@media (min-width: 1100px) {
+  .dj-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    gap: 16px;
+  }
+
+  /* 编辑器列 + 历史列：等宽 flex 列，各自纵向布局、内部滚动 */
+  .dj-main > * {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* 历史网格填满列高（RO 测量基准，翻页 rowHeight 192） */
+  .dj-grid {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 编辑器列填满：textarea/preview 高度 100%（覆盖单列 min-height: 260px 规则，R9） */
+  .dj-main .dj-content-input,
+  .dj-main .dj-preview {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .dj-main .dj-preview {
+    max-height: none;
+  }
+}
+
+/* 列表区滚动兜底：仅 !fitsOnePage（可用高度放不下 ≥1 整行，罕见退化）时由模板类绑定启用（R7）；
+   限定桌面作用域，移动端保持页面滚动不受影响（R2） */
+@media (min-width: 769px) {
+  .dj-grid-scroll {
+    overflow-y: auto;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import {
   calcDepositTotal,
@@ -16,6 +16,8 @@ import {
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
 import type { LedgerCategory, LedgerEntry } from '@/types'
+import PanelPager from './PanelPager.vue'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchLedgerStore()
 const toast = useToast()
@@ -32,6 +34,12 @@ function shiftMonth(delta: number): void {
   const [y, m] = selectedMonth.value.split('-').map(Number)
   const d = new Date(y, m - 1 + delta, 1)
   selectedMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  paging.goto(1) // 月份切换 → 列表回第 1 页
+}
+
+function goToCurrentMonth(): void {
+  selectedMonth.value = currentMonth()
+  paging.goto(1) // 本月 → 列表回第 1 页
 }
 
 // ===== 月度统计（必须走 ledgerCore 纯函数，禁组件内重算公式）=====
@@ -141,6 +149,17 @@ const viewEntries = computed<EntryView[]>(() =>
   monthEntries.value.map(entry => ({ entry, cat: findCategory(store.categories, entry.categoryId) }))
 )
 
+// ===== 自适应分页（Wave-2 T11）：≥769px 分页；≤768px 惰性（全量渲染、pager 隐藏，R2）=====
+const listEl = ref<HTMLElement | null>(null)
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+// （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证；与 Todo/Diary 面板同构）
+const paging = reactive(usePanelPaging({
+  items: () => viewEntries.value,
+  rowHeight: 49, // row-heights.json: ledger = 49 (MAX 47 + 2px，R4)
+  containerRef: listEl,
+  gridRef: undefined
+}))
+
 function catNameOf(categoryId: string): string {
   return findCategory(store.categories, categoryId)?.name ?? '未知'
 }
@@ -198,12 +217,14 @@ async function handleSave(): Promise<void> {
   } else {
     await store.addEntry(note ? { ...payload, note } : payload)
   }
+  paging.goto(1) // 新增/编辑后列表回第 1 页（新记录在 date 降序列表顶部）
   cancelForm()
 }
 
 async function handleDelete(id: string): Promise<void> {
   if (confirm('确定要删除这笔记账吗？')) {
     await store.deleteEntry(id)
+    paging.goto(1) // 删除后列表回第 1 页
   }
 }
 
@@ -242,6 +263,7 @@ async function handleEditCatSave(): Promise<void> {
     return
   }
   editingCatId.value = null
+  paging.goto(1) // 分组变更 → 列表回第 1 页
 }
 
 async function handleAddCat(): Promise<void> {
@@ -253,6 +275,7 @@ async function handleAddCat(): Promise<void> {
     return
   }
   newCatName.value = ''
+  paging.goto(1) // 分组变更 → 列表回第 1 页
 }
 
 async function handleDeleteCat(id: string): Promise<void> {
@@ -264,7 +287,9 @@ async function handleDeleteCat(id: string): Promise<void> {
     } else {
       toast.error('该分组无法删除')
     }
+    return
   }
+  paging.goto(1) // 分组变更 → 列表回第 1 页
 }
 
 // ESC 关闭弹框（先记录弹框，再分组管理）
@@ -297,7 +322,7 @@ onUnmounted(() => {
       <button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</button>
       <button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</button>
       <input v-model="selectedMonth" type="month" class="form-input month-input" data-testid="ld-month" />
-      <button class="month-btn today-btn" data-testid="ld-today" @click="selectedMonth = currentMonth()">本月</button>
+      <button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</button>
       <div class="ld-month-actions">
         <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
           {{ store.showAmount ? '🙈 隐藏金额' : '👁️ 显示金额' }}
@@ -483,27 +508,31 @@ onUnmounted(() => {
       <div class="ld-empty-sub">＋ 新增第一笔记录</div>
     </div>
 
-    <div v-else-if="listExpanded" class="ld-list">
-      <div v-for="v in viewEntries" :key="v.entry.id" class="ld-item" data-testid="ld-item">
-        <span class="ld-date">{{ v.entry.date }}</span>
-        <span
-          class="ld-cat-badge"
-          :class="{ 'is-income': v.cat?.type === 'income' }"
-          :data-testid="`ld-cat-${v.entry.categoryId}`"
-        >
-          {{ v.cat?.name ?? '未知' }}
-        </span>
-        <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
-        <span v-else class="ld-note">—</span>
-        <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
-          {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
-        </span>
-        <div class="ld-actions">
-          <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
-          <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
+    <template v-else-if="listExpanded">
+      <div ref="listEl" class="ld-list" :class="{ 'ld-list-scroll': !paging.fitsOnePage }">
+        <div v-for="v in paging.pageItems" :key="v.entry.id" class="ld-item" data-testid="ld-item">
+          <span class="ld-date">{{ v.entry.date }}</span>
+          <span
+            class="ld-cat-badge"
+            :class="{ 'is-income': v.cat?.type === 'income' }"
+            :data-testid="`ld-cat-${v.entry.categoryId}`"
+          >
+            {{ v.cat?.name ?? '未知' }}
+          </span>
+          <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
+          <span v-else class="ld-note">—</span>
+          <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
+            {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
+          </span>
+          <div class="ld-actions">
+            <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
+            <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+    </template>
 
     <!-- 新增/编辑记录弹框 -->
     <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
@@ -1512,6 +1541,20 @@ onUnmounted(() => {
 
   .ld-donut-legend {
     width: 100%;
+  }
+}
+
+/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T11，R1/R2/R7）===== */
+@media (min-width: 769px) {
+  /* flex 列内可收缩占满剩余高度（T3 shell 契约 .wb-content > * flex:1 min-height:0 已在视图层就位） */
+  .ld-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区滚动兜底：仅 !fitsOnePage（一屏放不下）时由模板类绑定启用（R7） */
+  .ld-list-scroll {
+    overflow-y: auto;
   }
 }
 </style>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcDailyAttainment, sleepDurationHours } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
+import PanelPager from './PanelPager.vue'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 
 const store = useWorkbenchHealthStore()
@@ -86,6 +88,23 @@ const formNote = ref('')
 // ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/今日达标不受影响）=====
 const listExpanded = ref(false)
 
+// ===== 自适应分页（Wave-2 T10）：≥769px 分页；折叠时列表未挂载（listEl null）→ 分页惰性（R8）=====
+const listEl = ref<HTMLElement | null>(null)
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+const paging = reactive(
+  usePanelPaging({
+    items: () => sortedRecords.value,
+    rowHeight: 118, // row-heights.json: sleep = 118（MAX 115.98 + 2px，R4）
+    containerRef: listEl,
+    gridRef: undefined
+  })
+)
+
+function toggleList(): void {
+  listExpanded.value = !listExpanded.value
+  if (listExpanded.value) paging.goto(1) // 展开回第 1 页（T10）
+}
+
 // date + 入睡/起床时间 必填，否则保存按钮 disabled
 const isFormValid = computed(() => {
   return formDate.value !== '' && formSleepTime.value !== '' && formWakeTime.value !== ''
@@ -145,12 +164,14 @@ async function handleSaveRecord(): Promise<void> {
   } else {
     await store.addRecord('sleep', payload)
   }
+  paging.goto(1) // 新增/编辑后回第 1 页（T10）
   cancelRecordForm()
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
   if (confirm('确定要删除这条睡眠记录吗？')) {
     await store.deleteRecord('sleep', id)
+    paging.goto(1) // 删除后回第 1 页（T10）
   }
 }
 
@@ -219,7 +240,7 @@ onUnmounted(() => {
         v-if="store.records.sleep.length > 0"
         class="btn-toggle-list"
         data-testid="sl-toggle-list"
-        @click="listExpanded = !listExpanded"
+        @click="toggleList"
       >
         {{ listExpanded ? '收起记录' : '展开记录' }}（{{ store.records.sleep.length }}）
       </button>
@@ -237,22 +258,25 @@ onUnmounted(() => {
     </div>
 
     <!-- 记录列表 -->
-    <div v-else-if="listExpanded" class="ex-list">
-      <div v-for="rec in sortedRecords" :key="rec.id" class="ex-item" data-testid="sl-item">
-        <div class="ex-item-head">
-          <span class="ex-date">{{ rec.date }}</span>
-          <span class="ex-type-badge">{{ rec.sleepTime }} → {{ rec.wakeTime }}</span>
-        </div>
-        <div class="ex-meta">{{ fmtHours(rec.durationHours) }} 小时 · {{ '★'.repeat(rec.quality) }}</div>
-        <div v-if="rec.note" class="ex-note">{{ rec.note }}</div>
-        <div class="ex-actions">
-          <button class="btn-edit" :data-testid="`sl-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
-          <button class="btn-delete" :data-testid="`sl-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">
-            删除
-          </button>
+    <template v-else-if="listExpanded">
+      <div ref="listEl" class="ex-list" :class="{ 'ex-list-scroll': !paging.fitsOnePage }">
+        <div v-for="rec in paging.pageItems" :key="rec.id" class="ex-item" data-testid="sl-item">
+          <div class="ex-item-head">
+            <span class="ex-date">{{ rec.date }}</span>
+            <span class="ex-type-badge">{{ rec.sleepTime }} → {{ rec.wakeTime }}</span>
+          </div>
+          <div class="ex-meta">{{ fmtHours(rec.durationHours) }} 小时 · {{ '★'.repeat(rec.quality) }}</div>
+          <div v-if="rec.note" class="ex-note">{{ rec.note }}</div>
+          <div class="ex-actions">
+            <button class="btn-edit" :data-testid="`sl-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
+            <button class="btn-delete" :data-testid="`sl-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">
+              删除
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+    </template>
 
     <!-- 目标弹框 -->
     <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
@@ -901,6 +925,33 @@ onUnmounted(() => {
   .field-type,
   .field-time {
     width: 100%;
+  }
+}
+
+/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T10，R1/R2/R7/R8）===== */
+/* 容器 hop：.wb-health（WorkbenchHealth tabs 容器）块级 → flex 列，
+   子面板根才能 stretch（T3 只钉到 .wb-content > *，容器文件禁改 → 从子面板侧补齐） */
+@media (min-width: 769px) {
+  :global(.wb-health) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 面板根钉满 tab 内容区（R1 flex-stretch） */
+  .wb-exercise {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区可收缩占满剩余高度（PanelPager 下方） */
+  .ex-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区滚动兜底：仅 !fitsOnePage 时由模板类绑定启用（R7） */
+  .ex-list-scroll {
+    overflow-y: auto;
   }
 }
 </style>

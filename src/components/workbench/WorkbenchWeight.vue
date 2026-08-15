@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } from '@/composables/healthCore'
 import type { WeightChartPoint } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
+import PanelPager from './PanelPager.vue'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchHealthStore()
 
@@ -118,6 +120,23 @@ const formNote = ref('')
 // ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/图表不受影响）=====
 const listExpanded = ref(false)
 
+// ===== 自适应分页（Wave-2 T10）：≥769px 分页；折叠时列表未挂载（listEl null）→ 分页惰性（R8）=====
+const listEl = ref<HTMLElement | null>(null)
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+const paging = reactive(
+  usePanelPaging({
+    items: () => sortedWeightRecords.value,
+    rowHeight: 88, // row-heights.json: weight = 88（MAX 86.01 + 2px，R4）
+    containerRef: listEl,
+    gridRef: undefined
+  })
+)
+
+function toggleList(): void {
+  listExpanded.value = !listExpanded.value
+  if (listExpanded.value) paging.goto(1) // 展开回第 1 页（T10）
+}
+
 // date 必填 + weightKg > 0（允许 1 位小数），否则保存按钮 disabled
 const isRecordValid = computed(() => {
   const w = Number(formWeightKg.value)
@@ -160,12 +179,14 @@ async function handleSaveRecord(): Promise<void> {
   } else {
     await store.addRecord('weight', payload)
   }
+  paging.goto(1) // 新增/编辑后回第 1 页（T10）
   cancelRecordForm()
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
   if (confirm('确定要删除这条体重记录吗？')) {
     await store.deleteRecord('weight', id)
+    paging.goto(1) // 删除后回第 1 页（T10）
   }
 }
 
@@ -328,7 +349,7 @@ onUnmounted(() => {
         v-if="store.records.weight.length > 0"
         class="btn-toggle-list"
         data-testid="wt-toggle-list"
-        @click="listExpanded = !listExpanded"
+        @click="toggleList"
       >
         {{ listExpanded ? '收起记录' : '展开记录' }}（{{ store.records.weight.length }}）
       </button>
@@ -346,21 +367,24 @@ onUnmounted(() => {
     </div>
 
     <!-- 记录列表（date 降序，同日 createdAt 降序） -->
-    <div v-else-if="listExpanded" class="wt-list">
-      <div v-for="rec in sortedWeightRecords" :key="rec.id" class="wt-item" data-testid="wt-item">
-        <div class="wt-item-head">
-          <span class="wt-date">{{ rec.date }}</span>
-          <span class="wt-weight">{{ rec.weightKg }} kg</span>
-        </div>
-        <div v-if="rec.note" class="wt-note">{{ rec.note }}</div>
-        <div class="wt-actions">
-          <button class="btn-edit" :data-testid="`wt-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
-          <button class="btn-delete" :data-testid="`wt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">
-            删除
-          </button>
+    <template v-else-if="listExpanded">
+      <div ref="listEl" class="wt-list" :class="{ 'wt-list-scroll': !paging.fitsOnePage }">
+        <div v-for="rec in paging.pageItems" :key="rec.id" class="wt-item" data-testid="wt-item">
+          <div class="wt-item-head">
+            <span class="wt-date">{{ rec.date }}</span>
+            <span class="wt-weight">{{ rec.weightKg }} kg</span>
+          </div>
+          <div v-if="rec.note" class="wt-note">{{ rec.note }}</div>
+          <div class="wt-actions">
+            <button class="btn-edit" :data-testid="`wt-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
+            <button class="btn-delete" :data-testid="`wt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">
+              删除
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+    </template>
 
     <!-- 身高设置弹框 -->
     <div v-if="showHeightDialog" class="dialog-overlay" @click.self="closeHeightDialog">
@@ -1048,6 +1072,33 @@ onUnmounted(() => {
   .field-date,
   .field-weight {
     width: 100%;
+  }
+}
+
+/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T10，R1/R2/R7/R8）===== */
+/* 容器 hop：.wb-health（WorkbenchHealth tabs 容器）块级 → flex 列，
+   子面板根才能 stretch（T3 只钉到 .wb-content > *，容器文件禁改 → 从子面板侧补齐） */
+@media (min-width: 769px) {
+  :global(.wb-health) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 面板根钉满 tab 内容区（R1 flex-stretch） */
+  .wb-weight {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区可收缩占满剩余高度（PanelPager 下方） */
+  .wt-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区滚动兜底：仅 !fitsOnePage 时由模板类绑定启用（R7） */
+  .wt-list-scroll {
+    overflow-y: auto;
   }
 }
 </style>

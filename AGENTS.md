@@ -5,9 +5,9 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 23 root SFCs + 17 workbench SFCs (13 panels + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡), sizes, component-level anti-patterns
+- `src/components/AGENTS.md` — the 23 root SFCs + 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡), sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 15 Pinia stores and data-layer invariants
-- `src/composables/AGENTS.md` — the 28 composables (incl. auto-generated `presetIcons.ts`)
+- `src/composables/AGENTS.md` — the 30 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts, test scripts, and game rewrite rules
 
 ## STRUCTURE
@@ -16,8 +16,8 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
 │   ├── components/               # 23 root SFCs + workbench/ subdir (UI layer)
-│   │   └── workbench/            # 17 SFC：13 面板（主页/待办/便签/日记本/倒计时/番茄钟/习惯打卡/密码/记账 + 运动/饮食/睡眠/体重）+ WorkbenchHealth tabs 容器 + WorkbenchHealthReminders 只读提醒 + WeatherCard/CalendarAnchorCard 主页内嵌卡
-│   ├── composables/              # 28 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, workbenchMenuCore.ts, diaryCore.ts, noteCore.ts, noteMarkdown.ts, healthCore.ts, ledgerCore.ts, spotlightCore.ts, habitCore.ts, pomodoroCore.ts)
+│   │   └── workbench/            # 18 SFC：13 面板（主页/待办/便签/日记本/倒计时/番茄钟/习惯打卡/密码/记账 + 运动/饮食/睡眠/体重）+ PanelPager 共享分页条 + WorkbenchHealth tabs 容器 + WorkbenchHealthReminders 只读提醒 + WeatherCard/CalendarAnchorCard 主页内嵌卡
+│   ├── composables/              # 30 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, workbenchMenuCore.ts, panelPagingCore.ts, usePanelPaging.ts, diaryCore.ts, noteCore.ts, noteMarkdown.ts, healthCore.ts, ledgerCore.ts, spotlightCore.ts, habitCore.ts, pomodoroCore.ts)
 │   ├── stores/                   # 15 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchDiary.ts, workbenchHealth.ts, workbenchLedger.ts, workbenchPomodoro.ts, workbenchHabits.ts)
 │   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
 │   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台 (eager imports)
@@ -69,6 +69,7 @@ easy-web-tab/
 | Game URL rewrites | `scripts/serve-with-rewrites.cjs` | Custom rewrite rules for /games/* |
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
 | 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 10 项（主页/待办/便签/日记本/倒计时/番茄钟/习惯打卡/密码/健康管理/记账）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；运动/饮食/睡眠面板含只读定时提醒区块（WorkbenchHealthReminders.vue）；便签面板 WorkbenchNotes.vue 支持类型切换（普通/时光轴）+ 分类筛选 + 时光轴条目；日记本面板 WorkbenchDiary.vue（每日一篇，date 本地唯一，Markdown 编辑/预览 + 历史卡片分页）；主页 WorkbenchHome.vue=行动台布局（9 张统计卡收进可折叠「📊 概览」区 home-overview，默认折叠、localStorage user-home-overview-collapsed 记住，空数据按 visibleStatCards 隐藏，两行动面板前置统计卡之前）；数据经 `useIdb.ts` 存 IndexedDB |
+| 工作台一屏布局（自适应分页） | `src/composables/usePanelPaging.ts` + `src/composables/panelPagingCore.ts` + `src/components/workbench/PanelPager.vue` | 桌面 ≥769px 一屏布局（页面滚动关闭，`.wb-content` flex 列 + 面板根 flex:1 min-height:0 钉满）；长列表经共享分页条翻页（← 第 X / Y 页 →）；`usePanelPaging` 返回普通对象（非 reactive），ResizeObserver 测列表区可用高 + `gridTemplateColumns` 实测列数，行高常量来自 `.omo/evidence/workbench-onescreen/row-heights.json` 实测（MAX+2px）；≤768px 移动端分页惰性（全量渲染无切片）；11 面板接入（todo/notes 双实例/diary/countdown/habits/password/exercise/diet/sleep/weight/ledger），Home 与健康 tabs 容器不接入 |
 
 ## CODE MAP
 
@@ -101,6 +102,8 @@ easy-web-tab/
 | `emptyDiaryData` / `normalizeDiaryData` / `dateKeyOf` / `diaryDateLabel` / `isValidDateKey` / `sortDiaryEntries` / `findDiaryByDate` | functions | `src/composables/diaryCore.ts` | 日记纯逻辑：归一化（非对象/数组 → empty、非法 date 剔除、缺 id 回退 `dy_<date>`、content 强转字符串、时间戳回填，幂等）/本地日期键（`dateKeyOf` 防 UTC 偏移）/星期标签（'YYYY-MM-DD 周X'）/排序（date 降序 → createdAt 降序，不改入参）/按日期查找（组件/视图禁止内联重算） |
 | `LEGACY_BUILTIN_TODO_CATEGORIES` / `normalizeTodo` / `filterTodos` / `dueInfo` / `migrateLegacyBuiltinCategories` / `purgeLegacyBuiltinCategories` / `isTodoUncategorized` / `moveCustomCategoryInList` | functions | `src/composables/todoCore.ts` | 待办纯逻辑：归一化（categoryId trim 后空值剔除）/查询筛选（title/description/priority/status/categoryId，categoryId='uncategorized' 字面量匹配未分类）/截止倒计时主角（剩余/今天/逾期）/旧内置分类 work/life/study → 未分类迁移（migrateLegacyBuiltinCategories）+ 注册表残留清理（purgeLegacyBuiltinCategories，不改入参、幂等、返回新数组）/自定义分类移动（组件禁止重算） |
 | `WORKBENCH_MENU_KEYS` / `WORKBENCH_MENU_DEFAULT_ORDER` / `MENU_DEFAULT_LABELS` / `MENU_ICONS` + `normalizeWorkbenchMenu` / `moveMenuItem` / `renameMenuLabel` / `resolveMenuItems` | functions | `src/composables/workbenchMenuCore.ts` | 工作台菜单纯逻辑：10 键/默认序/默认名（逐字一致，load-bearing；home/todos/notes/diary/countdowns/pomodoro/habits/passwords/health/ledger，diary 默认名 日记本、图标键 diary→Icon.vue MDI notebook path）/图标常量；归一化（home 恒 index 0、未知键剔除、去重首次优先、缺失按默认序补全恒 10 项、label trim 去空截断 12 code point）/移动（`{ok, reason:'locked'|'boundary'|'not-found'|'ok'}`，不改入参）/改名（`{ok, reason:'empty'|'not-found'|'ok'}`）/解析渲染（label 回退默认名、icon 查表）；组件/视图禁止重算 |
+| `calcRowsPerPage` / `clampPage` / `slicePage` | functions | `src/composables/panelPagingCore.ts` | 面板自适应分页纯逻辑：`calcRowsPerPage(availH, rowHeight, gap=12)` 行槽公式 `Math.max(1, Math.floor((availH + gap) / (rowHeight + gap)))`（availH≤0 → 1）/`clampPage(page, totalPages)` 钳制 [1,totalPages]（totalPages≤0 → 1、分数四舍五入）/`slicePage(items, page, pageSize)` 等分切片（pageSize≤0 → []、越界钳末页、返回新数组不改入参）— 纯函数，零 vue/pinia/DOM 依赖，`node --experimental-strip-types` 可测（组件禁止内联重算） |
+| `usePanelPaging` | composable | `src/composables/usePanelPaging.ts` | 工作台面板自适应分页：options `{ items: () => T[], rowHeight, gap=12, containerRef, gridRef? }` → 返回**普通对象（非 reactive）**`{ isDesktop, rowsPerPage, colsPerRow, currentPage, totalPages, pageItems, fitsOnePage, next, prev, goto }`；matchMedia `(min-width: 769px)` 桌面检测；ResizeObserver 测高 + `getComputedStyle(grid).gridTemplateColumns` 实测列数；≤768px/rowsPerPage 0（未测量/区域未渲染）→ 分页惰性（pageItems 全量、totalPages 恒 1）；`fitsOnePage` = availH ≥ rowHeight+gap，false 时列表区回退 overflow-y:auto（R7） |
 | `useCountdownReminder` | composable | `src/composables/useCountdownReminder.ts` | Singleton reminder popup engine (60s tick + 9am summary) |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
 | `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v5, 8 core stores: todos/notes/diary/countdowns/passwords/health/ledger/settings + 3 aux stores: pomodoro/habits/snapshots; backup 导出 version 6, v1-v6 兼容导入, `idbImportAll` 版本范围守卫 `<1 || >6` 拒绝) |
@@ -125,6 +128,7 @@ easy-web-tab/
 - **记账敏感金额掩码规范**: 金额展示（收入/支出/结余/存款/支出比/分类占比金额+百分比/单条记录金额）默认隐藏显示 `****`，经 `ledgerCore` 的 `maskOrReveal`/`MASKED_TEXT` 统一掩码（组件禁止自造掩码串）；`showAmount`+`toggleAmountVisibility()` 为纯内存开关（刷新即重置，不写 IDB/localStorage）；空月 `—` 不掩码、消费笔数/共 N 条不掩码、`0.00` 存款照掩（真实值）；编辑弹框金额回填保持明文（用户主动编辑）；工作台 JSON 导出 `idbExportAll` 保持明文（与密码导出一致）
 - **便签数据规范**: 便签=「分类(NoteCategory)+便签(WorkbenchNote)」混合模型，IDB store 'notes' 存 `{categories, notes}`（NoteData）；便签带 `categoryId`（undefined/null/空串 = 未分类）+ `entries`（时光轴条目，仅 type='timeline' 保留，normal 类型归一化时强制剔除）；时光轴条目排序走 `sortTimelineEntries`（datetime 升序 → createdAt 升序，noteCore 纯函数，组件禁止内联排序公式）；类型筛选默认 'all'（全部类型，不过滤），普通/时光轴精确匹配，'all' 视图经 `partitionNotesByType` 拆分为双段（普通+时光轴）渲染；类型切换（normal ↔ timeline）保留 content+entries 数据不删除
 - **日记数据规范**: 日记=纯条目模型（无分类），每日一篇，`date` 本地 'YYYY-MM-DD' 唯一（`dateKeyOf` 本地日期防 UTC 偏移）；id `dy_` 前缀（缺失回退 `dy_<date>`）；IDB store 'diary' 存 DiaryData 对象 `{ entries }`——**`saveDiary` 写对象形状 `{ entries: toRaw(entries.value) }`，`normalizeDiaryData` 拒绝裸数组（Array.isArray → empty），写裸数组会导致保存后刷新日记全部丢失（T5 round-trip bug 实证），勿改回数组写入**；`upsertEntry` content trim 空跳过不保存；排序/归一化/星期标签一律走 `diaryCore` 纯函数（组件禁止内联重算）
+- **工作台一屏布局规范**: 桌面（≥769px，matchMedia `(min-width: 769px)`）页面滚动关闭，`.wb-content` flex 列 + 面板根 `flex:1; min-height:0` 钉满视口，长列表经共享分页条（PanelPager，testid `panel-pager`/`panel-pager-prev`/`panel-pager-info`/`panel-pager-next`，totalPages≤1 不渲染、边界禁用）翻页；分页一律走 `usePanelPaging` composable（核心公式委托 `panelPagingCore` 纯函数，组件禁止内联重算）；rowHeight 常量来自 `.omo/evidence/workbench-onescreen/row-heights.json` 实测 MAX+2px（todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 77/exercise 118/diet 118/sleep 118/weight 88/ledger 49，被测文件勿手改）；筛选/排序/增删改/月份切换后 `goto(1)` 回页 1（items 变化仅 clampPage 钳制不自动回 1）；`!fitsOnePage` 时列表区回退 `overflow-y:auto` 区内滚动兜底（`*-scroll` 类，R7）；≤768px 移动端分页惰性（全量渲染、无切片、无 pager）；条件渲染列表（健康折叠/密码锁态/记账折叠）containerRef null → 分页惰性直到渲染（R8）
 
 ## ANTI-PATTERNS (THIS PROJECT)
 
@@ -134,7 +138,7 @@ easy-web-tab/
 - **Only `video` is a permanently built-in category** — others (office, tech, etc.) are legacy seeds users can delete
 - **No built-in seed data** — `public/data/sites.md` was removed from the repo; `loadSites()` still fetches `/data/sites.md` (404 → caught → empty), so data comes solely from localStorage/imports
 - **No ESLint/Prettier** — code quality relies solely on TypeScript strict mode
-- **No test framework** — no vitest/jest/cypress; `countdownCore.ts`/`todoCore.ts`/`healthCore.ts`/`ledgerCore.ts`/`workbenchMenuCore.ts`/`noteCore.ts`/`diaryCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown` / `test:todo` / `test:health` / `test:ledger` / `test:menu` / `test:notes` / `test:diary`), UI 验证走手动/Playwright QA
+- **No test framework** — no vitest/jest/cypress; `countdownCore.ts`/`todoCore.ts`/`healthCore.ts`/`ledgerCore.ts`/`workbenchMenuCore.ts`/`noteCore.ts`/`diaryCore.ts`/`panelPagingCore.ts` pure functions are tested via `node --experimental-strip-types` (`npm run test:countdown` / `test:todo` / `test:health` / `test:ledger` / `test:menu` / `test:notes` / `test:diary` / `test:paging`), UI 验证走手动/Playwright QA
 - **User data priority**: localStorage data overrides built-in data (same-URL merge in `loadSites()`)
 - **No Pinia `persist` plugin** — persistence is manual: `localStorage.setItem` for sites/categories/engines/theme/icons; `idbPut` (via `useIdb.ts`) for countdowns/passwords/workbench todos/notes/diary/health/ledger
 
@@ -163,8 +167,10 @@ npm run test:notes      # Pure-function tests for noteCore.ts (归一化/排序/
 npm run test:diary      # Pure-function tests for diaryCore.ts (15 断言 T1-T15: 归一化/日期键/星期标签/排序/查找, node --experimental-strip-types)
 npm run test:note-markdown  # Pure-function tests for noteMarkdown.ts (18 断言 T1-T18: markdown 渲染/breaks 换行/链接 target+rel/XSS 转义/javascript: 链接抑制/空输入, node --experimental-strip-types)
 npm run test:menu       # Pure-function tests for workbenchMenuCore.ts (15 断言 T1-T15: 归一化/home 恒 0/移动/改名/解析/常量完整性, node --experimental-strip-types)
+npm run test:paging     # Pure-function tests for panelPagingCore.ts (15 断言 T1-T15: calcRowsPerPage/clampPage/slicePage 边界, node --experimental-strip-types)
 node scripts/qa-ledger-charts.mjs  # Playwright UI QA: 记账图表契约 S1-S7（后台 vite dev 16718-16726 + 注入 IndexedDB ledger 数据 → 趋势柱/环形图/回归断言 + 明暗全页截图存 .omo/evidence/ledger-charts/）
 node scripts/qa-workbench-home.mjs  # Playwright UI QA: 主页概览折叠契约 S1-S8（后台/复用 vite dev 16718-16726 → /workbench 主页 UI 播种待办 → 折叠默认态/展开持久化/空数据隐藏/面板顺序/作用域 nav/视觉瘦身/移动端 375 无横向滚动 + 明暗全页截图存 .omo/evidence/workbench-home/）
+node scripts/qa-workbench-onescreen.mjs  # Playwright UI QA: 一屏布局脚手架+行高测量（后台/复用 vite dev 16718-16726 → 注入 IDB v5 7 store + 密码 UI 播种 → 双视口首条行高 MAX+2px → row-heights.json 12 面板 + 明暗 40 截图存 .omo/evidence/workbench-onescreen/）
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

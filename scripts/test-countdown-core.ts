@@ -73,6 +73,18 @@ test('S3b normalizeCountdown color', () => {
   assert.equal(normalizeCountdown({ color: 123 as unknown as string }).color, '#3b82f6')
 })
 
+// S3d — emailReminder normalization: true/false preserved, non-boolean/absent dropped
+test('S3d normalizeCountdown emailReminder', () => {
+  // true → 保留 true
+  assert.equal(normalizeCountdown({ emailReminder: true }).emailReminder, true)
+  // false → 保留 false
+  assert.equal(normalizeCountdown({ emailReminder: false }).emailReminder, false)
+  // 非布尔值（如字符串 'yes'）→ 字段缺失
+  assert.ok(!('emailReminder' in normalizeCountdown({ emailReminder: 'yes' as unknown as boolean })))
+  // 缺省 → 字段缺失（缺省 = 不发邮件）
+  assert.ok(!('emailReminder' in normalizeCountdown({})))
+})
+
 // S3c — filterCountdowns: name fuzzy / category / repeat type / combined / empty
 function mkCountdown(id: string, name: string, repeat: Countdown['repeat'], category: Countdown['category'] = 'work'): Countdown {
   return {

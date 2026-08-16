@@ -3,7 +3,12 @@
 // 仅由 init() 触发后才访问 Pinia store（init 在 App.vue onMounted 调用，此时 Pinia 已激活）。
 import { shallowRef, readonly } from 'vue'
 import { useCountdownsStore } from '@/stores/countdowns'
+import { useAppSettingsStore } from '@/stores/settings'
 import { calcRemaining, getReminderDue } from '@/composables/countdownCore'
+import { sendDesktopNotification } from '@/composables/useDesktopNotify'
+import { sendReminderEmail } from '@/composables/reminderEmail'
+import { isEmailConfigured, shouldSendReminderEmail, buildEmailParams } from '@/composables/reminderCore'
+import type { ReminderEmailConfig } from '@/composables/reminderCore'
 
 export interface CountdownReminderItem {
   id: string
@@ -51,8 +56,11 @@ function pushItems(items: CountdownReminderItem[]): void {
 }
 
 // 分钟级 tick：到期发生时刻 → 记录 lastRemindedAt 并提醒；每天 9:00 后补「最后 3 天」摘要。
+// 三通道分发：弹窗（原有）+ 桌面通知（开关开启）+ 邮件（倒计时 emailReminder 且配置完整，仅到点不发摘要）。
 async function tick(): Promise<void> {
   const store = useCountdownsStore()
+  // 设置每 tick 只读一次（不逐条读）：desktopNotifyEnabled / 邮件五字段全部来自 useAppSettingsStore
+  const settingsStore = useAppSettingsStore()
   await store.loadCountdowns()
   const items: CountdownReminderItem[] = []
 
@@ -60,7 +68,24 @@ async function tick(): Promise<void> {
     const occ = getReminderDue(c.endDateTime, c.repeat, c.lastRemindedAt)
     if (occ !== null) {
       items.push({ id: c.id, name: c.name, label: occ.slice(5) })
+      // 桌面通知：开关开启即发（内部自行判定浏览器支持 + 权限 granted），tag 传倒计时 id 去重
+      if (settingsStore.desktopNotifyEnabled) {
+        sendDesktopNotification(c.name, `${occ} 已到`, c.id)
+      }
+      // lastRemindedAt 更新是防重复提醒的唯一机制，必须最先落库（不可被邮件发送阻塞）
       await store.updateCountdown(c.id, { lastRemindedAt: occ })
+      // 邮件提醒（仅到点，9:00 摘要永不发邮件）：倒计时 emailReminder=true 且 EmailJS 配置完整才发；
+      // 失败静默 console.warn，不重试、不 toast
+      const emailCfg: ReminderEmailConfig = {
+        enabled: settingsStore.reminderEmailEnabled,
+        toEmail: settingsStore.reminderEmailTo,
+        serviceId: settingsStore.reminderEmailServiceId,
+        templateId: settingsStore.reminderEmailTemplateId,
+        publicKey: settingsStore.reminderEmailPublicKey
+      }
+      if (isEmailConfigured(emailCfg) && shouldSendReminderEmail(c, emailCfg)) {
+        await sendReminderEmail(emailCfg, buildEmailParams(c, occ, emailCfg.toEmail, window.location.href))
+      }
     }
   }
 
@@ -72,7 +97,13 @@ async function tick(): Promise<void> {
       .map((c) => ({ c, r: calcRemaining(c.endDateTime, c.repeat) }))
       .filter(({ r }) => !r.isExpired && r.days <= 3)
     if (urgent.length > 0) {
-      items.push(...urgent.map(({ c, r }) => ({ id: c.id, name: c.name, label: r.label })))
+      for (const { c, r } of urgent) {
+        items.push({ id: c.id, name: c.name, label: r.label })
+        // 摘要同样走桌面通知（邮件仅限到点，摘要永不发邮件）
+        if (settingsStore.desktopNotifyEnabled) {
+          sendDesktopNotification(c.name, r.label, c.id)
+        }
+      }
       localStorage.setItem(STORAGE_KEY, localToday())
     }
   }

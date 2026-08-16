@@ -253,6 +253,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     repeat?: CountdownRepeat | null
     category?: CountdownCategory
     color?: string
+    emailReminder?: boolean
   }): Promise<void> {
     const now = new Date().toISOString()
     countdowns.value.push(
@@ -263,6 +264,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
         repeat: input.repeat ?? null,
         category: input.category,
         color: input.color,
+        emailReminder: input.emailReminder,
         createdAt: now,
         updatedAt: now,
         sortOrder:
@@ -283,6 +285,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
       lastRemindedAt?: string
       sortOrder?: number
       showOnDisplay?: boolean
+      emailReminder?: boolean
     }
   ): Promise<void> {
     const index = countdowns.value.findIndex(c => c.id === id)

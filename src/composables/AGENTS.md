@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-30 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+33 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
 
 ## STRUCTURE
 
@@ -16,8 +16,11 @@ composables/
 ├── useDeadLinkChecker.ts   # Batch link check with 500ms throttle per request
 ├── useToast.ts             # Singleton toast state (module-level shallowRef, NOT Pinia)
 ├── useCrypto.ts            # crypto-js AES-CBC + PBKDF2 encryption (98 lines) — used by passwords store
-├── countdownCore.ts        # 倒计时纯逻辑引擎（550 行）: 6 种重复规则 + 分类（内置 6 + 任意自定义，normalizeCountdown 保留 trim 非空值、categoryLabel 未知回退原名）+ calcRemaining/sortCountdowns/moveCustomCategoryInList
-├── useCountdownReminder.ts # Singleton 提醒弹框引擎：60s tick + 到点提醒 + 每天 9:00 最后3天摘要
+├── countdownCore.ts        # 倒计时纯逻辑引擎（550 行）: 6 种重复规则 + 分类（内置 6 + 任意自定义，normalizeCountdown 保留 trim 非空值、categoryLabel 未知回退原名）+ calcRemaining/sortCountdowns/moveCustomCategoryInList（normalizeCountdown 对 emailReminder 仅布尔透传、非布尔/缺失不输出字段=缺省不发邮件）
+├── reminderCore.ts         # 提醒纯逻辑引擎（52 行）: ReminderEmailConfig{enabled,toEmail,serviceId,templateId,publicKey} + isEmailConfigured(enabled 且四字段 trim 非空)/shouldSendReminderEmail(c.emailReminder===true && 配置完整)/buildEmailParams({to_email,countdown_name,occurrence_time,app_url?}) — 纯函数零 vue/pinia，node --experimental-strip-types 可测
+├── useCountdownReminder.ts # Singleton 提醒引擎（三通道）：60s tick 单例（每轮读一次 settings store）+ 到点→弹框（CountdownReminder.vue）+桌面通知（开关开时）+邮件（仅到点：isEmailConfigured && shouldSendReminderEmail 才发）+ 每天 9:00 最后3天摘要（弹框+桌面通知，**永不发邮件**）；lastRemindedAt 先落库不被邮件阻塞
+├── useDesktopNotify.ts     # 桌面通知封装（38 行）: notificationsSupported()/notificationPermission()/requestNotifyPermission()（不支持→'unsupported'、异常→'denied'）/sendDesktopNotification(title,body,tag?)（仅 permission==='granted' 才 new Notification，tag 去重，失败 false 静默）；不主动请求权限（UI 层职责）
+├── reminderEmail.ts        # EmailJS v4 邮件发送封装（21 行）: sendReminderEmail(cfg, params): Promise<boolean>（send 第 4 参传 { publicKey } 免全局 init），res?.status===200 判定，失败 console.warn 返回 false 不重试不 toast
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
 ├── useAppSettingsDialog.ts # AppSettingsDialog 逻辑（弹窗尺寸/工作台菜单 tab 状态）
@@ -53,7 +56,10 @@ composables/
 | Toast notifications | `useToast.ts` | Singleton pattern — shared across entire app |
 | Encryption | `useCrypto.ts` | crypto-js: AES-CBC + PBKDF2 key derivation (pure JS, works over HTTP) |
 | Countdown math | `countdownCore.ts` | `parseRepeat`/`normalizeCountdown`（保留任意 trim 后非空分类，'once'→null）/`calcNextOccurrence`/`getReminderDue`/`calcRemaining`/`sortCountdowns`/`moveCustomCategoryInList`（自定义分类上移/下移一格，不改入参）/`repeatLabel`/`categoryLabel`（未知分类回退原名）/`serializeRepeatYaml` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
-| Countdown reminder | `useCountdownReminder.ts` | 单例弹框引擎：60s `setInterval` tick + init 立即 tick + visibilitychange 立即 tick；到点写 `lastRemindedAt` 去重；9:00 最后3天摘要用 `STORAGE_KEY`(`user-countdown-reminder-date`) 防同日重复 |
+| Countdown reminder | `useCountdownReminder.ts` | 单例三通道引擎：60s `setInterval` tick + init/visibilitychange 立即 tick（每轮读一次 settings store）；到点写 `lastRemindedAt` 去重（先落库不被邮件阻塞）→ 弹框（CountdownReminder.vue）+ 桌面通知（desktopNotifyEnabled 开时 sendDesktopNotification）+ 邮件（仅到点：isEmailConfigured && shouldSendReminderEmail 才发，buildEmailParams 带 window.location.href 作 app_url）；9:00 最后3天摘要用 `STORAGE_KEY`(`user-countdown-reminder-date`) 防同日重复，摘要只弹框+桌面通知**永不发邮件** |
+| 提醒纯逻辑/邮件配置 | `reminderCore.ts` | `ReminderEmailConfig`(enabled/toEmail/serviceId/templateId/publicKey)/`isEmailConfigured`(enabled 且四字段 trim 非空，任一缺失 → false 短路)/`shouldSendReminderEmail`(c.emailReminder===true && 配置完整)/`buildEmailParams`(模板变量契约 to_email/countdown_name/occurrence_time 恒输出 + app_url 仅非空时附加) — 纯函数零 vue/pinia，`node --experimental-strip-types` 可测（scripts/test-reminder-core.ts 10 断言 T1-T10） |
+| 桌面通知 | `useDesktopNotify.ts` | `notificationsSupported()`/`notificationPermission()`（不支持→'unsupported'）/`requestNotifyPermission()`（异常→'denied'，不向上抛）/`sendDesktopNotification(title,body,tag?)`（仅 permission==='granted' 才 new Notification，tag 同标签去重，失败静默 false）；发送前自行判定权限，绝不主动请求（请求属 UI 层，由设置页触发） |
+| 邮件提醒发送 | `reminderEmail.ts` | `sendReminderEmail(cfg, params): Promise<boolean>` — EmailJS v4 `emailjs.send(serviceId, templateId, params, { publicKey })`（options 传公钥免全局 init），`res?.status===200` 判定；失败 console.warn 返回 false，不重试不 toast |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
 | IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords/settings stores + workbench todos/notes/diary/health/ledger/pomodoro/habits; `idbImportAll` validates backup version (导出 version 6；接受 v1-v6，范围守卫 `version < 1 || version > 6` 拒绝——勿改回裸 `!== 6`，曾拒旧备份 T1 回归已修；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据（兜底在范围守卫通过后执行），notes 数组旧格式 → `{categories:[], notes:[...]}` 归一化包装，snapshots 缺键跳过不 put) |
@@ -75,7 +81,7 @@ composables/
 - `useCountdownReminder` is also a singleton (module-level shallowRef + `init()` 幂等守卫)
 - `useGames` is also a singleton with a `loaded` guard flag
 - `presetIcons.ts` is auto-generated — never edit manually
-- `healthCore.ts` / `ledgerCore.ts` / `noteCore.ts` / `diaryCore.ts` / `panelPagingCore.ts` are pure-logic engines — **禁止 import vue/pinia/DOM**（`node --experimental-strip-types` 测试运行器无法执行）；组件/面板只调用它们，禁止重算公式
+- `healthCore.ts` / `ledgerCore.ts` / `noteCore.ts` / `diaryCore.ts` / `panelPagingCore.ts` / `reminderCore.ts` are pure-logic engines — **禁止 import vue/pinia/DOM**（`node --experimental-strip-types` 测试运行器无法执行）；组件/面板只调用它们，禁止重算公式
 - 便签分类 `showInTabs` 归一化规则：仅布尔值透传（false 隐藏 / true 显式显示），缺失不新增字段（undefined=默认显示）；`normalizeNoteCategory` + `tabCategoriesOf` 是标签页可见性唯一来源，组件禁止自造过滤公式
 - 记账金额掩码格式唯一来源 `ledgerCore` 的 `MASKED_TEXT`（'****'），组件不得自行硬编码掩码串
 - **工作台一屏布局规范**: 桌面 ≥769px 一屏布局（`.wb-content` flex 列 + 面板根 flex:1 min-height:0 钉满），长列表分页一律走 `usePanelPaging` composable，核心公式委托 `panelPagingCore` 纯函数（组件禁止内联重算）；rowHeight 常量唯一来源 `.omo/evidence/workbench-onescreen/row-heights.json` 实测 MAX+2px（todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 116/exercise 533/diet 537/sleep 563/weight 88/ledger 49，被测文件勿手改）；密码/运动/饮食/睡眠 4 面板为 6 列卡片网格（`repeat(6, minmax(0,1fr))` + gridRef 实测列数）且 `maxRows` 钳制每页行数（password maxRows:3=18 卡/页、exercise/diet/sleep maxRows:1=6 卡/页，行数经 clampMaxRows 归一）；筛选/排序/增删改/月份切换后 `goto(1)` 回页 1（items 变化仅 clampPage 钳制不自动回 1）；`fitsOnePage` = 一屏容纳 ≥1 整行（availH ≥ rowHeight+gap），false 时列表区回退 `overflow-y:auto` 区内滚动兜底（`*-scroll` 类，R7）；≤768px 移动端分页惰性（全量渲染、无切片、无 pager）；条件渲染列表（健康折叠/密码锁态/记账折叠）containerRef null → 分页惰性直到渲染（R8）

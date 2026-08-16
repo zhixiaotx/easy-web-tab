@@ -478,7 +478,8 @@ export const useSitesStore = defineStore('sites', () => {
           const lastRemindedLine = c.lastRemindedAt ? `\n    lastRemindedAt: '${c.lastRemindedAt}'` : ''
           const sortOrderLine = typeof c.sortOrder === 'number' ? `\n    sortOrder: ${c.sortOrder}` : ''
           const showOnDisplayLine = c.showOnDisplay === false ? '\n    showOnDisplay: false' : ''
-          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${colorLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
+          const emailReminderLine = c.emailReminder === true ? '\n    emailReminder: true' : ''
+          return `  - id: ${c.id}\n    name: ${c.name}\n    endDateTime: ${c.endDateTime}${repeatPrefix}${repeatBlock}${categoryLine}${colorLine}${lastRemindedLine}${sortOrderLine}${showOnDisplayLine}${emailReminderLine}\n    createdAt: ${c.createdAt}\n    updatedAt: ${c.updatedAt}`
         }).join('\n\n')}\n\n`
       : ''
 

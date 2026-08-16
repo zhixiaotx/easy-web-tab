@@ -140,6 +140,16 @@ const monthEntries = computed(() =>
 // ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/统计不受影响）=====
 const listExpanded = ref(false)
 
+// ===== 图表区展开/折叠（默认展开）。一屏布局下统计卡+图表会压塌列表区（实测列表仅剩 2-91px、0-1 行可见），
+// 故展开记录时自动收起图表腾出列表空间，收起记录时恢复图表（手动开关仍可覆盖）=====
+const chartsExpanded = ref(true)
+
+function toggleList(): void {
+  listExpanded.value = !listExpanded.value
+  chartsExpanded.value = !listExpanded.value // 展开记录 → 收起图表；收起记录 → 恢复图表
+  paging.goto(1) // 列表展开/收起后回第 1 页
+}
+
 interface EntryView {
   entry: LedgerEntry
   cat: LedgerCategory | undefined
@@ -378,8 +388,20 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 图表区：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），≥1600px 上下堆叠 -->
-    <div class="ld-charts-row">
+    <!-- 图表区（可折叠，默认展开）：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），
+         ≥1600px 上下堆叠；展开记录时自动收起图表，为记录列表腾出空间 -->
+    <div class="ld-charts-section">
+      <button
+        type="button"
+        class="ld-charts-toggle"
+        data-testid="ld-charts-toggle"
+        :aria-expanded="chartsExpanded"
+        @click="chartsExpanded = !chartsExpanded"
+      >
+        <span>📈 图表</span>
+        <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
+      </button>
+      <div v-show="chartsExpanded" class="ld-charts-row">
       <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
       <section class="ld-card" data-testid="ld-trend">
         <h3 class="ld-card-title">近 6 月收支趋势</h3>
@@ -496,11 +518,12 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      </div>
     </div>
 
     <!-- 操作栏：数量 + 管理分组 + 新增 -->
     <div class="ld-headbar">
-      <button class="btn-manage" data-testid="ld-toggle-list" @click="listExpanded = !listExpanded">
+      <button class="btn-manage" data-testid="ld-toggle-list" @click="toggleList">
         {{ listExpanded ? '收起记录' : '展开记录' }}（{{ monthEntries.length }}）
       </button>
     </div>
@@ -947,6 +970,43 @@ onUnmounted(() => {
 
 .ld-donut-dot.is-accent {
   background: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 图表区折叠开关 ===== */
+.ld-charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ld-charts-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-full, 999px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.ld-charts-toggle:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.ld-charts-chevron {
+  transition: transform 0.15s ease;
+}
+
+.ld-charts-chevron.open {
+  transform: rotate(180deg);
 }
 
 /* ===== 操作栏 ===== */
@@ -1481,7 +1541,8 @@ onUnmounted(() => {
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete,
-:root.dark .month-btn {
+:root.dark .month-btn,
+:root.dark .ld-charts-toggle {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);

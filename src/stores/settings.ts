@@ -3,12 +3,14 @@ import { ref, computed, toRaw } from 'vue'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
 import {
   WORKBENCH_MENU_DEFAULT_ORDER,
+  WORKBENCH_MENU_KEYS,
   normalizeWorkbenchMenu,
+  normalizeWorkbenchMenuVisibility,
   moveMenuItem,
   renameMenuLabel,
   resolveMenuItems
 } from '@/composables/workbenchMenuCore'
-import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
+import type { WorkbenchMenuItem, WorkbenchMenuVisibility } from '@/composables/workbenchMenuCore'
 import type { AppSettingsData } from '@/types'
 
 // ========================================
@@ -158,7 +160,8 @@ function parseSettingsData(raw: unknown): AppSettingsData {
     buttonOpacity: 1,
     bgOpacity: 1,
     workbenchMenuOrder: [...WORKBENCH_MENU_DEFAULT_ORDER],
-    workbenchMenuLabels: {}
+    workbenchMenuLabels: {},
+    workbenchMenuVisibility: {}
   }
   const data = raw as Record<string, unknown>
   if (!data || typeof data !== 'object') return out
@@ -188,6 +191,12 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   const menu = normalizeWorkbenchMenu(data.workbenchMenuOrder, data.workbenchMenuLabels)
   out.workbenchMenuOrder = menu.order
   out.workbenchMenuLabels = menu.labels
+  // 工作台菜单开关：仅已知键布尔值（false = 隐藏）；非法/缺失一律显示
+  out.workbenchMenuVisibility = normalizeWorkbenchMenuVisibility(data.workbenchMenuVisibility)
+  // 导航筛选栏展开态：仅采纳布尔；非法/缺失回退默认（收起）
+  if (typeof data.navFiltersExpanded === 'boolean') {
+    out.navFiltersExpanded = data.navFiltersExpanded
+  }
   // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
   // （清除城市后重载不复活旧值，非法值回退默认即未配置）
   if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
@@ -208,13 +217,17 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const buttonOpacity = ref<number>(1)
   const bgOpacity = ref<number>(1)
 
-  // 工作台菜单顺序/名称：初始即默认序（拷贝，勿直接引用只读常量），杜绝空菜单闪屏
+  // 工作台菜单顺序/名称/开关：初始即默认（顺序拷贝，勿直接引用只读常量），杜绝空菜单闪屏
   const workbenchMenuOrder = ref<string[]>([...WORKBENCH_MENU_DEFAULT_ORDER])
   const workbenchMenuLabels = ref<Record<string, string>>({})
+  const workbenchMenuVisibility = ref<WorkbenchMenuVisibility>({})
 
   // 工作台城市（天气卡显示城市）与侧栏折叠态：默认未配置（undefined = 无城市 / 不折叠）
   const workbenchCity = ref<string | undefined>(undefined)
   const workbenchSidebarCollapsed = ref<boolean | undefined>(undefined)
+
+  // 导航管理页分类/标签栏展开态：默认收起（false）
+  const navFiltersExpanded = ref<boolean>(false)
 
   // ========================================
   // 持久化
@@ -228,8 +241,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       bgOpacity: bgOpacity.value,
       workbenchMenuOrder: toRaw(workbenchMenuOrder.value),
       workbenchMenuLabels: toRaw(workbenchMenuLabels.value),
+      workbenchMenuVisibility: toRaw(workbenchMenuVisibility.value),
       workbenchCity: toRaw(workbenchCity.value),
-      workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value)
+      workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value),
+      navFiltersExpanded: navFiltersExpanded.value
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
@@ -298,6 +313,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       const menu = normalizeWorkbenchMenu(effective.workbenchMenuOrder, effective.workbenchMenuLabels)
       workbenchMenuOrder.value = menu.order
       workbenchMenuLabels.value = menu.labels
+      workbenchMenuVisibility.value = normalizeWorkbenchMenuVisibility(effective.workbenchMenuVisibility)
+      navFiltersExpanded.value = effective.navFiltersExpanded === true
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -369,8 +386,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     bgOpacity.value = 1
     workbenchMenuOrder.value = [...WORKBENCH_MENU_DEFAULT_ORDER]
     workbenchMenuLabels.value = {}
+    workbenchMenuVisibility.value = {}
     workbenchCity.value = undefined
     workbenchSidebarCollapsed.value = undefined
+    navFiltersExpanded.value = false
     const root = document.documentElement
     for (const id of DIALOG_IDS) {
       root.style.removeProperty(DIALOG_VARS[id].widthVar)
@@ -412,15 +431,52 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   }
 
   function resetWorkbenchMenu(): { ok: boolean; reason: 'ok' } {
-    // 区块级恢复默认：只重置菜单两字段，不触碰 dialogSizes/opacity/CSS 变量，不调用 resetDefaults
+    // 区块级恢复默认：只重置菜单三字段（顺序/名称/开关），不触碰 dialogSizes/opacity/CSS 变量，不调用 resetDefaults
     workbenchMenuOrder.value = [...WORKBENCH_MENU_DEFAULT_ORDER]
     workbenchMenuLabels.value = {}
+    workbenchMenuVisibility.value = {}
     persist()
     return { ok: true, reason: 'ok' as const }
   }
 
-  // 菜单渲染项（label 回退默认名，icon 查表）——默认态恒 10 项、home 首位
+  // ========================================
+  // 工作台菜单开关 / 导航筛选栏展开态
+  // ========================================
+  function setWorkbenchMenuVisibility(key: string, visible: boolean) {
+    const next = { ...workbenchMenuVisibility.value }
+    if (visible) delete next[key] // 恢复显示 = 移除记录（缺省即显示）
+    else next[key] = false
+    workbenchMenuVisibility.value = next
+    persist()
+  }
+
+  function setNavFiltersExpanded(v: boolean) {
+    navFiltersExpanded.value = v
+    persist()
+  }
+
+  // 菜单开关判定（缺失键 = 显示）；home 恒显示（视图/设置弹窗锁定其开关）
+  function isWorkbenchMenuEnabled(key: string): boolean {
+    return workbenchMenuVisibility.value[key] !== false
+  }
+
+  // 全键开关视图（模板/组件消费：Record<菜单键, boolean>，缺失恒 true）
+  const workbenchMenuEnabled = computed<Record<string, boolean>>(() => {
+    const out: Record<string, boolean> = {}
+    for (const key of WORKBENCH_MENU_KEYS) {
+      out[key] = workbenchMenuVisibility.value[key] !== false
+    }
+    return out
+  })
+
+  // 菜单渲染项（label 回退默认名，icon 查表；开关关闭的键剔除）——默认态恒 10 项、home 首位
   const workbenchMenuItems = computed<WorkbenchMenuItem[]>(() =>
+    resolveMenuItems(workbenchMenuOrder.value, workbenchMenuLabels.value, workbenchMenuVisibility.value)
+  )
+
+  // 全量菜单项（不受开关过滤）：设置弹窗「工作台菜单」列表渲染用——开关关闭的行仍保留，
+  // 否则关闭后该行消失将无法重新开启
+  const workbenchMenuAllItems = computed<WorkbenchMenuItem[]>(() =>
     resolveMenuItems(workbenchMenuOrder.value, workbenchMenuLabels.value)
   )
 
@@ -430,9 +486,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     bgOpacity,
     workbenchMenuOrder,
     workbenchMenuLabels,
+    workbenchMenuVisibility,
+    workbenchMenuEnabled,
     workbenchMenuItems,
+    workbenchMenuAllItems,
     workbenchCity,
     workbenchSidebarCollapsed,
+    navFiltersExpanded,
     initSettings,
     applySettings,
     setDialogSize,
@@ -440,6 +500,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setBgOpacity,
     setWorkbenchCity,
     setWorkbenchSidebarCollapsed,
+    setWorkbenchMenuVisibility,
+    isWorkbenchMenuEnabled,
+    setNavFiltersExpanded,
     resetDefaults,
     moveWorkbenchMenuItem,
     renameWorkbenchMenuItem,

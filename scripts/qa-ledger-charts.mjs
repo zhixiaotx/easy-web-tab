@@ -4,7 +4,7 @@
  * 在 E1 脚手架（后台启动/复用 vite dev 16718-16726 → /workbench → 点击 wb-menu-ledger →
  * 6 统计卡 + 月份导航 + 截图 + JSON 日志）基础上，扩展完整场景契约：
  *
- *  - 数据注入：在点击菜单触发 loadLedger 之前，直接向 IndexedDB（easy-web-tab v4，store 'ledger'，键 'items'）
+ *  - 数据注入：在点击菜单触发 loadLedger 之前，直接向 IndexedDB（easy-web-tab v5，store 'ledger'，键 'items'）
  *    写入 6 个月（当前真实月 + 前 5 个月，跨年安全）的记账数据——每月 4 条（工资收入 + 房贷/餐饮/出行支出）。
  *    注意 income 取 `10000 + 月索引×2000`（最大值 20000 = nice 天花板，使最高柱顶与顶部网格线严格对齐，
  *    满足 S1 的对齐断言；若用 ×1000 则最大值 15000 → nice 天花板 20000，顶部对齐断言不成立）。
@@ -197,13 +197,13 @@ function buildFutureLedgerData() {
 }
 
 /**
- * 向 IndexedDB easy-web-tab v4 的 store 'ledger' 以键 'items' 写入 LedgerData。
+ * 向 IndexedDB easy-web-tab v5 的 store 'ledger' 以键 'items' 写入 LedgerData。
  * 在页面上下文执行（应用自身的 openIdb 缓存独立，二次连接同版本不触发 versionchange）。
  */
 async function injectLedgerData(page, data) {
   return page.evaluate((payload) => {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('easy-web-tab', 4)
+      const req = indexedDB.open('easy-web-tab', 5)
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains('ledger')) req.result.createObjectStore('ledger')
       }
@@ -483,21 +483,29 @@ try {
   const toggleVisible = await page.locator('[data-testid="ld-toggle-amounts"]').isVisible()
   const listToggleVisible = await page.locator('[data-testid="ld-toggle-list"]').isVisible()
   const ratioVisible = await page.locator('[data-testid="ld-ratio-block"]').isVisible()
-  // 记录列表默认收起 → 展开后校验条目存在
+  // 记录列表默认收起 → 展开后校验条目存在；展开列表自动收起图表（一屏空间契约）
   await page.locator('[data-testid="ld-toggle-list"]').click()
   await page.waitForSelector('[data-testid="ld-item"]', { state: 'visible', timeout: 5000 })
   const itemCount = await page.locator('[data-testid="ld-item"]').count()
+  const chartsToggleExists = (await page.locator('[data-testid="ld-charts-toggle"]').count()) === 1
+  const chartsRowHidden = await page.locator('.ld-charts-row').evaluate((el) => getComputedStyle(el).display === 'none')
   record(
-    'S6) 回归：6 统计卡/月份导航/新增/掩码开关/列表开关/占比块 + 记录条目（展开后 ≥1）全部完好',
+    'S6) 回归：6 统计卡/月份导航/新增/掩码开关/列表开关/占比块 + 记录条目（展开后 ≥1）+ 展开列表自动收起图表全部完好',
     statsVisibleAgain &&
       monthNavAgain &&
       addVisible &&
       toggleVisible &&
       listToggleVisible &&
       ratioVisible &&
-      itemCount >= 1,
-    { statAgain, navAgain, addVisible, toggleVisible, listToggleVisible, ratioVisible, itemCount }
+      itemCount >= 1 &&
+      chartsToggleExists &&
+      chartsRowHidden,
+    { statAgain, navAgain, addVisible, toggleVisible, listToggleVisible, ratioVisible, itemCount, chartsToggleExists, chartsRowHidden }
   )
+
+  // 收起记录 → 图表恢复展开（S7 截图呈现默认视觉形态）
+  await page.locator('[data-testid="ld-toggle-list"]').click()
+  await page.waitForTimeout(300)
 
   // ===== e) 证据截图（脚本内 fs.writeFileSync，禁止 Write 工具）=====
   mkdirSync(EVIDENCE_DIR, { recursive: true })
@@ -533,7 +541,7 @@ try {
     result: `${verdict} (${totalPassed}/${results.length})`,
     browser: 'chromium (playwright, headless)',
     dev_server: `vite on ${devBase} (${startedByUs ? 'started by script' : 'reused existing'})`,
-    injection: 'page.evaluate → IndexedDB easy-web-tab v4 / ledger / items（点击菜单挂载 loadLedger 前注入）',
+    injection: 'page.evaluate → IndexedDB easy-web-tab v5 / ledger / items（点击菜单挂载 loadLedger 前注入）',
     evidence_png: EVIDENCE_PNG,
     evidence_light: EVIDENCE_LIGHT,
     evidence_dark: EVIDENCE_DARK,

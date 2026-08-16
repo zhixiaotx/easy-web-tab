@@ -44,12 +44,14 @@ const viewHabits = computed(() =>
   }))
 )
 
-// ===== 自适应分页（R4/R7：rowHeight 82 = row-heights.json MAX 79.58 + 2px；行式列表无 gridRef → colsPerRow 1）=====
+// ===== 自适应分页（R4/R7：rowHeight 82 = row-heights.json MAX 79.58 + 2px；
+// 右侧卡片网格：gridRef = listEl 同元素实测列数 → 每页 = rowsPerPage × colsPerRow）=====
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewHabits.value,
   rowHeight: 82, // row-heights.json: habits = 82 (MAX 79.58 + 2px)
-  containerRef: listEl
+  containerRef: listEl,
+  gridRef: listEl
 })
 // usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供列表变化回页 1）
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
@@ -147,139 +149,164 @@ onMounted(() => {
 
 <template>
   <div class="wb-habits">
-    <!-- 本周统计卡：习惯总数 / 今日已打卡 / 本周打卡达成 -->
-    <div class="stat-card">
-      <div class="stat-header">
-        <span class="stat-icon">🔥</span>
-        <span class="stat-label">本周统计</span>
-      </div>
-      <div class="hb-summary-row">
-        <div class="hb-summary-item" data-testid="hb-total-count">
-          <span class="hb-summary-value">{{ stats.total }}</span>
-          <span class="hb-summary-label">个习惯</span>
+    <!-- 左栏：统计卡 + 新增/编辑表单 -->
+    <div class="hb-side">
+      <!-- 本周统计卡：习惯总数 / 今日已打卡 / 本周打卡达成 -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-label">本周统计</span>
         </div>
-        <div class="hb-summary-item" data-testid="hb-today-count">
-          <span class="hb-summary-value">{{ stats.todayChecked }}/{{ stats.total }}</span>
-          <span class="hb-summary-label">今日已打卡</span>
-        </div>
-        <div class="hb-summary-item" data-testid="hb-week-count">
-          <span class="hb-summary-value">{{ stats.weekCompleted }}/{{ stats.weekTarget }}</span>
-          <span class="hb-summary-label">本周打卡/目标</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 新增/编辑习惯表单 -->
-    <div class="stat-card">
-      <div class="stat-header">
-        <span class="stat-icon">📌</span>
-        <span class="stat-label">{{ isEditing ? '编辑习惯' : '新增习惯' }}</span>
-        <button
-          v-if="isEditing"
-          type="button"
-          class="btn-secondary hb-cancel-btn"
-          data-testid="hb-form-cancel"
-          @click="resetForm"
-        >
-          取消编辑
-        </button>
-      </div>
-      <form class="hb-form" @submit.prevent="handleAddOrSave">
-        <div class="field">
-          <label class="field-label">名称 *</label>
-          <input
-            v-model="formName"
-            type="text"
-            class="form-input"
-            placeholder="例如：每天喝水 8 杯"
-            maxlength="30"
-            data-testid="hb-form-name"
-          />
-        </div>
-        <div class="field">
-          <label class="field-label">频率</label>
-          <select v-model="formFrequency" class="form-input" data-testid="hb-form-frequency">
-            <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="field-label">颜色</label>
-          <div class="hb-color-picker" data-testid="hb-form-color">
-            <button
-              v-for="(color, i) in TODO_COLOR_PRESETS"
-              :key="color"
-              type="button"
-              class="hb-color-option"
-              :class="{ active: formColor.toLowerCase() === color }"
-              :style="{ '--hb-swatch': color }"
-              :data-testid="'hb-color-preset-' + (i + 1)"
-              :title="color"
-              @click="formColor = color"
-            ></button>
+        <div class="hb-summary-row">
+          <div class="hb-summary-item" data-testid="hb-total-count">
+            <span class="hb-summary-value">{{ stats.total }}</span>
+            <span class="hb-summary-label">个习惯</span>
+          </div>
+          <div class="hb-summary-item" data-testid="hb-today-count">
+            <span class="hb-summary-value">{{ stats.todayChecked }}/{{ stats.total }}</span>
+            <span class="hb-summary-label">今日已打卡</span>
+          </div>
+          <div class="hb-summary-item" data-testid="hb-week-count">
+            <span class="hb-summary-value">{{ stats.weekCompleted }}/{{ stats.weekTarget }}</span>
+            <span class="hb-summary-label">本周打卡/目标</span>
           </div>
         </div>
-        <button type="submit" class="btn-primary" :disabled="!formName.trim()" data-testid="hb-add-btn">
-          {{ isEditing ? '保存' : '添加' }}
-        </button>
-      </form>
-    </div>
+      </div>
 
-    <!-- 习惯卡片列表 -->
-    <div v-if="store.habits.length === 0" class="empty-state" data-testid="hb-empty">
-      📌 还没有习惯，先在上方添加一个吧
-    </div>
-
-    <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
-      <div
-        v-for="v in pageItems"
-        :key="v.habit.id"
-        class="hb-card"
-        :class="{ 'is-checked': v.checked }"
-        :data-testid="`hb-card-${v.habit.id}`"
-        :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-      >
-        <span class="hb-card-bar"></span>
-        <span class="hb-card-icon">📌</span>
-        <div class="hb-card-main">
-          <div class="hb-card-name">{{ v.habit.name }}</div>
-          <div class="hb-card-badges">
-            <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
-              🔥 连续 {{ v.streak }} 天
-            </span>
-            <span class="hb-badge hb-badge-week" :data-testid="`hb-week-${v.habit.id}`">
-              本周 {{ v.week.completed }}/{{ v.week.target }}
-            </span>
-          </div>
+      <!-- 新增/编辑习惯表单 -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-icon">📌</span>
+          <span class="stat-label">{{ isEditing ? '编辑习惯' : '新增习惯' }}</span>
+          <button
+            v-if="isEditing"
+            type="button"
+            class="btn-secondary hb-cancel-btn"
+            data-testid="hb-form-cancel"
+            @click="resetForm"
+          >
+            取消编辑
+          </button>
         </div>
-        <div class="hb-card-actions">
-          <label class="hb-check-label" :title="v.checked ? '取消今日打卡' : '今日打卡'">
+        <form class="hb-form" @submit.prevent="handleAddOrSave">
+          <div class="field">
+            <label class="field-label">名称 *</label>
             <input
-              type="checkbox"
-              class="hb-check-input"
-              :checked="v.checked"
-              :data-testid="`hb-check-${v.habit.id}`"
-              @change="handleCheck(v.habit.id)"
+              v-model="formName"
+              type="text"
+              class="form-input"
+              placeholder="例如：每天喝水 8 杯"
+              maxlength="30"
+              data-testid="hb-form-name"
             />
-          </label>
-          <button class="btn-edit" :data-testid="`hb-edit-${v.habit.id}`" @click="startEdit(v.habit.id)">编辑</button>
-          <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
-        </div>
+          </div>
+          <div class="field">
+            <label class="field-label">频率</label>
+            <select v-model="formFrequency" class="form-input" data-testid="hb-form-frequency">
+              <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">颜色</label>
+            <div class="hb-color-picker" data-testid="hb-form-color">
+              <button
+                v-for="(color, i) in TODO_COLOR_PRESETS"
+                :key="color"
+                type="button"
+                class="hb-color-option"
+                :class="{ active: formColor.toLowerCase() === color }"
+                :style="{ '--hb-swatch': color }"
+                :data-testid="'hb-color-preset-' + (i + 1)"
+                :title="color"
+                @click="formColor = color"
+              ></button>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" :disabled="!formName.trim()" data-testid="hb-add-btn">
+            {{ isEditing ? '保存' : '添加' }}
+          </button>
+        </form>
       </div>
     </div>
 
-    <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
+    <!-- 右栏：习惯卡片网格（多条并排展示，分页在网格下方） -->
+    <div class="hb-main">
+      <div v-if="store.habits.length === 0" class="empty-state" data-testid="hb-empty">
+        📌 还没有习惯，先在左侧添加一个吧
+      </div>
+
+      <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
+        <div
+          v-for="v in pageItems"
+          :key="v.habit.id"
+          class="hb-card"
+          :class="{ 'is-checked': v.checked }"
+          :data-testid="`hb-card-${v.habit.id}`"
+          :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
+        >
+          <span class="hb-card-bar"></span>
+          <span class="hb-card-icon">📌</span>
+          <div class="hb-card-main">
+            <div class="hb-card-name">{{ v.habit.name }}</div>
+            <div class="hb-card-badges">
+              <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
+                🔥 连续 {{ v.streak }} 天
+              </span>
+              <span class="hb-badge hb-badge-week" :data-testid="`hb-week-${v.habit.id}`">
+                本周 {{ v.week.completed }}/{{ v.week.target }}
+              </span>
+            </div>
+          </div>
+          <div class="hb-card-actions">
+            <label class="hb-check-label" :title="v.checked ? '取消今日打卡' : '今日打卡'">
+              <input
+                type="checkbox"
+                class="hb-check-input"
+                :checked="v.checked"
+                :data-testid="`hb-check-${v.habit.id}`"
+                @change="handleCheck(v.habit.id)"
+              />
+            </label>
+            <button class="btn-edit" :data-testid="`hb-edit-${v.habit.id}`" @click="startEdit(v.habit.id)">编辑</button>
+            <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
+          </div>
+        </div>
+      </div>
+
+      <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 面板容器（复用 WorkbenchPomodoro stat-card 结构） */
+/* 面板容器：桌面 ≥1200px 左右双栏（左=统计+表单，右=卡片网格），其余单列堆叠 */
 .wb-habits {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 560px;
+}
+
+.hb-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hb-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+@media (min-width: 1200px) {
+  .wb-habits {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    align-items: stretch;
+  }
 }
 
 .stat-card {
@@ -455,11 +482,12 @@ onMounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-/* ===== 习惯卡片列表 ===== */
+/* ===== 习惯卡片网格（右栏，多列并排） ===== */
 .hb-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 10px;
+  align-content: start;
 }
 
 .hb-card {
@@ -655,8 +683,13 @@ onMounted(() => {
   }
 }
 
-/* ===== 桌面自适应分页（一屏布局 Wave-2 T8：R1/R4/R7 契约；面板根 max-width 560px 保留居中单列）===== */
+/* ===== 桌面自适应分页（一屏布局：右栏网格 flex:1 钉满，分页在网格下方）===== */
 @media (min-width: 769px) {
+  .hb-main {
+    flex: 1;
+    min-height: 0;
+  }
+
   .hb-list {
     flex: 1;
     min-height: 0;

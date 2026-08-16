@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { idbExportAll, idbImportAll } from '@/composables/useIdb'
@@ -65,9 +65,10 @@ const activeSection = ref<SectionKey>('home')
 // 健康管理面板当前激活 tab（点击菜单「健康管理」不传 tab → 保留上次激活）
 const activeHealthTab = ref<HealthModule>('exercise')
 
-// WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）
+// WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）。
+// 菜单开关关闭的功能不可进入（白名单 + 开关双重守卫）。
 function navigateTo(section: string, tab?: string) {
-  if ((SECTION_KEYS as readonly string[]).includes(section)) {
+  if ((SECTION_KEYS as readonly string[]).includes(section) && settingsStore.isWorkbenchMenuEnabled(section)) {
     activeSection.value = section as SectionKey
     if (section === 'health' && tab !== undefined && (HEALTH_TABS as readonly string[]).includes(tab)) {
       activeHealthTab.value = tab as HealthModule
@@ -78,6 +79,17 @@ function navigateTo(section: string, tab?: string) {
 // 菜单渲染项：顺序/名称/图标一律来自设置 store（workbenchMenuItems 由 core 解析，home 恒居首）
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
+
+// 菜单开关变化（设置弹窗切换）→ 当前激活区被关闭时回退到首个可见菜单项（home 恒可见）
+watch(
+  () => menuItems.value.map(item => item.key),
+  (keys) => {
+    if (keys.length === 0) return
+    if (!keys.includes(activeSection.value)) {
+      activeSection.value = keys[0] as SectionKey
+    }
+  }
+)
 
 // 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
 const sidebarCollapsed = computed(() => settingsStore.workbenchSidebarCollapsed ?? false)

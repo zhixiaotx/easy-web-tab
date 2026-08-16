@@ -24,7 +24,7 @@
  *
  * 本脚本负责「脚手架 + 测量 + 一屏契约断言」：行高测量写 row-heights.json 后，
  * 追加 Wave-3 T13 的 S1-S8 断言波（record()/guard() + 真实 Playwright 交互）：
- *   S1 桌面两视口 × 明暗 × 10 面板（健康 4 子面板并入）无纵向滚动 + 主页概览默认折叠
+ *   S1 桌面两视口 × 明暗 × 10 面板（健康 4 子面板并入）无纵向滚动 + 主页轮播默认第 1 屏
  *   S2 分页条可见 + 边界禁用 + 翻页内容变化
  *   S3 筛选/分类/月份切换后 goto(1) 回第 1 页
  *   S4 时光轴卡内联 5 条 + 「+N 条」全量浮层（WorkbenchNotes 时光轴折叠）
@@ -577,7 +577,7 @@ async function ensureExpanded(page, toggleSel, itemSel) {
 }
 
 async function runContractAssertions(page) {
-  // ===== S1+S7：桌面两视口 × 明暗 × 10 面板（健康 4 子面板并入）无纵向滚动 + 无横向溢出；主页断言概览默认折叠 =====
+  // ===== S1+S7：桌面两视口 × 明暗 × 10 面板（健康 4 子面板并入）无纵向滚动 + 无横向溢出；主页断言轮播默认第 1 屏 =====
   for (const vp of VIEWPORTS) {
     for (const theme of ['light', 'dark']) {
       await page.setViewportSize({ width: vp.width, height: vp.height })
@@ -596,11 +596,12 @@ async function runContractAssertions(page) {
             doc: `${m.docScrollH}/${m.docClientH}`
           })
           if (panel.key === 'home') {
-            const collapsed = await page.evaluate(() => {
-              const chev = document.querySelector('[data-testid="home-overview-chevron"]')
-              return !chev || !chev.classList.contains('open')
+            const carouselOk = await page.evaluate(() => {
+              const carousel = document.querySelector('[data-testid="home-carousel"]')
+              const dot0 = document.querySelector('[data-testid="home-carousel-dot-0"]')
+              return !!carousel && !!dot0 && dot0.classList.contains('active')
             })
-            record(`S1 home @ ${vp.label}/${theme} 概览默认折叠`, collapsed, {})
+            record(`S1 home @ ${vp.label}/${theme} 轮播骨架 + 默认第 1 屏 active`, carouselOk, {})
           }
         })
         await guard(`S7 ${panel.key} @ ${vp.label}/${theme} 无横向溢出`, async () => {

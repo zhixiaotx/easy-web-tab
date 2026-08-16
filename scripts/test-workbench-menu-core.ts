@@ -5,6 +5,7 @@ import {
   MENU_DEFAULT_LABELS,
   MENU_ICONS,
   normalizeWorkbenchMenu,
+  normalizeWorkbenchMenuVisibility,
   moveMenuItem,
   renameMenuLabel,
   resolveMenuItems
@@ -204,6 +205,35 @@ test('T15 diary shift in resolve & move', () => {
   const up = moveMenuItem(WORKBENCH_MENU_DEFAULT_ORDER, 'habits', 'up')
   assert.equal(up.ok, true)
   assert.deepEqual(up.order, ['home', 'todos', 'notes', 'diary', 'countdowns', 'habits', 'pomodoro', 'passwords', 'health', 'ledger'])
+})
+
+// T16 — normalizeWorkbenchMenuVisibility：仅已知键布尔值；缺失/非法/非对象 → 全显示（{}）
+test('T16 normalizeWorkbenchMenuVisibility', () => {
+  assert.deepEqual(normalizeWorkbenchMenuVisibility(undefined), {})
+  assert.deepEqual(normalizeWorkbenchMenuVisibility(null), {})
+  assert.deepEqual(normalizeWorkbenchMenuVisibility('x'), {})
+  assert.deepEqual(normalizeWorkbenchMenuVisibility([1, 2]), {})
+  assert.deepEqual(normalizeWorkbenchMenuVisibility({ todos: false, ledger: true, bogus: false, notes: 'yes', diary: 1 }), {
+    todos: false,
+    ledger: true
+  })
+})
+
+// T17 — resolveMenuItems 带 visibility：false 键从渲染列表剔除、顺序保持、home 不豁免
+test('T17 resolveMenuItems filters hidden keys', () => {
+  const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, {}, { todos: false, ledger: false, bogus: false })
+  assert.deepEqual(
+    items.map(i => i.key),
+    ['home', 'notes', 'diary', 'countdowns', 'pomodoro', 'habits', 'passwords', 'health']
+  )
+  assert.equal(items[0].label, MENU_DEFAULT_LABELS.home)
+})
+
+// T18 — resolveMenuItems 无 visibility（旧两参调用）→ 恒 10 项全显示（向后兼容）
+test('T18 resolveMenuItems without visibility keeps all', () => {
+  const items = resolveMenuItems(WORKBENCH_MENU_DEFAULT_ORDER, {})
+  assert.equal(items.length, 10)
+  assert.deepEqual(items.map(i => i.key), [...WORKBENCH_MENU_KEYS])
 })
 
 let passed = 0

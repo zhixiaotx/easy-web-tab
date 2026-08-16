@@ -174,15 +174,31 @@ export interface NoteData {
   notes: WorkbenchNote[]
 }
 
-// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度 + 工作台菜单顺序/名称 + 工作台城市/侧栏折叠态
+// 工作台日记本：每天一条（date 本地 'YYYY-MM-DD' 唯一，upsert 语义）
+export interface WorkbenchDiary {
+  id: string // 'dy_' 前缀
+  date: string // 'YYYY-MM-DD' 本地日期，唯一（每天一条）
+  content: string // Markdown 正文
+  createdAt: string
+  updatedAt: string
+}
+
+// 工作台日记本数据（条目列表）
+export interface DiaryData {
+  entries: WorkbenchDiary[]
+}
+
+// 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度 + 工作台菜单顺序/名称/开关 + 工作台城市/侧栏折叠态 + 导航筛选栏展开态
 export interface AppSettingsData {
   dialogSizes: Record<string, { width: number; height: number }>
   buttonOpacity: number
   bgOpacity: number
   workbenchMenuOrder?: string[]
   workbenchMenuLabels?: Record<string, string>
+  workbenchMenuVisibility?: Record<string, boolean> // 工作台菜单开关（false = 隐藏菜单项/面板/主页对应统计；缺失 = 显示）
   workbenchCity?: string // 天气卡城市（trim 后非空；空串/undefined/null = 未配置）
   workbenchSidebarCollapsed?: boolean // 工作台侧栏折叠态（非法/缺失 = 未配置即展开）
+  navFiltersExpanded?: boolean // 导航管理页分类/标签栏展开态（默认 false = 收起）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {
@@ -190,13 +206,14 @@ export function emptyAppSettingsData(): AppSettingsData {
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 5
+export const WORKBENCH_DATA_VERSION = 6
 
 export interface WorkbenchData {
   version: number
   exportedAt: string
   todos: WorkbenchTodo[]
   notes: NoteData
+  diary: DiaryData
   countdowns: Countdown[]
   passwords: string // 整库加密 blob 字符串（useCrypto 现有格式）
   health: HealthData

@@ -5,6 +5,8 @@ import type { CountdownItem, CountdownRemaining, CountdownSortMode } from '@/sto
 import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/countdownCore'
 import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
 import { useToast } from '@/composables/useToast'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from './PanelPager.vue'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
 import { COUNTDOWN_CATEGORIES, COUNTDOWN_COLOR_PRESETS, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 
@@ -29,11 +31,13 @@ function applySearch(): void {
     category: activeCategoryTab.value || undefined,
     repeat: searchRepeat.value
   }
+  goto(1)
 }
 
 function selectCategoryTab(category: string): void {
   activeCategoryTab.value = category
   appliedFilters.value = { ...appliedFilters.value, category: category || undefined }
+  goto(1)
 }
 
 function resetSearch(): void {
@@ -41,10 +45,22 @@ function resetSearch(): void {
   searchRepeat.value = ''
   activeCategoryTab.value = ''
   appliedFilters.value = {}
+  goto(1)
 }
 
 // 列表渲染用筛选后的数据；排序/手动移动基于 filteredItems 的位置
 const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, appliedFilters.value))
+
+// ===== 自适应分页（R3/R4/R7：gridRef 实时读 auto-fill 列数；rowHeight 158 = row-heights.json MAX 155.38 + 2px）=====
+const gridEl = ref<HTMLElement | null>(null)
+const paging = usePanelPaging({
+  items: () => filteredItems.value,
+  rowHeight: 158, // row-heights.json: countdown = 158 (MAX 155.38 + 2px)
+  containerRef: gridEl,
+  gridRef: gridEl
+})
+// usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供筛选/排序变化回页 1）
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
 // ===== 分类管理（标签页显示 + 自定义分类 CRUD，偏好存 localStorage）=====
 const toast = useToast()
@@ -96,6 +112,7 @@ function handleRenameCategory(oldName: string): void {
     if (activeCategoryTab.value === oldName) {
       selectCategoryTab(newName)
     }
+    goto(1)
   } else {
     // 改名失败（重名等）→ 还原草稿为原名称（与便签面板 commitCatName 一致）
     renameDrafts.value[oldName] = oldName
@@ -114,6 +131,7 @@ function handleDeleteCategory(category: string): void {
     if (activeCategoryTab.value === category) {
       selectCategoryTab('')
     }
+    goto(1)
   }
   catErrorToast(result)
 }
@@ -311,6 +329,7 @@ const isManual = computed(() => store.sortMode === 'manual')
 
 function onSortChange(event: Event): void {
   store.setSort((event.target as HTMLSelectElement).value as CountdownSortMode)
+  goto(1)
 }
 
 // manual 模式边界：按 filteredItems 位置判断，首行 ▲ 禁用、末行 ▼ 禁用
@@ -433,9 +452,9 @@ onUnmounted(() => {
       <button class="btn-cancel" @click="resetSearch">重置查询</button>
     </div>
 
-    <div v-else class="cd-grid">
+    <div v-else ref="gridEl" class="cd-grid" :class="{ 'cd-grid-scroll': !fitsOnePage }">
       <div
-        v-for="item in filteredItems"
+        v-for="item in pageItems"
         :key="item.id"
         class="cd-card"
         data-testid="cd-item"
@@ -490,6 +509,8 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
 
     <!-- 新增/编辑弹框 -->
     <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
@@ -1730,5 +1751,17 @@ onUnmounted(() => {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
+}
+
+/* ===== 桌面自适应分页（一屏布局 Wave-2 T8：R1/R3/R4/R7 契约）===== */
+@media (min-width: 769px) {
+  .cd-grid {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .cd-grid-scroll {
+    overflow-y: auto;
+  }
 }
 </style>

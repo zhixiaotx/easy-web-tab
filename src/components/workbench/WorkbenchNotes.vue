@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from './PanelPager.vue'
 
 const store = useWorkbenchNotesStore()
 
@@ -36,12 +38,17 @@ function applyFilters(): void {
   searchKeyword.value = searchDraft.value.trim()
   activeType.value = typeDraft.value
   activeCategoryId.value = categoryDraft.value === '' ? undefined : categoryDraft.value
+  // 筛选变化 → 双段分页回第 1 页（R8 两个实例独立，但关键词/类型/分类影响两段，均需归位）
+  normalPaging.goto(1)
+  timelinePaging.goto(1)
 }
 
 // 分类筛选标签页：点击即时生效（与倒计时面板一致）；同步草稿 ref，保证「查询」不覆盖、重置/删分类回退逻辑一致
 function selectCategoryTab(id: string | undefined): void {
   categoryDraft.value = id ?? ''
   activeCategoryId.value = id
+  normalPaging.goto(1)
+  timelinePaging.goto(1)
 }
 
 // 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
@@ -73,6 +80,24 @@ const filteredNotes = computed<WorkbenchNote[]>(() =>
 const filteredPartition = computed(() => partitionNotesByType(filteredNotes.value))
 const filteredNormal = computed(() => filteredPartition.value.normal)
 const filteredTimeline = computed(() => filteredPartition.value.timeline)
+
+// ===== 自适应分页（R1/R3/R7/R8）：普通/时光轴两个独立实例（'all' 视图双段各翻各的）=====
+// rowHeight 来自 .omo/evidence/workbench-onescreen/row-heights.json 实测（MAX + 2px margin，R4）
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+const normalGridEl = ref<HTMLElement | null>(null)
+const timelineGridEl = ref<HTMLElement | null>(null)
+const normalPaging = reactive(usePanelPaging({
+  items: () => filteredNormal.value,
+  rowHeight: 287, // row-heights.json: notes = 287 (MAX 285 + 2px)
+  containerRef: normalGridEl,
+  gridRef: normalGridEl
+}))
+const timelinePaging = reactive(usePanelPaging({
+  items: () => filteredTimeline.value,
+  rowHeight: 2343, // row-heights.json: timeline = 2343 — 时光轴卡片整卡高度（含全部条目）
+  containerRef: timelineGridEl,
+  gridRef: timelineGridEl
+}))
 
 // 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
 const hasActiveFilter = computed(() =>
@@ -197,6 +222,37 @@ function sortedEntriesOf(note: WorkbenchNote): TimelineEntry[] {
   return sortTimelineEntries(note.entries ?? [])
 }
 
+// ===== 时光轴卡内联条目上限 5 + 「+N 条」全量浮层（S4：卡内只内联前 5 条，超限按钮开浮层看全量，浮层内列表滚动）=====
+const TIMELINE_INLINE_LIMIT = 5
+
+// 当前展开全量条目的时光轴便签 id（null = 无展开）；浮层可滚动看全量、支持行内编辑/删除
+const timelineExpandNoteId = ref<string | null>(null)
+
+// 卡片内联展示条目：前 5 条（排序已走 sortedEntriesOf，禁止重复排序公式）
+function inlineEntriesOf(note: WorkbenchNote): TimelineEntry[] {
+  return sortedEntriesOf(note).slice(0, TIMELINE_INLINE_LIMIT)
+}
+
+// 超限隐藏条数：> 0 时显示「+N 条」按钮
+function hiddenEntryCount(note: WorkbenchNote): number {
+  return Math.max(0, sortedEntriesOf(note).length - TIMELINE_INLINE_LIMIT)
+}
+
+// 浮层目标便签（读 store 快照；关闭即清空）
+const expandedTimelineNote = computed<WorkbenchNote | null>(() => {
+  const id = timelineExpandNoteId.value
+  if (!id) return null
+  return store.notes.find(n => n.id === id) ?? null
+})
+
+function openTimelineExpand(noteId: string): void {
+  timelineExpandNoteId.value = noteId
+}
+
+function closeTimelineExpand(): void {
+  timelineExpandNoteId.value = null
+}
+
 // 时光轴卡片渲染时给未初始化草稿补默认 datetime（本地当前时间）；追加成功后也重置为当前时间
 watch(
   () => filteredNotes.value,
@@ -307,6 +363,9 @@ async function handleDeleteCat(cat: NoteCategory): Promise<void> {
   // 当前正按该分类筛选（应用值或草稿值）时重置为「全部」
   if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
   if (categoryDraft.value === cat.id) categoryDraft.value = ''
+  // 分类删除 → 该分类便签归未分类，筛选列表变化 → 双段分页回第 1 页
+  normalPaging.goto(1)
+  timelinePaging.goto(1)
 }
 
 // 标签页显示勾选：写 store（showInTabs）；取消勾选的分类若正被激活筛选 → 回退「全部」（镜像 handleDeleteCat 的回退逻辑）
@@ -319,6 +378,9 @@ async function handleToggleTab(cat: NoteCategory, checked: boolean): Promise<voi
   if (!checked) {
     if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
     if (categoryDraft.value === cat.id) categoryDraft.value = ''
+    // 隐藏正激活筛选的分类 → 筛选回退「全部」，双段分页回第 1 页
+    normalPaging.goto(1)
+    timelinePaging.goto(1)
   }
 }
 
@@ -430,9 +492,14 @@ onUnmounted(() => {
 
     <!-- 时光轴（类型下拉=时光轴/'all' 双段渲染之一）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
     <template v-if="activeType !== 'normal'">
-      <div v-if="filteredTimeline.length > 0" class="notes-grid timeline-grid">
+      <div
+        v-if="filteredTimeline.length > 0"
+        ref="timelineGridEl"
+        class="notes-grid timeline-grid"
+        :class="{ 'timeline-grid-scroll': !timelinePaging.fitsOnePage }"
+      >
         <div
-          v-for="note in filteredTimeline"
+          v-for="note in timelinePaging.pageItems"
           :key="note.id"
           class="note-card timeline-card"
           :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
@@ -464,10 +531,10 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序） -->
+          <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序），卡片内联前 5 条（S4），超限经「+N 条」开浮层看全量 -->
           <div class="timeline-list" data-testid="nt-timeline-list">
             <div
-              v-for="entry in sortedEntriesOf(note)"
+              v-for="entry in inlineEntriesOf(note)"
               :key="entry.id"
               class="timeline-item"
               :data-testid="`nt-entry-${entry.id}`"
@@ -532,6 +599,17 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- 超限「+N 条」按钮（S4）：点击开全量条目浮层 -->
+          <button
+            v-if="hiddenEntryCount(note) > 0"
+            type="button"
+            class="timeline-more-btn"
+            :data-testid="`nt-entry-more-${note.id}`"
+            @click.stop="openTimelineExpand(note.id)"
+          >
+            +{{ hiddenEntryCount(note) }} 条
+          </button>
+
           <!-- 卡片底部快速追加行：datetime（默认本地当前时间）+ content + 添加按钮 -->
           <div class="timeline-add-row">
             <input
@@ -561,17 +639,108 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      <PanelPager
+        :page="timelinePaging.currentPage"
+        :total="timelinePaging.totalPages"
+        @prev="timelinePaging.prev()"
+        @next="timelinePaging.next()"
+      />
 
-      <div v-else-if="activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
+      <div v-if="filteredTimeline.length === 0 && activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
         {{ emptyText }}
       </div>
     </template>
 
+    <!-- 时光轴全量条目浮层（S4：「+N 条」开浮层看全量，列表区内滚动；复用 note-overlay 遮罩样式） -->
+    <div v-if="expandedTimelineNote" class="note-overlay timeline-expand-overlay" data-testid="nt-entry-overlay" @click.self="closeTimelineExpand">
+      <div class="timeline-expand-panel">
+        <div class="timeline-expand-head">
+          <span class="timeline-title">{{ expandedTimelineNote.title || '时光轴便签' }}</span>
+          <button type="button" class="btn-cancel" data-testid="nt-entry-overlay-close" @click="closeTimelineExpand">
+            关闭
+          </button>
+        </div>
+        <div class="timeline-expand-list">
+          <div
+            v-for="entry in sortedEntriesOf(expandedTimelineNote)"
+            :key="entry.id"
+            class="timeline-item"
+            :data-testid="`nt-entry-${entry.id}`"
+          >
+            <span class="timeline-dot"></span>
+            <template
+              v-if="editingEntry && editingEntry.noteId === expandedTimelineNote.id && editingEntry.entryId === entry.id"
+            >
+              <div class="timeline-item-edit">
+                <input
+                  v-model="entryEditDatetime"
+                  type="text"
+                  class="form-input"
+                  :data-testid="`nt-entry-edit-dt-${entry.id}`"
+                  placeholder="YYYY-MM-DD HH:mm"
+                />
+                <input
+                  v-model="entryEditContent"
+                  type="text"
+                  class="form-input"
+                  :data-testid="`nt-entry-edit-content-${entry.id}`"
+                  placeholder="记录内容"
+                />
+                <div class="timeline-item-actions">
+                  <button
+                    type="button"
+                    class="btn-save"
+                    :disabled="!canSaveEntry()"
+                    :data-testid="`nt-entry-save-${entry.id}`"
+                    @click="handleSaveEntry(expandedTimelineNote.id, entry.id)"
+                  >
+                    保存
+                  </button>
+                  <button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
+                    取消
+                  </button>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="timeline-item-body">
+                <div class="timeline-item-time">{{ entry.datetime }}</div>
+                <div class="timeline-item-content" v-html="renderedContent(entry.content)"></div>
+                <div class="timeline-item-actions">
+                  <button
+                    type="button"
+                    class="btn-edit"
+                    :data-testid="`nt-entry-edit-${entry.id}`"
+                    @click.stop="startEditEntry(expandedTimelineNote.id, entry)"
+                  >
+                    编辑
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-delete"
+                    :data-testid="`nt-entry-del-${entry.id}`"
+                    @click.stop="handleDeleteEntry(expandedTimelineNote.id, entry.id)"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
     <template v-if="activeType !== 'timeline'">
-      <div v-if="filteredNormal.length > 0" class="notes-grid">
+      <div
+        v-if="filteredNormal.length > 0"
+        ref="normalGridEl"
+        class="notes-grid"
+        :class="{ 'notes-grid-scroll': !normalPaging.fitsOnePage }"
+      >
         <div
-          v-for="note in filteredNormal"
+          v-for="note in normalPaging.pageItems"
           :key="note.id"
           class="note-card"
           :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
@@ -606,8 +775,14 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      <PanelPager
+        :page="normalPaging.currentPage"
+        :total="normalPaging.totalPages"
+        @prev="normalPaging.prev()"
+        @next="normalPaging.next()"
+      />
 
-      <div v-else-if="activeType === 'normal' || filteredTimeline.length === 0" class="empty-state" data-testid="note-empty">
+      <div v-if="filteredNormal.length === 0 && (activeType === 'normal' || filteredTimeline.length === 0)" class="empty-state" data-testid="note-empty">
         {{ emptyText }}
       </div>
     </template>
@@ -1167,6 +1342,24 @@ onUnmounted(() => {
   margin: 4px 0 2px;
 }
 
+/* 「+N 条」按钮（S4）：卡片内联条目超限时显示，点击开全量条目浮层 */
+.timeline-more-btn {
+  margin: 2px 0 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 8%, transparent);
+  color: var(--accent-color, var(--color-primary));
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.timeline-more-btn:hover {
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 16%, transparent);
+}
+
 .timeline-item {
   position: relative;
   display: flex;
@@ -1303,6 +1496,40 @@ onUnmounted(() => {
   justify-content: center;
   padding: 20px;
   background: rgba(0, 0, 0, 0.5);
+}
+
+/* 时光轴全量条目浮层（S4）：复用 note-overlay 遮罩，面板内列表滚动看全量 */
+.timeline-expand-overlay {
+  z-index: 1100;
+}
+
+.timeline-expand-panel {
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+}
+
+.timeline-expand-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.timeline-expand-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .note-form {
@@ -1790,6 +2017,10 @@ onUnmounted(() => {
   background-color: var(--bg-secondary, #1f2937);
 }
 
+:root.dark .timeline-expand-panel {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
 :root.dark .empty-state {
   background-color: var(--bg-secondary, #1f2937);
 }
@@ -1919,6 +2150,28 @@ onUnmounted(() => {
 
   .nt-field-grow .nt-field-keyword {
     width: 100%;
+  }
+}
+
+/* ===== 桌面（≥769px）一屏布局：网格区 flex 占满 + 分页（R1/R2/R7）=====
+   仅桌面作用域；移动端保持原状（页面滚动、全量渲染，composable 惰性不切片）。
+   flex:1 + min-height:0 让网格区占满可用高度（RO 测量基准）；!fitsOnePage 退化时区内滚动兜底（R7）；
+   timeline-card 卡内只内联前 5 条（S4），超限经「+N 条」开全量浮层（浮层内列表滚动），超高时卡内滚动兜底（min-height:0 允许 grid item 收缩）。 */
+@media (min-width: 769px) {
+  .notes-grid,
+  .timeline-grid {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .notes-grid-scroll,
+  .timeline-grid-scroll {
+    overflow-y: auto;
+  }
+
+  .timeline-card {
+    overflow-y: auto;
+    min-height: 0;
   }
 }
 

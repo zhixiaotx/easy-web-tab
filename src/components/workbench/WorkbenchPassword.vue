@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
 import { useToast } from '@/composables/useToast'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
+import PanelPager from './PanelPager.vue'
 
 const passwordsStore = usePasswordsStore()
 const sitesStore = useSitesStore()
@@ -69,6 +71,22 @@ const filteredPasswords = computed<PasswordEntry[]>(() => {
   if (!searchQuery.value) return passwordsStore.passwords
   return passwordsStore.searchPasswords(searchQuery.value)
 })
+
+// ===== 自适应分页（桌面 ≥769px；锁定/未解锁时列表不渲染 → containerRef 为 null → 分页惰性 R8）=====
+const listEl = ref<HTMLElement | null>(null)
+// reactive() 包裹：模板访问 paging.currentPage/pageItems/totalPages/fitsOnePage 时 ref 自动解包（PanelPager 消费契约）
+const paging = reactive(
+  usePanelPaging({
+    items: () => filteredPasswords.value,
+    rowHeight: 116, // row-heights.json: password = 116（6 列卡片实测 MAX 113.17 + 2px，R4）
+    containerRef: listEl,
+    gridRef: listEl, // 与 containerRef 同元素：getComputedStyle(gridTemplateColumns) 实测列数 → 6
+    maxRows: 3 // 6 列 × 3 行 = 18 卡/页（行数经 clampMaxRows 钳制）
+  })
+)
+
+// 搜索变化 → 回第 1 页（输入与清除按钮两条路径都经 searchQuery 变化触发）
+watch(searchQuery, () => paging.goto(1))
 
 // ===== 新增/编辑弹窗（共用表单，四字段全部必填）=====
 const showForm = ref(false)
@@ -332,36 +350,19 @@ onUnmounted(() => {
         {{ searchQuery ? '没有找到匹配的密码' : '暂无保存的密码' }}
       </div>
 
-      <!-- 条目列表 -->
-      <div v-else class="pwd-list">
-        <div v-for="entry in filteredPasswords" :key="entry.id" class="pwd-item" data-testid="pwd-item">
-          <div class="pwd-info">
-            <div class="pwd-item-header">
-              <img
-                v-if="getSiteIcon(entry.url)"
-                :src="getSiteIcon(entry.url)"
-                class="pwd-site-icon"
-                alt=""
-                loading="lazy"
-                @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
-              />
-              <span class="pwd-site-name">{{ entry.siteName }}</span>
-              <a
-                class="pwd-site-url"
-                :href="entry.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                :title="entry.url"
-              >{{ entry.url }}</a>
-            </div>
-            <div class="pwd-details">
-              <span class="pwd-username">👤 {{ entry.username }}</span>
-              <span class="pwd-masked">
-                🔑 {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
-              </span>
-            </div>
-          </div>
-          <div class="pwd-actions">
+      <!-- 条目列表（6 列卡片网格：桌面 3 行 × 6 列 = 18 卡/页；移动端 2 列全量渲染） -->
+      <div v-else class="pwd-list" :class="{ 'pwd-list-scroll': !paging.fitsOnePage }" ref="listEl">
+        <div v-for="entry in paging.pageItems" :key="entry.id" class="pwd-item" data-testid="pwd-item">
+          <div class="pwd-card-head">
+            <img
+              v-if="getSiteIcon(entry.url)"
+              :src="getSiteIcon(entry.url)"
+              class="pwd-site-icon"
+              alt=""
+              loading="lazy"
+              @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
+            />
+            <span class="pwd-site-name" :title="entry.siteName">{{ entry.siteName }}</span>
             <a
               class="pwd-icon-btn pwd-open"
               :href="entry.url"
@@ -370,6 +371,14 @@ onUnmounted(() => {
               title="打开网站"
               :data-testid="`pwd-open-${entry.id}`"
             >↗</a>
+          </div>
+          <div class="pwd-details">
+            <span class="pwd-username" :title="entry.username">👤 {{ entry.username }}</span>
+            <span class="pwd-masked" :title="isPasswordVisible(entry.id) ? entry.password : ''">
+              🔑 {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
+            </span>
+          </div>
+          <div class="pwd-actions">
             <button
               class="pwd-icon-btn"
               :title="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
@@ -405,6 +414,9 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+
+      <!-- 自适应分页（仅已解锁列表可见时渲染；totalPages>1 才显示） -->
+      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </div>
 
     <!-- 新增/编辑弹窗 -->
@@ -507,6 +519,14 @@ onUnmounted(() => {
 <style scoped>
 /* 面板容器（WorkbenchView 的 .wb-content 已提供滚动与背景，此处不 position:fixed） */
 .wb-password {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 已解锁主体（工具栏 + 列表 + 分页条）：flex 列，让 .pwd-list 的 flex:1 撑满剩余高度供 RO 测量
+   （缺此规则时 .pwd-main 为块级，.pwd-list flex:1 失效 → RO 只测到 1 行内容高 → rowsPerPage=1） */
+.pwd-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -654,19 +674,45 @@ onUnmounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-/* ===== 列表 ===== */
+/* ===== 列表（卡片网格）===== */
 .pwd-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+/* 桌面（≥769px）自适应分页：主体撑满面板高度，列表区 flex:1 撑满剩余高度供 RO 测量；
+   一屏放不下时 overflow-y:auto 兜底（R7） */
+@media (min-width: 769px) {
+  .pwd-main {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pwd-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pwd-list-scroll {
+    overflow-y: auto;
+  }
+}
+
+/* 移动端（≤768px）分页惰性（全量渲染）：网格收窄为 2 列 */
+@media (max-width: 768px) {
+  .pwd-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .pwd-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
@@ -678,60 +724,47 @@ onUnmounted(() => {
   border-color: var(--accent-color, var(--color-primary));
 }
 
-.pwd-info {
-  flex: 1;
+.pwd-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
-.pwd-item-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
 .pwd-site-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   object-fit: contain;
   flex-shrink: 0;
   background: var(--bg-secondary, var(--color-bg-hover));
 }
 
 .pwd-site-name {
-  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
-  max-width: 40%;
-}
-
-.pwd-site-url {
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-decoration: none;
-  flex: 1;
-  min-width: 0;
-}
-
-.pwd-site-url:hover {
-  color: var(--accent-color, var(--color-primary));
-  text-decoration: underline;
 }
 
 .pwd-details {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 13px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
   color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.pwd-username,
+.pwd-masked {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pwd-masked {
@@ -741,15 +774,18 @@ onUnmounted(() => {
 .pwd-actions {
   display: flex;
   gap: 2px;
-  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color, var(--color-border));
 }
 
 .pwd-icon-btn {
-  padding: 6px 7px;
+  padding: 3px 4px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1;
   opacity: 0.6;
   transition: opacity var(--transition-fast, 0.15s ease);
   border-radius: var(--radius-sm, 6px);
@@ -997,7 +1033,6 @@ onUnmounted(() => {
   color: var(--text-primary, #f9fafb);
 }
 
-:root.dark .pwd-site-url,
 :root.dark .pwd-details {
   color: var(--text-secondary, #d1d5db);
 }
@@ -1027,15 +1062,5 @@ onUnmounted(() => {
 :root.dark .pwd-btn-primary:disabled {
   background-color: var(--input-bg, #374151);
   color: var(--text-muted, #9ca3af);
-}
-
-@media (max-width: 640px) {
-  .pwd-item {
-    flex-wrap: wrap;
-  }
-
-  .pwd-actions {
-    margin-left: auto;
-  }
 }
 </style>

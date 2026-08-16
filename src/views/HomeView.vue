@@ -17,6 +17,7 @@ import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
+import { useAppSettingsStore } from '../stores/settings'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useToast } from '../composables/useToast'
 import { useHelpModal } from '../composables/useHelpModal'
@@ -24,6 +25,7 @@ import { useHelpModal } from '../composables/useHelpModal'
 const store = useSitesStore()
 const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
+const settingsStore = useAppSettingsStore()
 const toast = useToast()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 const router = useRouter()
@@ -285,9 +287,25 @@ const handlePageChange = () => {
       </div>
     </header>
 
-    <CategoryTabs />
+    <!-- 分类 · 标签筛选栏：折叠开关（默认收起，可在设置 → 导航设置 → 导航筛选栏切换模式） -->
+    <button
+      class="nav-filter-toggle"
+      data-testid="nav-filter-toggle"
+      :aria-expanded="settingsStore.navFiltersExpanded"
+      @click="settingsStore.setNavFiltersExpanded(!settingsStore.navFiltersExpanded)"
+    >
+      <span class="nav-filter-chevron" :class="{ open: settingsStore.navFiltersExpanded }">▸</span>
+      <span>分类 · 标签</span>
+      <span v-if="!settingsStore.navFiltersExpanded && (store.selectedCategory !== '' || store.selectedTags.length > 0 || store.showOnlyInvalid)" class="nav-filter-hint">
+        有筛选
+      </span>
+    </button>
 
-    <TagFilter />
+    <div v-show="settingsStore.navFiltersExpanded" class="nav-filter-panel" data-testid="nav-filter-panel">
+      <CategoryTabs />
+
+      <TagFilter />
+    </div>
 
     <main ref="sitesGridRef" class="sites-grid">
       <SiteCard
@@ -457,6 +475,49 @@ const handlePageChange = () => {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
   margin-top: 16px;
+}
+
+/* 分类 · 标签筛选栏折叠开关（默认收起；设置 → 导航设置 → 导航筛选栏可切换模式） */
+.nav-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px 16px;
+  background-color: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-filter-toggle:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.nav-filter-chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.nav-filter-chevron.open {
+  transform: rotate(90deg);
+}
+
+.nav-filter-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-filter-hint {
+  font-size: 12px;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 999px;
+  padding: 1px 8px;
 }
 
 /* 底部固定分页 */

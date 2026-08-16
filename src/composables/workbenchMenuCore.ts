@@ -1,4 +1,4 @@
-// 工作台菜单纯逻辑模块：9 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
+// 工作台菜单纯逻辑模块：10 项菜单（home 恒居首位）的顺序归一化 / 上移下移 / 改名 / 解析渲染。
 // 零 vue/pinia 运行时依赖（node --experimental-strip-types 可运行），无 DOM，纯函数。
 // 默认名称逐字一致（qa-notes-tabs.spec.ts 按文本「个人便签」定位菜单，改动会破坏回归）。
 
@@ -7,6 +7,7 @@ export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'home',
   'todos',
   'notes',
+  'diary',
   'countdowns',
   'pomodoro',
   'habits',
@@ -23,6 +24,7 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   home: '主页',
   todos: '工作待办',
   notes: '个人便签',
+  diary: '日记本',
   countdowns: '定时提醒',
   pomodoro: '番茄钟',
   habits: '习惯打卡',
@@ -36,6 +38,7 @@ export const MENU_ICONS: Record<string, string> = {
   home: 'home',
   todos: 'todos',
   notes: 'notes',
+  diary: 'diary',
   countdowns: 'countdowns',
   pomodoro: 'pomodoro',
   habits: 'habits',
@@ -67,10 +70,27 @@ export interface WorkbenchMenuItem {
   icon: string
 }
 
+/** 菜单可见性开关（key → 是否显示；缺失键一律视为显示，false = 隐藏）。 */
+export type WorkbenchMenuVisibility = Record<string, boolean>
+
+/**
+ * 菜单可见性归一化（幂等）：仅保留已知键的布尔值，缺失/非法一律视为显示（不写入 out）。
+ * 非对象/数组输入按缺省处理（全显示）。
+ */
+export function normalizeWorkbenchMenuVisibility(visibility?: unknown): WorkbenchMenuVisibility {
+  const out: WorkbenchMenuVisibility = {}
+  if (visibility === null || typeof visibility !== 'object' || Array.isArray(visibility)) return out
+  for (const [key, value] of Object.entries(visibility as Record<string, unknown>)) {
+    if (!KNOWN_MENU_KEYS.has(key) || typeof value !== 'boolean') continue
+    out[key] = value
+  }
+  return out
+}
+
 /**
  * 归一化菜单顺序与名称（幂等）：
  * order → 仅保留已知键、去重（首次出现优先）、home 强制 index 0（缺失则前插、后置则前移）、
- *         缺失已知键按默认序补全 → 恒 9 项；
+ *         缺失已知键按默认序补全 → 恒 10 项；
  * labels → 仅保留已知键、trim、去空、截断 12 code point。
  * 非数组 / 非对象输入按缺省处理（兜底默认）。
  */
@@ -150,11 +170,19 @@ export function renameMenuLabel(labels: Record<string, string>, key: string, nam
 
 /**
  * 解析菜单渲染项：按 order 顺序迭代，label = 用户改名 ?? 默认名，icon 查表。
+ * 可选 visibility（工作台菜单开关）：false 的键从渲染列表剔除（未传/缺失 = 全显示，向后兼容）。
  */
-export function resolveMenuItems(order: string[], labels: Record<string, string>): WorkbenchMenuItem[] {
-  return order.map(key => ({
-    key,
-    label: labels[key] ?? MENU_DEFAULT_LABELS[key],
-    icon: MENU_ICONS[key]
-  }))
+export function resolveMenuItems(
+  order: string[],
+  labels: Record<string, string>,
+  visibility?: WorkbenchMenuVisibility
+): WorkbenchMenuItem[] {
+  const visible = normalizeWorkbenchMenuVisibility(visibility)
+  return order
+    .filter(key => visible[key] !== false)
+    .map(key => ({
+      key,
+      label: labels[key] ?? MENU_DEFAULT_LABELS[key],
+      icon: MENU_ICONS[key]
+    }))
 }

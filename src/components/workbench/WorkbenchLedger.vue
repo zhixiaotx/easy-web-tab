@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import {
   calcDepositTotal,
@@ -16,6 +16,8 @@ import {
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
 import type { LedgerCategory, LedgerEntry } from '@/types'
+import PanelPager from './PanelPager.vue'
+import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchLedgerStore()
 const toast = useToast()
@@ -32,6 +34,12 @@ function shiftMonth(delta: number): void {
   const [y, m] = selectedMonth.value.split('-').map(Number)
   const d = new Date(y, m - 1 + delta, 1)
   selectedMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  paging.goto(1) // 月份切换 → 列表回第 1 页
+}
+
+function goToCurrentMonth(): void {
+  selectedMonth.value = currentMonth()
+  paging.goto(1) // 本月 → 列表回第 1 页
 }
 
 // ===== 月度统计（必须走 ledgerCore 纯函数，禁组件内重算公式）=====
@@ -132,6 +140,16 @@ const monthEntries = computed(() =>
 // ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/统计不受影响）=====
 const listExpanded = ref(false)
 
+// ===== 图表区展开/折叠（默认展开）。一屏布局下统计卡+图表会压塌列表区（实测列表仅剩 2-91px、0-1 行可见），
+// 故展开记录时自动收起图表腾出列表空间，收起记录时恢复图表（手动开关仍可覆盖）=====
+const chartsExpanded = ref(true)
+
+function toggleList(): void {
+  listExpanded.value = !listExpanded.value
+  chartsExpanded.value = !listExpanded.value // 展开记录 → 收起图表；收起记录 → 恢复图表
+  paging.goto(1) // 列表展开/收起后回第 1 页
+}
+
 interface EntryView {
   entry: LedgerEntry
   cat: LedgerCategory | undefined
@@ -140,6 +158,17 @@ interface EntryView {
 const viewEntries = computed<EntryView[]>(() =>
   monthEntries.value.map(entry => ({ entry, cat: findCategory(store.categories, entry.categoryId) }))
 )
+
+// ===== 自适应分页（Wave-2 T11）：≥769px 分页；≤768px 惰性（全量渲染、pager 隐藏，R2）=====
+const listEl = ref<HTMLElement | null>(null)
+// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
+// （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证；与 Todo/Diary 面板同构）
+const paging = reactive(usePanelPaging({
+  items: () => viewEntries.value,
+  rowHeight: 49, // row-heights.json: ledger = 49 (MAX 47 + 2px，R4)
+  containerRef: listEl,
+  gridRef: undefined
+}))
 
 function catNameOf(categoryId: string): string {
   return findCategory(store.categories, categoryId)?.name ?? '未知'
@@ -198,12 +227,14 @@ async function handleSave(): Promise<void> {
   } else {
     await store.addEntry(note ? { ...payload, note } : payload)
   }
+  paging.goto(1) // 新增/编辑后列表回第 1 页（新记录在 date 降序列表顶部）
   cancelForm()
 }
 
 async function handleDelete(id: string): Promise<void> {
   if (confirm('确定要删除这笔记账吗？')) {
     await store.deleteEntry(id)
+    paging.goto(1) // 删除后列表回第 1 页
   }
 }
 
@@ -242,6 +273,7 @@ async function handleEditCatSave(): Promise<void> {
     return
   }
   editingCatId.value = null
+  paging.goto(1) // 分组变更 → 列表回第 1 页
 }
 
 async function handleAddCat(): Promise<void> {
@@ -253,6 +285,7 @@ async function handleAddCat(): Promise<void> {
     return
   }
   newCatName.value = ''
+  paging.goto(1) // 分组变更 → 列表回第 1 页
 }
 
 async function handleDeleteCat(id: string): Promise<void> {
@@ -264,7 +297,9 @@ async function handleDeleteCat(id: string): Promise<void> {
     } else {
       toast.error('该分组无法删除')
     }
+    return
   }
+  paging.goto(1) // 分组变更 → 列表回第 1 页
 }
 
 // ESC 关闭弹框（先记录弹框，再分组管理）
@@ -297,7 +332,7 @@ onUnmounted(() => {
       <button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</button>
       <button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</button>
       <input v-model="selectedMonth" type="month" class="form-input month-input" data-testid="ld-month" />
-      <button class="month-btn today-btn" data-testid="ld-today" @click="selectedMonth = currentMonth()">本月</button>
+      <button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</button>
       <div class="ld-month-actions">
         <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
           {{ store.showAmount ? '🙈 隐藏金额' : '👁️ 显示金额' }}
@@ -353,126 +388,142 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
-    <section class="ld-card" data-testid="ld-trend">
-      <h3 class="ld-card-title">近 6 月收支趋势</h3>
-      <svg
-        v-if="trendScale"
-        viewBox="0 0 600 220"
-        width="100%"
-        height="220"
-        preserveAspectRatio="xMidYMid meet"
-        class="ld-trend-svg"
+    <!-- 图表区（可折叠，默认展开）：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），
+         ≥1600px 上下堆叠；展开记录时自动收起图表，为记录列表腾出空间 -->
+    <div class="ld-charts-section">
+      <button
+        type="button"
+        class="ld-charts-toggle"
+        data-testid="ld-charts-toggle"
+        :aria-expanded="chartsExpanded"
+        @click="chartsExpanded = !chartsExpanded"
       >
-        <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
-        <g>
-          <line
-            v-for="(g, gi) in trendGridlines"
-            :key="'grid-' + gi"
-            class="ld-trend-gridline"
-            x1="0"
-            x2="600"
-            :y1="g.y"
-            :y2="g.y"
-          />
-          <text
-            v-for="(g, gi) in trendGridlines"
-            :key="'val-' + gi"
-            class="ld-trend-axis-label"
-            x="6"
-            :y="g.y + 4"
-            font-size="11"
-            text-anchor="start"
-            :data-testid="gi === trendGridlines.length - 1 ? 'ld-trend-max' : undefined"
-          >
-            {{ g.label }}
-          </text>
-        </g>
-
-        <!-- 每根柱：data-testid=ld-trend-bar-<月索引>-<income|expense>（同月两柱并排，income 先于 expense） -->
-        <rect
-          v-for="(b, idx) in trendBars"
-          :key="b.monthKey + '-' + b.kind"
-          :data-testid="`ld-trend-bar-${Math.floor(idx / 2)}-${b.kind}`"
-          class="ld-trend-bar"
-          :class="b.kind === 'income' ? 'is-income' : 'is-expense'"
-          :x="b.x"
-          :y="b.y"
-          :width="trendBarWidth"
-          :height="b.height"
-          rx="2"
-        />
-
-        <!-- 月标签：data-testid=ld-trend-month-<月索引> -->
-        <text
-          v-for="(l, li) in trendMonthLabels"
-          :key="l.monthKey"
-          :data-testid="`ld-trend-month-${li}`"
-          class="ld-trend-axis-label"
-          :x="l.x"
-          y="214"
-          font-size="11"
-          text-anchor="middle"
+        <span>📈 图表</span>
+        <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
+      </button>
+      <div v-show="chartsExpanded" class="ld-charts-row">
+      <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
+      <section class="ld-card" data-testid="ld-trend">
+        <h3 class="ld-card-title">近 6 月收支趋势</h3>
+        <svg
+          v-if="trendScale"
+          viewBox="0 0 600 220"
+          width="100%"
+          height="220"
+          preserveAspectRatio="xMidYMid meet"
+          class="ld-trend-svg"
         >
-          {{ l.label }}
-        </text>
-      </svg>
-      <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
-    </section>
+          <!-- 5 条水平网格线 + 数值标签（顶部为 maxY，data-testid=ld-trend-max） -->
+          <g>
+            <line
+              v-for="(g, gi) in trendGridlines"
+              :key="'grid-' + gi"
+              class="ld-trend-gridline"
+              x1="0"
+              x2="600"
+              :y1="g.y"
+              :y2="g.y"
+            />
+            <text
+              v-for="(g, gi) in trendGridlines"
+              :key="'val-' + gi"
+              class="ld-trend-axis-label"
+              x="6"
+              :y="g.y + 4"
+              font-size="11"
+              text-anchor="start"
+              :data-testid="gi === trendGridlines.length - 1 ? 'ld-trend-max' : undefined"
+            >
+              {{ g.label }}
+            </text>
+          </g>
 
-    <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
-    <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
-      <div class="ld-ratio-title">支出分类占比</div>
-      <div class="ld-donut-layout">
-        <div class="ld-donut-wrap">
-          <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
-            <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
-            <circle
+          <!-- 每根柱：data-testid=ld-trend-bar-<月索引>-<income|expense>（同月两柱并排，income 先于 expense） -->
+          <rect
+            v-for="(b, idx) in trendBars"
+            :key="b.monthKey + '-' + b.kind"
+            :data-testid="`ld-trend-bar-${Math.floor(idx / 2)}-${b.kind}`"
+            class="ld-trend-bar"
+            :class="b.kind === 'income' ? 'is-income' : 'is-expense'"
+            :x="b.x"
+            :y="b.y"
+            :width="trendBarWidth"
+            :height="b.height"
+            rx="2"
+          />
+
+          <!-- 月标签：data-testid=ld-trend-month-<月索引> -->
+          <text
+            v-for="(l, li) in trendMonthLabels"
+            :key="l.monthKey"
+            :data-testid="`ld-trend-month-${li}`"
+            class="ld-trend-axis-label"
+            :x="l.x"
+            y="214"
+            font-size="11"
+            text-anchor="middle"
+          >
+            {{ l.label }}
+          </text>
+        </svg>
+        <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
+      </section>
+
+      <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
+      <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
+        <div class="ld-ratio-title">支出分类占比</div>
+        <div class="ld-donut-layout">
+          <div class="ld-donut-wrap">
+            <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
+              <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
+              <circle
+                v-for="(seg, idx) in donutSegments"
+                :key="seg.categoryId"
+                class="ld-donut-seg"
+                :class="{ 'is-accent': idx === 0 }"
+                cx="110"
+                cy="110"
+                :r="RING_R"
+                :stroke="idx === 0 ? undefined : seg.color"
+                :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
+                :stroke-dashoffset="seg.dashOffset"
+                :stroke-linecap="seg.linecap"
+                :data-testid="`ld-donut-seg-${idx}`"
+                transform="rotate(-90 110 110)"
+              />
+            </svg>
+            <div class="ld-donut-center" data-testid="ld-donut-center">
+              {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
+            </div>
+          </div>
+          <div class="ld-donut-legend">
+            <div
               v-for="(seg, idx) in donutSegments"
               :key="seg.categoryId"
-              class="ld-donut-seg"
-              :class="{ 'is-accent': idx === 0 }"
-              cx="110"
-              cy="110"
-              :r="RING_R"
-              :stroke="idx === 0 ? undefined : seg.color"
-              :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
-              :stroke-dashoffset="seg.dashOffset"
-              :stroke-linecap="seg.linecap"
-              :data-testid="`ld-donut-seg-${idx}`"
-              transform="rotate(-90 110 110)"
-            />
-          </svg>
-          <div class="ld-donut-center" data-testid="ld-donut-center">
-            {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
-          </div>
-        </div>
-        <div class="ld-donut-legend">
-          <div
-            v-for="(seg, idx) in donutSegments"
-            :key="seg.categoryId"
-            class="ld-donut-legend-row"
-            :data-testid="`ld-donut-legend-${seg.categoryId}`"
-          >
-            <span
-              class="ld-donut-dot"
-              :class="{ 'is-accent': idx === 0 }"
-              :style="idx === 0 ? undefined : { background: seg.color }"
-            ></span>
-            <div class="ld-ratio-head">
-              <span class="ld-ratio-name">{{ seg.name }}</span>
-              <span class="ld-ratio-val">
-                {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
-              </span>
+              class="ld-donut-legend-row"
+              :data-testid="`ld-donut-legend-${seg.categoryId}`"
+            >
+              <span
+                class="ld-donut-dot"
+                :class="{ 'is-accent': idx === 0 }"
+                :style="idx === 0 ? undefined : { background: seg.color }"
+              ></span>
+              <div class="ld-ratio-head">
+                <span class="ld-ratio-name">{{ seg.name }}</span>
+                <span class="ld-ratio-val">
+                  {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
 
     <!-- 操作栏：数量 + 管理分组 + 新增 -->
     <div class="ld-headbar">
-      <button class="btn-manage" data-testid="ld-toggle-list" @click="listExpanded = !listExpanded">
+      <button class="btn-manage" data-testid="ld-toggle-list" @click="toggleList">
         {{ listExpanded ? '收起记录' : '展开记录' }}（{{ monthEntries.length }}）
       </button>
     </div>
@@ -483,27 +534,31 @@ onUnmounted(() => {
       <div class="ld-empty-sub">＋ 新增第一笔记录</div>
     </div>
 
-    <div v-else-if="listExpanded" class="ld-list">
-      <div v-for="v in viewEntries" :key="v.entry.id" class="ld-item" data-testid="ld-item">
-        <span class="ld-date">{{ v.entry.date }}</span>
-        <span
-          class="ld-cat-badge"
-          :class="{ 'is-income': v.cat?.type === 'income' }"
-          :data-testid="`ld-cat-${v.entry.categoryId}`"
-        >
-          {{ v.cat?.name ?? '未知' }}
-        </span>
-        <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
-        <span v-else class="ld-note">—</span>
-        <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
-          {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
-        </span>
-        <div class="ld-actions">
-          <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
-          <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
+    <template v-else-if="listExpanded">
+      <div ref="listEl" class="ld-list" :class="{ 'ld-list-scroll': !paging.fitsOnePage }">
+        <div v-for="v in paging.pageItems" :key="v.entry.id" class="ld-item" data-testid="ld-item">
+          <span class="ld-date">{{ v.entry.date }}</span>
+          <span
+            class="ld-cat-badge"
+            :class="{ 'is-income': v.cat?.type === 'income' }"
+            :data-testid="`ld-cat-${v.entry.categoryId}`"
+          >
+            {{ v.cat?.name ?? '未知' }}
+          </span>
+          <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
+          <span v-else class="ld-note">—</span>
+          <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
+            {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
+          </span>
+          <div class="ld-actions">
+            <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
+            <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+    </template>
 
     <!-- 新增/编辑记录弹框 -->
     <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
@@ -915,6 +970,43 @@ onUnmounted(() => {
 
 .ld-donut-dot.is-accent {
   background: var(--accent-color, var(--color-primary));
+}
+
+/* ===== 图表区折叠开关 ===== */
+.ld-charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ld-charts-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-full, 999px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.ld-charts-toggle:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.ld-charts-chevron {
+  transition: transform 0.15s ease;
+}
+
+.ld-charts-chevron.open {
+  transform: rotate(180deg);
 }
 
 /* ===== 操作栏 ===== */
@@ -1449,7 +1541,8 @@ onUnmounted(() => {
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete,
-:root.dark .month-btn {
+:root.dark .month-btn,
+:root.dark .ld-charts-toggle {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
@@ -1512,6 +1605,38 @@ onUnmounted(() => {
 
   .ld-donut-legend {
     width: 100%;
+  }
+}
+
+/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T11，R1/R2/R7）===== */
+@media (min-width: 769px) {
+  /* flex 列内可收缩占满剩余高度（T3 shell 契约 .wb-content > * flex:1 min-height:0 已在视图层就位） */
+  .ld-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 列表区滚动兜底：仅 !fitsOnePage（一屏放不下）时由模板类绑定启用（R7） */
+  .ld-list-scroll {
+    overflow-y: auto;
+  }
+}
+
+/* ===== 桌面中低宽度（769-1599px）：图表区并排压缩纵向占用（R1 一屏契约，1366×768 ledger 头部溢出修复；≥1600px 保持上下堆叠）===== */
+@media (min-width: 769px) and (max-width: 1599px),
+  (min-width: 1600px) and (max-height: 900px) {
+  /* M-3：≥1600px 且视口较矮时图表堆叠会压塌 .ld-list（列表区高度趋近 0），
+     此带宽下保持并排以保住列表区可用高度（QA 仅覆盖 1366×768 与 1920×1080） */
+  .ld-charts-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .ld-charts-row > .ld-card,
+  .ld-charts-row > .ld-ratio-block {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>

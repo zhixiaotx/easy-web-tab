@@ -6,7 +6,8 @@ import { onMounted, onUnmounted, type Ref } from 'vue'
  * - Alt+K：打开全局搜索浮层。焦点在输入类元素（INPUT/TEXTAREA/SELECT/contenteditable）时跳过，
  *   避免打断打字（如便签/待办表单）。
  * - Ctrl+Alt+1..9：跳转左侧菜单第 1..9 项（按设置 store 当前菜单顺序映射：
- *   Ctrl+Alt+1=index0 主页 … Ctrl+Alt+9=index8，菜单重排后跟随新位置；禁用裸 Ctrl+1..9）。
+ *   Ctrl+Alt+1=index0 主页 … Ctrl+Alt+9=index8；菜单恒 10 项，快捷键仅覆盖前 9 项，
+ *   第 10 项经快捷键不可达；菜单重排后跟随新位置；禁用裸 Ctrl+1..9）。
  * - Esc：关闭全局搜索浮层（幂等；浮层自身也处理 Esc，双保险不重复触发）。
  */
 export interface WorkbenchShortcutsOptions {
@@ -52,7 +53,7 @@ export function useWorkbenchShortcuts(options: WorkbenchShortcutsOptions) {
 
     // Ctrl+Alt+1..9：跳转菜单第 1..9 项（输入框内同样生效，与 Alt+K 的 skip-input 语义区分）。
     // 全量映射：数字 n → menuKeys[n-1]（settingsStore.workbenchMenuItems 当前位置序），
-    // 菜单恒归一化为 9 项，Ctrl+Alt+9=index8 → ledger；菜单重排后跟随新位置。
+    // 菜单恒归一化为 10 项，Ctrl+Alt+1..9 覆盖前 9 项（第 10 项 ledger 经快捷键不可达）；菜单重排后跟随新位置。
     if (event.ctrlKey && event.altKey && !event.shiftKey && !event.metaKey && /^[1-9]$/.test(event.key)) {
       const idx = Number(event.key) - 1
       const menuKeys = options.getMenuKeys()

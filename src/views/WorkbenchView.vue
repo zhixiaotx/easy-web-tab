@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { idbExportAll, idbImportAll } from '@/composables/useIdb'
@@ -10,7 +10,9 @@ import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
+import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useAppSettingsStore } from '@/stores/settings'
+import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
@@ -21,6 +23,7 @@ import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
+import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
 import Icon from '@/components/Icon.vue'
 import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
@@ -38,14 +41,16 @@ const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
+const diaryStore = useWorkbenchDiaryStore()
 const settingsStore = useAppSettingsStore()
 const sitesStore = useSitesStore()
 
-// 左侧菜单导航白名单（9 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（10 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
   'home',
   'todos',
   'notes',
+  'diary',
   'countdowns',
   'pomodoro',
   'habits',
@@ -60,9 +65,10 @@ const activeSection = ref<SectionKey>('home')
 // 健康管理面板当前激活 tab（点击菜单「健康管理」不传 tab → 保留上次激活）
 const activeHealthTab = ref<HealthModule>('exercise')
 
-// WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）
+// WorkbenchHome 通过 @navigate 请求跳转（emits 声明为 string，这里做白名单收窄）。
+// 菜单开关关闭的功能不可进入（白名单 + 开关双重守卫）。
 function navigateTo(section: string, tab?: string) {
-  if ((SECTION_KEYS as readonly string[]).includes(section)) {
+  if ((SECTION_KEYS as readonly string[]).includes(section) && settingsStore.isWorkbenchMenuEnabled(section)) {
     activeSection.value = section as SectionKey
     if (section === 'health' && tab !== undefined && (HEALTH_TABS as readonly string[]).includes(tab)) {
       activeHealthTab.value = tab as HealthModule
@@ -74,6 +80,17 @@ function navigateTo(section: string, tab?: string) {
 // 视图禁止内联重算排序/标签（顺序与改名经设置弹窗调整后在此直接生效）
 const menuItems = computed(() => settingsStore.workbenchMenuItems)
 
+// 菜单开关变化（设置弹窗切换）→ 当前激活区被关闭时回退到首个可见菜单项（home 恒可见）
+watch(
+  () => menuItems.value.map(item => item.key),
+  (keys) => {
+    if (keys.length === 0) return
+    if (!keys.includes(activeSection.value)) {
+      activeSection.value = keys[0] as SectionKey
+    }
+  }
+)
+
 // 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
 const sidebarCollapsed = computed(() => settingsStore.workbenchSidebarCollapsed ?? false)
 
@@ -81,8 +98,9 @@ function toggleSidebar() {
   settingsStore.setWorkbenchSidebarCollapsed(!sidebarCollapsed.value)
 }
 
-// ===== 全局搜索（侧栏底部按钮 / Alt+K 打开）=====
+// ===== 全局搜索（右上角按钮 / Alt+K 打开）=====
 const spotlightOpen = ref(false)
+const showSettingsDialog = ref(false)
 
 // 6 类数据源：密码不解密内容，仅 siteName/url 由 spotlightCore 匹配（core 契约）
 const spotlightData = computed<SpotlightData>(() => ({
@@ -118,10 +136,6 @@ useWorkbenchShortcuts({
   onNavigate: (key) => navigateTo(key as SectionKey)
 })
 
-// 实时时钟（每秒更新）
-const now = ref(new Date())
-let clockTimer: ReturnType<typeof setInterval> | undefined
-
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
@@ -130,21 +144,11 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-function formatClock(d: Date): string {
-  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
-  const weekday = d.toLocaleDateString('zh-CN', { weekday: 'long' })
-  return `${formatDate(d)} ${time} ${weekday}`
-}
-
-const clockText = computed(() => formatClock(now.value))
-
 onMounted(async () => {
-  clockTimer = setInterval(() => {
-    now.value = new Date()
-  }, 1000)
   await Promise.all([
     todosStore.loadTodos(),
     notesStore.loadNotes(),
+    diaryStore.loadDiary(),
     countdownsStore.loadCountdowns(),
     healthStore.loadHealth(),
     ledgerStore.loadLedger(),
@@ -154,10 +158,6 @@ onMounted(async () => {
   await habitsStore.loadHabits()
   // 进入工作台自动快照（fire-and-forget：非阻塞、静默失败，绝不阻塞渲染；同日去重由 captureSnapshot 处理）
   captureSnapshot().catch(() => {})
-})
-
-onUnmounted(() => {
-  if (clockTimer !== undefined) clearInterval(clockTimer)
 })
 
 // 导出：读取全部 4 store 打包为 JSON 下载
@@ -225,6 +225,7 @@ async function handleImportFile(event: Event) {
     await Promise.all([
       todosStore.loadTodos(),
       notesStore.loadNotes(),
+      diaryStore.loadDiary(),
       countdownsStore.loadCountdowns(),
       healthStore.loadHealth(),
       ledgerStore.loadLedger(),
@@ -241,13 +242,13 @@ async function handleImportFile(event: Event) {
       }
     }
 
-    // 成功 toast：仅统计 todos/notes/countdowns/健康/记账（密码不解密不计条数）
+    // 成功 toast：仅统计 todos/notes/diary/countdowns/健康/记账（密码不解密不计条数）
     const healthCount =
       healthStore.records.exercise.length +
       healthStore.records.diet.length +
       healthStore.records.sleep.length +
       healthStore.records.weight.length
-    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，倒计时 ${countdownsStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledgerStore.entries.length} 笔`
+    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，日记 ${diaryStore.entries.length} 篇，倒计时 ${countdownsStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledgerStore.entries.length} 笔`
     toast.success(skipPasswords ? `${countMsg}（密码已跳过）` : `${countMsg}；密码库已导入`)
   }
   reader.readAsText(file)
@@ -256,16 +257,17 @@ async function handleImportFile(event: Event) {
 
 <template>
   <div class="wb-shell">
-    <!-- 头部：左 = 返回 + 标题；右 = 时钟 + 导入导出 -->
+    <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 设置 + 导入导出 -->
     <header class="wb-header">
       <div class="wb-header-left">
         <button class="wb-btn" @click="router.back()">← 返回</button>
         <h1>工作台</h1>
       </div>
       <div class="wb-header-right">
-        <span class="wb-clock" data-testid="wb-clock">{{ clockText }}</span>
         <button class="wb-btn" @click="handleImportClick">导入</button>
         <button class="wb-btn" @click="handleExport">导出</button>
+        <button class="wb-btn" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true"><Icon name="search" /> 全局搜索</button>
+        <button class="wb-btn" title="设置" @click="showSettingsDialog = true">⚙️ 设置</button>
         <input
           ref="importInput"
           type="file"
@@ -302,21 +304,13 @@ async function handleImportFile(event: Event) {
           <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
           <span class="wb-menu-label">{{ item.label }}</span>
         </button>
-        <button
-          class="wb-menu-item wb-spotlight-open"
-          data-testid="wb-spotlight-open"
-          title="全局搜索 (Alt+K)"
-          @click="spotlightOpen = true"
-        >
-          <span class="wb-menu-icon"><Icon name="search" /></span>
-          <span class="wb-menu-label">全局搜索</span>
-        </button>
       </nav>
 
       <main class="wb-content">
         <WorkbenchHome v-if="activeSection === 'home'" @navigate="navigateTo" />
         <WorkbenchTodo v-else-if="activeSection === 'todos'" />
         <WorkbenchNotes v-else-if="activeSection === 'notes'" />
+        <WorkbenchDiary v-else-if="activeSection === 'diary'" />
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
         <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
         <WorkbenchHabits v-else-if="activeSection === 'habits'" />
@@ -332,12 +326,17 @@ async function handleImportFile(event: Event) {
       @select="handleSpotlightSelect"
       @close="spotlightOpen = false"
     />
+    <AppSettingsDialog
+      v-if="showSettingsDialog"
+      @close="showSettingsDialog = false"
+    />
   </div>
 </template>
 
 <style scoped>
 /* 亮色基础样式（沿用 --color-* 全局 token） */
 .wb-shell {
+  height: 100dvh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -377,14 +376,6 @@ async function handleImportFile(event: Event) {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.wb-clock {
-  font-size: 14px;
-  color: var(--color-text-secondary, #64748b);
-  font-variant-numeric: tabular-nums;
-  margin-right: 8px;
-  white-space: nowrap;
 }
 
 .wb-btn {
@@ -506,15 +497,12 @@ async function handleImportFile(event: Event) {
   font-weight: 600;
 }
 
-/* 全局搜索入口固定在菜单底部（margin-top:auto 撑开与导航项间距） */
-.wb-menu-item.wb-spotlight-open {
-  margin-top: auto;
-}
-
 .wb-content {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   background-color: var(--color-bg, #f8fafc);
 }
 
@@ -530,10 +518,6 @@ async function handleImportFile(event: Event) {
 
 :root.dark .wb-header-left h1 {
   color: var(--text-primary, #f9fafb);
-}
-
-:root.dark .wb-clock {
-  color: var(--text-secondary, #d1d5db);
 }
 
 :root.dark .wb-btn {
@@ -587,7 +571,16 @@ async function handleImportFile(event: Event) {
   }
 }
 
+/* 桌面一屏契约：面板根钉满内容区（flex-stretch，不用百分比高度） */
+@media (min-width: 769px) {
+  .wb-content { overflow: hidden; }
+  .wb-content > * { flex: 1; min-height: 0; }
+}
+
 @media (max-width: 768px) {
+  .wb-content { overflow-y: auto; }
+  .wb-content > * { flex: none; }
+
   .wb-header {
     flex-direction: column;
     align-items: flex-start;

@@ -133,9 +133,9 @@ function isMenuUpDisabled(item: WorkbenchMenuItem, index: number): boolean {
   return item.key === 'home' || index <= 1
 }
 
-// 下移按钮禁用：home 恒禁用；末行（index === items.length - 1）达下边界
+// 下移按钮禁用：home 恒禁用；末行（index === 全量 items.length - 1）达下边界
 function isMenuDownDisabled(item: WorkbenchMenuItem, index: number): boolean {
-  return item.key === 'home' || index >= store.workbenchMenuItems.length - 1
+  return item.key === 'home' || index >= store.workbenchMenuAllItems.length - 1
 }
 
 // 改名提交（blur / Enter）：先按 code point 校验 ≤ 12（Metis N2：代理对不得绕过上限）；
@@ -341,6 +341,27 @@ onUnmounted(() => {
 
         <p class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
 
+        <!-- 导航筛选栏（仅导航设置 tab）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
+        <div v-if="activeTab === 'nav'" class="wb-menu-config nav-filter-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">导航筛选栏</h3>
+            <button
+              type="button"
+              class="switch-btn"
+              :class="{ on: store.navFiltersExpanded }"
+              role="switch"
+              :aria-checked="store.navFiltersExpanded"
+              data-testid="navfilter-switch"
+              @click="store.setNavFiltersExpanded(!store.navFiltersExpanded)"
+            >
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+          <p class="wb-menu-hint">
+            控制导航管理页「分类 · 标签」筛选栏的展开与收起：{{ store.navFiltersExpanded ? '当前为展开模式' : '当前为收起模式（默认）' }}
+          </p>
+        </div>
+
         <!-- 天气城市（仅工作台设置 tab）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
         <div v-if="activeTab === 'wb'" class="wb-city-config">
           <div class="wb-menu-head">
@@ -364,16 +385,30 @@ onUnmounted(() => {
             <h3 class="wb-menu-title">工作台菜单</h3>
             <button type="button" class="row-reset" data-testid="wbmenu-reset" @click="store.resetWorkbenchMenu()">恢复默认</button>
           </div>
-          <p class="wb-menu-hint">主页固定置顶，不可调整顺序；位于最前/最后时按钮禁用</p>
+          <p class="wb-menu-hint">主页固定置顶，不可调整顺序或关闭；开关关闭的功能将从菜单与主页统计中隐藏</p>
 
           <div class="wb-menu-list">
             <div
-              v-for="(item, index) in store.workbenchMenuItems"
+              v-for="(item, index) in store.workbenchMenuAllItems"
               :key="item.key"
               class="wb-menu-row"
+              :class="{ 'is-disabled-item': !store.isWorkbenchMenuEnabled(item.key) }"
               :data-testid="`wbmenu-row-${item.key}`"
             >
               <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
+              <button
+                type="button"
+                class="switch-btn"
+                :class="{ on: store.isWorkbenchMenuEnabled(item.key) }"
+                role="switch"
+                :aria-checked="store.isWorkbenchMenuEnabled(item.key)"
+                :disabled="item.key === 'home'"
+                :title="item.key === 'home' ? '主页为默认页，不可关闭' : store.isWorkbenchMenuEnabled(item.key) ? '关闭此功能' : '开启此功能'"
+                :data-testid="`wbmenu-switch-${item.key}`"
+                @click="store.setWorkbenchMenuVisibility(item.key, !store.isWorkbenchMenuEnabled(item.key))"
+              >
+                <span class="switch-thumb"></span>
+              </button>
               <input
                 type="text"
                 class="wb-menu-name-input"
@@ -838,6 +873,61 @@ onUnmounted(() => {
 .wb-menu-btn:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* 开关按钮（工作台菜单显示开关 / 导航筛选栏展开控制共用） */
+.switch-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--bg-secondary, var(--color-bg-hover));
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background-color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+}
+
+.switch-btn .switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--text-muted, var(--color-text-muted));
+  transition: transform var(--transition-fast, 0.15s ease), background-color var(--transition-fast, 0.15s ease);
+}
+
+.switch-btn.on {
+  background-color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.switch-btn.on .switch-thumb {
+  transform: translateX(18px);
+  background-color: #fff;
+}
+
+.switch-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* 菜单行开关关闭时的弱化态（行内输入/按钮整体降透明度提示） */
+.wb-menu-row.is-disabled-item {
+  opacity: 0.55;
+}
+
+:root.dark .switch-btn {
+  background-color: var(--input-bg, #374151);
+  border-color: var(--border-color, #4b5563);
+}
+
+:root.dark .switch-btn.on {
+  background-color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
 }
 
 /* 数据时光机区块（复用 .wb-menu-config 容器，仅补充快照专属样式） */

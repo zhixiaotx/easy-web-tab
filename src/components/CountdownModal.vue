@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import type { CountdownItem } from '@/stores/countdowns'
 import { repeatLabel, categoryLabel } from '@/composables/countdownCore'
+import { useToast } from '@/composables/useToast'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 
 const emit = defineEmits<{
@@ -10,6 +11,11 @@ const emit = defineEmits<{
 }>()
 
 const store = useCountdownsStore()
+
+// 邮件提醒开关行提示文案（title 与开启成功 toast 共用）
+const EMAIL_HINT = '需在设置-提醒设置中配置收件邮箱后生效'
+
+const toast = useToast()
 
 type RemainingStatus = 'normal' | 'urgent' | 'critical' | 'expired'
 
@@ -43,6 +49,17 @@ onUnmounted(() => {
 
 // 前台展示列表（store 挂载后异步加载，用 computed 保持响应）
 const items = computed<CountdownItem[]>(() => store.frontCountdowns)
+
+// 切换邮件提醒：缺省/undefined 视为关闭，点击取反后写库并 toast 反馈
+async function toggleEmailReminder(item: CountdownItem) {
+  const enabled = item.emailReminder !== true
+  try {
+    await store.updateCountdown(item.id, { emailReminder: enabled })
+    toast.info(enabled ? '已开启邮件提醒，需在设置-提醒设置中配置邮箱后生效' : '已关闭邮件提醒')
+  } catch {
+    toast.warning('邮件提醒设置保存失败')
+  }
+}
 </script>
 
 <template>
@@ -58,17 +75,30 @@ const items = computed<CountdownItem[]>(() => store.frontCountdowns)
 
         <div v-else class="countdown-list">
           <div v-for="item in items" :key="item.id" class="countdown-item">
-            <div class="countdown-info">
-              <div class="countdown-title">
-                <span class="countdown-name">{{ item.name }}</span>
-                <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
-                <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
+            <div class="countdown-main-row">
+              <div class="countdown-info">
+                <div class="countdown-title">
+                  <span class="countdown-name">{{ item.name }}</span>
+                  <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
+                  <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
+                </div>
+                <span class="countdown-time">{{ item.remaining.nextTime }}</span>
               </div>
-              <span class="countdown-time">{{ item.remaining.nextTime }}</span>
+              <span class="countdown-remaining" :class="statusClass(item.remaining.status)">
+                {{ item.remaining.label }}
+              </span>
             </div>
-            <span class="countdown-remaining" :class="statusClass(item.remaining.status)">
-              {{ item.remaining.label }}
-            </span>
+            <!-- 邮件提醒开关行：单向绑定 checked，点击切换写库（缺省/undefined = 未勾选） -->
+            <label class="countdown-email-toggle" data-testid="cd-email-toggle" :title="EMAIL_HINT">
+              <input
+                type="checkbox"
+                class="email-toggle-input"
+                data-testid="cd-email-switch"
+                :checked="item.emailReminder === true"
+                @change="toggleEmailReminder(item)"
+              />
+              <span>📧 邮件提醒</span>
+            </label>
           </div>
         </div>
       </div>
@@ -145,8 +175,9 @@ const items = computed<CountdownItem[]>(() => store.frontCountdowns)
 
 .countdown-item {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   padding: 14px 16px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border: 1px solid var(--border-color, var(--color-border));
@@ -156,6 +187,37 @@ const items = computed<CountdownItem[]>(() => store.frontCountdowns)
 
 .countdown-item:hover {
   border-color: var(--accent-color, var(--color-primary));
+}
+
+/* 卡片顶部行式头部：名称/徽标/时间/剩余（保持原有横向布局） */
+.countdown-main-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 邮件提醒开关行：虚线分隔 + 小字号 muted，hover 变主色 */
+.countdown-email-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color, var(--color-border));
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+.countdown-email-toggle:hover {
+  color: var(--accent-color, var(--color-primary));
+}
+
+.email-toggle-input {
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .countdown-info {
@@ -328,7 +390,7 @@ const items = computed<CountdownItem[]>(() => store.frontCountdowns)
     max-height: 90vh;
   }
 
-  .countdown-item {
+  .countdown-main-row {
     flex-wrap: wrap;
   }
 

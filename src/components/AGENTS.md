@@ -15,7 +15,7 @@ components/
 ├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航管理页分类/标签栏展开收起）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-：remind-desktop-switch 开启即请求权限 / remind-email-switch / remind-email-to / remind-email-service / remind-email-template / remind-email-key / remind-email-test，canTestEmail 由 isEmailConfigured 驱动，测试走 sendReminderEmail + toast）
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
-├── CountdownModal.vue    # 前台只读倒计时弹框（/display，repeatLabel + categoryLabel 徽标）
+├── CountdownModal.vue    # 前台倒计时弹框（/display，repeatLabel + categoryLabel 徽标；卡片底部新增可交互邮件提醒开关 `cd-email-toggle`/`cd-email-switch`：`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；启用成功 toast 提示需在设置-提醒设置配置邮箱）
 ├── CountdownReminder.vue # 全局提醒弹框（z-index 2000，读 useCountdownReminder 单例，仅「关闭」可关）
 ├── IconManager.vue       # Custom icon upload & management (617 lines)
 ├── SearchBar.vue         # Search input
@@ -59,7 +59,7 @@ components/
 | Icon management | `IconManager.vue` | Upload & manage custom site icons |
 | Password vault | `workbench/WorkbenchPassword.vue` | 主密码三态（设置/解锁/锁定），新增/编辑弹窗 + 书签库名称关联下拉，按网站名称搜索，AES-CBC 加密存 IndexedDB |
 | Countdown management | `workbench/WorkbenchCountdown.vue` | 工作台表单：6 种重复规则选择器（weekly 周几多选 + 工作日快捷钮 / monthly 几号 / interval 分钟）+ 分类下拉取 `store.allCategories`（内置 6 + 自定义）+ 校验；`repeatLabel`/`categoryLabel` 徽标；面板分类筛选为 tabs（全部 + `tabCategories`，`cd-cat-all`/`cd-cat-<c>`，即时过滤）+ ⚙️ 分类管理弹框（`cd-cat-dialog`：标签页显示复选框 + 自定义分类内联改名（`cd-cat-rename-input-*`，blur/Enter 提交、Esc 还原）/上移下移（`cd-cat-up-*`/`cd-cat-down-*`）/删除（`cd-cat-del-*`，带 confirm）/添加（`cd-cat-new-input`/`cd-cat-add-btn`），失败走 useToast warning）；表单「发送邮件提醒」复选框 `cd-form-email`（默认关、startAdd 复位 false、startEdit 回填 `item.emailReminder === true`、handleSave 透传，opt-in——未勾选即不发邮件） |
-| Countdown display | `CountdownModal.vue` | 前台只读展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫/exercise=橙/diet=琥珀/sleep=青，亮暗双主题；自定义分类统一默认灰 `cat-default`） |
+| Countdown display | `CountdownModal.vue` | 前台展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫/exercise=橙/diet=琥珀/sleep=青，亮暗双主题；自定义分类统一默认灰 `cat-default`）；卡片底部可交互邮件提醒开关 `cd-email-toggle`（label）/`cd-email-switch`（checkbox），`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB，开启 toast「已开启邮件提醒，需在设置-提醒设置中配置邮箱后生效」/关闭 toast「已关闭邮件提醒」 |
 | Reminder popup | `CountdownReminder.vue` | 全屏遮罩弹框，到点时间显示 `⏰ MM-DD HH:mm`；z-index 2000，点击遮罩不关闭 |
 | Tag filtering | `TagFilter.vue` + `CategoryTabs.vue` | Tags extracted from all sites |
 | Loading states | `SkeletonCard.vue` + `SkeletonGrid.vue` | Shimmer placeholders |
@@ -85,6 +85,7 @@ components/
 - **WorkbenchDiary.vue testid 约定**：工具栏 日期输入 `dj-date-input`（默认今天）、今日 `dj-today-btn`、保存 `dj-save-btn`、删除 `dj-delete-btn`（仅选中条目时渲染）、编辑/预览切换 `dj-preview-toggle`、字数 `dj-char-count`、内容编辑 `dj-content-input`、Markdown 预览 `dj-preview`（`noteMarkdown.renderMarkdown` + `:deep()` 排版镜像 WorkbenchNotes）、空态 `dj-empty`「还没有日记，写下今天的第一篇吧」；历史卡片 `dj-card-<id>` + 日期标签 `dj-card-date-<id>`（含中文星期 周X）+ 今天徽标 `dj-card-today-<id>`（今天）+ 6 行 clamp 预览 `dj-card-preview-<id>`；分页 `dj-page-prev`/`dj-page-info`（「第 X / Y 页」）/`dj-page-next`（边界禁用），8 条/页、新增条目回第 1 页、删除页码自动钳制；G3 空保存守卫（trim 空 → toast「内容为空，未保存」）；日期切换脏检查 confirm；其余 `dj-*` 前缀
 - **AppSettingsDialog.vue 提醒设置 tab testid 约定**：桌面通知开关 `remind-desktop-switch`（onToggleDesktopNotify，开启时同步 `requestNotifyPermission`）、邮件总开关 `remind-email-switch`、收件箱 `remind-email-to`、Service ID `remind-email-service`、Template ID `remind-email-template`、Public Key `remind-email-key`、测试按钮 `remind-email-test`（canTestEmail=isEmailConfigured，点击走 `sendReminderEmail` + toast 结果）；模板变量契约 to_email/countdown_name/occurrence_time/app_url 由 `reminderCore.buildEmailParams` 唯一提供，组件禁止内联拼参
 - **WorkbenchCountdown.vue testid 约定**：邮件提醒复选框 `cd-form-email`（默认关；startAdd 复位 false；startEdit 回填 `item.emailReminder === true`；handleSave 透传 emailReminder，opt-in 缺省不发邮件）
+- **CountdownModal.vue testid 约定**：卡片底部邮件提醒开关 `cd-email-toggle`（label.countdown-email-toggle，内含 span「📧 邮件提醒」+ checkbox `cd-email-switch`）；`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；开启 toast「已开启邮件提醒，需在设置-提醒设置中配置邮箱后生效」、关闭 toast「已关闭邮件提醒」；缺省（无 emailReminder 字段）= 不发邮件
 - **PanelPager.vue testid 约定**：容器 `panel-pager`（仅 total>1 渲染）、上一页 `panel-pager-prev`（page≤1 disabled）、信息 `panel-pager-info`（「第 X / Y 页」）、下一页 `panel-pager-next`（page≥total disabled）；纯展示组件（props page/total、emit prev/next，无默认值/校验/业务逻辑），Wave-3 QA 脚本断言 testid 勿改名；消费方绑 `usePanelPaging` 返回值（`reactive(...)` 包裹或解构顶层 ref 自动解包）
 
 ## ANTI-PATTERNS

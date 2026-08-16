@@ -40,7 +40,9 @@ export function useMarkdown() {
               createdAt: typeof raw?.createdAt === 'string' && raw.createdAt.trim() !== '' ? raw.createdAt : now,
               updatedAt: typeof raw?.updatedAt === 'string' && raw.updatedAt.trim() !== '' ? raw.updatedAt : now,
               sortOrder: typeof raw?.sortOrder === 'number' ? raw.sortOrder : undefined,
-              showOnDisplay: typeof raw?.showOnDisplay === 'boolean' ? raw.showOnDisplay : undefined
+              showOnDisplay: typeof raw?.showOnDisplay === 'boolean' ? raw.showOnDisplay : undefined,
+              // 邮件提醒开关：仅布尔值透传，缺失 → undefined（后续 normalize 缺省不发邮件）
+              emailReminder: typeof raw?.emailReminder === 'boolean' ? raw.emailReminder : undefined
             }
           })
         : undefined

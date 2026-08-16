@@ -170,6 +170,8 @@ const formRepeatType = ref<'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 
 const formWeekDays = ref<number[]>([])
 const formDayOfMonth = ref(1)
 const formIntervalMinutes = ref(45)
+// 发送邮件提醒（默认关闭 = 主动勾选 opt-in；需在设置-提醒设置中配置收件邮箱）
+const formEmailReminder = ref(false)
 
 const repeatTypeOptions: {
   value: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'interval'
@@ -232,6 +234,7 @@ function startAdd(): void {
   formTime.value = ''
   formCategory.value = 'work'
   formColor.value = DEFAULT_COUNTDOWN_COLOR
+  formEmailReminder.value = false
   resetRepeatForm()
   showDialog.value = true
 }
@@ -245,6 +248,8 @@ function startEdit(item: CountdownItem): void {
   formTime.value = time ?? ''
   formCategory.value = item.category ?? 'work'
   formColor.value = item.color ?? DEFAULT_COUNTDOWN_COLOR
+  // 旧数据无 emailReminder 字段 → 视为未勾选
+  formEmailReminder.value = item.emailReminder === true
 
   // 反向映射重复规则：null/absent/'once' → once；旧字符串 'yearly' → yearly；对象 → 类型 + 参数
   resetRepeatForm()
@@ -294,10 +299,19 @@ async function handleSave(): Promise<void> {
   const category = formCategory.value
   const color = formColor.value
   if (editingId.value) {
-    await store.updateCountdown(editingId.value, { name, endDateTime, repeat, category, color })
+    await store.updateCountdown(editingId.value, {
+      name,
+      endDateTime,
+      repeat,
+      category,
+      color,
+      emailReminder: formEmailReminder.value
+    })
   } else {
-    await store.addCountdown({ name, endDateTime, repeat, category, color })
+    await store.addCountdown({ name, endDateTime, repeat, category, color, emailReminder: formEmailReminder.value })
   }
+  // 保存成功复位（新增路径每次打开重新默认未勾选）
+  formEmailReminder.value = false
   cancelForm()
 }
 
@@ -620,6 +634,14 @@ onUnmounted(() => {
               </label>
               <button type="button" class="color-reset" @click="formColor = DEFAULT_COUNTDOWN_COLOR">恢复默认</button>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label class="email-check-row" data-testid="cd-form-email">
+              <input v-model="formEmailReminder" type="checkbox" class="form-checkbox" />
+              <span>发送邮件提醒</span>
+            </label>
+            <p class="form-hint">需在设置-提醒设置中配置收件邮箱</p>
           </div>
 
           <!-- 实时预览 -->
@@ -1405,6 +1427,27 @@ onUnmounted(() => {
 
 .field-cat {
   width: 110px;
+}
+
+/* 发送邮件提醒勾选行 */
+.email-check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.email-check-row input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent-color, var(--color-primary));
+}
+
+.form-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
 }
 
 .form-input {

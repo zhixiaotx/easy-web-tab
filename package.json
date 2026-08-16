@@ -10,6 +10,7 @@
     "serve": "node scripts/serve-with-rewrites.cjs",
     "start": "npm run build && npm run serve",
     "test:countdown": "node --experimental-strip-types scripts/test-countdown-core.ts",
+    "test:reminder": "node --experimental-strip-types scripts/test-reminder-core.ts",
     "test:habits": "node --experimental-strip-types scripts/test-habit-core.ts",
     "test:todo": "node --experimental-strip-types scripts/test-todo-core.ts",
     "test:health": "node --experimental-strip-types scripts/test-health-core.ts",
@@ -24,6 +25,7 @@
     "test:pomodoro": "node --experimental-strip-types scripts/test-pomodoro-core.ts"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@vueuse/core": "^14.2.1",
     "crypto-js": "^4.2.0",
     "gray-matter": "^4.0.3",

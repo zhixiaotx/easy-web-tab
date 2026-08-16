@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import {
   useAppSettingsStore,
   DIALOG_LABELS,
@@ -12,6 +12,9 @@ import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
 import { idbGet, idbPut, idbImportAll } from '@/composables/useIdb'
+import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
+import { sendReminderEmail } from '@/composables/reminderEmail'
+import { requestNotifyPermission } from '@/composables/useDesktopNotify'
 import { captureSnapshot } from '@/composables/useSnapshots'
 import type { SnapshotWithSource } from '@/composables/useSnapshots'
 import { normalizeSnapshotList } from '@/composables/snapshotCore'
@@ -31,8 +34,8 @@ import Icon from '@/components/Icon.vue'
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置）
-const activeTab = ref<'nav' | 'wb'>('nav')
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置）
+const activeTab = ref<'nav' | 'wb' | 'remind'>('nav')
 
 const emit = defineEmits<{
   close: []
@@ -269,6 +272,48 @@ async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
   }
 }
 
+// ========================================
+// 提醒设置（仅提醒设置 tab）：桌面通知权限请求 + 邮件提醒（EmailJS）测试发送
+// 配置对象形状与 reminderCore/reminderEmail 契约一致（enabled/toEmail/serviceId/templateId/publicKey）
+// ========================================
+const emailConfig = computed(() => ({
+  enabled: store.reminderEmailEnabled,
+  toEmail: store.reminderEmailTo,
+  serviceId: store.reminderEmailServiceId,
+  templateId: store.reminderEmailTemplateId,
+  publicKey: store.reminderEmailPublicKey
+}))
+
+// 测试按钮可用性：开关开启且四字段非空（isEmailConfigured 纯函数判定，组件禁止内联重算）
+const canTestEmail = computed(() => isEmailConfigured(emailConfig.value))
+
+// 桌面通知开关：开启时同步请求浏览器通知权限（须在用户手势内调用，Chrome 要求）
+function onToggleDesktopNotify(): void {
+  const next = !store.desktopNotifyEnabled
+  store.setDesktopNotifyEnabled(next)
+  if (next) {
+    void requestNotifyPermission()
+  }
+}
+
+// 发送测试邮件：按 sendReminderEmail 布尔结果 → success/error toast
+const testEmailBusy = ref(false)
+async function handleTestEmail(): Promise<void> {
+  if (testEmailBusy.value) return
+  testEmailBusy.value = true
+  const cfg = emailConfig.value
+  const ok = await sendReminderEmail(
+    cfg,
+    buildEmailParams({ id: 'test', name: '测试邮件' }, new Date().toLocaleString(), cfg.toEmail, window.location.href)
+  )
+  testEmailBusy.value = false
+  if (ok) {
+    toast.success('测试邮件发送成功')
+  } else {
+    toast.error('测试邮件发送失败，请检查配置')
+  }
+}
+
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -337,9 +382,17 @@ onUnmounted(() => {
             :aria-selected="activeTab === 'wb'"
             @click="activeTab = 'wb'"
           >工作台设置</button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'remind' }"
+            :aria-selected="activeTab === 'remind'"
+            @click="activeTab = 'remind'"
+          >提醒设置</button>
         </div>
 
-        <p class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+        <p v-if="activeTab !== 'remind'" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
 
         <!-- 导航筛选栏（仅导航设置 tab）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
         <div v-if="activeTab === 'nav'" class="wb-menu-config nav-filter-config">
@@ -480,7 +533,104 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="settings-grid">
+        <!-- 桌面通知（仅提醒设置 tab）：开关 + 开启时请求浏览器通知权限 + 权限状态提示 -->
+        <div v-if="activeTab === 'remind'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">桌面通知</h3>
+            <button
+              type="button"
+              class="switch-btn"
+              :class="{ on: store.desktopNotifyEnabled }"
+              role="switch"
+              :aria-checked="store.desktopNotifyEnabled"
+              data-testid="remind-desktop-switch"
+              @click="onToggleDesktopNotify"
+            >
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+          <p class="wb-menu-hint">
+            开启后，倒计时提醒到点会弹出浏览器桌面通知；开启时将自动请求通知权限，若浏览器已拒绝，请在浏览器站点设置中重新授权
+          </p>
+        </div>
+
+        <!-- 邮件提醒（仅提醒设置 tab）：EmailJS 配置（开关 + 四字段 + 测试发送） -->
+        <div v-if="activeTab === 'remind'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">邮件提醒</h3>
+            <button
+              type="button"
+              class="switch-btn"
+              :class="{ on: store.reminderEmailEnabled }"
+              role="switch"
+              :aria-checked="store.reminderEmailEnabled"
+              data-testid="remind-email-switch"
+              @click="store.setReminderEmailEnabled(!store.reminderEmailEnabled)"
+            >
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+          <p class="wb-menu-hint">EmailJS 需注册（emailjs.com）→ 创建 Service + Template（模板变量命名契约：to_email / countdown_name / occurrence_time / app_url）</p>
+
+          <div class="remind-fields">
+            <label class="remind-field">
+              <span class="remind-label">收件邮箱</span>
+              <input
+                type="email"
+                class="wb-menu-name-input"
+                placeholder="example@email.com"
+                data-testid="remind-email-to"
+                :value="store.reminderEmailTo"
+                @input="store.setReminderEmailTo(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">Service ID</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="service_xxxxxxxx"
+                data-testid="remind-email-service"
+                :value="store.reminderEmailServiceId"
+                @input="store.setReminderEmailServiceId(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">Template ID</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="template_xxxxxxxx"
+                data-testid="remind-email-template"
+                :value="store.reminderEmailTemplateId"
+                @input="store.setReminderEmailTemplateId(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">Public Key</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="public key"
+                data-testid="remind-email-key"
+                :value="store.reminderEmailPublicKey"
+                @input="store.setReminderEmailPublicKey(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+          </div>
+
+          <div class="remind-actions">
+            <button
+              type="button"
+              class="wb-menu-btn"
+              data-testid="remind-email-test"
+              :disabled="!canTestEmail || testEmailBusy"
+              @click="handleTestEmail"
+            >发送测试邮件</button>
+          </div>
+        </div>
+
+        <div class="settings-grid" v-if="activeTab !== 'remind'">
           <div class="grid-header">
             <span class="col-label">弹窗</span>
             <span>宽度 (px)</span>
@@ -1001,6 +1151,34 @@ onUnmounted(() => {
 :root.dark .wb-snapshot-source,
 :root.dark .wb-snapshot-empty {
   color: var(--text-muted, #9ca3af);
+}
+
+/* 提醒设置区块：邮件配置字段行（输入框复用 .wb-menu-name-input，仅补标签列与操作区） */
+.remind-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remind-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.remind-label {
+  flex-shrink: 0;
+  width: 92px;
+  font-size: 13px;
+  color: var(--text-primary, var(--color-text));
+}
+
+.remind-actions {
+  margin-top: 12px;
+}
+
+:root.dark .remind-label {
+  color: var(--text-primary, #f9fafb);
 }
 
 @media (max-width: 640px) {

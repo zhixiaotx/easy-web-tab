@@ -106,7 +106,9 @@ export function normalizeCountdown(raw: Partial<Countdown>): Countdown {
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
     ...(raw.sortOrder !== undefined ? { sortOrder: raw.sortOrder } : {}),
-    ...(raw.showOnDisplay !== undefined ? { showOnDisplay: raw.showOnDisplay } : {})
+    ...(raw.showOnDisplay !== undefined ? { showOnDisplay: raw.showOnDisplay } : {}),
+    // emailReminder：仅布尔值透传（true 发邮件 / false 不发），非布尔或缺失 → 不输出该字段（缺省不发）
+    ...(typeof raw.emailReminder === 'boolean' ? { emailReminder: raw.emailReminder } : {})
   }
 }
 

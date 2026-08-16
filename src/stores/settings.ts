@@ -161,7 +161,13 @@ function parseSettingsData(raw: unknown): AppSettingsData {
     bgOpacity: 1,
     workbenchMenuOrder: [...WORKBENCH_MENU_DEFAULT_ORDER],
     workbenchMenuLabels: {},
-    workbenchMenuVisibility: {}
+    workbenchMenuVisibility: {},
+    desktopNotifyEnabled: false,
+    reminderEmailEnabled: false,
+    reminderEmailTo: '',
+    reminderEmailServiceId: '',
+    reminderEmailTemplateId: '',
+    reminderEmailPublicKey: ''
   }
   const data = raw as Record<string, unknown>
   if (!data || typeof data !== 'object') return out
@@ -206,6 +212,13 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.workbenchSidebarCollapsed === 'boolean') {
     out.workbenchSidebarCollapsed = data.workbenchSidebarCollapsed
   }
+  // 提醒设置：6 字段白名单解析（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
+  out.desktopNotifyEnabled = typeof data.desktopNotifyEnabled === 'boolean' ? data.desktopNotifyEnabled : false
+  out.reminderEmailEnabled = typeof data.reminderEmailEnabled === 'boolean' ? data.reminderEmailEnabled : false
+  out.reminderEmailTo = typeof data.reminderEmailTo === 'string' ? data.reminderEmailTo : ''
+  out.reminderEmailServiceId = typeof data.reminderEmailServiceId === 'string' ? data.reminderEmailServiceId : ''
+  out.reminderEmailTemplateId = typeof data.reminderEmailTemplateId === 'string' ? data.reminderEmailTemplateId : ''
+  out.reminderEmailPublicKey = typeof data.reminderEmailPublicKey === 'string' ? data.reminderEmailPublicKey : ''
   return out
 }
 
@@ -229,6 +242,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航管理页分类/标签栏展开态：默认收起（false）
   const navFiltersExpanded = ref<boolean>(false)
 
+  // 提醒设置：桌面通知开关 + 邮件提醒（EmailJS）开关与四字段配置——默认关闭/空串
+  const desktopNotifyEnabled = ref<boolean>(false)
+  const reminderEmailEnabled = ref<boolean>(false)
+  const reminderEmailTo = ref<string>('')
+  const reminderEmailServiceId = ref<string>('')
+  const reminderEmailTemplateId = ref<string>('')
+  const reminderEmailPublicKey = ref<string>('')
+
   // ========================================
   // 持久化
   // ========================================
@@ -244,7 +265,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchMenuVisibility: toRaw(workbenchMenuVisibility.value),
       workbenchCity: toRaw(workbenchCity.value),
       workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value),
-      navFiltersExpanded: navFiltersExpanded.value
+      navFiltersExpanded: navFiltersExpanded.value,
+      desktopNotifyEnabled: desktopNotifyEnabled.value,
+      reminderEmailEnabled: reminderEmailEnabled.value,
+      reminderEmailTo: reminderEmailTo.value,
+      reminderEmailServiceId: reminderEmailServiceId.value,
+      reminderEmailTemplateId: reminderEmailTemplateId.value,
+      reminderEmailPublicKey: reminderEmailPublicKey.value
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
@@ -336,6 +363,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       } else {
         workbenchSidebarCollapsed.value = undefined
       }
+      // 提醒设置：6 字段白名单应用（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
+      desktopNotifyEnabled.value = effective.desktopNotifyEnabled === true
+      reminderEmailEnabled.value = effective.reminderEmailEnabled === true
+      reminderEmailTo.value = typeof effective.reminderEmailTo === 'string' ? effective.reminderEmailTo : ''
+      reminderEmailServiceId.value = typeof effective.reminderEmailServiceId === 'string' ? effective.reminderEmailServiceId : ''
+      reminderEmailTemplateId.value = typeof effective.reminderEmailTemplateId === 'string' ? effective.reminderEmailTemplateId : ''
+      reminderEmailPublicKey.value = typeof effective.reminderEmailPublicKey === 'string' ? effective.reminderEmailPublicKey : ''
       // 归一化结果写回 IDB（fire-and-forget）：保证导出/导入往返幂等，镜像迁移分支的 idbPut
       persist()
     }
@@ -390,6 +424,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchCity.value = undefined
     workbenchSidebarCollapsed.value = undefined
     navFiltersExpanded.value = false
+    desktopNotifyEnabled.value = false
+    reminderEmailEnabled.value = false
+    reminderEmailTo.value = ''
+    reminderEmailServiceId.value = ''
+    reminderEmailTemplateId.value = ''
+    reminderEmailPublicKey.value = ''
     const root = document.documentElement
     for (const id of DIALOG_IDS) {
       root.style.removeProperty(DIALOG_VARS[id].widthVar)
@@ -455,6 +495,37 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 提醒设置：桌面通知/邮件提醒开关（纯布尔）+ 邮件配置四字段（原样透传不 trim）——更新 ref → persist
+  function setDesktopNotifyEnabled(v: boolean) {
+    desktopNotifyEnabled.value = v
+    persist()
+  }
+
+  function setReminderEmailEnabled(v: boolean) {
+    reminderEmailEnabled.value = v
+    persist()
+  }
+
+  function setReminderEmailTo(s: string) {
+    reminderEmailTo.value = s
+    persist()
+  }
+
+  function setReminderEmailServiceId(s: string) {
+    reminderEmailServiceId.value = s
+    persist()
+  }
+
+  function setReminderEmailTemplateId(s: string) {
+    reminderEmailTemplateId.value = s
+    persist()
+  }
+
+  function setReminderEmailPublicKey(s: string) {
+    reminderEmailPublicKey.value = s
+    persist()
+  }
+
   // 菜单开关判定（缺失键 = 显示）；home 恒显示（视图/设置弹窗锁定其开关）
   function isWorkbenchMenuEnabled(key: string): boolean {
     return workbenchMenuVisibility.value[key] !== false
@@ -493,6 +564,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchCity,
     workbenchSidebarCollapsed,
     navFiltersExpanded,
+    desktopNotifyEnabled,
+    reminderEmailEnabled,
+    reminderEmailTo,
+    reminderEmailServiceId,
+    reminderEmailTemplateId,
+    reminderEmailPublicKey,
     initSettings,
     applySettings,
     setDialogSize,
@@ -503,6 +580,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setWorkbenchMenuVisibility,
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,
+    setDesktopNotifyEnabled,
+    setReminderEmailEnabled,
+    setReminderEmailTo,
+    setReminderEmailServiceId,
+    setReminderEmailTemplateId,
+    setReminderEmailPublicKey,
     resetDefaults,
     moveWorkbenchMenuItem,
     renameWorkbenchMenuItem,

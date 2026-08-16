@@ -84,6 +84,7 @@ export interface Countdown {
   updatedAt: string
   sortOrder?: number        // NEW: manual sort position (1..n); undefined = last
   showOnDisplay?: boolean   // NEW: front-page visibility; undefined = true
+  emailReminder?: boolean   // 发送邮件提醒开关；undefined/缺省 = 不发邮件
   color?: string            // 卡片自定义颜色（'#RRGGBB' 或 '#RGB' hex）；undefined = 默认蓝
 }
 
@@ -199,6 +200,12 @@ export interface AppSettingsData {
   workbenchCity?: string // 天气卡城市（trim 后非空；空串/undefined/null = 未配置）
   workbenchSidebarCollapsed?: boolean // 工作台侧栏折叠态（非法/缺失 = 未配置即展开）
   navFiltersExpanded?: boolean // 导航管理页分类/标签栏展开态（默认 false = 收起）
+  desktopNotifyEnabled?: boolean // 定时提醒桌面通知总开关（默认 false = 关闭）
+  reminderEmailEnabled?: boolean // 定时提醒邮件总开关（默认 false = 关闭）
+  reminderEmailTo?: string // EmailJS 收件邮箱（空串 = 未配置）
+  reminderEmailServiceId?: string // EmailJS Service ID
+  reminderEmailTemplateId?: string // EmailJS Template ID
+  reminderEmailPublicKey?: string // EmailJS Public Key
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

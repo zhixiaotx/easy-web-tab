@@ -14,6 +14,7 @@ export interface CountdownReminderItem {
   id: string
   name: string
   label: string
+  emailReminder?: boolean
 }
 
 export interface CountdownReminderState {
@@ -67,7 +68,7 @@ async function tick(): Promise<void> {
   for (const c of store.countdowns) {
     const occ = getReminderDue(c.endDateTime, c.repeat, c.lastRemindedAt)
     if (occ !== null) {
-      items.push({ id: c.id, name: c.name, label: occ.slice(5) })
+      items.push({ id: c.id, name: c.name, label: occ.slice(5), emailReminder: c.emailReminder })
       // 桌面通知：开关开启即发（内部自行判定浏览器支持 + 权限 granted），tag 传倒计时 id 去重
       if (settingsStore.desktopNotifyEnabled) {
         sendDesktopNotification(c.name, `${occ} 已到`, c.id)
@@ -98,7 +99,7 @@ async function tick(): Promise<void> {
       .filter(({ r }) => !r.isExpired && r.days <= 3)
     if (urgent.length > 0) {
       for (const { c, r } of urgent) {
-        items.push({ id: c.id, name: c.name, label: r.label })
+        items.push({ id: c.id, name: c.name, label: r.label, emailReminder: c.emailReminder })
         // 摘要同样走桌面通知（邮件仅限到点，摘要永不发邮件）
         if (settingsStore.desktopNotifyEnabled) {
           sendDesktopNotification(c.name, r.label, c.id)

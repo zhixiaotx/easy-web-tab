@@ -544,9 +544,8 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
   align-items: start;
 }
 
-.home-slide-grid-stats,
-.home-slide-grid-tools {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.home-slide-grid-stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 /* 工具页单卡居中容器 */
@@ -1089,16 +1088,14 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .home-slide-grid-stats,
-  .home-slide-grid-tools {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .home-slide-grid-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .home-slide-grid,
-  .home-slide-grid-stats,
-  .home-slide-grid-tools {
+  .home-slide-grid-stats {
     grid-template-columns: 1fr;
   }
 

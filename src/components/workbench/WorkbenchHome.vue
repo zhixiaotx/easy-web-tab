@@ -6,15 +6,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { useCountdownsStore } from '@/stores/countdowns'
-import { usePasswordsStore } from '@/stores/passwords'
-import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
-import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
-import { useAppSettingsStore } from '@/stores/settings'
-import { calcBmi, calcDailyAttainment, calcExerciseAttainment } from '@/composables/healthCore'
-import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
 import { useToast } from '@/composables/useToast'
-import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
+import { useHomeStats, PRIORITY_META, statusClass } from '@/composables/useHomeStats'
 import Icon from '@/components/Icon.vue'
 import WeatherCard from '@/components/workbench/WeatherCard.vue'
 import CalendarAnchorCard from '@/components/workbench/CalendarAnchorCard.vue'
@@ -23,15 +16,27 @@ const emit = defineEmits<{ navigate: [section: string, tab?: string] }>()
 
 const todosStore = useWorkbenchTodosStore()
 const notesStore = useWorkbenchNotesStore()
-const countdownsStore = useCountdownsStore()
-const passwordsStore = usePasswordsStore()
-const healthStore = useWorkbenchHealthStore()
-const ledgerStore = useWorkbenchLedgerStore()
-const settingsStore = useAppSettingsStore()
 const toast = useToast()
 
-// ===== 菜单开关视图（缺失键恒 true；false = 功能已关闭）=====
-const menuOn = computed(() => settingsStore.workbenchMenuEnabled)
+// ===== 主页统计逻辑（从 composable 消费）=====
+const {
+  menuOn,
+  todoStats,
+  todoCompletionRate,
+  noteStats,
+  countdownStats,
+  exerciseStats,
+  dietStats,
+  sleepStats,
+  weightStats,
+  ledgerStats,
+  visibleStatCards,
+  upcomingCountdowns,
+  pendingTodos,
+  isOverdue,
+  isUnlocked,
+  passwordCount
+} = useHomeStats()
 
 // ===== 问候 + 时间（按 now 时段问候：早上好/下午好/晚上好）=====
 const now = ref(new Date())
@@ -92,6 +97,24 @@ function resumeCarousel(): void {
   startAutoplay()
 }
 
+// ===== 触摸滑动手势（移动端 swipe left/right 切换轮播）=====
+const SWIPE_THRESHOLD = 50
+let touchStartX = 0
+
+function onTouchStart(e: TouchEvent): void {
+  touchStartX = e.touches[0].clientX
+}
+
+function onTouchEnd(e: TouchEvent): void {
+  const deltaX = e.changedTouches[0].clientX - touchStartX
+  if (Math.abs(deltaX) < SWIPE_THRESHOLD) return
+  if (deltaX < 0) {
+    nextSlide()
+  } else {
+    prevSlide()
+  }
+}
+
 onMounted(() => {
   nowTimer = window.setInterval(() => {
     now.value = new Date()
@@ -118,156 +141,19 @@ async function handleQuickAdd(): Promise<void> {
   quickTodoTitle.value = ''
 }
 
-// ===== 逾期判断（同 WorkbenchTodo.vue）=====
-// 今天 = 本地日期 YYYY-MM-DD（不能用 toISOString，那是 UTC，会偏一天）
-function localToday(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// ===== 快捷添加便签（回车 addNote + toast）=====
+const quickNoteTitle = ref('')
 
-function isOverdue(todo: WorkbenchTodo): boolean {
-  return !!todo.dueDate && !todo.completed && todo.dueDate < localToday()
-}
-
-// ===== 统计卡 =====
-const todoStats = computed(() => ({
-  total: todosStore.todos.length,
-  active: todosStore.activeCount,
-  overdue: todosStore.todos.filter(t => isOverdue(t)).length
-}))
-
-// 待办完成率（微可视化进度环，数值仅由 store 的 total/active 派生，不重算统计）
-const todoCompletionRate = computed(() => {
-  const total = todoStats.value.total
-  if (total === 0) return 0
-  return Math.round(((total - todoStats.value.active) / total) * 100)
-})
-
-const noteStats = computed(() => ({
-  total: notesStore.notes.length,
-  pinned: notesStore.notes.filter(n => n.pinned).length
-}))
-
-// 30 天内到期：itemsWithRemaining 中未过期且 status 非 normal（critical ≤7 天、urgent ≤30 天，均在 30 天内）
-const countdownStats = computed(() => ({
-  total: countdownsStore.countdowns.length,
-  near30: countdownsStore.itemsWithRemaining.filter(
-    i => !i.remaining.isExpired && i.remaining.status !== 'normal'
-  ).length
-}))
-
-// ===== 健康 & 记账统计卡（数值全部走 healthCore/ledgerCore 纯函数，不在此重写公式）=====
-
-// 运动指标单位（周达标 sub：次/分钟/千卡）
-const EXERCISE_UNIT: Record<HealthPlanMetric, string> = {
-  times: '次',
-  minutes: '分钟',
-  calories: '千卡',
-  duration: '次'
-}
-
-// 运动：本周达标（times=条数 / minutes=Σduration / calories=Σcalories）
-const exerciseStats = computed(() => {
-  const plan = healthStore.plans.exercise
-  const at = calcExerciseAttainment(healthStore.records.exercise, plan, localToday())
-  if (!at || !plan) return { value: '未设定目标', sub: '点击前往设置' }
-  return { value: `${at.current}/${at.target}`, sub: `本周 · ${EXERCISE_UNIT[plan.metric]}` }
-})
-
-// 饮食：今日热量合计
-const dietStats = computed(() => {
-  const at = calcDailyAttainment(healthStore.records.diet, healthStore.plans.diet, localToday())
-  if (!at) return { value: '未设定目标', sub: '点击前往设置' }
-  return { value: `${at.current}/${at.target}`, sub: '今日 · 千卡' }
-})
-
-// 睡眠：今日时长（今日无记录但有计划 → '—'）
-const sleepStats = computed(() => {
-  const today = localToday()
-  const plan = healthStore.plans.sleep
-  if (!plan) return { value: '未设定目标', sub: '点击前往设置' }
-  if (!healthStore.records.sleep.some(r => r.date === today)) return { value: '—', sub: '今日暂无记录' }
-  const at = calcDailyAttainment(healthStore.records.sleep, plan, today)
-  // 计划存在且今日有记录 → at 必非 null（calcDailyAttainment 仅无计划/模块非 diet|sleep 时返回 null）
-  if (!at) return { value: '—', sub: '今日暂无记录' }
-  return { value: `${at.current}/${at.target}`, sub: '今日 · 小时' }
-})
-
-// 体重：最近一条（date 降序，同日取 createdAt 新者）+ 身高 → BMI
-const weightStats = computed(() => {
-  const height = healthStore.height
-  const latest = [...healthStore.records.weight].sort((a, b) =>
-    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
-  )[0]
-  if (latest === undefined || height === undefined) return { value: '—', sub: '点击前往设置' }
-  const bmi = calcBmi(latest.weightKg, height)
-  if (bmi === null) return { value: '—', sub: '点击前往设置' }
-  return { value: `BMI ${bmi.toFixed(1)}`, sub: `最近 ${latest.weightKg} kg` }
-})
-
-// 记账：本月收入/支出（金额走掩码：默认隐藏 ****，跟随记账面板可见性开关实时联动；结余由记账面板承载）
-const ledgerStats = computed(() => {
-  const stats = calcMonthlyStats(ledgerStore.entries, monthKeyOf(localToday()), ledgerStore.categories)
-  return {
-    value: `支出 ¥${maskOrReveal(formatYuan(stats.expense), !ledgerStore.showAmount)}`,
-    sub: `收入 ¥${maskOrReveal(formatYuan(stats.income), !ledgerStore.showAmount)}`
+async function handleQuickNote(): Promise<void> {
+  const title = quickNoteTitle.value.trim()
+  if (!title) return
+  if (title.length > 100) {
+    toast.warning('便签标题不能超过 100 字')
+    return
   }
-})
-
-// ===== 概览可见统计卡（纯占位隐藏：无数据的卡不渲染；菜单开关关闭的功能不渲染；有目标但 0 值的卡保留）=====
-const visibleStatCards = computed<string[]>(() => {
-  const keys: string[] = []
-  const on = menuOn.value
-  const height = healthStore.height
-  if (on.todos && todosStore.todos.length > 0) keys.push('todos')
-  if (on.notes && notesStore.notes.length > 0) keys.push('notes')
-  if (on.countdowns && countdownsStore.countdowns.length > 0) keys.push('countdowns')
-  if (on.passwords && passwordsStore.isUnlocked && passwordsStore.passwords.length > 0) keys.push('passwords')
-  if (on.health && healthStore.plans.exercise) keys.push('exercise')
-  if (on.health && healthStore.plans.diet) keys.push('diet')
-  if (on.health && healthStore.plans.sleep) keys.push('sleep')
-  if (on.health && height !== undefined && height > 0 && healthStore.records.weight.length > 0) keys.push('weight')
-  if (on.ledger && ledgerStore.entries.length > 0) keys.push('ledger')
-  return keys
-})
-
-// ===== 即将到期倒计时：itemsWithRemaining 中未过期的前 3 条（已按 store 排序）=====
-const upcomingCountdowns = computed<CountdownItem[]>(() =>
-  countdownsStore.itemsWithRemaining.filter(i => !i.remaining.isExpired).slice(0, 3)
-)
-
-// ===== 未完成待办前 5：todos 中未完成，按 visibleTodos 排序语义
-//（优先级高→低 → 截止日期升序，无截止排最后 → 创建时间降序，新的在前）=====
-const PRIORITY_ORDER: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 }
-
-const pendingTodos = computed<WorkbenchTodo[]>(() =>
-  todosStore.todos
-    .filter(t => !t.completed)
-    .sort((a, b) => {
-      const pa = PRIORITY_ORDER[a.priority]
-      const pb = PRIORITY_ORDER[b.priority]
-      if (pa !== pb) return pa - pb
-      if (a.dueDate !== b.dueDate) {
-        if (!a.dueDate) return 1
-        if (!b.dueDate) return -1
-        return a.dueDate < b.dueDate ? -1 : 1
-      }
-      return a.createdAt < b.createdAt ? 1 : -1
-    })
-    .slice(0, 5)
-)
-
-// ===== 优先级徽章（同 WorkbenchTodo.vue）=====
-const PRIORITY_META: Record<TodoPriority, { label: string; className: string }> = {
-  high: { label: '高', className: 'prio-high' },
-  medium: { label: '中', className: 'prio-medium' },
-  low: { label: '低', className: 'prio-low' }
-}
-
-// 倒计时剩余状态色（同 WorkbenchCountdown.vue）
-function statusClass(status: CountdownItem['remaining']['status']): string {
-  return `cd-${status}`
+  await notesStore.addNote({ title, content: '', color: 'blue' })
+  toast.success('便签已添加')
+  quickNoteTitle.value = ''
 }
 </script>
 
@@ -285,7 +171,7 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
       </div>
     </section>
 
-    <!-- 轮播区：行动台 / 数据概览 / 工具 三屏自动轮播（hover 暂停，箭头/圆点手动切换） -->
+    <!-- 轮播区：行动台 / 数据概览 / 工具 三屏自动轮播（hover 暂停，箭头/圆点/触摸滑动手势切换） -->
     <section
       class="home-carousel"
       data-testid="home-carousel"
@@ -293,11 +179,15 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
       @mouseenter="pauseCarousel"
       @mouseleave="resumeCarousel"
     >
-      <div class="home-carousel-window">
+      <div
+        class="home-carousel-window"
+        @touchstart="onTouchStart"
+        @touchend="onTouchEnd"
+      >
         <div class="home-carousel-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
           <!-- 第 1 屏：行动台（即将到期提醒 + 未完成待办 + 天气 + 日历锚点，开关关闭的功能整块隐藏） -->
           <div class="home-slide" data-testid="home-slide-action">
-            <div v-if="menuOn.countdowns || menuOn.todos || true" class="home-slide-grid">
+            <div v-if="menuOn.countdowns || menuOn.todos" class="home-slide-grid">
               <section v-if="menuOn.countdowns" class="bento-card bento-panel">
                 <div class="panel-header">
                   <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
@@ -337,17 +227,17 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
               <!-- 日历锚点卡（第一页嵌入，发薪/纪念日倒计时） -->
               <CalendarAnchorCard class="bento-anchor" />
             </div>
-            <div v-else class="home-empty" data-testid="home-action-empty">待办与定时提醒功能已关闭，可在设置中开启</div>
+            <div v-else class="home-empty" data-testid="home-action-empty">待办与定时提醒功能已关闭，可在工作台菜单设置中开启</div>
           </div>
 
           <!-- 第 2 屏：数据概览（统计卡；卡按 visibleStatCards 隐藏纯占位，全空时显示空态） -->
           <div class="home-slide" data-testid="home-slide-overview">
             <div v-if="visibleStatCards.length > 0" class="home-slide-grid home-slide-grid-stats" data-testid="home-overview">
-              <div class="bento-card bento-stat" data-testid="home-stats-todos" v-if="visibleStatCards.includes('todos')">
+              <div class="bento-card bento-stat" data-testid="home-stats-todos" v-if="visibleStatCards.includes('todos')" @click="emit('navigate', 'todos')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="todos" :size="16" /></span>
                   <span class="stat-label">待办任务</span>
-                  <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-todos" @click.stop="emit('navigate', 'todos')">前往 →</button>
                 </div>
                 <div class="stat-body">
                   <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
@@ -369,83 +259,83 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
                 <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-notes" v-if="visibleStatCards.includes('notes')">
+              <div class="bento-card bento-stat" data-testid="home-stats-notes" v-if="visibleStatCards.includes('notes')" @click="emit('navigate', 'notes')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="notes" :size="16" /></span>
                   <span class="stat-label">便签</span>
-                  <button class="nav-btn" data-testid="home-nav-notes" @click="emit('navigate', 'notes')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-notes" @click.stop="emit('navigate', 'notes')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-notes">{{ noteStats.total }}</div>
                 <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-countdowns" v-if="visibleStatCards.includes('countdowns')">
+              <div class="bento-card bento-stat" data-testid="home-stats-countdowns" v-if="visibleStatCards.includes('countdowns')" @click="emit('navigate', 'countdowns')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="countdowns" :size="16" /></span>
                   <span class="stat-label">定时提醒</span>
-                  <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-countdowns" @click.stop="emit('navigate', 'countdowns')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
                 <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-passwords" v-if="visibleStatCards.includes('passwords')">
+              <div class="bento-card bento-stat" data-testid="home-stats-passwords" v-if="visibleStatCards.includes('passwords')" @click="emit('navigate', 'passwords')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="passwords" :size="16" /></span>
                   <span class="stat-label">密码</span>
-                  <button class="nav-btn" data-testid="home-nav-passwords" @click="emit('navigate', 'passwords')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-passwords" @click.stop="emit('navigate', 'passwords')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-passwords">
-                  {{ passwordsStore.isUnlocked ? `${passwordsStore.passwords.length} 条` : '🔒 解锁后可见' }}
+                  {{ isUnlocked ? `${passwordCount} 条` : '🔒 解锁后可见' }}
                 </div>
-                <div class="stat-sub">{{ passwordsStore.isUnlocked ? '已解锁' : '未解锁' }}</div>
+                <div class="stat-sub">{{ isUnlocked ? '已解锁' : '未解锁' }}</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-exercise" v-if="visibleStatCards.includes('exercise')">
+              <div class="bento-card bento-stat" data-testid="home-stats-exercise" v-if="visibleStatCards.includes('exercise')" @click="emit('navigate', 'health', 'exercise')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="exercise" :size="16" /></span>
                   <span class="stat-label">运动</span>
-                  <button class="nav-btn" data-testid="home-nav-exercise" @click="emit('navigate', 'health', 'exercise')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-exercise" @click.stop="emit('navigate', 'health', 'exercise')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-diet" v-if="visibleStatCards.includes('diet')">
+              <div class="bento-card bento-stat" data-testid="home-stats-diet" v-if="visibleStatCards.includes('diet')" @click="emit('navigate', 'health', 'diet')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="diet" :size="16" /></span>
                   <span class="stat-label">饮食</span>
-                  <button class="nav-btn" data-testid="home-nav-diet" @click="emit('navigate', 'health', 'diet')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-diet" @click.stop="emit('navigate', 'health', 'diet')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-sleep" v-if="visibleStatCards.includes('sleep')">
+              <div class="bento-card bento-stat" data-testid="home-stats-sleep" v-if="visibleStatCards.includes('sleep')" @click="emit('navigate', 'health', 'sleep')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="sleep" :size="16" /></span>
                   <span class="stat-label">睡眠</span>
-                  <button class="nav-btn" data-testid="home-nav-sleep" @click="emit('navigate', 'health', 'sleep')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-sleep" @click.stop="emit('navigate', 'health', 'sleep')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-weight" v-if="visibleStatCards.includes('weight')">
+              <div class="bento-card bento-stat" data-testid="home-stats-weight" v-if="visibleStatCards.includes('weight')" @click="emit('navigate', 'health', 'weight')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="weight" :size="16" /></span>
                   <span class="stat-label">体重</span>
-                  <button class="nav-btn" data-testid="home-nav-weight" @click="emit('navigate', 'health', 'weight')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-weight" @click.stop="emit('navigate', 'health', 'weight')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-ledger" v-if="visibleStatCards.includes('ledger')">
+              <div class="bento-card bento-stat" data-testid="home-stats-ledger" v-if="visibleStatCards.includes('ledger')" @click="emit('navigate', 'ledger')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="ledger" :size="16" /></span>
                   <span class="stat-label">记账</span>
-                  <button class="nav-btn" data-testid="home-nav-ledger" @click="emit('navigate', 'ledger')">前往 →</button>
+                  <button class="nav-btn" data-testid="home-nav-ledger" @click.stop="emit('navigate', 'ledger')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
@@ -454,10 +344,11 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
           </div>
 
-          <!-- 第 3 屏：工具（快捷添加待办；待办关闭时整块隐藏） -->
+          <!-- 第 3 屏：工具（快捷添加待办/便签 + 近期到期提醒 + 快捷跳转，功能关闭时对应块隐藏） -->
           <div class="home-slide" data-testid="home-slide-tools">
-            <div v-if="menuOn.todos" class="home-slide-tools-single">
-              <section class="bento-card bento-quick-add">
+            <div class="home-slide-tools-grid" data-testid="home-tools-grid">
+              <!-- 快捷添加待办 -->
+              <section v-if="menuOn.todos" class="bento-card bento-quick-add">
                 <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
                 <div class="quick-add-row">
                   <input
@@ -469,13 +360,78 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
                     placeholder="输入待办标题，回车即可添加…"
                     @keyup.enter="handleQuickAdd"
                   />
-                  <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">
-                    添加
+                  <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">添加</button>
+                </div>
+              </section>
+
+              <!-- 快捷添加便签 -->
+              <section v-if="menuOn.notes" class="bento-card bento-quick-add">
+                <div class="quick-add-label"><Icon name="notes" :size="16" />快速添加便签</div>
+                <div class="quick-add-row">
+                  <input
+                    v-model="quickNoteTitle"
+                    class="quick-add-input"
+                    data-testid="home-quick-note-input"
+                    type="text"
+                    maxlength="100"
+                    placeholder="输入便签标题，回车即可添加…"
+                    @keyup.enter="handleQuickNote"
+                  />
+                  <button type="button" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote">添加</button>
+                </div>
+              </section>
+
+              <!-- 近期到期提醒 -->
+              <section v-if="menuOn.countdowns && upcomingCountdowns.length > 0" class="bento-card bento-upcoming">
+                <div class="upcoming-header"><Icon name="countdowns" :size="16" />近期到期提醒</div>
+                <ul class="upcoming-list" data-testid="home-tools-upcoming-list">
+                  <li v-for="item in upcomingCountdowns" :key="item.id" class="upcoming-item">
+                    <span class="upcoming-name">{{ item.name }}</span>
+                    <span class="upcoming-remaining" :class="statusClass(item.remaining.status)">{{ item.remaining.label }}</span>
+                  </li>
+                </ul>
+              </section>
+
+              <!-- 快捷跳转 -->
+              <section class="bento-card bento-quick-links">
+                <div class="quick-links-header"><Icon name="home" :size="16" />快捷跳转</div>
+                <div class="quick-links-grid">
+                  <button v-if="menuOn.todos" class="quick-link-btn" data-testid="home-quick-link-todos" @click="emit('navigate', 'todos')">
+                    <Icon name="todos" :size="20" />待办
+                  </button>
+                  <button v-if="menuOn.notes" class="quick-link-btn" data-testid="home-quick-link-notes" @click="emit('navigate', 'notes')">
+                    <Icon name="notes" :size="20" />便签
+                  </button>
+                  <button v-if="menuOn.diary" class="quick-link-btn" data-testid="home-quick-link-diary" @click="emit('navigate', 'diary')">
+                    <Icon name="diary" :size="20" />日记
+                  </button>
+                  <button v-if="menuOn.countdowns" class="quick-link-btn" data-testid="home-quick-link-countdowns" @click="emit('navigate', 'countdowns')">
+                    <Icon name="countdowns" :size="20" />定时提醒
+                  </button>
+                  <button v-if="menuOn.pomodoro" class="quick-link-btn" data-testid="home-quick-link-pomodoro" @click="emit('navigate', 'pomodoro')">
+                    <Icon name="pomodoro" :size="20" />番茄钟
+                  </button>
+                  <button v-if="menuOn.habits" class="quick-link-btn" data-testid="home-quick-link-habits" @click="emit('navigate', 'habits')">
+                    <Icon name="habits" :size="20" />习惯打卡
+                  </button>
+                  <button v-if="menuOn.passwords" class="quick-link-btn" data-testid="home-quick-link-passwords" @click="emit('navigate', 'passwords')">
+                    <Icon name="passwords" :size="20" />密码管理
+                  </button>
+                  <button v-if="menuOn.health" class="quick-link-btn" data-testid="home-quick-link-health" @click="emit('navigate', 'health')">
+                    <Icon name="health" :size="20" />健康管理
+                  </button>
+                  <button v-if="menuOn.ledger" class="quick-link-btn" data-testid="home-quick-link-ledger" @click="emit('navigate', 'ledger')">
+                    <Icon name="ledger" :size="20" />记账
                   </button>
                 </div>
               </section>
             </div>
-            <div v-else class="home-empty" data-testid="home-tools-empty">快速添加待办功能已关闭，可在设置中开启</div>
+            <!-- 所有工具卡片均隐藏时的兜底空态 -->
+            <div
+              v-if="!menuOn.todos && !menuOn.notes"
+              class="home-empty"
+              data-testid="home-tools-empty"
+            >快捷添加功能已关闭，可在设置中开启</div>
           </div>
         </div>
       </div>
@@ -580,6 +536,12 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 /* 统计卡瘦身：padding 覆盖（12px 14px），不改共享 .bento-card 的 16px */
 .bento-stat {
   padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bento-stat:active {
+  transform: scale(0.98);
 }
 
 /* ===== 问候条 ===== */
@@ -689,6 +651,119 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 
 .quick-add-btn:hover {
   filter: brightness(1.1);
+}
+
+/* ===== 工具页网格布局 ===== */
+.home-slide-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 12px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* ===== 近期到期提醒 ===== */
+.bento-upcoming {
+  gap: 10px;
+}
+
+.upcoming-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.upcoming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 8px);
+  transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.upcoming-item:hover {
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.upcoming-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, var(--color-text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upcoming-remaining {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ===== 快捷跳转 ===== */
+.bento-quick-links {
+  gap: 10px;
+}
+
+.quick-links-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.quick-links-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.quick-link-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.quick-link-btn:hover {
+  background: var(--accent-color, var(--color-primary));
+  color: #fff;
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.quick-link-btn:active {
+  transform: scale(0.96);
 }
 
 /* ===== 统计卡头部 ===== */

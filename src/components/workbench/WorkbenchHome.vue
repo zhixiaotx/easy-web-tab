@@ -295,9 +295,9 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
     >
       <div class="home-carousel-window">
         <div class="home-carousel-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
-          <!-- 第 1 屏：行动台（即将到期提醒 + 未完成待办，开关关闭的功能整块隐藏） -->
+          <!-- 第 1 屏：行动台（即将到期提醒 + 未完成待办 + 天气 + 日历锚点，开关关闭的功能整块隐藏） -->
           <div class="home-slide" data-testid="home-slide-action">
-            <div v-if="menuOn.countdowns || menuOn.todos" class="home-slide-grid">
+            <div v-if="menuOn.countdowns || menuOn.todos || true" class="home-slide-grid">
               <section v-if="menuOn.countdowns" class="bento-card bento-panel">
                 <div class="panel-header">
                   <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
@@ -330,6 +330,12 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
                 </ul>
                 <div v-else class="home-empty" data-testid="home-todo-empty">暂无未完成待办</div>
               </section>
+
+              <!-- 天气卡（第一页嵌入，未配置城市显示占位+去设置） -->
+              <WeatherCard class="bento-weather" />
+
+              <!-- 日历锚点卡（第一页嵌入，发薪/纪念日倒计时） -->
+              <CalendarAnchorCard class="bento-anchor" />
             </div>
             <div v-else class="home-empty" data-testid="home-action-empty">待办与定时提醒功能已关闭，可在设置中开启</div>
           </div>
@@ -448,10 +454,10 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
           </div>
 
-          <!-- 第 3 屏：工具（快捷添加待办 + 天气 + 日历锚点；待办关闭时快捷添加隐藏） -->
+          <!-- 第 3 屏：工具（快捷添加待办；待办关闭时整块隐藏） -->
           <div class="home-slide" data-testid="home-slide-tools">
-            <div class="home-slide-grid home-slide-grid-tools">
-              <section v-if="menuOn.todos" class="bento-card bento-quick-add">
+            <div v-if="menuOn.todos" class="home-slide-tools-single">
+              <section class="bento-card bento-quick-add">
                 <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
                 <div class="quick-add-row">
                   <input
@@ -468,13 +474,8 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
                   </button>
                 </div>
               </section>
-
-              <!-- 天气卡（只读嵌入，未配置城市显示占位+去设置） -->
-              <WeatherCard class="bento-weather" />
-
-              <!-- 日历锚点卡（只读嵌入，发薪/纪念日倒计时） -->
-              <CalendarAnchorCard class="bento-anchor" />
             </div>
+            <div v-else class="home-empty" data-testid="home-tools-empty">快速添加待办功能已关闭，可在设置中开启</div>
           </div>
         </div>
       </div>
@@ -546,6 +547,18 @@ function statusClass(status: CountdownItem['remaining']['status']): string {
 .home-slide-grid-stats,
 .home-slide-grid-tools {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 工具页单卡居中容器 */
+.home-slide-tools-single {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.home-slide-tools-single .bento-quick-add {
+  width: 100%;
+  max-width: 400px;
 }
 
 /* ===== 卡片基础（统一 .bento-card）===== */

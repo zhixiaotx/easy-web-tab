@@ -14,8 +14,9 @@ export async function sendReminderEmail(
   try {
     const res = await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey })
     return res?.status === 200
-  } catch (error) {
-    console.warn('[ReminderEmail] 发送失败:', error)
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number; text?: string; toString?: () => string }
+    console.warn('[ReminderEmail] 发送失败:', err.message ?? String(error), err.status !== undefined ? `(HTTP ${err.status})` : '', err.text ?? '')
     return false
   }
 }

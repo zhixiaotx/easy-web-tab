@@ -385,9 +385,10 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-countdown">
-    <!-- 查询卡片（第一行：名称/重复；第二行：查询/重置 靠右） -->
+    <!-- 查询卡片（名称/重复/排序 + 查询/重置 靠右） -->
     <div class="cd-search-card">
       <div class="cd-search-fields">
+        <label class="search-label">名称</label>
         <input
           v-model="searchName"
           type="text"
@@ -400,6 +401,24 @@ onUnmounted(() => {
           <option value="">全部重复</option>
           <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
+        <label class="search-label">排序类型</label>
+        <select
+          class="form-input sort-select"
+          data-testid="cd-sort-select"
+          :value="store.sortMode"
+          @change="onSortChange"
+        >
+          <option v-for="m in SORT_MODES" :key="m.value" :value="m.value">{{ m.label }}</option>
+        </select>
+        <button
+          v-if="!isManual"
+          class="sort-dir-btn"
+          data-testid="cd-sort-dir"
+          @click="store.toggleDirection()"
+        >
+          {{ store.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序' }}
+        </button>
+        <span v-if="isManual" class="sort-hint">点击 ▲▼ 箭头调整顺序</span>
       </div>
       <div class="cd-search-actions">
         <button class="search-btn" data-testid="cd-search-btn" @click="applySearch">查询</button>
@@ -433,27 +452,6 @@ onUnmounted(() => {
         :data-testid="'cd-cat-' + c"
         @click="selectCategoryTab(c)"
       >{{ categoryLabel(c) }}</button>
-    </div>
-
-    <!-- 排序控件 -->
-    <div class="cd-sortbar">
-      <select
-        class="form-input sort-select"
-        data-testid="cd-sort-select"
-        :value="store.sortMode"
-        @change="onSortChange"
-      >
-        <option v-for="m in SORT_MODES" :key="m.value" :value="m.value">{{ m.label }}</option>
-      </select>
-      <button
-        v-if="!isManual"
-        class="sort-dir-btn"
-        data-testid="cd-sort-dir"
-        @click="store.toggleDirection()"
-      >
-        {{ store.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序' }}
-      </button>
-      <span v-if="isManual" class="sort-hint">点击 ▲▼ 箭头调整顺序</span>
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -762,13 +760,49 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+.search-label {
+  font-size: 14px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .search-name {
-  flex: 1;
-  min-width: 140px;
+  width: 250px;
+  flex-shrink: 0;
 }
 
 .search-select {
   width: 130px;
+  flex-shrink: 0;
+}
+
+.sort-select {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.sort-dir-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+  flex-shrink: 0;
+}
+
+.sort-dir-btn:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.sort-hint {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
   flex-shrink: 0;
 }
 
@@ -853,40 +887,6 @@ onUnmounted(() => {
 .btn-cat-manage:hover {
   color: var(--accent-color, var(--color-primary));
   border-color: var(--accent-color, var(--color-primary));
-}
-
-/* ===== 排序栏 ===== */
-.cd-sortbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.sort-select {
-  width: 150px;
-}
-
-.sort-dir-btn {
-  padding: 8px 14px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.sort-dir-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.sort-hint {
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
 }
 
 /* ===== 卡片墙 ===== */

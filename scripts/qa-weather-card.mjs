@@ -28,7 +28,23 @@ const EVIDENCE_LOG = join(EVIDENCE_DIR, 'task-15-workbench-improvements.log')
 
 // 固定 fixture（离线 mock，零真实网络）
 const GEO_FIXTURE = { results: [{ latitude: 39.9042, longitude: 116.4074, name: '北京' }] }
-const FORECAST_FIXTURE = { current: { temperature_2m: 28.5, relative_humidity_2m: 55, weather_code: 1 } }
+const FORECAST_FIXTURE = {
+  current: {
+    temperature_2m: 28.5,
+    relative_humidity_2m: 55,
+    weather_code: 1,
+    apparent_temperature: 26.3,
+    wind_speed_10m: 12.5,
+    is_day: 1
+  },
+  daily: {
+    sunrise: ['2026-08-16T05:32:00+08:00'],
+    sunset: ['2026-08-16T19:18:00+08:00'],
+    temperature_2m_max: [32.1],
+    temperature_2m_min: [21.5],
+    uv_index_max: [7.2]
+  }
+}
 
 /** 轮询等待 dev server 就绪（最多 40s）。 */
 async function waitForServer(url, timeoutMs = 40000) {
@@ -178,13 +194,13 @@ async function main() {
     await page.waitForTimeout(1500) // 等 store 初始化完成
     const deps = await resolveDeps(devBase)
     await mountWeatherCard(page, deps)
-    await page.locator('[data-testid="wx-card"]').waitFor({ state: 'visible' })
+    await page.locator('#qa-wx-host [data-testid="wx-card"]').waitFor({ state: 'visible' })
     push('A1 WeatherCard mounted', true, 'wx-card visible on /workbench')
 
     // ============ FAILURE A: 未配置城市 → 固定占位 + 去设置 ============
-    const placeholderText = await page.locator('[data-testid="wx-card"] .wx-placeholder-text').textContent()
+    const placeholderText = await page.locator('#qa-wx-host .wx-placeholder-text').textContent()
     push('A2 unconfigured → 「未设置城市」placeholder', placeholderText === '未设置城市', `got=${placeholderText}`)
-    const setupBtn = await page.locator('[data-testid="wx-setup-btn"]').isVisible()
+    const setupBtn = await page.locator('#qa-wx-host [data-testid="wx-setup-btn"]').isVisible()
     push('A3 unconfigured → 「去设置」button visible', setupBtn === true, `testid=wx-setup-btn`)
     const noToast1 = (await page.locator('.toast-container .toast').count()) === 0
     push('A4 unconfigured → no toast', noToast1 === true, '.toast-container .toast count=0')
@@ -198,28 +214,50 @@ async function main() {
     })
     push('B1 setWorkbenchCity(北京) reflected in store', setCity === '北京', `got=${setCity}`)
 
-    const temp = page.locator('[data-testid="wx-temp"]')
+    const temp = page.locator('#qa-wx-host [data-testid="wx-temp"]')
     await temp.waitFor({ state: 'visible', timeout: 8000 })
     const tempText = (await temp.textContent()) || ''
     push('B2 temperature shown (28.5 → 29°C)', tempText === '29°C', `got=${tempText}`)
 
-    const emojiText = (await page.locator('[data-testid="wx-emoji"]').textContent()) || ''
+    const emojiText = (await page.locator('#qa-wx-host [data-testid="wx-emoji"]').textContent()) || ''
     push('B3 weather emoji shown (code=1 → ⛅ 多云)', emojiText === '⛅', `got=${emojiText}`)
 
-    const humidityText = (await page.locator('[data-testid="wx-humidity"]').textContent()) || ''
-    push('B4 humidity shown (55%)', humidityText === '湿度 55%', `got=${humidityText}`)
+    const humidityText = (await page.locator('#qa-wx-host [data-testid="wx-humidity"]').textContent()) || ''
+    push('B4 humidity shown (55%)', humidityText.includes('55'), `got=${humidityText}`)
 
-    const cityText = (await page.locator('[data-testid="wx-city"]').textContent()) || ''
+    const cityText = (await page.locator('#qa-wx-host [data-testid="wx-city"]').textContent()) || ''
     push('B5 city label shown', cityText === '北京', `got=${cityText}`)
 
+    // 新增字段断言（B6-B14）
+    const feelsLikeText = (await page.locator('#qa-wx-host [data-testid="wx-feels"]').textContent()) || ''
+    push('B6 feelsLike shown (26.3 → 26°C)', feelsLikeText === '体感 26°C', `got=${feelsLikeText}`)
+
+    const descText = (await page.locator('#qa-wx-host [data-testid="wx-desc"]').textContent()) || ''
+    push('B7 weather desc shown (code=1, isDay=1 → 晴间多云)', descText === '晴间多云', `got=${descText}`)
+
+    const windText = (await page.locator('#qa-wx-host [data-testid="wx-wind"]').textContent()) || ''
+    push('B8 wind speed shown (12.5 km/h)', windText.includes('12.5'), `got=${windText}`)
+
+    const sunriseText = (await page.locator('#qa-wx-host [data-testid="wx-sunrise"]').textContent()) || ''
+    push('B9 sunrise shown (HH:MM format)', sunriseText.includes('05:32') || sunriseText.includes('5:32'), `got=${sunriseText}`)
+
+    const sunsetText = (await page.locator('#qa-wx-host [data-testid="wx-sunset"]').textContent()) || ''
+    push('B10 sunset shown (HH:MM format)', sunsetText.includes('19:18') || sunsetText.includes('7:18'), `got=${sunsetText}`)
+
+    const highLowText = (await page.locator('#qa-wx-host [data-testid="wx-highlow"]').textContent()) || ''
+    push('B11 high/low shown (32°/22°)', highLowText.includes('32') && highLowText.includes('22'), `got=${highLowText}`)
+
+    const uvText = (await page.locator('#qa-wx-host [data-testid="wx-uv"]').textContent()) || ''
+    push('B12 UV index shown (7.2)', uvText.includes('7.2'), `got=${uvText}`)
+
     // fixture 命中计数：确认数据确实来自 mock 而非真实网络
-    push('B6 geocode fixture hit', geocodeHits >= 1, `hits=${geocodeHits}`)
-    push('B7 forecast fixture hit', forecastHits >= 1, `hits=${forecastHits}`)
+    push('B13 geocode fixture hit', geocodeHits >= 1, `hits=${geocodeHits}`)
+    push('B14 forecast fixture hit', forecastHits >= 1, `hits=${forecastHits}`)
 
     // 证据截图：happy 渲染
     mkdirSync(EVIDENCE_DIR, { recursive: true })
     await page.locator('#qa-wx-host').screenshot({ path: EVIDENCE_PNG })
-    push('B8 evidence screenshot written', true, EVIDENCE_PNG)
+    push('B15 evidence screenshot written', true, EVIDENCE_PNG)
 
     // ============ FAILURE B: mock 断网（forecast abort）→ 保持占位不报错 ============
     await page.route('https://api.open-meteo.com/**', (route) => route.abort()) // 最新注册优先命中
@@ -228,10 +266,10 @@ async function main() {
       const store = useAppSettingsStore()
       store.setWorkbenchCity('上海')
     })
-    const loading = page.locator('[data-testid="wx-loading"]')
+    const loading = page.locator('#qa-wx-host [data-testid="wx-loading"]')
     await loading.waitFor({ state: 'visible', timeout: 12000 })
     await page.waitForFunction(() => {
-      const el = document.querySelector('[data-testid="wx-loading"]')
+      const el = document.querySelector('#qa-wx-host [data-testid="wx-loading"]')
       return el && el.textContent === '--°C'
     }, { timeout: 12000 })
     const loadingText = (await loading.textContent()) || ''

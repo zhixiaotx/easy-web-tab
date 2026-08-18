@@ -109,9 +109,9 @@ const handlePageChange = () => {
 
 .btn-admin {
   padding: 8px 14px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
@@ -120,17 +120,17 @@ const handlePageChange = () => {
 }
 
 .btn-admin:hover {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .btn-help,
 .btn-countdown {
   padding: 8px 12px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
@@ -140,9 +140,9 @@ const handlePageChange = () => {
 
 .btn-help:hover,
 .btn-countdown:hover {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 .container {
@@ -178,7 +178,7 @@ const handlePageChange = () => {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #64748b;
+  color: var(--color-text-secondary, #64748b);
   font-size: 16px;
 }
 
@@ -189,7 +189,7 @@ const handlePageChange = () => {
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: var(--color-bg-card, rgba(255, 255, 255, 0.95));
   backdrop-filter: blur(10px);
   padding: 12px 24px;
   border-radius: 16px;
@@ -198,17 +198,21 @@ const handlePageChange = () => {
 
 /* 暗色模式 */
 :root.dark .bottom-pagination {
-  background-color: rgba(31, 41, 55, 0.95);
+  background-color: var(--bg-secondary, rgba(31, 41, 55, 0.95));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-:root.dark .btn-admin {
+:root.dark .btn-admin,
+:root.dark .btn-help,
+:root.dark .btn-countdown {
   background-color: var(--bg-secondary, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
 }
 
-:root.dark .btn-admin:hover {
+:root.dark .btn-admin:hover,
+:root.dark .btn-help:hover,
+:root.dark .btn-countdown:hover {
   background-color: var(--hover-bg, #374151);
   color: var(--accent-color, #3b82f6);
   border-color: var(--accent-color, #3b82f6);

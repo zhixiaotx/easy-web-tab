@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { idbExportAll, idbImportAll } from '@/composables/useIdb'
@@ -44,6 +44,9 @@ const habitsStore = useWorkbenchHabitsStore()
 const diaryStore = useWorkbenchDiaryStore()
 const settingsStore = useAppSettingsStore()
 const sitesStore = useSitesStore()
+
+// 移动端菜单导航 ref（用于自动滚动到激活项）
+const menuNavRef = ref<HTMLElement | null>(null)
 
 // 左侧菜单导航白名单（10 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
@@ -90,6 +93,19 @@ watch(
     }
   }
 )
+
+// 移动端菜单：切换激活项时自动滚动到可视区域（横排 overflow-x:auto 容器）
+watch(activeSection, async () => {
+  await nextTick()
+  const nav = menuNavRef.value
+  if (!nav) return
+  // 仅移动端（横排滚动态）生效；桌面端菜单不滚动
+  if (nav.scrollWidth <= nav.clientWidth) return
+  const active = nav.querySelector('.wb-menu-item.active') as HTMLElement | null
+  if (active) {
+    active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }
+})
 
 // 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
 const sidebarCollapsed = computed(() => settingsStore.workbenchSidebarCollapsed ?? false)
@@ -280,7 +296,7 @@ async function handleImportFile(event: Event) {
 
     <!-- 主体：左菜单 + 右内容区 -->
     <div class="wb-body">
-      <nav class="wb-menu" :class="{ collapsed: sidebarCollapsed }">
+      <nav ref="menuNavRef" class="wb-menu" :class="{ collapsed: sidebarCollapsed }">
         <button
           class="wb-sidebar-toggle"
           data-testid="wb-sidebar-toggle"
@@ -595,6 +611,9 @@ async function handleImportFile(event: Event) {
     width: 100%;
     flex-direction: row;
     overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
     border-right: none;
     border-bottom: 1px solid var(--color-border, #e2e8f0);
   }
@@ -619,6 +638,7 @@ async function handleImportFile(event: Event) {
 
   .wb-menu-item {
     white-space: nowrap;
+    scroll-snap-align: start;
   }
 }
 </style>

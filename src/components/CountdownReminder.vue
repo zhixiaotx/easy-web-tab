@@ -1,7 +1,24 @@
 <script setup lang="ts">
 import { useCountdownReminder } from '@/composables/useCountdownReminder'
+import type { CountdownReminderItem } from '@/composables/useCountdownReminder'
+import { useCountdownsStore } from '@/stores/countdowns'
+import { useToast } from '@/composables/useToast'
 
 const { state, close } = useCountdownReminder()
+const store = useCountdownsStore()
+const toast = useToast()
+
+// 切换邮件提醒：缺省/undefined 视为关闭，点击取反后写库并 toast 反馈
+async function toggleEmailReminder(item: CountdownReminderItem) {
+  const enabled = item.emailReminder !== true
+  try {
+    await store.updateCountdown(item.id, { emailReminder: enabled })
+    item.emailReminder = enabled
+    toast.info(enabled ? '已开启邮件提醒，需在设置-提醒设置中配置邮箱后生效' : '已关闭邮件提醒')
+  } catch {
+    toast.warning('邮件提醒设置保存失败')
+  }
+}
 </script>
 
 <template>
@@ -12,6 +29,16 @@ const { state, close } = useCountdownReminder()
         <li v-for="item in state.items" :key="item.id" class="reminder-item">
           <span class="reminder-name">{{ item.name }}</span>
           <span class="reminder-label"><template v-if="/^\d{2}-\d{2} \d{2}:\d{2}$/.test(item.label)">⏰ </template>{{ item.label }}</span>
+          <label class="reminder-email-toggle" :data-testid="`cd-email-toggle-${item.id}`" title="邮件提醒">
+            <span class="reminder-email-icon">📧</span>
+            <input
+              type="checkbox"
+              class="cd-email-switch"
+              :data-testid="`cd-email-switch-${item.id}`"
+              :checked="item.emailReminder === true"
+              @change="toggleEmailReminder(item)"
+            />
+          </label>
         </li>
       </ul>
       <button class="reminder-close" @click="close">关闭</button>
@@ -128,5 +155,68 @@ const { state, close } = useCountdownReminder()
 
 :root.dark .reminder-label {
   color: #60a5fa;
+}
+
+/* 邮件提醒开关（行内，与名称/时间同行） */
+.reminder-email-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 13px;
+  user-select: none;
+}
+
+.reminder-email-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.cd-email-switch {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--bg-secondary, var(--color-bg-hover));
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  vertical-align: middle;
+}
+
+.cd-email-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--text-muted, var(--color-text-muted));
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.cd-email-switch:checked {
+  background-color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.cd-email-switch:checked::after {
+  transform: translateX(14px);
+  background-color: #fff;
+}
+
+:root.dark .cd-email-switch {
+  background-color: var(--input-bg, #374151);
+  border-color: var(--border-color, #4b5563);
+}
+
+:root.dark .cd-email-switch:checked {
+  background-color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
 }
 </style>

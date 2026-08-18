@@ -91,9 +91,9 @@ onMounted(async () => {
 }
 
 .hr-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -101,16 +101,18 @@ onMounted(async () => {
 
 .hr-item {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
   font-size: 13px;
 }
 
 .hr-name {
-  flex: 1;
   min-width: 0;
+  font-weight: 600;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -121,7 +123,6 @@ onMounted(async () => {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 
@@ -149,5 +150,10 @@ onMounted(async () => {
 :root.dark .hr-name,
 :root.dark .hr-time {
   color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .hr-item {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
 }
 </style>

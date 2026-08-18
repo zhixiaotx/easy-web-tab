@@ -449,19 +449,6 @@ onUnmounted(() => {
               :data-testid="`wbmenu-row-${item.key}`"
             >
               <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
-              <button
-                type="button"
-                class="switch-btn"
-                :class="{ on: store.isWorkbenchMenuEnabled(item.key) }"
-                role="switch"
-                :aria-checked="store.isWorkbenchMenuEnabled(item.key)"
-                :disabled="item.key === 'home'"
-                :title="item.key === 'home' ? '主页为默认页，不可关闭' : store.isWorkbenchMenuEnabled(item.key) ? '关闭此功能' : '开启此功能'"
-                :data-testid="`wbmenu-switch-${item.key}`"
-                @click="store.setWorkbenchMenuVisibility(item.key, !store.isWorkbenchMenuEnabled(item.key))"
-              >
-                <span class="switch-thumb"></span>
-              </button>
               <input
                 type="text"
                 class="wb-menu-name-input"
@@ -492,6 +479,19 @@ onUnmounted(() => {
                   @click="onMoveMenu(item.key, 'down')"
                 >下移</button>
               </div>
+              <button
+                type="button"
+                class="switch-btn"
+                :class="{ on: store.isWorkbenchMenuEnabled(item.key) }"
+                role="switch"
+                :aria-checked="store.isWorkbenchMenuEnabled(item.key)"
+                :disabled="item.key === 'home'"
+                :title="item.key === 'home' ? '主页为默认页，不可关闭' : store.isWorkbenchMenuEnabled(item.key) ? '关闭此功能' : '开启此功能'"
+                :data-testid="`wbmenu-switch-${item.key}`"
+                @click="store.setWorkbenchMenuVisibility(item.key, !store.isWorkbenchMenuEnabled(item.key))"
+              >
+                <span class="switch-thumb"></span>
+              </button>
             </div>
           </div>
         </div>

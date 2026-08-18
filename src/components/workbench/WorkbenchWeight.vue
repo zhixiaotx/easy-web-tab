@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } from '@/composables/healthCore'
 import type { WeightChartPoint } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
-import PanelPager from './PanelPager.vue'
-import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchHealthStore()
 
@@ -117,24 +115,35 @@ const formDate = ref(localToday())
 const formWeightKg = ref('')
 const formNote = ref('')
 
-// ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/图表不受影响）=====
-const listExpanded = ref(false)
-
-// ===== 自适应分页（Wave-2 T10）：≥769px 分页；折叠时列表未挂载（listEl null）→ 分页惰性（R8）=====
-const listEl = ref<HTMLElement | null>(null)
-// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
-const paging = reactive(
-  usePanelPaging({
-    items: () => sortedWeightRecords.value,
-    rowHeight: 88, // row-heights.json: weight = 88（MAX 86.01 + 2px，R4）
-    containerRef: listEl,
-    gridRef: undefined
-  })
-)
+// ===== 体重记录弹框 =====
+const showRecordsDialog = ref(false)
 
 function toggleList(): void {
-  listExpanded.value = !listExpanded.value
-  if (listExpanded.value) paging.goto(1) // 展开回第 1 页（T10）
+  recordsPage.value = 1
+  showRecordsDialog.value = true
+}
+
+function closeRecordsDialog(): void {
+  showRecordsDialog.value = false
+}
+
+// ===== 体重记录分页 =====
+const RECORDS_PAGE_SIZE = 20
+const recordsPage = ref(1)
+
+const recordsTotalPages = computed(() => Math.ceil(sortedWeightRecords.value.length / RECORDS_PAGE_SIZE))
+
+const paginatedWeightRecords = computed(() => {
+  const start = (recordsPage.value - 1) * RECORDS_PAGE_SIZE
+  return sortedWeightRecords.value.slice(start, start + RECORDS_PAGE_SIZE)
+})
+
+function recordsPrev(): void {
+  if (recordsPage.value > 1) recordsPage.value--
+}
+
+function recordsNext(): void {
+  if (recordsPage.value < recordsTotalPages.value) recordsPage.value++
 }
 
 // date 必填 + weightKg > 0（允许 1 位小数），否则保存按钮 disabled
@@ -179,21 +188,22 @@ async function handleSaveRecord(): Promise<void> {
   } else {
     await store.addRecord('weight', payload)
   }
-  paging.goto(1) // 新增/编辑后回第 1 页（T10）
   cancelRecordForm()
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
   if (confirm('确定要删除这条体重记录吗？')) {
     await store.deleteRecord('weight', id)
-    paging.goto(1) // 删除后回第 1 页（T10）
   }
 }
 
-// ESC 关闭弹框（先关记录弹框，再关身高弹框）
+// ESC 关闭弹框（先关记录列表弹框，再关记录表单弹框，最后关身高弹框）
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
-  if (showRecordDialog.value) {
+  if (showRecordsDialog.value) {
+    event.preventDefault()
+    closeRecordsDialog()
+  } else if (showRecordDialog.value) {
     event.preventDefault()
     cancelRecordForm()
   } else if (showHeightDialog.value) {
@@ -343,7 +353,7 @@ onUnmounted(() => {
       <div v-else class="wt-chart-empty" data-testid="wt-chart-empty">暂无体重记录</div>
     </div>
 
-    <!-- 操作栏：展开记录 + 新增 -->
+    <!-- 操作栏：查看记录 + 新增 -->
     <div class="wt-headbar">
       <button
         v-if="store.records.weight.length > 0"
@@ -351,7 +361,7 @@ onUnmounted(() => {
         data-testid="wt-toggle-list"
         @click="toggleList"
       >
-        {{ listExpanded ? '收起记录' : '展开记录' }}（{{ store.records.weight.length }}）
+        查看记录（{{ store.records.weight.length }}）
       </button>
       <button class="btn-add" data-testid="wt-add" @click="startAddRecord">＋ 新增体重</button>
     </div>
@@ -365,26 +375,6 @@ onUnmounted(() => {
     >
       ＋ 新增第一条体重记录
     </div>
-
-    <!-- 记录列表（date 降序，同日 createdAt 降序） -->
-    <template v-else-if="listExpanded">
-      <div ref="listEl" class="wt-list" :class="{ 'wt-list-scroll': !paging.fitsOnePage }">
-        <div v-for="rec in paging.pageItems" :key="rec.id" class="wt-item" data-testid="wt-item">
-          <div class="wt-item-head">
-            <span class="wt-date">{{ rec.date }}</span>
-            <span class="wt-weight">{{ rec.weightKg }} kg</span>
-          </div>
-          <div v-if="rec.note" class="wt-note">{{ rec.note }}</div>
-          <div class="wt-actions">
-            <button class="btn-edit" :data-testid="`wt-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
-            <button class="btn-delete" :data-testid="`wt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">
-              删除
-            </button>
-          </div>
-        </div>
-      </div>
-      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
-    </template>
 
     <!-- 身高设置弹框 -->
     <div v-if="showHeightDialog" class="dialog-overlay" @click.self="closeHeightDialog">
@@ -465,6 +455,46 @@ onUnmounted(() => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- 体重记录弹框 -->
+    <div v-if="showRecordsDialog" class="dialog-overlay" @click.self="closeRecordsDialog">
+      <div class="dialog wt-records-dialog" data-testid="wt-records-dialog">
+        <div class="dialog-header">
+          <h3>体重记录</h3>
+          <button class="close-btn" data-testid="wt-records-close" @click="closeRecordsDialog">✕</button>
+        </div>
+        <div class="dialog-body wt-records-body">
+          <template v-if="sortedWeightRecords.length > 0">
+            <div class="wt-records-grid">
+              <div v-for="rec in paginatedWeightRecords" :key="rec.id" class="wt-record-item" data-testid="wt-record-item">
+                <div class="wt-record-head">
+                  <span class="wt-record-date">{{ rec.date }}</span>
+                  <span class="wt-record-weight">{{ rec.weightKg }} kg</span>
+                </div>
+                <div v-if="store.height !== undefined" class="wt-record-bmi">
+                  BMI {{ calcBmi(rec.weightKg, store.height)?.toFixed(1) ?? '—' }}
+                </div>
+                <div v-if="rec.note" class="wt-record-note">{{ rec.note }}</div>
+                <div class="wt-record-actions">
+                  <button class="btn-edit" :data-testid="`wt-edit-${rec.id}`" @click="showRecordsDialog = false; startEditRecord(rec.id)">编辑</button>
+                  <button class="btn-delete" :data-testid="`wt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">删除</button>
+                </div>
+              </div>
+            </div>
+            <!-- 分页控制 -->
+            <div v-if="recordsTotalPages > 1" class="wt-records-pager">
+              <button class="wt-pager-btn" :disabled="recordsPage <= 1" data-testid="wt-records-prev" @click="recordsPrev">← 上一页</button>
+              <span class="wt-pager-info" data-testid="wt-records-page">第 {{ recordsPage }} / {{ recordsTotalPages }} 页</span>
+              <button class="wt-pager-btn" :disabled="recordsPage >= recordsTotalPages" data-testid="wt-records-next" @click="recordsNext">下一页 →</button>
+            </div>
+          </template>
+          <div v-else class="wt-records-empty" data-testid="wt-records-empty">
+            <div>暂无体重记录</div>
+            <button class="btn-add-inline" @click="showRecordsDialog = false; startAddRecord()">＋ 新增</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -702,70 +732,6 @@ onUnmounted(() => {
   background-color: var(--accent-hover, var(--color-primary-hover));
 }
 
-/* ===== 记录列表 ===== */
-.wt-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.wt-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px 12px;
-  background: var(--bg-card, var(--color-bg-card));
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent-color, #3b82f6) 7%, transparent),
-    transparent 55%
-  );
-  border: 1px solid var(--border-color, var(--color-border));
-  border-left: 4px solid var(--accent-color, var(--color-primary));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-}
-
-.wt-item-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.wt-date {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-  font-variant-numeric: tabular-nums;
-}
-
-.wt-weight {
-  flex-shrink: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--accent-color, var(--color-primary));
-  font-variant-numeric: tabular-nums;
-}
-
-.wt-note {
-  font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.wt-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-}
-
 /* ===== 按钮（复用 WorkbenchTodo/Exercise 体系）===== */
 .btn-edit,
 .btn-delete {
@@ -875,6 +841,134 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.wt-records-dialog {
+  max-width: 960px;
+}
+
+.wt-records-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.wt-records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.wt-record-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+}
+
+.wt-record-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wt-record-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.wt-record-weight {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-color, var(--color-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.wt-record-bmi {
+  font-size: 12px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.wt-record-note {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wt-record-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.wt-records-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.btn-add-inline {
+  margin-top: 12px;
+  padding: 6px 14px;
+  background: var(--accent-color, var(--color-primary));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-add-inline:hover {
+  opacity: 0.9;
+}
+
+/* ===== 体重记录弹框分页 ===== */
+.wt-records-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--border-color, var(--color-border));
+}
+
+.wt-pager-btn {
+  padding: 5px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.wt-pager-btn:hover:not(:disabled) {
+  background: var(--hover-bg, var(--color-bg-active));
+}
+
+.wt-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.wt-pager-info {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
 }
 
 .form-group {
@@ -1005,16 +1099,9 @@ onUnmounted(() => {
   background-color: var(--bg-secondary, #1f2937);
 }
 
-:root.dark .wt-date {
-  color: var(--text-primary, #f9fafb);
-}
-
-:root.dark .wt-note {
-  color: var(--text-secondary, #d1d5db);
-}
-
-:root.dark .wt-weight {
-  color: #93c5fd;
+:root.dark .wt-record-item {
+  background-color: var(--bg-secondary, #1f2937);
+  border-color: var(--border-color, #374151);
 }
 
 :root.dark .bmi-under {
@@ -1064,6 +1151,12 @@ onUnmounted(() => {
   border-color: var(--border-color, #374151);
 }
 
+:root.dark .wt-pager-btn {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
 @media (max-width: 640px) {
   .wt-top-cards {
     grid-template-columns: 1fr;
@@ -1073,32 +1166,9 @@ onUnmounted(() => {
   .field-weight {
     width: 100%;
   }
-}
 
-/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T10，R1/R2/R7/R8）===== */
-/* 容器 hop：.wb-health（WorkbenchHealth tabs 容器）块级 → flex 列，
-   子面板根才能 stretch（T3 只钉到 .wb-content > *，容器文件禁改 → 从子面板侧补齐） */
-@media (min-width: 769px) {
-  :global(.wb-health) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* 面板根钉满 tab 内容区（R1 flex-stretch） */
-  .wb-weight {
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 列表区可收缩占满剩余高度（PanelPager 下方） */
-  .wt-list {
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 列表区滚动兜底：仅 !fitsOnePage 时由模板类绑定启用（R7） */
-  .wt-list-scroll {
-    overflow-y: auto;
+  .wt-records-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

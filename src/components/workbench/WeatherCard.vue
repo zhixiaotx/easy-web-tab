@@ -2,14 +2,15 @@
 import { computed, ref, watch } from 'vue'
 import { useAppSettingsStore } from '@/stores/settings'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
-import { fetchWeather, weatherEmoji, type WeatherInfo } from '@/composables/useWeather'
+import { fetchWeather, weatherEmoji, weatherDesc, formatTime, type WeatherInfo } from '@/composables/useWeather'
 
 /**
  * 天气卡（open-meteo，可配置城市）。
  * 读 settingsStore.workbenchCity：未配置（undefined/空串）固定显示占位「未设置城市」+「去设置」；
- * 配置后 watch 城市变化 → fetchWeather → 显示温度/天气 emoji/湿度；
+ * 配置后 watch 城市变化 → fetchWeather → 双行布局：
+ *   第一行：城市名 + emoji + 温度 + 体感温度 + 天气描述
+ *   第二行：湿度 + 风速 + 日出日落 + 高低温 + UV 指数
  * 加载中显示轻量占位，获取失败保持占位（静默降级，不 toast 不报错，无隐藏分支）。
- * 本期独立组件，Todo 14 才嵌入 WorkbenchHome。
  */
 const settingsStore = useAppSettingsStore()
 const { openAppSettings } = useAppSettingsDialog()
@@ -53,13 +54,30 @@ watch(
 
     <!-- 已配置：成功显示天气数据；加载中/失败保持轻量占位（静默） -->
     <div v-else class="wx-body">
-      <span class="wx-city" data-testid="wx-city">{{ city }}</span>
-      <template v-if="weather">
-        <span class="wx-emoji" data-testid="wx-emoji">{{ weatherEmoji(weather.code) }}</span>
-        <span class="wx-temp" data-testid="wx-temp">{{ Math.round(weather.temp) }}°C</span>
-        <span class="wx-humidity" data-testid="wx-humidity">湿度 {{ weather.humidity }}%</span>
-      </template>
-      <span v-else class="wx-loading" data-testid="wx-loading">{{ loading ? '加载中…' : '--°C' }}</span>
+      <!-- 第一行：城市 + emoji + 温度 + 体感 + 描述 -->
+      <div class="wx-row-1">
+        <span class="wx-city" data-testid="wx-city">{{ city }}</span>
+        <template v-if="weather">
+          <span class="wx-emoji" data-testid="wx-emoji">{{ weatherEmoji(weather.code) }}</span>
+          <span class="wx-temp" data-testid="wx-temp">{{ Math.round(weather.temp) }}°C</span>
+          <span class="wx-feels" data-testid="wx-feels">体感 {{ Math.round(weather.feelsLike) }}°C</span>
+          <span class="wx-desc" data-testid="wx-desc">{{ weatherDesc(weather.code, weather.isDay) }}</span>
+        </template>
+        <span v-else class="wx-loading" data-testid="wx-loading">{{ loading ? '加载中…' : '--°C' }}</span>
+      </div>
+
+      <!-- 分割线 -->
+      <div class="wx-divider"></div>
+
+      <!-- 第二行：湿度 + 风速 + 日出日落 + 高低温 + UV -->
+      <div v-if="weather" class="wx-row-2">
+        <span class="wx-detail-item" data-testid="wx-humidity">💧 湿度 {{ weather.humidity }}%</span>
+        <span class="wx-detail-item" data-testid="wx-wind">🌬️ 风速 {{ weather.windSpeed }} km/h</span>
+        <span class="wx-detail-item" data-testid="wx-sunrise">🌅 日出 {{ formatTime(weather.sunrise) }}</span>
+        <span class="wx-detail-item" data-testid="wx-sunset">🌇 日落 {{ formatTime(weather.sunset) }}</span>
+        <span class="wx-detail-item" data-testid="wx-highlow">🔺 {{ Math.round(weather.dailyHigh) }}° / 🔻 {{ Math.round(weather.dailyLow) }}°</span>
+        <span class="wx-detail-item" data-testid="wx-uv">☀️ UV {{ weather.uvIndex }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -110,9 +128,31 @@ watch(
 
 .wx-body {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.wx-row-1 {
+  display: flex;
   align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.wx-divider {
+  height: 1px;
+  background: var(--border-color, var(--color-border));
+  opacity: 0.6;
+}
+
+.wx-row-2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary, var(--color-text-secondary));
 }
 
 .wx-city {
@@ -133,9 +173,19 @@ watch(
   font-variant-numeric: tabular-nums;
 }
 
-.wx-humidity {
-  font-size: 12px;
+.wx-feels {
+  font-size: 13px;
   color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.wx-desc {
+  font-size: 13px;
+  color: var(--text-primary, var(--color-text));
+  font-weight: 500;
+}
+
+.wx-detail-item {
+  white-space: nowrap;
 }
 
 .wx-loading {
@@ -150,14 +200,23 @@ watch(
 }
 
 :root.dark .wx-placeholder-text,
-:root.dark .wx-humidity,
+:root.dark .wx-row-2,
 :root.dark .wx-loading {
   color: var(--text-secondary, #d1d5db);
 }
 
 :root.dark .wx-city,
-:root.dark .wx-temp {
+:root.dark .wx-temp,
+:root.dark .wx-desc {
   color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .wx-feels {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .wx-divider {
+  background: #374151;
 }
 
 :root.dark .wx-setup-btn {

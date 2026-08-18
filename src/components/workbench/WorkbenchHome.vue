@@ -185,9 +185,44 @@ async function handleQuickNote(): Promise<void> {
         @touchend="onTouchEnd"
       >
         <div class="home-carousel-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
-          <!-- 第 1 屏：行动台（即将到期提醒 + 未完成待办 + 天气 + 日历锚点，开关关闭的功能整块隐藏） -->
+          <!-- 第 1 屏：行动台（快捷添加待办/便签 + 即将到期提醒 + 天气 + 日历锚点） -->
           <div class="home-slide" data-testid="home-slide-action">
-            <div v-if="menuOn.countdowns || menuOn.todos" class="home-slide-grid">
+            <div v-if="menuOn.todos || menuOn.notes || menuOn.countdowns" class="home-slide-grid">
+              <!-- 快捷添加待办（第一列） -->
+              <section v-if="menuOn.todos" class="bento-card bento-quick-add">
+                <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
+                <div class="quick-add-row">
+                  <input
+                    v-model="quickTodoTitle"
+                    class="quick-add-input"
+                    data-testid="home-quick-add-input"
+                    type="text"
+                    maxlength="100"
+                    placeholder="输入待办标题，回车即可添加…"
+                    @keyup.enter="handleQuickAdd"
+                  />
+                  <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">添加</button>
+                </div>
+              </section>
+
+              <!-- 快捷添加便签（第一列） -->
+              <section v-if="menuOn.notes" class="bento-card bento-quick-add">
+                <div class="quick-add-label"><Icon name="notes" :size="16" />快速添加便签</div>
+                <div class="quick-add-row">
+                  <input
+                    v-model="quickNoteTitle"
+                    class="quick-add-input"
+                    data-testid="home-quick-note-input"
+                    type="text"
+                    maxlength="100"
+                    placeholder="输入便签标题，回车即可添加…"
+                    @keyup.enter="handleQuickNote"
+                  />
+                  <button type="button" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote">添加</button>
+                </div>
+              </section>
+
+              <!-- 即将到期定时提醒 -->
               <section v-if="menuOn.countdowns" class="bento-card bento-panel">
                 <div class="panel-header">
                   <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
@@ -202,32 +237,11 @@ async function handleQuickNote(): Promise<void> {
                 <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的定时提醒</div>
               </section>
 
-              <section v-if="menuOn.todos" class="bento-card bento-panel">
-                <div class="panel-header">
-                  <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
-                  <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
-                </div>
-                <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
-                  <li v-for="todo in pendingTodos" :key="todo.id" class="home-list-item">
-                    <span class="home-list-title">{{ todo.title }}</span>
-                    <span class="prio-badge" :class="PRIORITY_META[todo.priority].className">
-                      {{ PRIORITY_META[todo.priority].label }}
-                    </span>
-                    <span v-if="todo.dueDate" class="home-list-meta due" :class="{ overdue: isOverdue(todo) }">
-                      {{ todo.dueDate }}
-                    </span>
-                  </li>
-                </ul>
-                <div v-else class="home-empty" data-testid="home-todo-empty">暂无未完成待办</div>
-              </section>
-
               <!-- 天气卡（第一页嵌入，未配置城市显示占位+去设置） -->
               <WeatherCard class="bento-weather" />
 
-              <!-- 日历锚点卡（第一页嵌入，发薪/纪念日倒计时） -->
-              <CalendarAnchorCard class="bento-anchor" />
             </div>
-            <div v-else class="home-empty" data-testid="home-action-empty">待办与定时提醒功能已关闭，可在工作台菜单设置中开启</div>
+            <div v-else class="home-empty" data-testid="home-action-empty">快捷添加与定时提醒功能已关闭，可在工作台菜单设置中开启</div>
           </div>
 
           <!-- 第 2 屏：数据概览（统计卡；卡按 visibleStatCards 隐藏纯占位，全空时显示空态） -->
@@ -344,94 +358,38 @@ async function handleQuickNote(): Promise<void> {
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
           </div>
 
-          <!-- 第 3 屏：工具（快捷添加待办/便签 + 近期到期提醒 + 快捷跳转，功能关闭时对应块隐藏） -->
+          <!-- 第 3 屏：工具（未完成待办 + 日历锚点） -->
           <div class="home-slide" data-testid="home-slide-tools">
             <div class="home-slide-tools-grid" data-testid="home-tools-grid">
-              <!-- 快捷添加待办 -->
-              <section v-if="menuOn.todos" class="bento-card bento-quick-add">
-                <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
-                <div class="quick-add-row">
-                  <input
-                    v-model="quickTodoTitle"
-                    class="quick-add-input"
-                    data-testid="home-quick-add-input"
-                    type="text"
-                    maxlength="100"
-                    placeholder="输入待办标题，回车即可添加…"
-                    @keyup.enter="handleQuickAdd"
-                  />
-                  <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">添加</button>
+              <!-- 未完成待办 -->
+              <section v-if="menuOn.todos" class="bento-card bento-panel">
+                <div class="panel-header">
+                  <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
+                  <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
                 </div>
-              </section>
-
-              <!-- 快捷添加便签 -->
-              <section v-if="menuOn.notes" class="bento-card bento-quick-add">
-                <div class="quick-add-label"><Icon name="notes" :size="16" />快速添加便签</div>
-                <div class="quick-add-row">
-                  <input
-                    v-model="quickNoteTitle"
-                    class="quick-add-input"
-                    data-testid="home-quick-note-input"
-                    type="text"
-                    maxlength="100"
-                    placeholder="输入便签标题，回车即可添加…"
-                    @keyup.enter="handleQuickNote"
-                  />
-                  <button type="button" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote">添加</button>
-                </div>
-              </section>
-
-              <!-- 近期到期提醒 -->
-              <section v-if="menuOn.countdowns && upcomingCountdowns.length > 0" class="bento-card bento-upcoming">
-                <div class="upcoming-header"><Icon name="countdowns" :size="16" />近期到期提醒</div>
-                <ul class="upcoming-list" data-testid="home-tools-upcoming-list">
-                  <li v-for="item in upcomingCountdowns" :key="item.id" class="upcoming-item">
-                    <span class="upcoming-name">{{ item.name }}</span>
-                    <span class="upcoming-remaining" :class="statusClass(item.remaining.status)">{{ item.remaining.label }}</span>
+                <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
+                  <li v-for="todo in pendingTodos" :key="todo.id" class="home-list-item">
+                    <span class="home-list-title">{{ todo.title }}</span>
+                    <span class="prio-badge" :class="PRIORITY_META[todo.priority].className">
+                      {{ PRIORITY_META[todo.priority].label }}
+                    </span>
+                    <span v-if="todo.dueDate" class="home-list-meta due" :class="{ overdue: isOverdue(todo) }">
+                      {{ todo.dueDate }}
+                    </span>
                   </li>
                 </ul>
+                <div v-else class="home-empty" data-testid="home-todo-empty">暂无未完成待办</div>
               </section>
 
-              <!-- 快捷跳转 -->
-              <section class="bento-card bento-quick-links">
-                <div class="quick-links-header"><Icon name="home" :size="16" />快捷跳转</div>
-                <div class="quick-links-grid">
-                  <button v-if="menuOn.todos" class="quick-link-btn" data-testid="home-quick-link-todos" @click="emit('navigate', 'todos')">
-                    <Icon name="todos" :size="20" />待办
-                  </button>
-                  <button v-if="menuOn.notes" class="quick-link-btn" data-testid="home-quick-link-notes" @click="emit('navigate', 'notes')">
-                    <Icon name="notes" :size="20" />便签
-                  </button>
-                  <button v-if="menuOn.diary" class="quick-link-btn" data-testid="home-quick-link-diary" @click="emit('navigate', 'diary')">
-                    <Icon name="diary" :size="20" />日记
-                  </button>
-                  <button v-if="menuOn.countdowns" class="quick-link-btn" data-testid="home-quick-link-countdowns" @click="emit('navigate', 'countdowns')">
-                    <Icon name="countdowns" :size="20" />定时提醒
-                  </button>
-                  <button v-if="menuOn.pomodoro" class="quick-link-btn" data-testid="home-quick-link-pomodoro" @click="emit('navigate', 'pomodoro')">
-                    <Icon name="pomodoro" :size="20" />番茄钟
-                  </button>
-                  <button v-if="menuOn.habits" class="quick-link-btn" data-testid="home-quick-link-habits" @click="emit('navigate', 'habits')">
-                    <Icon name="habits" :size="20" />习惯打卡
-                  </button>
-                  <button v-if="menuOn.passwords" class="quick-link-btn" data-testid="home-quick-link-passwords" @click="emit('navigate', 'passwords')">
-                    <Icon name="passwords" :size="20" />密码管理
-                  </button>
-                  <button v-if="menuOn.health" class="quick-link-btn" data-testid="home-quick-link-health" @click="emit('navigate', 'health')">
-                    <Icon name="health" :size="20" />健康管理
-                  </button>
-                  <button v-if="menuOn.ledger" class="quick-link-btn" data-testid="home-quick-link-ledger" @click="emit('navigate', 'ledger')">
-                    <Icon name="ledger" :size="20" />记账
-                  </button>
-                </div>
-              </section>
+              <!-- 日历锚点卡（发薪/纪念日倒计时） -->
+              <CalendarAnchorCard class="bento-anchor" />
             </div>
             <!-- 所有工具卡片均隐藏时的兜底空态 -->
             <div
-              v-if="!menuOn.todos && !menuOn.notes"
+              v-if="!menuOn.todos"
               class="home-empty"
               data-testid="home-tools-empty"
-            >快捷添加功能已关闭，可在设置中开启</div>
+            >功能已关闭，可在设置中开启</div>
           </div>
         </div>
       </div>
@@ -661,109 +619,6 @@ async function handleQuickNote(): Promise<void> {
   padding: 12px;
   height: 100%;
   box-sizing: border-box;
-}
-
-/* ===== 近期到期提醒 ===== */
-.bento-upcoming {
-  gap: 10px;
-}
-
-.upcoming-header {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
-}
-
-.upcoming-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.upcoming-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-sm, 8px);
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.upcoming-item:hover {
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.upcoming-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary, var(--color-text));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.upcoming-remaining {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* ===== 快捷跳转 ===== */
-.bento-quick-links {
-  gap: 10px;
-}
-
-.quick-links-header {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
-}
-
-.quick-links-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.quick-link-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 8px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-sm, 8px);
-  color: var(--text-secondary, var(--color-text-secondary));
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.quick-link-btn:hover {
-  background: var(--accent-color, var(--color-primary));
-  color: #fff;
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.quick-link-btn:active {
-  transform: scale(0.96);
 }
 
 /* ===== 统计卡头部 ===== */

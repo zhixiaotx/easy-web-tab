@@ -183,7 +183,7 @@ async function injectIdb(page, storeName, payload) {
   return page.evaluate(
     ({ storeName, payload }) =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('easy-web-tab', 5)
+        const req = indexedDB.open('easy-web-tab', 6)
         req.onupgradeneeded = () => {
           if (!req.result.objectStoreNames.contains(storeName)) req.result.createObjectStore(storeName)
         }
@@ -216,7 +216,7 @@ async function readIdb(page, storeName) {
   return page.evaluate(
     (storeName) =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('easy-web-tab', 5)
+        const req = indexedDB.open('easy-web-tab', 6)
         req.onsuccess = () => {
           const db = req.result
           try {

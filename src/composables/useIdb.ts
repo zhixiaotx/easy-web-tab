@@ -6,7 +6,8 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, Countdown, DiaryData, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, BusinessData, Countdown, DiaryData, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
+import { emptyBusinessData } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
 import { emptyHabitsData } from './habitCore'
 import { emptyHealthData } from './healthCore'
@@ -15,9 +16,9 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 5
-/** 核心 8 store：随 JSON 备份导出/导入 */
-export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings'] as const
+export const DB_VERSION = 6
+/** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business） */
+export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
 export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
 export const IDB_KEY = 'items'
@@ -86,7 +87,7 @@ export function idbClear(store: IdbStore): Promise<void> {
 }
 
 export async function idbExportAll(): Promise<WorkbenchData> {
-  const [todos, notes, diary, countdowns, passwords, health, ledger, settings, pomodoro, habits] = await Promise.all([
+  const [todos, notes, diary, countdowns, passwords, health, ledger, settings, pomodoro, habits, business] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
     idbGet<NoteData>('notes'),
     idbGet<DiaryData>('diary'),
@@ -96,7 +97,8 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     idbGet<LedgerData>('ledger'),
     idbGet<AppSettingsData>('settings'),
     idbGet('pomodoro'),
-    idbGet('habits')
+    idbGet('habits'),
+    idbGet<BusinessData>('business')
   ])
   return {
     version: WORKBENCH_DATA_VERSION,
@@ -110,14 +112,15 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     ledger: ledger ?? emptyLedgerData(),
     settings: settings ?? emptyAppSettingsData(),
     pomodoro: pomodoro ?? emptyPomodoroData(),
-    habits: habits ?? emptyHabitsData()
+    habits: habits ?? emptyHabitsData(),
+    business: business ?? emptyBusinessData()
   }
 }
 
 export async function idbImportAll(data: WorkbenchData): Promise<void> {
-  // 版本白名单：接受 v1-v6（v1-v5 旧备份兼容导入，不拒绝——AGENTS.md 硬性规范）；
-  // 拒绝 v0 与未来 v7+（范围守卫保留 number 类型，下方 v1 分支可正常判定）
-  if (data.version < 1 || data.version > 6) {
+  // 版本白名单：接受 v1-v7（v1-v6 旧备份兼容导入，不拒绝——AGENTS.md 硬性规范）；
+  // 拒绝 v0 与未来 v8+（范围守卫保留 number 类型，下方 v1 分支可正常判定）
+  if (data.version < 1 || data.version > 7) {
     throw new Error('备份文件版本不兼容')
   }
   // notes 兼容旧数组（v1/v2 纯便签列表）与新对象（v3 NoteData）两种格式
@@ -157,6 +160,8 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
   // diary 兼容 v1-v5 备份（无该字段 → empty 兜底）；v6 备份原样透传。
   // 兜底同样放在写入循环之前 → 键存在性守卫对 diary 恒有键可写（v1-v5 导入后日记为空）
   data = { ...data, diary: data.diary ?? emptyDiaryData() }
+  // business 兼容 v1-v6 备份（无该字段 → empty 兜底）；v7 备份原样透传（含内置种子分类契约）
+  data = { ...data, business: data.business ?? emptyBusinessData() }
   const db = await openIdb()
   // 事务范围覆盖核心+辅助全部 store（循环只写 data 中存在的键，
   // v1-v5 备份缺 snapshots 字段 → 跳过写入，绝不 put undefined 进新 store）

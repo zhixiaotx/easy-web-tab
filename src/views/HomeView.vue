@@ -265,6 +265,7 @@ const handlePageChange = () => {
   <!-- 左上角工具栏 -->
   <div class="top-left-toolbar">
     <button class="btn-help" @click="router.push('/workbench')" title="工作台">🧰 工作台</button>
+    <button class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" title="销售记账">💰 销售记账</button>
   </div>
 
   <div class="container">

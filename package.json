@@ -22,7 +22,8 @@
     "test:menu": "node --experimental-strip-types scripts/test-workbench-menu-core.ts",
     "test:spotlight": "node --experimental-strip-types scripts/test-spotlight-core.ts",
     "test:snapshot": "node --experimental-strip-types scripts/test-snapshot-core.ts",
-    "test:pomodoro": "node --experimental-strip-types scripts/test-pomodoro-core.ts"
+    "test:pomodoro": "node --experimental-strip-types scripts/test-pomodoro-core.ts",
+    "test:business": "node --experimental-strip-types scripts/test-business-core.ts"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

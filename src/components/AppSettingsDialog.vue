@@ -27,21 +27,26 @@ import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
+import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import type { WorkbenchData } from '@/types'
 import Icon from '@/components/Icon.vue'
+import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置）
-const activeTab = ref<'nav' | 'wb' | 'remind'>('nav')
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账）
+const activeTab = ref<'nav' | 'wb' | 'remind' | 'business'>('nav')
 
 const emit = defineEmits<{
   close: []
 }>()
 
 const store = useAppSettingsStore()
+const businessStore = useWorkbenchBusinessStore()
+// 销售记账分类管理弹框（复用页面内共享组件；null = 关闭）
+const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 // 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
 const appSettings = useAppSettingsDialog()
 const cityInput = ref<HTMLInputElement | null>(null)
@@ -390,9 +395,18 @@ onUnmounted(() => {
             :aria-selected="activeTab === 'remind'"
             @click="activeTab = 'remind'"
           >提醒设置</button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'business' }"
+            :aria-selected="activeTab === 'business'"
+            data-testid="settings-tab-business"
+            @click="activeTab = 'business'"
+          >销售记账</button>
         </div>
 
-        <p v-if="activeTab !== 'remind'" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+        <p v-if="activeTab === 'nav' || activeTab === 'wb'" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
 
         <!-- 导航筛选栏（仅导航设置 tab）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
         <div v-if="activeTab === 'nav'" class="wb-menu-config nav-filter-config">
@@ -630,7 +644,45 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="settings-grid" v-if="activeTab !== 'remind'">
+        <!-- 销售记账（仅销售记账 tab）：摊位名称 + 低库存阈值 + 商品/支出分类管理（复用页面内共享弹框） -->
+        <div v-if="activeTab === 'business'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">销售记账设置</h3>
+          </div>
+          <p class="wb-menu-hint">摊位名称显示在销售记账页头部；库存低于阈值时在库存页与首页预警</p>
+          <div class="remind-fields">
+            <label class="remind-field">
+              <span class="remind-label">摊位名称</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                maxlength="30"
+                placeholder="例如：夜市A区小吃摊"
+                data-testid="bizsettings-stall"
+                :value="businessStore.settings.stallName"
+                @input="businessStore.setStallName(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">低库存阈值</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                class="wb-menu-name-input"
+                data-testid="bizsettings-threshold"
+                :value="String(businessStore.settings.lowStockThreshold)"
+                @change="businessStore.setLowStockThreshold(Number(($event.target as HTMLInputElement).value) || 0)"
+              />
+            </label>
+          </div>
+          <div class="remind-actions">
+            <button type="button" class="wb-menu-btn" data-testid="bizsettings-product-cats" @click="bizCatManagerKind = 'product'">管理商品分类</button>
+            <button type="button" class="wb-menu-btn" data-testid="bizsettings-expense-cats" @click="bizCatManagerKind = 'expense'">管理支出分类</button>
+          </div>
+        </div>
+
+        <div class="settings-grid" v-if="activeTab === 'nav' || activeTab === 'wb'">
           <div class="grid-header">
             <span class="col-label">弹窗</span>
             <span>宽度 (px)</span>
@@ -684,6 +736,9 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- 销售记账分类管理（共享弹框，z-index 高于设置弹窗） -->
+    <BusinessCategoryManager v-if="bizCatManagerKind" :kind="bizCatManagerKind" @close="bizCatManagerKind = null" />
   </div>
 </template>
 

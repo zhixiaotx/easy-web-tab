@@ -377,6 +377,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 身高设置弹框 -->
+    <Transition name="dialog">
     <div v-if="showHeightDialog" class="dialog-overlay" @click.self="closeHeightDialog">
       <div class="dialog" data-testid="wt-height-dialog">
         <div class="dialog-header">
@@ -407,8 +408,10 @@ onUnmounted(() => {
         </form>
       </div>
     </div>
+    </Transition>
 
     <!-- 新增/编辑记录弹框 -->
+    <Transition name="dialog">
     <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">
       <div class="dialog" data-testid="wt-dialog">
         <div class="dialog-header">
@@ -457,8 +460,10 @@ onUnmounted(() => {
         </form>
       </div>
     </div>
+    </Transition>
 
     <!-- 体重记录弹框 -->
+    <Transition name="dialog">
     <div v-if="showRecordsDialog" class="dialog-overlay" @click.self="closeRecordsDialog">
       <div class="dialog wt-records-dialog" data-testid="wt-records-dialog">
         <div class="dialog-header">
@@ -468,6 +473,7 @@ onUnmounted(() => {
         <div class="dialog-body wt-records-body">
           <template v-if="sortedWeightRecords.length > 0">
             <div class="wt-records-grid">
+              <TransitionGroup name="grid">
               <div v-for="rec in paginatedWeightRecords" :key="rec.id" class="wt-record-item" data-testid="wt-record-item">
                 <div class="wt-record-head">
                   <span class="wt-record-date">{{ rec.date }}</span>
@@ -482,6 +488,7 @@ onUnmounted(() => {
                   <button class="btn-delete" :data-testid="`wt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">删除</button>
                 </div>
               </div>
+              </TransitionGroup>
             </div>
             <!-- 分页控制 -->
             <div v-if="recordsTotalPages > 1" class="wt-records-pager">
@@ -497,6 +504,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+    </Transition>
   </div>
 </template>
 

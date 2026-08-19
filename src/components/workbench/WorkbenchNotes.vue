@@ -410,6 +410,7 @@ onUnmounted(() => {
         class="notes-grid timeline-grid"
         :class="{ 'timeline-grid-scroll': !timelinePaging.fitsOnePage }"
       >
+        <TransitionGroup name="grid">
         <div
           v-for="note in timelinePaging.pageItems"
           :key="note.id"
@@ -550,6 +551,7 @@ onUnmounted(() => {
             </button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
       <PanelPager
         :page="timelinePaging.currentPage"
@@ -651,6 +653,7 @@ onUnmounted(() => {
         class="notes-grid"
         :class="{ 'notes-grid-scroll': !normalPaging.fitsOnePage }"
       >
+        <TransitionGroup name="grid">
         <div
           v-for="note in normalPaging.pageItems"
           :key="note.id"
@@ -686,6 +689,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+        </TransitionGroup>
       </div>
       <PanelPager
         :page="normalPaging.currentPage"

@@ -537,7 +537,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="manager-overlay" @click.self="emit('close')">
+  <Transition name="dialog">
+    <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
         <h2>⚙️ 设置</h2>
@@ -1084,6 +1085,7 @@ onUnmounted(() => {
     <!-- 销售记账分类管理（共享弹框，z-index 高于设置弹窗） -->
     <BusinessCategoryManager v-if="bizCatManagerKind" :kind="bizCatManagerKind" @close="bizCatManagerKind = null" />
   </div>
+  </Transition>
 </template>
 
 <style scoped>

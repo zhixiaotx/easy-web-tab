@@ -160,6 +160,7 @@ async function handleDelete(): Promise<void> {
 
         <template v-else>
           <div ref="historyGridEl" class="dj-grid" :class="{ 'dj-grid-scroll': !paging.fitsOnePage }">
+            <TransitionGroup name="grid">
             <div
               v-for="entry in paging.pageItems"
               :key="entry.id"
@@ -174,6 +175,7 @@ async function handleDelete(): Promise<void> {
               <div class="dj-card-preview" :data-testid="`dj-card-preview-${entry.id}`" v-html="renderMarkdown(entry.content)" @click="onCardPreviewClick"></div>
               <div class="dj-card-words">{{ entry.content.length }} 字</div>
             </div>
+            </TransitionGroup>
           </div>
 
           <div v-if="paging.totalPages > 1" class="dj-pagination">

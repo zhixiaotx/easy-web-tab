@@ -240,63 +240,6 @@
   color: var(--text-primary) !important;
 }
 
-/* 管理面板 - 修复白色问题 */
-:root.dark .manager-overlay {
-  background-color: rgba(0, 0, 0, 0.7);
-}
-
-:root.dark .manager {
-  background-color: var(--bg-secondary);
-}
-
-:root.dark .manager-header {
-  background-color: var(--bg-secondary);
-  border-bottom-color: var(--border-color);
-}
-
-:root.dark .manager-header h2 {
-  color: var(--text-primary);
-}
-
-:root.dark .manager-body {
-  background-color: var(--bg-secondary);
-}
-
-:root.dark .add-form {
-  background-color: var(--bg-secondary);
-  border-bottom-color: var(--border-color);
-}
-
-:root.dark .add-form h3 {
-  color: var(--text-secondary);
-}
-
-:root.dark .engine-section {
-  background-color: var(--bg-secondary);
-}
-
-:root.dark .engine-section h3 {
-  color: var(--text-secondary);
-}
-
-:root.dark .engine-item {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
-}
-
-:root.dark .engine-item.is-default {
-  background-color: #422006;
-  border-color: #b45309;
-}
-
-:root.dark .engine-name {
-  color: var(--text-primary);
-}
-
-:root.dark .engine-url {
-  color: var(--text-muted);
-}
-
 /* 搜索引擎选择器 */
 :root.dark .engine-select {
   background-color: var(--input-bg);
@@ -497,29 +440,6 @@
   color: var(--text-primary) !important;
 }
 
-/* 排序控件 */
-:root.dark .btn-sort {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
-  color: var(--text-muted);
-}
-
-:root.dark .btn-sort:hover:not(:disabled) {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
-}
-
-/* 锁定图标 */
-:root.dark .lock-icon {
-  color: var(--text-muted);
-}
-
-/* 默认标签 */
-:root.dark .default-tag {
-  background-color: #b45309;
-  color: white;
-}
-
 /* 编辑输入框 */
 :root.dark .edit-input {
   background-color: var(--input-bg) !important;
@@ -635,18 +555,6 @@
 
 :root.dark .site-count {
   color: var(--text-muted);
-}
-
-/* 排序控件 */
-:root.dark .btn-sort {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-  color: var(--text-muted);
-}
-
-:root.dark .btn-sort:hover:not(:disabled) {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
 }
 
 :root.dark .sort-hint {

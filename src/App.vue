@@ -16,12 +16,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <router-view />
+  <router-view v-slot="{ Component }">
+    <Transition name="route" mode="out-in">
+      <component :is="Component" />
+    </Transition>
+  </router-view>
   <Toast :toasts="toasts as any" @remove="removeToast" />
   <CountdownReminder />
 </template>
 
 <style>
+/* 动画 tokens + 过渡 classes */
+@import './styles/animations.css';
 /* 暗色模式样式 */
 @import './styles/dark.css';
 </style>

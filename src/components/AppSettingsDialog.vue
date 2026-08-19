@@ -29,6 +29,8 @@ import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import type { WorkbenchData } from '@/types'
+import { COUNTDOWN_CATEGORIES } from '@/types'
+import { categoryLabel } from '@/composables/countdownCore'
 import Icon from '@/components/Icon.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 
@@ -327,6 +329,175 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+// ========================================
+// 分类管理（待办/倒计时/便签，统一放设置弹窗 wb tab）=====
+// 三个 store API 不同（待办/倒计时=string[]，便签=NoteCategory[]），组件禁止抽公共组件
+// ========================================
+
+// --- 待办分类 ---
+const todosCatStore = useWorkbenchTodosStore()
+const todoCatDrafts = reactive<Record<string, string>>({})
+const newTodoCatName = ref('')
+
+function initTodoCats(): void {
+  for (const c of todosCatStore.customCategories) {
+    if (!(c in todoCatDrafts)) todoCatDrafts[c] = c
+  }
+}
+
+function commitTodoCatName(name: string): void {
+  const draft = todoCatDrafts[name]
+  if (draft === undefined || draft.trim() === name) return
+  void todosCatStore.updateCategory(name, draft.trim()).then(res => {
+    if (!res.ok) {
+      toast.error(res.reason === 'duplicate' ? '待办分类名称已存在' : '分类名称不能为空')
+      todoCatDrafts[name] = name
+    }
+  })
+}
+
+function revertTodoCatName(name: string): void {
+  todoCatDrafts[name] = name
+}
+
+function handleAddTodoCat(): void {
+  const name = newTodoCatName.value.trim()
+  if (!name) return
+  const res = todosCatStore.addCategory(name)
+  if (!res.ok) {
+    toast.error(res.reason === 'duplicate' ? '待办分类名称已存在' : '分类名称不能为空')
+    return
+  }
+  todoCatDrafts[name] = name
+  newTodoCatName.value = ''
+}
+
+function handleDeleteTodoCat(name: string): void {
+  if (!confirm(`确定要删除待办分类「${name}」吗？该分类下的待办将变为未分类`)) return
+  const res = todosCatStore.deleteCategory(name)
+  if (!res.ok) {
+    toast.error(res.reason === 'in-use' ? '该分类下有待办，无法删除' : '删除失败')
+    return
+  }
+  delete todoCatDrafts[name]
+}
+
+function handleMoveTodoCat(name: string, dir: 'up' | 'down'): void {
+  todosCatStore.moveCategory(name, dir)
+}
+
+// --- 倒计时分类 ---
+const countdownsCatStore = useCountdownsStore()
+const cdCatDrafts = reactive<Record<string, string>>({})
+const newCdCatName = ref('')
+
+function initCdCats(): void {
+  for (const c of countdownsCatStore.customCategories) {
+    if (!(c in cdCatDrafts)) cdCatDrafts[c] = c
+  }
+}
+
+function commitCdCatName(name: string): void {
+  const draft = cdCatDrafts[name]
+  if (draft === undefined || draft.trim() === name) return
+  const res = countdownsCatStore.renameCustomCategory(name, draft.trim())
+  if (!res.ok) {
+    toast.error(res.reason === 'duplicate' ? '倒计时分类名称已存在' : '分类名称不能为空')
+    cdCatDrafts[name] = name
+  }
+}
+
+function revertCdCatName(name: string): void {
+  cdCatDrafts[name] = name
+}
+
+function handleAddCdCat(): void {
+  const name = newCdCatName.value.trim()
+  if (!name) return
+  const res = countdownsCatStore.addCustomCategory(name)
+  if (!res.ok) {
+    toast.error(res.reason === 'duplicate' ? '倒计时分类名称已存在' : '分类名称不能为空')
+    return
+  }
+  cdCatDrafts[name] = name
+  newCdCatName.value = ''
+}
+
+function handleDeleteCdCat(name: string): void {
+  if (!confirm(`确定要删除倒计时分类「${name}」吗？该分类下的倒计时将变为未分类`)) return
+  const res = countdownsCatStore.deleteCustomCategory(name)
+  if (!res.ok) {
+    toast.error(res.reason === 'in-use' ? '该分类下有倒计时，无法删除' : '删除失败')
+    return
+  }
+  delete cdCatDrafts[name]
+}
+
+function handleMoveCdCat(name: string, dir: 'up' | 'down'): void {
+  countdownsCatStore.moveCustomCategory(name, dir)
+}
+
+// --- 便签分类 ---
+const notesCatStore = useWorkbenchNotesStore()
+const noteCatDrafts = reactive<Record<string, string>>({})
+const newNoteCatName = ref('')
+
+const sortedNoteCategories = computed(() =>
+  [...notesCatStore.categories].sort((a, b) => (a.sort ?? 999) - (b.sort ?? 999))
+)
+
+function initNoteCats(): void {
+  for (const c of notesCatStore.categories) {
+    if (!(c.id in noteCatDrafts)) noteCatDrafts[c.id] = c.name
+  }
+}
+
+async function commitNoteCatName(cat: { id: string; name: string }): Promise<void> {
+  const draft = noteCatDrafts[cat.id]
+  if (draft === undefined || draft.trim() === cat.name) return
+  const ok = await notesCatStore.updateCategory(cat.id, { name: draft.trim() })
+  if (!ok) {
+    toast.error('便签分类名称已存在或为空')
+    noteCatDrafts[cat.id] = cat.name
+  }
+}
+
+function revertNoteCatName(cat: { id: string; name: string }): void {
+  noteCatDrafts[cat.id] = cat.name
+}
+
+async function handleAddNoteCat(): Promise<void> {
+  const name = newNoteCatName.value.trim()
+  if (!name) return
+  const ok = await notesCatStore.addCategory(name)
+  if (!ok) {
+    toast.error('便签分类名称已存在')
+    return
+  }
+  newNoteCatName.value = ''
+}
+
+async function handleDeleteNoteCat(cat: { id: string; name: string }): Promise<void> {
+  if (!confirm(`确定要删除便签分类「${cat.name}」吗？该分类下的便签将变为未分类`)) return
+  const ok = await notesCatStore.deleteCategory(cat.id)
+  if (!ok) {
+    toast.error('便签分类删除失败')
+    return
+  }
+  delete noteCatDrafts[cat.id]
+}
+
+async function handleMoveNoteCat(catId: string, dir: 'up' | 'down'): Promise<void> {
+  const ok = await notesCatStore.moveCategory(catId, dir)
+  if (!ok) toast.warning('已到边界，无法移动')
+}
+
+// 便签分类标签页显示切换（归一化为 handler，统一错误处理）
+async function handleToggleNoteCatTab(cat: { id: string; showInTabs?: boolean }): Promise<void> {
+  const ok = await notesCatStore.updateCategory(cat.id, { showInTabs: cat.showInTabs === false })
+  if (!ok) toast.error('分类更新失败')
+}
+
 // 订阅「去设置」打开事件（useAppSettingsDialog 单例）：打开时切到工作台设置 tab 并聚焦城市输入框；
 // 一次性消费打开标志（closeAppSettings），避免后续挂载重复触发
 let stopWatchSettings: (() => void) | undefined
@@ -335,6 +506,10 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   // 弹窗打开即加载快照列表（对话框 v-if 挂载，onMounted = 打开时刻）
   loadSnapshots()
+  // 初始化分类草稿（确保草稿映射与 store 实时）
+  initTodoCats()
+  initCdCats()
+  initNoteCats()
   stopWatchSettings = watch(
     () => appSettings.showAppSettings.value,
     (open) => {
@@ -507,6 +682,175 @@ onUnmounted(() => {
                 <span class="switch-thumb"></span>
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- 待办分类管理（仅工作台设置 tab）：改名/上下移/删除/新增 + 标签页显示勾选 -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">待办分类</h3>
+          </div>
+          <p class="wb-menu-hint">管理待办面板的分类列表；分类被待办引用时无法删除；勾选的分类会显示在面板筛选标签页</p>
+          <div class="wb-menu-list">
+            <div v-for="(cat, idx) in todosCatStore.customCategories" :key="cat" class="wb-menu-row">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="todoCatDrafts[cat] ?? cat"
+                @input="todoCatDrafts[cat] = ($event.target as HTMLInputElement).value"
+                @blur="commitTodoCatName(cat)"
+                @keydown.enter="commitTodoCatName(cat)"
+                @keydown.esc="revertTodoCatName(cat)"
+                :data-testid="`wbcfg-todo-name-${cat}`"
+              />
+              <div class="wb-menu-actions">
+                <button type="button" class="wb-menu-btn" :disabled="idx <= 0" :data-testid="`wbcfg-todo-up-${cat}`" @click="handleMoveTodoCat(cat, 'up')">上移</button>
+                <button type="button" class="wb-menu-btn" :disabled="idx >= todosCatStore.customCategories.length - 1" :data-testid="`wbcfg-todo-down-${cat}`" @click="handleMoveTodoCat(cat, 'down')">下移</button>
+              </div>
+              <button type="button" class="wb-menu-btn" :data-testid="`wbcfg-todo-del-${cat}`" @click="handleDeleteTodoCat(cat)">删除</button>
+              <button
+                type="button"
+                class="switch-btn"
+                :class="{ on: todosCatStore.tabCategories.includes(cat) }"
+                role="switch"
+                :aria-checked="todosCatStore.tabCategories.includes(cat)"
+                :data-testid="`wbcfg-todo-tab-${cat}`"
+                @click="todosCatStore.toggleTabCategory(cat, !todosCatStore.tabCategories.includes(cat))"
+              >
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <div class="wb-cat-add-row">
+            <input
+              v-model="newTodoCatName"
+              type="text"
+              class="wb-menu-name-input"
+              placeholder="新分类名称"
+              data-testid="wbcfg-todo-new"
+              @keydown.enter="handleAddTodoCat"
+            />
+            <button type="button" class="wb-menu-btn" :disabled="newTodoCatName.trim() === ''" data-testid="wbcfg-todo-add" @click="handleAddTodoCat">添加</button>
+          </div>
+        </div>
+
+        <!-- 倒计时分类管理（仅工作台设置 tab）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">倒计时分类</h3>
+          </div>
+          <p class="wb-menu-hint">管理倒计时面板的分类列表；分类被倒计时引用时无法删除；勾选的分类会显示在面板筛选标签页</p>
+
+          <!-- 内置分类（仅标签页显示，不可改名/移动/删除） -->
+          <div class="wb-cat-sub-title">内置分类</div>
+          <div class="wbcat-tab-list">
+            <label
+              v-for="c in COUNTDOWN_CATEGORIES"
+              :key="c"
+              class="wbcat-tab-row"
+              :data-testid="`wbcfg-cd-builtin-tab-${c}`"
+            >
+              <input
+                type="checkbox"
+                class="wbcat-tab-check"
+                :checked="countdownsCatStore.tabCategories.includes(c)"
+                @change="countdownsCatStore.setTabCategory(c, ($event.target as HTMLInputElement).checked)"
+              />
+              <span>{{ categoryLabel(c) }}</span>
+            </label>
+          </div>
+
+          <!-- 自定义分类 -->
+          <div class="wb-cat-sub-title">自定义分类</div>
+          <div class="wb-menu-list">
+            <div v-for="(cat, idx) in countdownsCatStore.customCategories" :key="cat" class="wb-menu-row">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="cdCatDrafts[cat] ?? cat"
+                @input="cdCatDrafts[cat] = ($event.target as HTMLInputElement).value"
+                @blur="commitCdCatName(cat)"
+                @keydown.enter="commitCdCatName(cat)"
+                @keydown.esc="revertCdCatName(cat)"
+                :data-testid="`wbcfg-cd-name-${cat}`"
+              />
+              <div class="wb-menu-actions">
+                <button type="button" class="wb-menu-btn" :disabled="idx <= 0" :data-testid="`wbcfg-cd-up-${cat}`" @click="handleMoveCdCat(cat, 'up')">上移</button>
+                <button type="button" class="wb-menu-btn" :disabled="idx >= countdownsCatStore.customCategories.length - 1" :data-testid="`wbcfg-cd-down-${cat}`" @click="handleMoveCdCat(cat, 'down')">下移</button>
+              </div>
+              <button type="button" class="wb-menu-btn" :data-testid="`wbcfg-cd-del-${cat}`" @click="handleDeleteCdCat(cat)">删除</button>
+              <button
+                type="button"
+                class="switch-btn"
+                :class="{ on: countdownsCatStore.tabCategories.includes(cat) }"
+                role="switch"
+                :aria-checked="countdownsCatStore.tabCategories.includes(cat)"
+                :data-testid="`wbcfg-cd-tab-${cat}`"
+                @click="countdownsCatStore.setTabCategory(cat, !countdownsCatStore.tabCategories.includes(cat))"
+              >
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <div class="wb-cat-add-row">
+            <input
+              v-model="newCdCatName"
+              type="text"
+              class="wb-menu-name-input"
+              placeholder="新分类名称"
+              data-testid="wbcfg-cd-new"
+              @keydown.enter="handleAddCdCat"
+            />
+            <button type="button" class="wb-menu-btn" :disabled="newCdCatName.trim() === ''" data-testid="wbcfg-cd-add" @click="handleAddCdCat">添加</button>
+          </div>
+        </div>
+
+        <!-- 便签分类管理（仅工作台设置 tab）：改名/上下移/删除/新增 -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">便签分类</h3>
+          </div>
+          <p class="wb-menu-hint">管理便签面板的分类列表；删除分类后该分类下的便签将变为未分类</p>
+          <div class="wb-menu-list">
+            <div v-for="(cat, idx) in sortedNoteCategories" :key="cat.id" class="wb-menu-row">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="noteCatDrafts[cat.id] ?? cat.name"
+                @input="noteCatDrafts[cat.id] = ($event.target as HTMLInputElement).value"
+                @blur="commitNoteCatName(cat)"
+                @keydown.enter="commitNoteCatName(cat)"
+                @keydown.esc="revertNoteCatName(cat)"
+                :data-testid="`wbcfg-note-name-${cat.id}`"
+              />
+              <div class="wb-menu-actions">
+                <button type="button" class="wb-menu-btn" :disabled="idx <= 0" :data-testid="`wbcfg-note-up-${cat.id}`" @click="handleMoveNoteCat(cat.id, 'up')">上移</button>
+                <button type="button" class="wb-menu-btn" :disabled="idx >= sortedNoteCategories.length - 1" :data-testid="`wbcfg-note-down-${cat.id}`" @click="handleMoveNoteCat(cat.id, 'down')">下移</button>
+              </div>
+              <button type="button" class="wb-menu-btn" :data-testid="`wbcfg-note-del-${cat.id}`" @click="handleDeleteNoteCat(cat)">删除</button>
+              <button
+                type="button"
+                class="switch-btn"
+                :class="{ on: cat.showInTabs !== false }"
+                role="switch"
+                :aria-checked="cat.showInTabs !== false"
+                :data-testid="`wbcfg-note-tab-${cat.id}`"
+                @click="handleToggleNoteCatTab({ id: cat.id, showInTabs: cat.showInTabs })"
+              >
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <div class="wb-cat-add-row">
+            <input
+              v-model="newNoteCatName"
+              type="text"
+              class="wb-menu-name-input"
+              placeholder="新分类名称"
+              data-testid="wbcfg-note-new"
+              @keydown.enter="handleAddNoteCat"
+            />
+            <button type="button" class="wb-menu-btn" :disabled="newNoteCatName.trim() === ''" data-testid="wbcfg-note-add" @click="handleAddNoteCat">添加</button>
           </div>
         </div>
 
@@ -758,7 +1102,7 @@ onUnmounted(() => {
   background-color: var(--bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 720px;
+  max-width: 1296px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -1153,6 +1497,50 @@ onUnmounted(() => {
   color: var(--text-primary, var(--color-text));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* 分类管理：新增行（输入框 + 添加按钮，紧跟分类列表下方） */
+.wb-cat-add-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* 分类管理：子标题（内置分类 / 自定义分类） */
+.wb-cat-sub-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  margin-bottom: 8px;
+}
+
+/* 分类管理：标签页显示复选行（用于内置分类的 tab 可见性） */
+.wbcat-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.wbcat-tab-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+}
+
+.wbcat-tab-row input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent-color, var(--color-primary));
 }
 
 .wb-snapshot-source {

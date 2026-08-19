@@ -4,7 +4,6 @@ import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import type { CountdownItem, CountdownRemaining, CountdownSortMode } from '@/stores/countdowns'
 import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/countdownCore'
 import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
-import { useToast } from '@/composables/useToast'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from './PanelPager.vue'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
@@ -61,96 +60,6 @@ const paging = usePanelPaging({
 })
 // usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供筛选/排序变化回页 1）
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
-
-// ===== 分类管理（标签页显示 + 自定义分类 CRUD，偏好存 localStorage）=====
-const toast = useToast()
-
-const showCatDialog = ref(false)
-const newCatName = ref('')
-const renameDrafts = ref<Record<string, string>>({})
-
-function openCatManager(): void {
-  renameDrafts.value = Object.fromEntries(store.customCategories.map(c => [c, c]))
-  newCatName.value = ''
-  showCatDialog.value = true
-}
-
-function closeCatManager(): void {
-  showCatDialog.value = false
-}
-
-function catErrorToast(result: { ok: boolean; reason?: string }): void {
-  if (result.ok) return
-  const messages: Record<string, string> = {
-    empty: '分类名称不能为空',
-    builtin: '内置分类不可修改',
-    duplicate: '分类名称已存在',
-    'not-found': '分类不存在',
-    'in-use': '该分类下还有倒计时，无法删除'
-  }
-  toast.warning(messages[result.reason ?? ''] ?? '操作失败')
-}
-
-function handleAddCategory(): void {
-  const name = newCatName.value.trim()
-  if (!name) return
-  const result = store.addCustomCategory(name)
-  if (result.ok) newCatName.value = ''
-  catErrorToast(result)
-}
-
-function handleRenameCategory(oldName: string): void {
-  const newName = (renameDrafts.value[oldName] ?? '').trim()
-  if (!newName || newName === oldName) return
-  const result = store.renameCustomCategory(oldName, newName)
-  if (result.ok) {
-    const next = { ...renameDrafts.value }
-    delete next[oldName]
-    next[newName] = newName
-    renameDrafts.value = next
-    // 重命名的正是当前激活的筛选 tab → 同步 activeCategoryTab，避免筛选悬空为空态
-    if (activeCategoryTab.value === oldName) {
-      selectCategoryTab(newName)
-    }
-    goto(1)
-  } else {
-    // 改名失败（重名等）→ 还原草稿为原名称（与便签面板 commitCatName 一致）
-    renameDrafts.value[oldName] = oldName
-  }
-  catErrorToast(result)
-}
-
-function handleDeleteCategory(category: string): void {
-  if (!confirm(`确定要删除分类「${category}」吗？`)) return
-  const result = store.deleteCustomCategory(category)
-  if (result.ok) {
-    const next = { ...renameDrafts.value }
-    delete next[category]
-    renameDrafts.value = next
-    // 删除的正是当前激活的筛选 tab → 回退到「全部」
-    if (activeCategoryTab.value === category) {
-      selectCategoryTab('')
-    }
-    goto(1)
-  }
-  catErrorToast(result)
-}
-
-// Esc 还原改名草稿为原名称（未保存的修改直接丢弃）
-function discardRenameDraft(category: string): void {
-  renameDrafts.value[category] = category
-}
-
-// 上移/下移：store 移动自定义分类；边界提示（与便签面板 moveCategory 边界处理一致），not-found 走 catErrorToast
-function handleMoveCategory(category: string, dir: 'up' | 'down'): void {
-  const result = store.moveCustomCategory(category, dir)
-  if (result.ok) return
-  if (result.reason === 'boundary') {
-    toast.warning('已到边界，无法移动')
-    return
-  }
-  catErrorToast(result)
-}
 
 // 徽标 class：内置分类用既有配色，自定义分类统一默认灰
 function categoryBadgeClass(category: string | null | undefined): string {
@@ -361,13 +270,11 @@ function statusClass(status: CountdownRemaining['status']): string {
   return `status-${status}`
 }
 
-// ESC 关闭分类管理 / 编辑弹框
+// ESC 关闭编辑弹框
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
-  event.preventDefault()
-  if (showCatDialog.value) {
-    closeCatManager()
-  } else if (showDialog.value) {
+  if (showDialog.value) {
+    event.preventDefault()
     cancelForm()
   }
 }
@@ -429,7 +336,6 @@ onUnmounted(() => {
     <!-- 操作行：新增提醒 + 分类管理 靠左 -->
     <div class="cd-actionbar">
       <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
-      <button class="btn-cat-manage" data-testid="cd-cat-manage" title="分类管理" @click="openCatManager">⚙️ 分类管理</button>
       <span class="toolbar-count" data-testid="cd-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
         <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
@@ -663,67 +569,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 分类管理弹框（标签页显示 + 自定义分类 CRUD） -->
-    <div v-if="showCatDialog" class="dialog-overlay" @click.self="closeCatManager">
-      <div class="dialog catmgr-dialog" data-testid="cd-cat-dialog">
-        <div class="dialog-header">
-          <h3>分类管理</h3>
-          <button class="close-btn" @click="closeCatManager">✕</button>
-        </div>
-        <div class="dialog-body">
-          <div class="catmgr-section">
-            <div class="catmgr-section-title">标签页显示</div>
-            <p class="catmgr-hint">勾选的分类会显示在面板上方的筛选标签页中</p>
-            <div class="catmgr-tab-list">
-              <label v-for="c in store.allCategories" :key="c" class="catmgr-tab-row">
-                <input
-                  type="checkbox"
-                  :checked="store.tabCategories.includes(c)"
-                  @change="store.setTabCategory(c, ($event.target as HTMLInputElement).checked)"
-                />
-                <span>{{ categoryLabel(c) }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="catmgr-section">
-            <div class="catmgr-section-title">自定义分类</div>
-            <p v-if="store.customCategories.length === 0" class="catmgr-hint">暂无自定义分类，可在下方添加</p>
-            <div v-for="c in store.customCategories" :key="c" class="catmgr-custom-row">
-              <input
-                v-model="renameDrafts[c]"
-                class="form-input catmgr-rename-input"
-                :data-testid="`cd-cat-rename-input-${c}`"
-                placeholder="分类名称"
-                @change="handleRenameCategory(c)"
-                @keyup.enter="handleRenameCategory(c)"
-                @keydown.esc.stop="discardRenameDraft(c)"
-              />
-              <div class="catmgr-row-actions">
-                <button class="catmgr-mini-btn" :data-testid="`cd-cat-up-${c}`" @click="handleMoveCategory(c, 'up')">↑ 上移</button>
-                <button class="catmgr-mini-btn" :data-testid="`cd-cat-down-${c}`" @click="handleMoveCategory(c, 'down')">↓ 下移</button>
-                <button class="catmgr-mini-btn danger" :data-testid="`cd-cat-del-${c}`" @click="handleDeleteCategory(c)">删除</button>
-              </div>
-            </div>
-            <div class="catmgr-add-row">
-              <input
-                v-model="newCatName"
-                class="form-input catmgr-add-input"
-                data-testid="cd-cat-new-input"
-                placeholder="新分类名称"
-                @keyup.enter="handleAddCategory"
-              />
-              <button
-                class="btn-save catmgr-add-btn"
-                :disabled="!newCatName.trim()"
-                data-testid="cd-cat-add-btn"
-                @click="handleAddCategory"
-              >添加</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -870,23 +715,6 @@ onUnmounted(() => {
 
 .btn-add:hover {
   background-color: var(--accent-hover, var(--color-primary-hover));
-}
-
-.btn-cat-manage {
-  padding: 10px 16px;
-  font-size: 14px;
-  border-radius: var(--radius-md, 8px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-cat-manage:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
 }
 
 /* ===== 卡片墙 ===== */
@@ -1169,129 +997,6 @@ onUnmounted(() => {
   color: #fff;
   background: var(--accent-color, var(--color-primary));
   border-color: var(--accent-color, var(--color-primary));
-}
-
-/* ===== 分类管理弹框 ===== */
-.dialog.catmgr-dialog {
-  max-width: var(--dlg-w-wb-countdown-cat, 440px);
-  max-height: var(--dlg-h-wb-countdown-cat, 85vh);
-}
-
-.catmgr-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.catmgr-section + .catmgr-section {
-  padding-top: 14px;
-  border-top: 1px solid var(--border-color, var(--color-border));
-}
-
-.catmgr-section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-}
-
-.catmgr-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-}
-
-.catmgr-tab-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.catmgr-tab-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-}
-
-.catmgr-tab-row input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: var(--accent-color, var(--color-primary));
-}
-
-.catmgr-custom-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.catmgr-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.catmgr-rename-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 10px;
-  font-size: 13px;
-}
-
-.catmgr-mini-btn {
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: var(--radius-md, 8px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.catmgr-mini-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.catmgr-mini-btn.danger:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
-}
-
-.catmgr-add-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px dashed var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.catmgr-add-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 10px;
-  font-size: 13px;
-}
-
-.catmgr-add-btn {
-  padding: 7px 16px;
-  font-size: 13px;
 }
 
 /* ===== 空态 ===== */
@@ -1787,10 +1492,7 @@ onUnmounted(() => {
   background: rgba(107, 114, 128, 0.15);
 }
 
-:root.dark .cd-cat-tab,
-:root.dark .btn-cat-manage,
-:root.dark .catmgr-tab-row,
-:root.dark .catmgr-mini-btn {
+:root.dark .cd-cat-tab {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);

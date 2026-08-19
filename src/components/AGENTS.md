@@ -12,7 +12,7 @@ components/
 ├── GlobalSearch.vue      # Multi-engine search bar (583 lines)
 ├── BackgroundManager.vue # Background image picker (876 lines)
 ├── BackupManager.vue     # Import/export UI
-├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航管理页分类/标签栏展开收起）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-：remind-desktop-switch 开启即请求权限 / remind-email-switch / remind-email-to / remind-email-service / remind-email-template / remind-email-key / remind-email-test，canTestEmail 由 isEmailConfigured 驱动，测试走 sendReminderEmail + toast）
+├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航管理页分类/标签栏展开收起）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-）+ 「销售记账」tab（activeTab +'business'：摊位名称 bizsettings-stall/低库存阈值 bizsettings-threshold/商品与支出分类管理入口 bizsettings-product-cats、bizsettings-expense-cats → 打开共享 BusinessCategoryManager 弹框；uses `useWorkbenchBusinessStore`）
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
 ├── CountdownModal.vue    # 前台倒计时弹框（/display，repeatLabel + categoryLabel 徽标；卡片底部新增可交互邮件提醒开关 `cd-email-toggle`/`cd-email-switch`：`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；启用成功 toast 提示需在设置-提醒设置配置邮箱）
@@ -23,6 +23,15 @@ components/
 ├── SettingsButton.vue    # Settings gear
 ├── SiteCard.vue          # Bookmark card (hover → edit/delete)
 ├── TagFilter.vue         # Tag filter bar
+└── business/              # 销售记账（摆摊进销存）8 SFC：BusinessView 页面的 7 功能面板 + 共享分类管理弹框
+    ├── BusinessHome.vue        # 首页：4 统计卡（营业额/成本/利润/毛利率，calcBusinessStats）+ 摊位名称编辑 + 低库存概览 + 6 快捷入口（navigate emit）
+    ├── BusinessProducts.vue    # 商品管理：分类 tabs（全部+可见分类+⚙️）+ 商品卡片网格（进价/售价/在售开关/编辑/删除）+ 新增/编辑弹框
+    ├── BusinessPurchases.vue   # 进货记录：行式列表 + 新增/编辑弹框（数量×单价自动合计）
+    ├── BusinessDaily.vue       # 收摊记录：日记录卡片（date 唯一 upsert）+ 编辑弹框（动态商品行：带出/剩余/损耗 + 收入自动预览）
+    ├── BusinessExpenses.vue    # 支出记录：tabs 容器（受控 activeTab+change，仿 WorkbenchHealth）+ 4 列卡片 + ⚙️
+    ├── BusinessInventory.vue   # 库存管理：低库存预警清单 + 库存总览表 + 阈值可配置
+    ├── BusinessStats.vue       # 统计报表：分类排行 + 商品排行 + 近 7/14/30 天趋势双折线 SVG（坐标走 businessCore）
+    └── BusinessCategoryManager.vue # 共享分类管理弹框（props kind: product/expense；标签页勾选/改名/上下移/删除/新增；Esc 关闭）
 ├── ThemeToggle.vue       # Dark mode toggle
 ├── HelpModal.vue         # Keyboard shortcuts help
 ├── Pagination.vue        # Page navigation
@@ -71,6 +80,7 @@ components/
 | 提醒设置 tab | `AppSettingsDialog.vue` | 「提醒设置」tab（activeTab==='remind'）：桌面通知开关 `remind-desktop-switch`（开启时同步 `requestNotifyPermission`）+ 邮件总开关 `remind-email-switch` + 四字段 `remind-email-to`/`remind-email-service`/`remind-email-template`/`remind-email-key` + 测试按钮 `remind-email-test`（canTestEmail 由 `isEmailConfigured` 驱动，点击 handleTestEmail 走 `sendReminderEmail` + toast 结果）；模板变量契约 to_email/countdown_name/occurrence_time/app_url（`buildEmailParams` 唯一来源）；字段经 store setters 持久化（set 后 persist）、parseSettingsData 白名单归一 |
 | 工作台左菜单渲染 | `src/views/WorkbenchView.vue` | 菜单渲染自 `settingsStore.workbenchMenuItems`（computed 由 `workbenchMenuCore.resolveMenuItems` 解析，顺序/改名/显示开关（false 键剔除）经设置弹窗调整后在此直接生效，视图禁止内联重算）；每项按钮 `data-testid="wb-menu-<key>"` + `:title="item.label"` 全名；label 溢出省略作用于内部 `.wb-menu-label` span（min-width:0 + overflow:hidden + text-overflow:ellipsis + white-space:nowrap，对按钮本身设 ellipsis 不截断子 span 文本）；`navigateTo` 白名单 + `isWorkbenchMenuEnabled` 开关双守卫；watch menuItems 键列表 → 当前激活区被关时回退首个可见项（home 恒可见）；`SECTION_KEYS`/内容 switch 仍 key 驱动不动 |
 | 工作台一屏布局/共享分页条 | `workbench/PanelPager.vue` + `src/composables/usePanelPaging.ts` + `src/composables/panelPagingCore.ts` | 桌面 ≥769px：`.wb-content` flex 列 + 面板根 `flex:1; min-height:0` 钉满（健康 tabs 容器经 `:global(.wb-health)` 补 flex 列）；长列表经 PanelPager 翻页（page/total props + prev/next emit，testid `panel-pager`/`panel-pager-prev`/`panel-pager-info`/`panel-pager-next`，total≤1 不渲染、边界禁用）；11 面板接入，rowHeight 常量（todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 116/exercise 533/diet 537/sleep 563/weight 88/ledger 49）与公式唯一来源 `usePanelPaging`/`panelPagingCore`（组件禁止自造）；密码/运动/饮食/睡眠 4 面板为 6 列卡片网格（`repeat(6, minmax(0,1fr))` + gridRef 实测列数）+ `maxRows` 钳制每页行数（password 3 行=18 卡/页、exercise/diet/sleep 1 行=6 卡/页，行数经 clampMaxRows 归一）；`!fitsOnePage` 时列表区回退 overflow-y:auto 区内滚动兜底（`*-scroll` 类）；≤768px 移动端分页惰性 |
+| 销售记账页面 | `src/views/BusinessView.vue` + `business/*.vue` | 左树 7 项固定（bs-menu-<key>，emoji 图标）+ 右内容 switch；支出 tabs 受控（expenseTab 存视图，change emit）；⚙️ 设置按钮打开 AppSettingsDialog；桌面一屏契约复刻 WorkbenchView（.bs-content/.bs-menu ≥769px flex 钉满、≤768px 横排）；BusinessHome 经 @navigate 跳转（视图白名单收窄）；数据经 useWorkbenchBusinessStore（IDB 'business'）自加载 |
 
 ## CONVENTIONS
 

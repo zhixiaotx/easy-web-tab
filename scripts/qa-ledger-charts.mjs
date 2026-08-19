@@ -203,7 +203,7 @@ function buildFutureLedgerData() {
 async function injectLedgerData(page, data) {
   return page.evaluate((payload) => {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('easy-web-tab', 5)
+      const req = indexedDB.open('easy-web-tab', 6)
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains('ledger')) req.result.createObjectStore('ledger')
       }

@@ -170,7 +170,7 @@ async function injectIdbStore(page, storeName, payload) {
   return page.evaluate(
     ({ store, value }) =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('easy-web-tab', 5)
+        const req = indexedDB.open('easy-web-tab', 6)
         req.onupgradeneeded = () => {
           if (!req.result.objectStoreNames.contains(store)) req.result.createObjectStore(store)
         }
@@ -417,7 +417,7 @@ const MEASURE_PANELS = [
   { key: 'exercise', menu: 'health', tab: 'exercise', toggle: '[data-testid="ex-toggle-list"]', item: '[data-testid="ex-item"]' },
   { key: 'diet', menu: 'health', tab: 'diet', toggle: '[data-testid="dt-toggle-list"]', item: '[data-testid="dt-item"]' },
   { key: 'sleep', menu: 'health', tab: 'sleep', toggle: '[data-testid="sl-toggle-list"]', item: '[data-testid="sl-item"]' },
-  { key: 'weight', menu: 'health', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-item"]' },
+  { key: 'weight', menu: 'health', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-record-item"]', closeSel: '[data-testid="wt-records-close"]' },
   { key: 'ledger', menu: 'ledger', toggle: '[data-testid="ld-toggle-list"]', item: '[data-testid="ld-item"]' }
 ]
 
@@ -494,6 +494,11 @@ async function measurePanels(page, heights) {
     await loc.waitFor({ state: 'visible', timeout: 10000 })
     const h = await loc.evaluate((el) => el.getBoundingClientRect().height)
     heights[panel.key] = Math.max(heights[panel.key] ?? 0, h)
+    // 体重等以弹框展示记录的测量目标：量完即关闭弹框，避免遮罩拦截后续面板点击
+    if (panel.closeSel) {
+      await page.click(panel.closeSel)
+      await page.waitForTimeout(120)
+    }
   }
 }
 
@@ -528,7 +533,7 @@ const CONTRACT_HEALTH_TABS = [
   { key: 'exercise', tab: 'exercise', toggle: '[data-testid="ex-toggle-list"]', item: '[data-testid="ex-item"]' },
   { key: 'diet', tab: 'diet', toggle: '[data-testid="dt-toggle-list"]', item: '[data-testid="dt-item"]' },
   { key: 'sleep', tab: 'sleep', toggle: '[data-testid="sl-toggle-list"]', item: '[data-testid="sl-item"]' },
-  { key: 'weight', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-item"]' }
+  { key: 'weight', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-record-item"]', closeSel: '[data-testid="wt-records-close"]' }
 ]
 
 async function navPanel(page, menu) {
@@ -627,6 +632,11 @@ async function runContractAssertions(page) {
             wc: `${m.wcScrollH}/${m.wcClientH}`,
             doc: `${m.docScrollH}/${m.docClientH}`
           })
+          // 体重记录为弹框展示：断言完关闭，防遮罩拦截后续面板点击
+          if (sub.closeSel) {
+            await page.click(sub.closeSel)
+            await page.waitForTimeout(100)
+          }
         })
         await guard(`S7 health/${sub.key} @ ${vp.label}/${theme} 无横向溢出`, async () => {
           const m = await metricsOf(page)

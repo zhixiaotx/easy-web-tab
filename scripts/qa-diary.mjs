@@ -176,7 +176,7 @@ function buildDiaryEntries() {
 async function injectDiaryArray(page, entries) {
   return page.evaluate((payload) => {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('easy-web-tab', 5)
+      const req = indexedDB.open('easy-web-tab', 6)
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains('diary')) req.result.createObjectStore('diary')
       }

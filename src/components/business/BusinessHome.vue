@@ -1,0 +1,299 @@
+<script setup lang="ts">
+// 销售记账首页：4 统计卡（营业额/成本/利润/毛利率）+ 快捷入口 + 摊位名称/低库存概览
+import { computed, ref } from 'vue'
+import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
+import { calcBusinessStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { useToast } from '@/composables/useToast'
+
+const emit = defineEmits<{ navigate: [section: string] }>()
+
+const store = useWorkbenchBusinessStore()
+const toast = useToast()
+
+const stats = computed(() => calcBusinessStats({
+  productCategories: store.productCategories,
+  expenseCategories: store.expenseCategories,
+  products: store.products,
+  purchases: store.purchases,
+  dailyRecords: store.dailyRecords,
+  expenses: store.expenses,
+  settings: store.settings
+}))
+
+const lowStock = computed(() => lowStockProducts({
+  productCategories: store.productCategories,
+  expenseCategories: store.expenseCategories,
+  products: store.products,
+  purchases: store.purchases,
+  dailyRecords: store.dailyRecords,
+  expenses: store.expenses,
+  settings: store.settings
+}))
+
+const stallDraft = ref('')
+
+async function commitStallName(): Promise<void> {
+  await store.setStallName(stallDraft.value)
+  toast.success('摊位名称已保存')
+}
+
+const NAV_ITEMS = [
+  { key: 'products', icon: '📦', label: '商品管理' },
+  { key: 'purchases', icon: '🛒', label: '进货记录' },
+  { key: 'daily', icon: '📋', label: '收摊记录' },
+  { key: 'expenses', icon: '💰', label: '支出记录' },
+  { key: 'inventory', icon: '📈', label: '库存管理' },
+  { key: 'stats', icon: '📊', label: '统计报表' }
+]
+</script>
+
+<template>
+  <div class="bizhome">
+    <!-- 统计卡 4 张 -->
+    <div class="bizhome-stats">
+      <div class="stat-card" data-testid="bizhome-revenue">
+        <div class="stat-label">💰 营业额</div>
+        <div class="stat-value">{{ formatYuanOf(stats.revenue) }}</div>
+      </div>
+      <div class="stat-card" data-testid="bizhome-cost">
+        <div class="stat-label">📦 成本</div>
+        <div class="stat-value">{{ formatYuanOf(stats.cost) }}</div>
+      </div>
+      <div class="stat-card" data-testid="bizhome-profit">
+        <div class="stat-label">📈 利润</div>
+        <div class="stat-value" :class="{ negative: stats.profit < 0 }">{{ formatYuanOf(stats.profit) }}</div>
+      </div>
+      <div class="stat-card" data-testid="bizhome-margin">
+        <div class="stat-label">💵 毛利率</div>
+        <div class="stat-value">{{ (stats.margin * 100).toFixed(1) }}%</div>
+      </div>
+    </div>
+
+    <!-- 摊位名称 + 低库存概览 -->
+    <div class="bizhome-row">
+      <div class="bizhome-card">
+        <div class="bizhome-card-title">🏪 摊位名称</div>
+        <div class="bizhome-stall">
+          <input
+            type="text"
+            class="biz-input"
+            maxlength="30"
+            placeholder="例如：夜市A区小吃摊"
+            data-testid="bizhome-stall-input"
+            :value="stallDraft || store.settings.stallName"
+            @input="stallDraft = ($event.target as HTMLInputElement).value"
+            @blur="commitStallName"
+            @keydown.enter="commitStallName"
+          />
+        </div>
+      </div>
+      <div class="bizhome-card" data-testid="bizhome-lowstock">
+        <div class="bizhome-card-title">⚠️ 低库存预警（阈值 {{ store.settings.lowStockThreshold }}）</div>
+        <p v-if="lowStock.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">暂无低库存商品</p>
+        <div v-else class="bizhome-low-list">
+          <div v-for="item in lowStock.slice(0, 5)" :key="item.product.id" class="bizhome-low-item">
+            <span>{{ item.product.name }}</span>
+            <span class="bizhome-low-stock">{{ item.stock }} {{ item.product.unit }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快捷入口 -->
+    <div class="bizhome-card">
+      <div class="bizhome-card-title">🚀 快捷操作</div>
+      <div class="bizhome-nav-grid">
+        <button
+          v-for="item in NAV_ITEMS"
+          :key="item.key"
+          class="bizhome-nav"
+          :data-testid="`bizhome-nav-${item.key}`"
+          @click="emit('navigate', item.key)"
+        >
+          <span class="bizhome-nav-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.bizhome {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.bizhome-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-value.negative {
+  color: var(--error-color, var(--color-error));
+}
+
+.bizhome-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  gap: 16px;
+}
+
+.bizhome-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.bizhome-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.biz-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  background-color: var(--input-bg, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  color: var(--text-primary, var(--color-text));
+}
+
+.biz-input:focus {
+  outline: none;
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.bizhome-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.bizhome-low-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bizhome-low-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: var(--radius-sm, 8px);
+}
+
+.bizhome-low-stock {
+  font-weight: 700;
+  color: var(--error-color, var(--color-error));
+  font-variant-numeric: tabular-nums;
+}
+
+.bizhome-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.bizhome-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-primary, var(--color-text));
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-md, 10px);
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.bizhome-nav:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.bizhome-nav-icon {
+  font-size: 18px;
+}
+
+:root.dark .stat-card,
+:root.dark .bizhome-card {
+  background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
+}
+
+:root.dark .bizhome-low-item,
+:root.dark .bizhome-nav {
+  background-color: var(--bg-card, #1f2937);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .stat-value {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .stat-value.negative {
+  color: #f87171;
+}
+
+:root.dark .biz-input {
+  background-color: var(--input-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+  border-color: var(--border-color, #374151);
+}
+
+@media (max-width: 900px) {
+  .bizhome-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bizhome-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

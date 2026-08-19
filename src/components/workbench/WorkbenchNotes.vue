@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
-import { useToast } from '@/composables/useToast'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
@@ -19,8 +18,6 @@ function onContentClick(e: MouseEvent): void {
   const t = e.target as Element | null
   if (t && t.closest('a')) e.stopPropagation()
 }
-const toast = useToast()
-
 // ===== 搜索表单（草稿 → 应用：输入控件绑定草稿，点「查询」才生效；「重置」一键清空）=====
 // 草稿值（绑定搜索表单控件）：
 //   searchDraft 关键词；typeDraft 类型（普通/时光轴）；categoryDraft 分类（''=全部；'uncategorized'=未分类；分类 id）
@@ -318,96 +315,12 @@ async function handleDeleteEntry(noteId: string, entryId: string): Promise<void>
   }
 }
 
-// ===== 分类管理弹框（仿 WorkbenchLedger.vue 分组管理交互范式）=====
-const showCatManager = ref(false)
-const catDrafts = ref<Record<string, string>>({})
-const newCatName = ref('')
-
-function openCatManager(): void {
-  const drafts: Record<string, string> = {}
-  for (const c of store.categories) drafts[c.id] = c.name
-  catDrafts.value = drafts
-  showCatManager.value = true
-}
-
-function closeCatManager(): void {
-  showCatManager.value = false
-}
-
-// 改名：@change（失焦）或回车提交；重名/空名被 store 拒绝 → toast + 回退草稿
-async function commitCatName(cat: NoteCategory): Promise<void> {
-  const draft = catDrafts.value[cat.id] ?? ''
-  const trimmed = draft.trim()
-  if (trimmed === cat.name) return
-  const ok = await store.updateCategory(cat.id, { name: trimmed })
-  if (!ok) {
-    toast.error('分类名称已存在或为空')
-    catDrafts.value[cat.id] = cat.name
-  }
-}
-
-async function handleMoveCat(cat: NoteCategory, dir: 'up' | 'down'): Promise<void> {
-  const ok = await store.moveCategory(cat.id, dir)
-  if (!ok) toast.warning('已到边界，无法移动')
-}
-
-// 删除分类：确认后调 store.deleteCategory（该分类便签归未分类由 store 处理，组件只管调 API 与刷新视图）；当前正按该分类筛选时重置为「全部」
-async function handleDeleteCat(cat: NoteCategory): Promise<void> {
-  if (!confirm(`确定要删除分类「${cat.name}」吗？该分类下的便签将归为未分类`)) return
-  const ok = await store.deleteCategory(cat.id)
-  if (!ok) {
-    toast.error('分类删除失败')
-    return
-  }
-  delete catDrafts.value[cat.id]
-  // 当前正按该分类筛选（应用值或草稿值）时重置为「全部」
-  if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
-  if (categoryDraft.value === cat.id) categoryDraft.value = ''
-  // 分类删除 → 该分类便签归未分类，筛选列表变化 → 双段分页回第 1 页
-  normalPaging.goto(1)
-  timelinePaging.goto(1)
-}
-
-// 标签页显示勾选：写 store（showInTabs）；取消勾选的分类若正被激活筛选 → 回退「全部」（镜像 handleDeleteCat 的回退逻辑）
-async function handleToggleTab(cat: NoteCategory, checked: boolean): Promise<void> {
-  const ok = await store.updateCategory(cat.id, { showInTabs: checked })
-  if (!ok) {
-    toast.error('分类更新失败')
-    return
-  }
-  if (!checked) {
-    if (activeCategoryId.value === cat.id) activeCategoryId.value = undefined
-    if (categoryDraft.value === cat.id) categoryDraft.value = ''
-    // 隐藏正激活筛选的分类 → 筛选回退「全部」，双段分页回第 1 页
-    normalPaging.goto(1)
-    timelinePaging.goto(1)
-  }
-}
-
-async function handleAddCat(): Promise<void> {
-  const name = newCatName.value.trim()
-  if (!name) return
-  const ok = await store.addCategory(name)
-  if (!ok) {
-    toast.error('分类名称已存在')
-    return
-  }
-  // 新分类补录草稿，保证其改名回退/校验基准正确
-  for (const c of store.categories) {
-    if (catDrafts.value[c.id] === undefined) catDrafts.value[c.id] = c.name
-  }
-  newCatName.value = ''
-}
-
-// ESC 关闭弹框（先编辑浮层，再分类管理）
+// ESC 关闭弹框
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
   if (formOpen.value) {
     event.preventDefault()
     cancelForm()
-  } else if (showCatManager.value) {
-    event.preventDefault()
-    closeCatManager()
   }
 }
 
@@ -457,11 +370,10 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 操作栏（无卡片）：新增便签/分类管理 + 计数，与待办面板 td-headbar 同构 -->
+    <!-- 操作栏（无卡片）：新增便签 + 计数 -->
     <div class="nt-headbar">
       <div class="nt-headbar-actions">
         <button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
-        <button class="nt-btn-manage" data-testid="nt-cat-manager" @click="openCatManager">分类管理</button>
       </div>
       <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
     </div>
@@ -874,66 +786,6 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
-    <!-- 分类管理弹框（仿 WorkbenchLedger.vue 分组管理交互范式：行 = 名称 input + 上移/下移/删除，底部新增行） -->
-    <div v-if="showCatManager" class="note-overlay cat-manager-overlay" data-testid="nt-cat-dialog" @click.self="closeCatManager">
-      <div class="cat-manager-dialog">
-        <div class="cat-dialog-header">
-          <h3>管理分类</h3>
-          <button class="cat-dialog-close" @click="closeCatManager">✕</button>
-        </div>
-        <div class="cat-dialog-body">
-          <!-- 标签页显示勾选：决定该分类是否出现在面板顶部筛选标签页（镜像倒计时面板 catmgr 范式，hint 文案同源） -->
-          <div class="cat-tab-section">
-            <div class="cat-tab-section-title">标签页显示</div>
-            <p class="cat-tab-hint">勾选的分类会显示在面板上方的筛选标签页中</p>
-            <div class="cat-tab-list">
-              <label v-for="cat in sortedCategories" :key="cat.id" class="cat-tab-row">
-                <input
-                  type="checkbox"
-                  :checked="cat.showInTabs !== false"
-                  :data-testid="`nt-catmgr-tab-${cat.id}`"
-                  @change="handleToggleTab(cat, ($event.target as HTMLInputElement).checked)"
-                />
-                <span>{{ cat.name }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="cat-manager-list">
-            <div v-for="cat in sortedCategories" :key="cat.id" class="cat-manager-row" :data-testid="`nt-catmgr-row-${cat.id}`">
-              <input
-                v-model="catDrafts[cat.id]"
-                type="text"
-                class="form-input cat-name-input"
-                :data-testid="`nt-catmgr-name-${cat.id}`"
-                @change="commitCatName(cat)"
-                @keydown.enter="commitCatName(cat)"
-              />
-              <div class="cat-row-actions">
-                <button class="btn-edit" :data-testid="`nt-catmgr-up-${cat.id}`" @click="handleMoveCat(cat, 'up')">↑ 上移</button>
-                <button class="btn-edit" :data-testid="`nt-catmgr-down-${cat.id}`" @click="handleMoveCat(cat, 'down')">↓ 下移</button>
-                <button class="btn-delete" :data-testid="`nt-catmgr-del-${cat.id}`" @click="handleDeleteCat(cat)">删除</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="cat-add-form">
-            <input
-              v-model="newCatName"
-              type="text"
-              class="form-input"
-              placeholder="新分类名称"
-              data-testid="nt-catmgr-new-name"
-              @keydown.enter="handleAddCat"
-            />
-            <button class="btn-add" :disabled="newCatName.trim() === ''" data-testid="nt-catmgr-add" @click="handleAddCat">
-              添加
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -1097,23 +949,6 @@ onUnmounted(() => {
 
 .nt-btn-add:hover {
   background: var(--accent-hover, var(--color-primary-hover));
-}
-
-.nt-btn-manage {
-  padding: 10px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.nt-btn-manage:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
 }
 
 /* ===== 网格卡片 ===== */
@@ -1764,197 +1599,7 @@ onUnmounted(() => {
   color: #fff;
 }
 
-/* ===== 分类管理弹框（复用 note-overlay 遮罩）===== */
-.cat-manager-dialog {
-  width: 100%;
-  max-width: var(--dlg-w-wb-notes-cat, 480px);
-  max-height: var(--dlg-h-wb-notes-cat, 85vh);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-lg, 14px);
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
 
-.cat-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 14px) var(--radius-lg, 14px) 0 0;
-}
-
-.cat-dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-}
-
-.cat-dialog-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  transition: color var(--transition-fast, 0.15s ease);
-}
-
-.cat-dialog-close:hover {
-  color: var(--text-primary, var(--color-text));
-}
-
-.cat-dialog-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.cat-manager-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* ===== 标签页显示勾选（镜像倒计时面板 catmgr 范式）===== */
-.cat-tab-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cat-tab-section + .cat-manager-list {
-  padding-top: 14px;
-  border-top: 1px solid var(--border-color, var(--color-border));
-}
-
-.cat-tab-section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-}
-
-.cat-tab-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-}
-
-.cat-tab-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.cat-tab-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-}
-
-.cat-tab-row input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: var(--accent-color, var(--color-primary));
-}
-
-.cat-manager-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.cat-name-input {
-  flex: 1;
-  min-width: 140px;
-}
-
-.cat-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 行内小按钮：复用表单按钮体系但缩小到行级尺寸 */
-.cat-row-actions .btn-edit,
-.cat-row-actions .btn-delete {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
-.btn-edit {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-edit:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.cat-add-form {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 12px;
-  border: 1px dashed var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-}
-
-.cat-add-form .form-input {
-  flex: 1;
-  min-width: 140px;
-}
-
-.btn-add {
-  padding: 9px 18px;
-  background: var(--accent-color, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-add:hover:not(:disabled) {
-  background: var(--accent-hover, var(--color-primary-hover));
-}
-
-.btn-add:disabled {
-  background: var(--text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .note-yellow {
@@ -2065,15 +1710,13 @@ onUnmounted(() => {
   border-color: var(--accent-color, #3b82f6);
 }
 
-:root.dark .nt-btn-reset,
-:root.dark .nt-btn-manage {
+:root.dark .nt-btn-reset {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
   border-color: var(--border-color, #374151);
 }
 
-:root.dark .nt-btn-reset:hover,
-:root.dark .nt-btn-manage:hover {
+:root.dark .nt-btn-reset:hover {
   color: var(--accent-color, #3b82f6);
   border-color: var(--accent-color, #3b82f6);
 }
@@ -2082,30 +1725,6 @@ onUnmounted(() => {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
-}
-
-:root.dark .cat-manager-dialog {
-  background-color: var(--bg-secondary, #1f2937);
-}
-
-:root.dark .cat-dialog-header {
-  background-color: var(--bg-secondary, #1f2937);
-}
-
-:root.dark .cat-manager-row {
-  background-color: var(--bg-card, #1f2937);
-}
-
-:root.dark .cat-name-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
-}
-
-:root.dark .cat-tab-row {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
 }
 
 :root.dark .type-radio-option {

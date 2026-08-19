@@ -17,11 +17,11 @@ easy-web-tab/
 ├── src/                          # Vue 3 SPA
 │   ├── components/               # 23 root SFCs + workbench/ subdir (UI layer)
 │   │   └── workbench/            # 18 SFC：13 面板（主页/待办/便签/日记本/倒计时/番茄钟/习惯打卡/密码/记账 + 运动/饮食/睡眠/体重）+ PanelPager 共享分页条 + WorkbenchHealth tabs 容器 + WorkbenchHealthReminders 只读提醒 + WeatherCard/CalendarAnchorCard 主页内嵌卡
-│   ├── composables/              # 33 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, workbenchMenuCore.ts, panelPagingCore.ts, usePanelPaging.ts, diaryCore.ts, noteCore.ts, noteMarkdown.ts, healthCore.ts, ledgerCore.ts, reminderCore.ts, useDesktopNotify.ts, reminderEmail.ts, spotlightCore.ts, habitCore.ts, pomodoroCore.ts)
-│   ├── stores/                   # 15 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchDiary.ts, workbenchHealth.ts, workbenchLedger.ts, workbenchPomodoro.ts, workbenchHabits.ts)
-│   ├── views/                    # 3 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台)
-│   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台 (eager imports)
-│   ├── types/index.ts            # Site, Category, WorkbenchDiary/DiaryData interfaces + DEFAULT_CATEGORIES + WORKBENCH_DATA_VERSION=6
+│   ├── composables/              # 34 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, workbenchMenuCore.ts, panelPagingCore.ts, usePanelPaging.ts, diaryCore.ts, noteCore.ts, noteMarkdown.ts, healthCore.ts, ledgerCore.ts, businessCore.ts, reminderCore.ts, useDesktopNotify.ts, reminderEmail.ts, spotlightCore.ts, habitCore.ts, pomodoroCore.ts)
+│   ├── stores/                   # 16 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchDiary.ts, workbenchHealth.ts, workbenchLedger.ts, workbenchBusiness.ts, workbenchPomodoro.ts, workbenchHabits.ts)
+│   ├── views/                    # 4 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台), BusinessView (销售记账/摆摊进销存)
+│   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台, /business → 销售记账 (eager imports)
+│   ├── types/index.ts            # Site, Category, WorkbenchDiary/DiaryData interfaces + Business 摆摊进销存接口/种子常量 + DEFAULT_CATEGORIES + WORKBENCH_DATA_VERSION=7
 │   └── styles/                   # dark.css, background.css
 ├── public/
 │   ├── data/myself-sites.md      # Only data file — sample sites downloaded via HelpModal.vue
@@ -44,7 +44,7 @@ easy-web-tab/
 | Add/edit bookmark UI | `src/components/SiteModal.vue` | Auto-fetches metadata via Jina.ai |
 | Bookmark CRUD logic | `src/stores/sites.ts` | God store: filtering, pagination, import/export |
 | Add new route | `src/router/index.ts` | Eager-loaded (no lazy loading) |
-| Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 desktopNotifyEnabled/reminderEmailEnabled/reminderEmailTo/reminderEmailServiceId/reminderEmailTemplateId/reminderEmailPublicKey；`Countdown` 含 `emailReminder?: boolean` opt-in 邮件提醒） |
+| Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 + `Countdown.emailReminder` opt-in + Business 摆摊进销存全部接口与种子常量 `DEFAULT_BUSINESS_EXPENSE_CATEGORIES`/`DEFAULT_BUSINESS_PRODUCT_CATEGORIES`；`WORKBENCH_DATA_VERSION=7`） |
 | Dark mode styles | `src/styles/dark.css` | CSS variables, class toggle |
 | Sample data | `public/data/myself-sites.md` | Fetched by `HelpModal.vue` (「下载示例数据」source) |
 | Keyboard shortcuts | `src/composables/useKeyboardShortcuts.ts` | Ctrl+N/B/D, Esc |
@@ -70,6 +70,7 @@ easy-web-tab/
 | Icon generation | `scripts/generate-preset-icons.cjs` | Runs at build time, generates presetIcons.ts |
 | 个人工作台 | `src/views/WorkbenchView.vue` + `src/components/workbench/` | 左侧菜单 10 项（主页/待办/便签/日记本/倒计时/番茄钟/习惯打卡/密码/健康管理/记账，每项带显示开关）；健康管理=tabs 容器（运动/饮食/睡眠/体重 四合一，WorkbenchHealth.vue）；运动/饮食/睡眠面板含只读定时提醒区块（WorkbenchHealthReminders.vue）；便签面板 WorkbenchNotes.vue 支持类型切换（普通/时光轴）+ 分类筛选 + 时光轴条目；日记本面板 WorkbenchDiary.vue（每日一篇，date 本地唯一，Markdown 编辑/预览 + 历史卡片分页）；主页 WorkbenchHome.vue=问候条 + 三屏轮播（行动台/数据概览/工具，6s 自动轮播 hover 暂停、箭头/圆点切换，统计卡按 visibleStatCards 隐藏且随菜单开关联动）；习惯打卡 WorkbenchHabits.vue=左表单右卡片网格；数据经 `useIdb.ts` 存 IndexedDB |
 | 工作台一屏布局（自适应分页） | `src/composables/usePanelPaging.ts` + `src/composables/panelPagingCore.ts` + `src/components/workbench/PanelPager.vue` | 桌面 ≥769px 一屏布局（页面滚动关闭，`.wb-content` flex 列 + 面板根 flex:1 min-height:0 钉满）；长列表经共享分页条翻页（← 第 X / Y 页 →）；`usePanelPaging` 返回普通对象（非 reactive），ResizeObserver 测列表区可用高 + `gridTemplateColumns` 实测列数，行高常量来自 `.omo/evidence/workbench-onescreen/row-heights.json` 实测（MAX+2px）；`maxRows` 行数上限钳制每页行数（密码 3 行/运动饮食睡眠 1 行）；≤768px 移动端分页惰性（全量渲染无切片）；11 面板接入（todo/notes 双实例/diary/countdown/habits/password/exercise/diet/sleep/weight/ledger），Home 与健康 tabs 容器不接入 |
+| 销售记账（摆摊进销存） | `src/views/BusinessView.vue` + `src/components/business/` + `src/stores/workbenchBusiness.ts` + `src/composables/businessCore.ts` | 独立页面 `/business`（HomeView 左上「💰 销售记账」入口），布局复刻 WorkbenchView（左树 7 项固定：首页/商品/进货/收摊/支出/库存/统计，emoji 图标）；商品分类内置 5 种子可删、支出分类内置 5 不可删；支出记录=tabs 容器（受控 activeTab+change，仿 WorkbenchHealth）+ 4 列卡片；收摊日记录 date 唯一 upsert、收入=Σ销售×售价自动算；库存=进货−带出+剩余、低库存预警阈值可配置（默认 20）；统计=营业额/成本/利润/毛利率 + 分类/商品排行 + 近 30 天趋势折线（businessCore 坐标）；共享分类管理弹框 BusinessCategoryManager（页面 ⚙️ 与设置弹窗「销售记账」tab 复用）；IndexedDB store 'business'，随备份 v7 导出/导入 |
 
 ## CODE MAP
 
@@ -87,6 +88,8 @@ easy-web-tab/
 | `useWorkbenchDiaryStore` | store | `src/stores/workbenchDiary.ts` | 日记每日一篇：`loadDiary`/`upsertEntry`（trim 空跳过、同日期更新、新日期 push `dy_` 前缀）/`deleteEntry`；`saveDiary` 写 DiaryData 对象形状 `{ entries: toRaw(...) }`（normalizeDiaryData 拒绝裸数组）；`sortedEntries` 委托 sortDiaryEntries；IndexedDB store 'diary' |
 | `useWorkbenchHealthStore` | store | `src/stores/workbenchHealth.ts` | 健康数据（height/plans/records 四模块 CRUD，IndexedDB store 'health'） |
 | `useWorkbenchLedgerStore` | store | `src/stores/workbenchLedger.ts` | 记账（categories/entries CRUD + 分组管理，内置 8 组不可删，IndexedDB store 'ledger'）；金额可见性 `showAmount`+`toggleAmountVisibility()`（纯内存，不持久化） |
+| `useWorkbenchBusinessStore` | store | `src/stores/workbenchBusiness.ts` | 销售记账（商品/支出双分类 CRUD + 商品/进货/收摊/支出 CRUD + 设置，全部薄委托 businessCore 纯函数；IndexedDB store 'business'；商品被进货/收摊引用禁删、支出内置 5 不可删、分类重命名同步不涉及 id 引用；saveBusiness 逐字段 toRaw） |
+| `emptyBusinessData` / `normalizeBusinessData` / `calcInventory` / `calcDailyRevenue` / `calcBusinessStats` / `calcProductRanking` / `calcCategoryRanking` / `calcBusinessTrend` / `businessTrendScale` + 双分类 CRUD 结果函数 | functions | `src/composables/businessCore.ts` | 销售记账纯逻辑：归一化（内置支出 5 缺失自动补回、商品分类空数组尊重存量）/分类 CRUD 结果计算（`{ok,reason:'empty'|'duplicate'|'not-found'|'in-use'|'builtin'|'boundary'}`，不改入参）/库存（进货−带出+剩余）/日收入（Σ max(0,带出−剩余−损耗)×售价）/统计/排行/近 N 天趋势 + 折线坐标（nice 天花板 + 5 网格线）— 纯函数零 vue/pinia/DOM，`node --experimental-strip-types` 可测 |
 | `useAppSettingsStore` | store | `src/stores/settings.ts` | 弹窗尺寸/透明度契约 + 工作台菜单（顺序/名称/显示开关）+ 导航筛选栏展开态：状态 `workbenchMenuOrder`/`workbenchMenuLabels`/`workbenchMenuVisibility`/`navFiltersExpanded`，变更 `moveWorkbenchMenuItem`/`renameWorkbenchMenuItem`/`setWorkbenchMenuVisibility`/`setNavFiltersExpanded`/`resetWorkbenchMenu`（全部委托 core + persist），computed `workbenchMenuItems`（resolveMenuItems 解析并过滤关闭项）/`workbenchMenuAllItems`（不过滤，设置弹窗列表用）/`workbenchMenuEnabled`（全键布尔视图）+ `isWorkbenchMenuEnabled(key)`；IDB store 'settings'，initSettings 两条来源经 normalizeWorkbenchMenu/normalizeWorkbenchMenuVisibility |
 | `useToast` | composable | `src/composables/useToast.ts` | Singleton toast state |
 | `getIconUrl` / `getFaviconImgSrc` | functions | `src/composables/useIconCache.ts` | Icon resolution chain |
@@ -109,7 +112,7 @@ easy-web-tab/
 | `notificationsSupported` / `notificationPermission` / `requestNotifyPermission` / `sendDesktopNotification` | functions | `src/composables/useDesktopNotify.ts` | 桌面通知封装：浏览器不支持→'unsupported'、异常→'denied'；仅 permission==='granted' 才 new Notification（tag 去重），失败 false 静默；不主动请求权限（请求属 UI 层职责） |
 | `sendReminderEmail` | function | `src/composables/reminderEmail.ts` | EmailJS v4 邮件发送：send(serviceId, templateId, params, { publicKey })（options 传公钥免全局 init），res?.status===200 判定，失败 console.warn 返回 false 不重试不 toast |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
-| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v5, 8 core stores: todos/notes/diary/countdowns/passwords/health/ledger/settings + 3 aux stores: pomodoro/habits/snapshots; backup 导出 version 6, v1-v6 兼容导入, `idbImportAll` 版本范围守卫 `<1 || >6` 拒绝) |
+| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v6, 9 core stores: todos/notes/diary/countdowns/passwords/health/ledger/settings/business + 3 aux stores: pomodoro/habits/snapshots; backup 导出 version 7, v1-v7 兼容导入, `idbImportAll` 版本范围守卫 `<1 || >7` 拒绝，v1-v6 补 business 空数据) |
 
 ## CONVENTIONS
 
@@ -122,7 +125,7 @@ easy-web-tab/
 - **Module type**: ESM (`"type": "module"`, `.cjs` for CommonJS scripts including PM2 configs)
 - **TypeScript**: Strict + noUnusedLocals + noUnusedParameters
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
-- **IndexedDB persistence**: 工作台数据（待办/便签/日记/倒计时/密码/健康/记账/设置/番茄钟/习惯打卡/快照）存浏览器 IndexedDB — DB 名 `easy-web-tab` v5，11 个 object store（8 核心 todos/notes/diary/countdowns/passwords/health/ledger/settings + 3 辅助 pomodoro/habits/snapshots），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）；notes store 存 NoteData `{categories, notes}` 双数组；diary store 存 DiaryData `{entries}` 对象（勿写裸数组，normalizeDiaryData 拒绝）；导出备份 version 6，v1-v6 备份导入时兼容（范围守卫 `<1 || >6` 拒绝；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据；notes 旧数组格式归一为 `{categories:[], notes:[...]}`，snapshots 永不进备份）
+- **IndexedDB persistence**: 工作台数据（待办/便签/日记/倒计时/密码/健康/记账/设置/销售记账/番茄钟/习惯打卡/快照）存浏览器 IndexedDB — DB 名 `easy-web-tab` v6，12 个 object store（9 核心 todos/notes/diary/countdowns/passwords/health/ledger/settings/business + 3 辅助 pomodoro/habits/snapshots），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）；notes store 存 NoteData `{categories, notes}` 双数组；diary store 存 DiaryData `{entries}` 对象（勿写裸数组，normalizeDiaryData 拒绝）；business store 存 BusinessData（七字段）；导出备份 version 7，v1-v7 备份导入时兼容（范围守卫 `<1 || >7` 拒绝；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据，v1-v6 补 business 空数据；notes 旧数组格式归一为 `{categories:[], notes:[...]}`，snapshots 永不进备份）
 - **倒计时 repeat 规范**: `once` 规范存 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有入口（loadCountdowns/importCountdowns/addCountdown/updateCountdown/useMarkdown 解析）经 `normalizeCountdown`/`parseRepeat` 归一化，幂等
 - **倒计时分类规范**: 内置 6 类（work/life/study/exercise/diet/sleep）+ 自定义分类注册表（`customCategories`，localStorage `user-countdown-categories`，不随 JSON 备份导出，与排序偏好同策略）；标签页可见分类 `tabCategories` 默认 exercise/diet/sleep（localStorage `user-countdown-tab-categories`，首次无记录时落默认值）；`normalizeCountdown` 保留任意 trim 后非空的自定义分类值（不再剥离为 'work'），`categoryLabel` 对未知分类回退原名；`CountdownCategory` 类型 = `string`；表单下拉全量取 `store.allCategories`（内置+自定义）；自定义分类被倒计时引用时删除返回 `{ ok:false, reason:'in-use' }`；重命名会同步存量条目 category 字段（toRaw 重建后 idbPut）
 - **倒计时邮件提醒规范**: `emailReminder` opt-in——缺省/非布尔（normalizeCountdown 不输出该字段）= 默认不发邮件；仅当倒计时 `emailReminder === true` 且设置中邮件配置完整（`isEmailConfigured`）才发；模板变量契约 to_email/countdown_name/occurrence_time/app_url（`buildEmailParams` 唯一来源，组件禁止内联拼参）；导出 Markdown 仅 emailReminder===true 才输出 `emailReminder: true` 行
@@ -173,9 +176,11 @@ npm run test:diary      # Pure-function tests for diaryCore.ts (15 断言 T1-T15
 npm run test:note-markdown  # Pure-function tests for noteMarkdown.ts (18 断言 T1-T18: markdown 渲染/breaks 换行/链接 target+rel/XSS 转义/javascript: 链接抑制/空输入, node --experimental-strip-types)
 npm run test:menu       # Pure-function tests for workbenchMenuCore.ts (18 断言 T1-T18: 归一化/home 恒 0/移动/改名/解析/常量完整性/可见性归一化+过滤, node --experimental-strip-types)
 npm run test:paging     # Pure-function tests for panelPagingCore.ts (15 断言 T1-T15: calcRowsPerPage/clampPage/slicePage 边界, node --experimental-strip-types)
-node scripts/qa-ledger-charts.mjs  # Playwright UI QA: 记账图表契约 S1-S7（后台 vite dev 16718-16726 + 注入 IndexedDB v5 ledger 数据 → 趋势柱/环形图/回归断言（S6 含展开列表自动收起图表）+ 明暗全页截图存 .omo/evidence/ledger-charts/）
+npm run test:business   # Pure-function tests for businessCore.ts (18 断言 T1-T18: 归一化/种子/分类 CRUD/库存/日收入/统计/排行/趋势坐标, node --experimental-strip-types)
+node scripts/qa-business.mjs  # Playwright UI QA: 销售记账全量契约 S1-S9（后台 vite dev 16718-16726 + 注入 IndexedDB v6 business 数据 → 左树/统计/商品/进货/收摊 upsert/支出 tabs/库存预警/排行趋势/设置 tab + 明暗截图存 .omo/evidence/business/）
+node scripts/qa-ledger-charts.mjs  # Playwright UI QA: 记账图表契约 S1-S7（后台 vite dev 16718-16726 + 注入 IndexedDB v6 ledger 数据 → 趋势柱/环形图/回归断言（S6 含展开列表自动收起图表）+ 明暗全页截图存 .omo/evidence/ledger-charts/）
 node scripts/qa-workbench-home.mjs  # Playwright UI QA: 主页轮播契约 S1-S7（后台/复用 vite dev 16718-16726 → /workbench 主页 UI 播种待办 → 轮播骨架/播种出现统计/手动切换/6s 自动轮播/菜单开关联动隐藏恢复/移动端 375 无横向滚动 + 明暗全页截图存 .omo/evidence/workbench-home/）
-node scripts/qa-workbench-onescreen.mjs  # Playwright UI QA: 一屏布局脚手架+行高测量（后台/复用 vite dev 16718-16726 → 注入 IDB v5 7 store + 密码 UI 播种 → 双视口首条行高 MAX+2px → row-heights.json 12 面板 + 明暗 40 截图存 .omo/evidence/workbench-onescreen/；主页断言轮播骨架默认第 1 屏 active）
+node scripts/qa-workbench-onescreen.mjs  # Playwright UI QA: 一屏布局脚手架+行高测量（后台/复用 vite dev 16718-16726 → 注入 IDB v6 7 store + 密码 UI 播种 → 双视口首条行高 MAX+2px → row-heights.json 12 面板 + 明暗 40 截图存 .omo/evidence/workbench-onescreen/；主页断言轮播骨架默认第 1 屏 active）
 npm run serve        # Production server WITH game rewrites (custom Node.js server)
 npm start            # Build + serve
 pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, uses `serve` package)

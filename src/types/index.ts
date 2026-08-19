@@ -213,7 +213,7 @@ export function emptyAppSettingsData(): AppSettingsData {
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 6
+export const WORKBENCH_DATA_VERSION = 7
 
 export interface WorkbenchData {
   version: number
@@ -228,6 +228,7 @@ export interface WorkbenchData {
   settings: AppSettingsData
   pomodoro?: unknown // v5 新增：番茄钟数据（后续 Todo 定义具体类型后收紧）
   habits?: unknown // v5 新增：习惯打卡数据（后续 Todo 定义具体类型后收紧）
+  business?: BusinessData // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
 }
 
 // ==================== 健康管理 ====================
@@ -357,3 +358,111 @@ export interface LedgerData {
   categories: LedgerCategory[]
   entries: LedgerEntry[]
 }
+
+// ==================== 摆摊进销存（销售记账，备份 v7 新增） ====================
+
+/** 支出分类：内置 5（isBuiltIn 不可删）+ 自定义；visible 控制支出 Tab 栏显示 */
+export interface BusinessExpenseCategory {
+  id: string // bec_ 前缀；内置 id 固定 expense-stall/gas/seasoning/transport/other
+  name: string
+  sortOrder: number
+  visible: boolean
+  isBuiltIn: boolean
+}
+
+/** 商品分类：内置 5 种子可删（删除后商品归未分类）；visible 控制商品页标签页显示 */
+export interface BusinessProductCategory {
+  id: string // bpc_ 前缀；内置 id 固定 product-snack/drink/fruit/daily/clothing
+  name: string
+  sortOrder: number
+  visible: boolean
+}
+
+/** 商品 */
+export interface BusinessProduct {
+  id: string // bp_ 前缀
+  name: string
+  categoryId?: string // undefined = 未分类
+  unit: string
+  purchasePrice: number // 进货单价
+  sellingPrice: number // 售价
+  active: boolean // 在售/停售（停售不出现在收摊带出选择）
+  createdAt: string
+}
+
+/** 进货记录 */
+export interface BusinessPurchase {
+  id: string // bpr_ 前缀
+  productId: string
+  quantity: number
+  unitPrice: number
+  total: number // quantity × unitPrice（表单自动算）
+  date: string // YYYY-MM-DD
+  note?: string
+  createdAt: string
+}
+
+/** 收摊日记录条目：sold = broughtOut - remaining - loss（core 计算，不存储） */
+export interface DailyRecordItem {
+  productId: string
+  broughtOut: number
+  remaining: number
+  loss: number
+}
+
+/** 收摊日记录：date 唯一（upsert 语义）；totalRevenue 由 core 按 items×售价 算好落库 */
+export interface BusinessDailyRecord {
+  id: string // bd_ 前缀
+  date: string // YYYY-MM-DD 本地日期
+  items: DailyRecordItem[]
+  totalRevenue: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 支出记录 */
+export interface BusinessExpense {
+  id: string // be_ 前缀
+  date: string // YYYY-MM-DD
+  categoryId: string
+  amount: number
+  note?: string
+  createdAt: string
+}
+
+/** 销售记账设置 */
+export interface BusinessSettings {
+  stallName: string // 摊位名称（仅展示）
+  lowStockThreshold: number // 低库存预警阈值，默认 20
+}
+
+/** 销售记账数据（IndexedDB store 'business'，键 'items'） */
+export interface BusinessData {
+  productCategories: BusinessProductCategory[]
+  expenseCategories: BusinessExpenseCategory[]
+  products: BusinessProduct[]
+  purchases: BusinessPurchase[]
+  dailyRecords: BusinessDailyRecord[]
+  expenses: BusinessExpense[]
+  settings: BusinessSettings
+}
+
+/** 内置支出分类（不可删，可改名/排序/标签页显隐） */
+export const DEFAULT_BUSINESS_EXPENSE_CATEGORIES: BusinessExpenseCategory[] = [
+  { id: 'expense-stall', name: '摊位费', sortOrder: 1, visible: true, isBuiltIn: true },
+  { id: 'expense-gas', name: '燃气费', sortOrder: 2, visible: true, isBuiltIn: true },
+  { id: 'expense-seasoning', name: '调料包装', sortOrder: 3, visible: true, isBuiltIn: true },
+  { id: 'expense-transport', name: '交通费', sortOrder: 4, visible: true, isBuiltIn: true },
+  { id: 'expense-other', name: '其他', sortOrder: 5, visible: true, isBuiltIn: true }
+]
+
+/** 内置商品分类（种子可删：删除后该分类商品归未分类） */
+export const DEFAULT_BUSINESS_PRODUCT_CATEGORIES: BusinessProductCategory[] = [
+  { id: 'product-snack', name: '小吃', sortOrder: 1, visible: true },
+  { id: 'product-drink', name: '饮品', sortOrder: 2, visible: true },
+  { id: 'product-fruit', name: '水果', sortOrder: 3, visible: true },
+  { id: 'product-daily', name: '日用品', sortOrder: 4, visible: true },
+  { id: 'product-clothing', name: '服饰', sortOrder: 5, visible: true }
+]
+

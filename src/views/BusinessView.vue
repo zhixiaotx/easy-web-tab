@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // 销售记账独立页面（摆摊进销存）：布局复刻 WorkbenchView（左树 + 右内容，桌面一屏钉满、移动端横排菜单）
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, toRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
+import { useToast } from '@/composables/useToast'
+import { localDateKey } from '@/composables/businessCore'
 import BusinessHome from '@/components/business/BusinessHome.vue'
 import BusinessProducts from '@/components/business/BusinessProducts.vue'
 import BusinessPurchases from '@/components/business/BusinessPurchases.vue'
@@ -14,6 +16,7 @@ import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 
 const router = useRouter()
 const store = useWorkbenchBusinessStore()
+const toast = useToast()
 
 // 左树 7 项（固定顺序，emoji 图标常量渲染，不接工作台菜单开关系统）
 const SECTIONS = [
@@ -39,6 +42,90 @@ function navigateTo(section: string): void {
 
 const showSettingsDialog = ref(false)
 
+// ===== 销售记账独立 JSON 备份（business-backup v1，仅本模块七字段，不含其他工作台数据） =====
+// 导出：打包当前 store 七字段为 JSON 下载（嵌套 reactive 逐字段 toRaw，防 JSON 序列化 Proxy 残留）
+function handleBusinessExport(): void {
+  try {
+    const payload = {
+      type: 'business-backup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        productCategories: toRaw(store.productCategories),
+        expenseCategories: toRaw(store.expenseCategories),
+        products: toRaw(store.products),
+        purchases: toRaw(store.purchases),
+        dailyRecords: toRaw(store.dailyRecords),
+        expenses: toRaw(store.expenses),
+        settings: toRaw(store.settings)
+      }
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `销售记账备份-${localDateKey()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast.success('导出成功')
+  } catch (e) {
+    console.error('[Business] export failed', e)
+    toast.error('导出失败')
+  }
+}
+
+// 导入：解析 JSON 备份 → 格式校验 → 确认覆盖 → importData 归一化写入 → toast
+const importInput = ref<HTMLInputElement | null>(null)
+
+function handleBusinessImportClick(): void {
+  importInput.value?.click()
+}
+
+async function handleBusinessImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    input.value = '' // 允许再次选择同一文件
+    const content = e.target?.result as string
+
+    let parsed: { type?: unknown; version?: unknown; data?: unknown }
+    try {
+      parsed = JSON.parse(content)
+    } catch {
+      toast.error('文件不是有效 JSON')
+      return
+    }
+
+    if (
+      parsed?.type !== 'business-backup' ||
+      parsed.version !== 1 ||
+      parsed.data === null ||
+      typeof parsed.data !== 'object' ||
+      Array.isArray(parsed.data)
+    ) {
+      toast.error('文件格式不正确（不是销售记账备份）')
+      return
+    }
+
+    if (!confirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
+
+    try {
+      const data = await store.importData(parsed.data)
+      toast.success(
+        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，收摊记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
+      )
+    } catch (err) {
+      toast.error(`导入失败：${err instanceof Error ? err.message : '文件格式无效'}`)
+    }
+  }
+  reader.readAsText(file)
+}
+
 onMounted(() => {
   void store.loadBusiness()
 })
@@ -54,9 +141,20 @@ onMounted(() => {
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">
-        <button class="bs-btn" title="设置" @click="showSettingsDialog = true">⚙️ 设置</button>
+        <button class="bs-btn" title="导出销售数据" data-testid="bs-export" @click="handleBusinessExport">📤 导出</button>
+        <button class="bs-btn" title="导入销售数据" data-testid="bs-import" @click="handleBusinessImportClick">📥 导入</button>
+        <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true">⚙️ 设置</button>
       </div>
     </header>
+
+    <input
+      ref="importInput"
+      type="file"
+      accept=".json,application/json"
+      style="display: none"
+      data-testid="bs-import-input"
+      @change="handleBusinessImportFile"
+    />
 
     <!-- 主体：左树 + 右内容区 -->
     <div class="bs-body">

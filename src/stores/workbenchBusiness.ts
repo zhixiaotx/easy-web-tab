@@ -326,6 +326,20 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     await saveBusiness()
   }
 
+  // ===== 整包导入（销售记账独立 JSON 备份，BusinessView 头部「导入」按钮入口） =====
+  async function importData(raw: unknown): Promise<BusinessData> {
+    const data = normalizeBusinessData(raw)
+    productCategories.value = data.productCategories
+    expenseCategories.value = data.expenseCategories
+    products.value = data.products
+    purchases.value = data.purchases
+    dailyRecords.value = data.dailyRecords
+    expenses.value = data.expenses
+    settings.value = data.settings
+    await saveBusiness()
+    return data
+  }
+
   // ===== 设置 =====
   async function setStallName(name: string): Promise<void> {
     settings.value.stallName = name.trim().slice(0, 30)
@@ -347,6 +361,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     settings,
     loadBusiness,
     saveBusiness,
+    importData,
     addProductCategory,
     renameProductCategory,
     toggleProductCategoryVisible,

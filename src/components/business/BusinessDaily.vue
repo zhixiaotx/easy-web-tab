@@ -2,7 +2,7 @@
 // 收摊记录：日记录卡片（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
 import { computed, reactive, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcDailyRevenue, findProduct, formatYuanOf, localDateKey, soldCount, sortDailyRecords } from '@/composables/businessCore'
+import { calcDailyCost, calcDailyLossAmount, calcDailyRevenue, findProduct, formatYuanOf, localDateKey, soldCount, sortDailyRecords } from '@/composables/businessCore'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 
 const store = useWorkbenchBusinessStore()
@@ -28,6 +28,30 @@ const rows = reactive<{ productId: string; broughtOut: number; remaining: number
 const formRevenue = computed(() =>
   calcDailyRevenue(rows.map(r => ({ ...r })), store.products)
 )
+
+const formCost = computed(() =>
+  calcDailyCost(rows.map(r => ({ ...r })), store.products)
+)
+
+const formLossAmount = computed(() =>
+  calcDailyLossAmount(rows.map(r => ({ ...r })), store.products)
+)
+
+const formProfit = computed(() =>
+  Math.round((formRevenue.value - formCost.value) * 100) / 100
+)
+
+function recordProfit(record: BusinessDailyRecord): number {
+  return Math.round((record.totalRevenue - calcDailyCost(record.items, store.products)) * 100) / 100
+}
+
+function recordCost(record: BusinessDailyRecord): number {
+  return calcDailyCost(record.items, store.products)
+}
+
+function recordLossAmount(record: BusinessDailyRecord): number {
+  return calcDailyLossAmount(record.items, store.products)
+}
 
 const isFormValid = computed(
   () => editingDate.value !== '' && rows.length > 0 && rows.every(r => r.productId !== '' && (r.broughtOut > 0 || r.remaining > 0 || r.loss > 0))
@@ -97,6 +121,11 @@ async function handleDelete(id: string): Promise<void> {
           <span class="bizday-date">{{ r.date }}</span>
           <span class="bizday-revenue" :data-testid="`bizday-revenue-${r.id}`">{{ formatYuanOf(r.totalRevenue) }}</span>
         </div>
+        <div class="bizday-stats">
+          <span class="bizday-stat">成本 <strong :data-testid="`bizday-cost-${r.id}`">{{ formatYuanOf(recordCost(r)) }}</strong></span>
+          <span class="bizday-stat">利润 <strong :data-testid="`bizday-profit-${r.id}`">{{ formatYuanOf(recordProfit(r)) }}</strong></span>
+          <span class="bizday-stat">损耗 <strong :data-testid="`bizday-loss-${r.id}`">{{ formatYuanOf(recordLossAmount(r)) }}</strong></span>
+        </div>
         <div class="bizday-items" :data-testid="`bizday-summary-${r.id}`">{{ itemSummary(r) || '无商品明细' }}</div>
         <div class="bizday-note">{{ r.note || '—' }}</div>
         <div class="bizday-actions">
@@ -146,7 +175,10 @@ async function handleDelete(id: string): Promise<void> {
           </div>
 
           <div class="bizday-revenue-preview">
-            预计营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(formRevenue) }}</strong>
+            营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(formRevenue) }}</strong>
+            <span class="bizday-preview-sep">成本 <strong data-testid="bizday-form-cost">{{ formatYuanOf(formCost) }}</strong></span>
+            <span class="bizday-preview-sep">利润 <strong data-testid="bizday-form-profit">{{ formatYuanOf(formProfit) }}</strong></span>
+            <span class="bizday-preview-sep">损耗 <strong data-testid="bizday-form-loss">{{ formatYuanOf(formLossAmount) }}</strong></span>
           </div>
 
           <div class="biz-field">
@@ -257,6 +289,26 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--text-secondary, var(--color-text-secondary));
 }
 
+.bizday-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.bizday-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.bizday-stat strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
 .bizday-note {
   font-size: 12px;
   color: var(--text-muted, var(--color-text-muted));
@@ -354,6 +406,13 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .bizday-revenue-preview {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: var(--radius-md, 8px);
   font-size: 14px;
   color: var(--text-secondary, var(--color-text-secondary));
 }
@@ -361,6 +420,18 @@ async function handleDelete(id: string): Promise<void> {
 .bizday-revenue-preview strong {
   color: var(--success-color, var(--color-success));
   font-size: 18px;
+}
+
+.bizday-preview-sep {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.bizday-preview-sep strong {
+  font-size: 16px;
+  color: var(--text-primary, var(--color-text));
 }
 
 /* 弹框 */

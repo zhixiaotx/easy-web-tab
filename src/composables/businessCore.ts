@@ -402,6 +402,26 @@ export function calcDailyRevenue(items: DailyRecordItem[], products: BusinessPro
   return Math.round(total * 100) / 100
 }
 
+/** 日记录成本（纯 COGS）：Σ 销售数量 × 商品进货价（商品已删除计 0，与 calcBusinessStats 同口径） */
+export function calcDailyCost(items: DailyRecordItem[], products: BusinessProduct[]): number {
+  let total = 0
+  for (const item of items) {
+    const product = products.find(p => p.id === item.productId)
+    total += soldCount(item) * (product?.purchasePrice ?? 0)
+  }
+  return Math.round(total * 100) / 100
+}
+
+/** 日记录损耗金额：Σ 损耗数量 × 商品售价（商品已删除计 0，按售价计潜在收入损失） */
+export function calcDailyLossAmount(items: DailyRecordItem[], products: BusinessProduct[]): number {
+  let total = 0
+  for (const item of items) {
+    const product = products.find(p => p.id === item.productId)
+    total += item.loss * (product?.sellingPrice ?? 0)
+  }
+  return Math.round(total * 100) / 100
+}
+
 /** 库存：按商品计 = Σ进货 − Σ带出 + Σ剩余（等价 进货 − 销售 − 损耗） */
 export function calcInventory(
   products: BusinessProduct[],

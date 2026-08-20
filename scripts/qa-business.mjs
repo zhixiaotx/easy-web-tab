@@ -3,8 +3,8 @@
  * 后台启动/复用 vite dev（16718-16726）→ 注入 IndexedDB easy-web-tab v6 store 'business' → /business：
  *  S1 左树 7 项 + 首页默认激活 + 4 统计卡数值（营业额/成本/利润/毛利率）
  *  S2 商品页：分类 tabs + 商品卡 + 新增弹框保存 + 停售开关
- *  S3 进货页：分类 tabs（全部+可见分类）+ 行分类徽标 + 分类过滤 + 新增进货自动合计
- *  S4 收摊页：日记录卡 + 编辑弹框（带出/剩余/损耗）+ 同日 upsert 覆盖
+ *  S3 进货页：卡片网格（桌面 5 列）+ 分类 tabs（全部+可见分类）+ 卡片分类徽标 + 分类过滤 + 新增进货自动合计
+ *  S4 收摊页：日记录卡（营业额/成本/利润/损耗四项）+ 编辑弹框四项预览 + 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
  *  S6 库存页：低库存预警 + 库存表 + 阈值修改
  *  S7 统计页：分类排行 + 商品排行 + 趋势双折线 SVG
@@ -225,19 +225,24 @@ try {
     )
   })
 
-  await guard('S3) 进货页：分类 tabs + 行分类徽标 + 新增自动合计', async () => {
+  await guard('S3) 进货页：卡片网格 5 列 + 分类 tabs + 卡片分类徽标 + 新增自动合计', async () => {
     await page.locator('[data-testid="bs-menu-purchases"]').click()
-    await page.waitForSelector('[data-testid="bizpur-row"]', { state: 'visible', timeout: 8000 })
+    await page.waitForSelector('[data-testid="bizpur-card-qa-b1"]', { state: 'visible', timeout: 8000 })
+    // 卡片网格：桌面 5 列（gridTemplateColumns 轨道数）
+    const gridCols = await page.evaluate(() => {
+      const el = document.querySelector('.bizpur-grid')
+      return el ? getComputedStyle(el).gridTemplateColumns.split(' ').length : 0
+    })
     // 分类 tabs：全部 + 5 可见分类（小吃/饮品/水果/日用品/服饰），badge 以 bizpur-cat-badge- 开头需排除
     const tabCount = await page.locator('button.bizpur-tab').count()
     const catAllVisible = await page.locator('[data-testid="bizpur-cat-all"]').isVisible()
-    // 行分类徽标：qa-b1=烤肠→小吃
+    // 卡片分类徽标：qa-b1=烤肠→小吃
     const badgeText = (await page.locator('[data-testid="bizpur-cat-badge-qa-b1"]').textContent()).trim()
-    const rowsBefore = await page.locator('[data-testid="bizpur-row"]').count()
+    const rowsBefore = await page.locator('[data-testid^="bizpur-card-"]').count()
     // 点击「小吃」tab → 仍见 qa-b1；点击「饮品」tab → 无进货记录空态
     await page.locator('[data-testid="bizpur-cat-product-snack"]').click()
     await page.waitForTimeout(200)
-    const rowsAfterSnack = await page.locator('[data-testid="bizpur-row"]').count()
+    const rowsAfterSnack = await page.locator('[data-testid^="bizpur-card-"]').count()
     await page.locator('[data-testid="bizpur-cat-product-drink"]').click()
     await page.waitForTimeout(200)
     const emptyVisible = await page.locator('[data-testid="bizpur-empty"]').isVisible()
@@ -251,35 +256,47 @@ try {
     const totalText = (await page.locator('[data-testid="bizpur-form-total"]').textContent()).trim()
     await page.locator('[data-testid="bizpur-save"]').click()
     await page.waitForTimeout(400)
-    const rowsAfter = await page.locator('[data-testid="bizpur-row"]').count()
+    const rowsAfter = await page.locator('[data-testid^="bizpur-card-"]').count()
     const countText = (await page.locator('.bizpur-count').textContent()).trim()
     record(
-      'S3) 进货页：tabs 6 + 徽标小吃 + 小吃1行/饮品空 + 列表 1→2 + 合计 20.00',
-      tabCount === 6 && catAllVisible && badgeText === '小吃' && rowsBefore === 1 && rowsAfterSnack === 1 && emptyVisible && rowsAfter === 2 && totalText.includes('20.00') && countText.includes('2'),
-      { tabCount, catAllVisible, badgeText, rowsBefore, rowsAfterSnack, emptyVisible, rowsAfter, totalText, countText }
+      'S3) 进货页：网格 5 列 + tabs 6 + 徽标小吃 + 小吃1卡/饮品空 + 卡片 1→2 + 合计 20.00',
+      gridCols === 5 && tabCount === 6 && catAllVisible && badgeText === '小吃' && rowsBefore === 1 && rowsAfterSnack === 1 && emptyVisible && rowsAfter === 2 && totalText.includes('20.00') && countText.includes('2'),
+      { gridCols, tabCount, catAllVisible, badgeText, rowsBefore, rowsAfterSnack, emptyVisible, rowsAfter, totalText, countText }
     )
   })
 
-  await guard('S4) 收摊页：卡片 + 同日 upsert 覆盖 + 收入自动重算', async () => {
+  await guard('S4) 收摊页：卡片四项 + 同日 upsert 覆盖 + 四项自动重算', async () => {
     await page.locator('[data-testid="bs-menu-daily"]').click()
     await page.waitForSelector('[data-testid^="bizday-card-"]', { state: 'visible', timeout: 8000 })
     const cardsBefore = await page.locator('[data-testid^="bizday-card-"]').count()
-    const revenueBefore = (await page.locator('[data-testid^="bizday-revenue-"]').first().textContent()).trim()
+    const revenueBefore = (await page.locator('[data-testid="bizday-revenue-qa-d1"]').textContent()).trim()
+    const costBefore = (await page.locator('[data-testid="bizday-cost-qa-d1"]').textContent()).trim()
+    const profitBefore = (await page.locator('[data-testid="bizday-profit-qa-d1"]').textContent()).trim()
+    const lossBefore = (await page.locator('[data-testid="bizday-loss-qa-d1"]').textContent()).trim()
     await page.locator('[data-testid="bizday-add"]').click()
     await page.waitForSelector('[data-testid="bizday-dialog"]', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="bizday-form-date"]').fill('2026-08-02') // 同日 → upsert 覆盖
     await page.locator('[data-testid="bizday-row-product"]').nth(0).selectOption('qa-p1')
     await page.locator('[data-testid="bizday-row"]').nth(0).locator('input').nth(0).fill('10') // 带出
     await page.locator('[data-testid="bizday-row"]').nth(0).locator('input').nth(1).fill('0') // 剩余
-    const preview = (await page.locator('[data-testid="bizday-form-revenue"]').textContent()).trim()
+    const previewRevenue = (await page.locator('[data-testid="bizday-form-revenue"]').textContent()).trim()
+    const previewCost = (await page.locator('[data-testid="bizday-form-cost"]').textContent()).trim()
+    const previewProfit = (await page.locator('[data-testid="bizday-form-profit"]').textContent()).trim()
+    const previewLoss = (await page.locator('[data-testid="bizday-form-loss"]').textContent()).trim()
     await page.locator('[data-testid="bizday-save"]').click()
     await page.waitForTimeout(400)
     const cardsAfter = await page.locator('[data-testid^="bizday-card-"]').count()
-    const revenueAfter = (await page.locator('[data-testid^="bizday-revenue-"]').first().textContent()).trim()
+    const revenueAfter = (await page.locator('[data-testid="bizday-revenue-qa-d1"]').textContent()).trim()
+    const costAfter = (await page.locator('[data-testid="bizday-cost-qa-d1"]').textContent()).trim()
+    const profitAfter = (await page.locator('[data-testid="bizday-profit-qa-d1"]').textContent()).trim()
+    const lossAfter = (await page.locator('[data-testid="bizday-loss-qa-d1"]').textContent()).trim()
     record(
-      'S4) 收摊页：同日 upsert 卡片数不变 + 收入重算（50.00）',
-      cardsBefore === 1 && cardsAfter === 1 && revenueBefore.includes('200') && preview.includes('50.00') && revenueAfter.includes('50.00'),
-      { cardsBefore, cardsAfter, revenueBefore, preview, revenueAfter }
+      'S4) 收摊页：卡四项 200/68/132/5 + 弹框 50/20/30/0 + 同日 upsert 后 50/20/30/0',
+      cardsBefore === 1 && cardsAfter === 1 &&
+        revenueBefore.includes('200') && costBefore.includes('68.00') && profitBefore.includes('132.00') && lossBefore.includes('5.00') &&
+        previewRevenue.includes('50.00') && previewCost.includes('20.00') && previewProfit.includes('30.00') && previewLoss.includes('0.00') &&
+        revenueAfter.includes('50.00') && costAfter.includes('20.00') && profitAfter.includes('30.00') && lossAfter.includes('0.00'),
+      { cardsBefore, cardsAfter, revenueBefore, costBefore, profitBefore, lossBefore, previewRevenue, previewCost, previewProfit, previewLoss, revenueAfter, costAfter, profitAfter, lossAfter }
     )
   })
 

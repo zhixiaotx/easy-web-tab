@@ -107,18 +107,19 @@ async function handleDelete(id: string): Promise<void> {
     </div>
 
     <div v-if="filtered.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
-    <div v-else class="bizpur-list">
-      <div class="bizpur-row bizpur-head-row">
-        <span>日期</span><span>商品</span><span>分类</span><span>数量</span><span>单价</span><span>总额</span><span>备注</span><span></span>
-      </div>
-      <div v-for="p in filtered" :key="p.id" class="bizpur-row" data-testid="bizpur-row">
-        <span class="bizpur-date">{{ p.date }}</span>
-        <span class="bizpur-product">{{ productNameOf(p.productId) }}</span>
-        <span class="bizpur-cat" :data-testid="`bizpur-cat-badge-${p.id}`">{{ catNameOf(p.productId) }}</span>
-        <span class="bizpur-num">{{ p.quantity }}</span>
-        <span class="bizpur-num">{{ formatYuanOf(p.unitPrice) }}</span>
-        <span class="bizpur-total">{{ formatYuanOf(p.total) }}</span>
-        <span class="bizpur-note">{{ p.note || '—' }}</span>
+    <div v-else class="bizpur-grid">
+      <div v-for="p in filtered" :key="p.id" class="bizpur-card" :data-testid="`bizpur-card-${p.id}`">
+        <div class="bizpur-card-head">
+          <span class="bizpur-date">{{ p.date }}</span>
+          <span class="bizpur-cat" :data-testid="`bizpur-cat-badge-${p.id}`">{{ catNameOf(p.productId) }}</span>
+        </div>
+        <div class="bizpur-product">{{ productNameOf(p.productId) }}</div>
+        <div class="bizpur-card-detail">
+          <span class="bizpur-num">×{{ p.quantity }}</span>
+          <span class="bizpur-num">@{{ formatYuanOf(p.unitPrice) }}</span>
+        </div>
+        <div class="bizpur-total">{{ formatYuanOf(p.total) }}</div>
+        <div class="bizpur-note">{{ p.note || '—' }}</div>
         <div class="bizpur-actions">
           <button class="bizpur-btn" :data-testid="`bizpur-edit-${p.id}`" @click="startEdit(p)">编辑</button>
           <button class="bizpur-btn del" :data-testid="`bizpur-del-${p.id}`" @click="handleDelete(p.id)">删除</button>
@@ -250,32 +251,42 @@ async function handleDelete(id: string): Promise<void> {
   border-radius: var(--radius-md, 10px);
 }
 
-.bizpur-list {
+.bizpur-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.bizpur-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
-  overflow-x: auto;
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+  transition: border-color var(--transition-fast, 0.15s ease);
 }
 
-.bizpur-row {
-  display: grid;
-  grid-template-columns: 110px minmax(120px, 1.4fr) minmax(90px, 0.8fr) 70px 90px 100px minmax(80px, 1fr) auto;
+.bizpur-card:hover {
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.bizpur-card-head {
+  display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
-  min-width: 900px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.bizpur-row:last-child {
-  border-bottom: none;
-}
-
-.bizpur-head-row {
-  background: var(--bg-secondary, var(--color-bg-hover));
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted, var(--color-text-muted));
+.bizpur-card-detail {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
 }
 
 .bizpur-date {
@@ -469,6 +480,11 @@ async function handleDelete(id: string): Promise<void> {
   box-shadow: none;
 }
 
+:root.dark .bizpur-card {
+  background-color: var(--bg-secondary, #1f2937);
+  box-shadow: none;
+}
+
 :root.dark .bizpur-tab {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
@@ -502,5 +518,11 @@ async function handleDelete(id: string): Promise<void> {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
   border-color: var(--border-color, #374151);
+}
+
+@media (max-width: 640px) {
+  .bizpur-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -7,6 +7,8 @@ import {
   calcBusinessStats,
   calcBusinessTrend,
   calcCategoryRanking,
+  calcDailyCost,
+  calcDailyLossAmount,
   calcDailyRevenue,
   calcInventory,
   calcProductRanking,
@@ -330,6 +332,39 @@ test('T20 filterPurchasesByCategory', () => {
   assert.equal(snackNoCat.length, 1, '分类过滤排除无分类商品进货')
   // 空数组 → []
   assert.equal(filterPurchasesByCategory([], [], 'all').length, 0)
+})
+
+// T21 — calcDailyCost：成本=Σ售出×进货价（纯 COGS）；缺失商品计 0；空数组
+test('T21 calcDailyCost', () => {
+  const d = buildData()
+  const items = d.dailyRecords[0].items
+  // p1: 售出24×进价2=48；p2: 售出20×进价1=20 → 68（与 calcBusinessStats 同口径）
+  assert.equal(calcDailyCost(items, d.products), 68)
+  // 缺失商品计 0（ghost 商品无进货价）
+  assert.equal(
+    calcDailyCost(items.concat([{ productId: 'ghost', broughtOut: 9, remaining: 0, loss: 0 }]), d.products),
+    68
+  )
+  // 空数组 → 0
+  assert.equal(calcDailyCost([], d.products), 0)
+})
+
+// T22 — calcDailyLossAmount：损耗金额=Σ损耗×售价；缺失商品计 0；全损耗
+test('T22 calcDailyLossAmount', () => {
+  const d = buildData()
+  const items = d.dailyRecords[0].items
+  // p1: 损耗1×售价5=5；p2: 损耗0×售价4=0 → 5
+  assert.equal(calcDailyLossAmount(items, d.products), 5)
+  // 缺失商品计 0
+  assert.equal(
+    calcDailyLossAmount([{ productId: 'ghost', broughtOut: 5, remaining: 0, loss: 3 }], d.products),
+    0
+  )
+  // 全损耗：10×5=50
+  assert.equal(
+    calcDailyLossAmount([{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 10 }], d.products),
+    50
+  )
 })
 
 let passed = 0

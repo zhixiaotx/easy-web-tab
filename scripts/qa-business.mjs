@@ -6,7 +6,7 @@
  *  S3 进货页：卡片网格（桌面 5 列）+ 分类 tabs（全部+可见分类）+ 卡片分类徽标 + 分类过滤 + 新增进货自动合计
  *  S4 收摊页：日记录卡（营业额/成本/利润/损耗四项）+ 编辑弹框四项预览 + 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
- *  S6 库存页：低库存预警 + 库存表 + 阈值修改
+ *  S6 库存页：库存卡片网格（桌面 5 列）+ 低库存预警（停售商品排除）+ 阈值修改
  *  S7 统计页：分类排行 + 商品排行 + 趋势双折线 SVG
  *  S8 设置弹窗「销售记账」tab：摊位名称/阈值/分类管理入口
  *  S9 明暗全页截图 + 移动端 375 无横向滚动
@@ -328,12 +328,21 @@ try {
     )
   })
 
-  await guard('S6) 库存页：低库存预警 + 库存表 + 阈值修改', async () => {
+  await guard('S6) 库存页：卡片网格 3 卡 5 列 + 预警仅 1 张（停售爆米花不预警）+ 阈值 0 清空', async () => {
     await page.locator('[data-testid="bs-menu-inventory"]').click()
     await page.waitForSelector('[data-testid="bizinv-alert"]', { state: 'visible', timeout: 8000 })
     const lowCardSel = '[data-testid^="bizinv-low-"]:not([data-testid="bizinv-low-empty"])'
     const lowCount = await page.locator(lowCardSel).count()
-    const rowCount = await page.locator('[data-testid^="bizinv-row-"]').count()
+    // 卡片网格：桌面 5 列（gridTemplateColumns 轨道数）
+    const cardCount = await page.locator('[data-testid^="bizinv-card-"]').count()
+    const gridCols = await page.evaluate(() => {
+      const el = document.querySelector('.bizinv-grid')
+      return el ? getComputedStyle(el).gridTemplateColumns.split(' ').length : 0
+    })
+    // 低库存仅 qa-p2：p1 库存恰在阈值 100 边界不含、爆米花停售排除
+    const hasP2 = (await page.locator('[data-testid="bizinv-low-qa-p2"]').count()) === 1
+    const lowTexts = await page.locator(lowCardSel).allTextContents()
+    const noDisabledInLow = !lowTexts.some((t) => t.includes('爆米花'))
     // 阈值改 0 → 预警清空
     await page.locator('[data-testid="bizinv-threshold"]').fill('0')
     await page.locator('[data-testid="bizinv-threshold"]').blur()
@@ -341,9 +350,9 @@ try {
     const lowAfter = await page.locator(lowCardSel).count()
     const emptyVisible = (await page.locator('[data-testid="bizinv-low-empty"]').count()) === 1
     record(
-      'S6) 库存页：预警 2 张 → 阈值 0 清空 + 库存表 3 行',
-      lowCount === 2 && rowCount === 3 && lowAfter === 0 && emptyVisible,
-      { lowCount, rowCount, lowAfter, emptyVisible }
+      'S6) 库存页：卡片网格 3 卡 5 列 + 预警仅 1 张（停售爆米花不预警）+ 阈值 0 清空',
+      cardCount === 3 && gridCols === 5 && lowCount === 1 && hasP2 && noDisabledInLow && lowAfter === 0 && emptyVisible,
+      { cardCount, gridCols, lowCount, hasP2, lowTexts, lowAfter, emptyVisible }
     )
   })
 

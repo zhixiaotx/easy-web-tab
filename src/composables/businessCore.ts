@@ -443,6 +443,26 @@ export function calcInventory(
   return stock
 }
 
+/** 进货合计：按商品 Σ进货数量 */
+export function calcPurchaseTotals(purchases: BusinessPurchase[]): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const p of purchases) {
+    totals[p.productId] = (totals[p.productId] ?? 0) + p.quantity
+  }
+  return totals
+}
+
+/** 带出合计：按商品 Σ带出数量（跨全部收摊记录） */
+export function calcBroughtOutTotals(dailyRecords: BusinessDailyRecord[]): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const r of dailyRecords) {
+    for (const item of r.items) {
+      totals[item.productId] = (totals[item.productId] ?? 0) + item.broughtOut
+    }
+  }
+  return totals
+}
+
 /** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率 */
 export interface BusinessStats {
   revenue: number
@@ -471,7 +491,7 @@ export function calcBusinessStats(data: BusinessData): BusinessStats {
   }
 }
 
-/** 低库存预警清单：库存 < 阈值，按库存升序（含停售商品，标注 active 供 UI 区分） */
+/** 低库存预警清单：在售商品（停售商品不参与预警）库存 < 阈值，按库存升序 */
 export interface LowStockItem {
   product: BusinessProduct
   stock: number
@@ -481,6 +501,7 @@ export function lowStockProducts(data: BusinessData): LowStockItem[] {
   const stock = calcInventory(data.products, data.purchases, data.dailyRecords)
   const threshold = data.settings.lowStockThreshold
   return data.products
+    .filter(product => product.active)
     .map(product => ({ product, stock: stock[product.id] ?? 0 }))
     .filter(item => item.stock < threshold)
     .sort((a, b) => a.stock - b.stock)

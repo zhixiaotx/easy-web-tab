@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   addExpenseCategory,
   addProductCategory,
+  calcBroughtOutTotals,
   calcBusinessStats,
   calcBusinessTrend,
   calcCategoryRanking,
@@ -12,6 +13,7 @@ import {
   calcDailyRevenue,
   calcInventory,
   calcProductRanking,
+  calcPurchaseTotals,
   businessTrendScale,
   deleteExpenseCategory,
   deleteProductCategory,
@@ -249,6 +251,11 @@ test('T15 lowStockProducts', () => {
   const low2 = lowStockProducts(d2)
   assert.equal(low2.length, 2)
   assert.equal(low2[0].product.id, 'p2') // 30 < 75 升序
+  // 停售商品不参与预警：首个商品 active=false 副本（阈值仍 100）→ 仅剩 p2
+  const dOff: BusinessData = { ...d2, products: [{ ...d.products[0], active: false }, d.products[1]] }
+  const lowOff = lowStockProducts(dOff)
+  assert.equal(lowOff.length, 1)
+  assert.equal(lowOff[0].product.id, 'p2')
 })
 
 // T16 — calcProductRanking / calcCategoryRanking
@@ -365,6 +372,41 @@ test('T22 calcDailyLossAmount', () => {
     calcDailyLossAmount([{ productId: 'p1', broughtOut: 10, remaining: 0, loss: 10 }], d.products),
     50
   )
+})
+
+// T23 — calcPurchaseTotals：按商品 Σ进货数量（多笔累加/无进货无键/空数组）
+test('T23 calcPurchaseTotals', () => {
+  const d = buildData()
+  const totals = calcPurchaseTotals(d.purchases)
+  // b1: p1×100；b2: p2×50
+  assert.deepEqual(totals, { p1: 100, p2: 50 })
+  // 无进货记录的商品不出现在结果键中
+  assert.ok(!('p3' in totals))
+  // 多笔累加：追加 p1 数量 25 → 合计 125
+  const more = [...d.purchases, { id: 'b3', productId: 'p1', quantity: 25, unitPrice: 2, total: 50, date: '2026-08-03', createdAt: '2026-08-03T00:00:00.000Z' }]
+  assert.equal(calcPurchaseTotals(more).p1, 125)
+  // 空数组 → {}
+  assert.deepEqual(calcPurchaseTotals([]), {})
+})
+
+// T24 — calcBroughtOutTotals：按商品 Σ带出数量（跨全部收摊记录累加/无记录无键/空数组）
+test('T24 calcBroughtOutTotals', () => {
+  const d = buildData()
+  const totals = calcBroughtOutTotals(d.dailyRecords)
+  // d1: p1 带出 30；p2 带出 20
+  assert.deepEqual(totals, { p1: 30, p2: 20 })
+  // 跨记录累加：第二条记录 p1 带出 5 → 35
+  const second: BusinessDailyRecord = {
+    id: 'd2', date: '2026-08-03', totalRevenue: 25,
+    items: [{ productId: 'p1', broughtOut: 5, remaining: 0, loss: 0 }],
+    createdAt: '2026-08-03T00:00:00.000Z', updatedAt: '2026-08-03T00:00:00.000Z'
+  }
+  const both = calcBroughtOutTotals([...d.dailyRecords, second])
+  assert.equal(both.p1, 35)
+  // 无收摊记录的商品无键
+  assert.ok(!('ghost' in both))
+  // 空数组 → {}
+  assert.deepEqual(calcBroughtOutTotals([]), {})
 })
 
 let passed = 0

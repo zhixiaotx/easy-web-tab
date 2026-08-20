@@ -1,12 +1,16 @@
 <script setup lang="ts">
-// 库存管理：库存总览表（进货/带出/剩余/当前库存）+ 低库存预警清单 + 阈值可配置
+// 库存管理：库存总览卡片网格（商品/单位/进货合计/带出合计）+ 低库存预警清单 + 阈值可配置
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcInventory, lowStockProducts, sortProducts } from '@/composables/businessCore'
+import { calcBroughtOutTotals, calcInventory, calcPurchaseTotals, lowStockProducts, sortProducts } from '@/composables/businessCore'
 
 const store = useWorkbenchBusinessStore()
 
 const stockMap = computed(() => calcInventory(store.products, store.purchases, store.dailyRecords))
+
+const purchaseTotals = computed(() => calcPurchaseTotals(store.purchases))
+
+const broughtOutTotals = computed(() => calcBroughtOutTotals(store.dailyRecords))
 
 const rows = computed(() =>
   sortProducts(store.products)
@@ -70,21 +74,18 @@ async function commitThreshold(): Promise<void> {
       </div>
     </div>
 
-    <!-- 库存总览表 -->
-    <div class="bizinv-table-wrap" data-testid="bizinv-table">
-      <div class="bizinv-row bizinv-head-row">
-        <span>商品</span><span>单位</span><span>进货合计</span><span>带出合计</span><span>剩余带回</span><span>当前库存</span><span>状态</span>
-      </div>
-      <div v-for="row in rows" :key="row.product.id" class="bizinv-row" :data-testid="'bizinv-row-' + row.product.id">
+    <!-- 库存总览卡片网格 -->
+    <div class="bizinv-grid" data-testid="bizinv-grid">
+      <div
+        v-for="row in rows"
+        :key="row.product.id"
+        class="bizinv-card"
+        :data-testid="'bizinv-card-' + row.product.id"
+      >
         <span class="bizinv-name">{{ row.product.name }}{{ row.product.active ? '' : '（停售）' }}</span>
-        <span>{{ row.product.unit }}</span>
-        <span class="bizinv-num">{{ store.purchases.filter(p => p.productId === row.product.id).reduce((s, p) => s + p.quantity, 0) }}</span>
-        <span class="bizinv-num">{{ store.dailyRecords.reduce((s, r) => s + r.items.filter(it => it.productId === row.product.id).reduce((x, it) => x + it.broughtOut, 0), 0) }}</span>
-        <span class="bizinv-num">{{ store.dailyRecords.reduce((s, r) => s + r.items.filter(it => it.productId === row.product.id).reduce((x, it) => x + it.remaining, 0), 0) }}</span>
-        <span class="bizinv-stock" :class="{ low: row.stock < store.settings.lowStockThreshold }">{{ row.stock }}</span>
-        <span class="bizinv-status" :class="{ low: row.stock < store.settings.lowStockThreshold }">
-          {{ row.stock < store.settings.lowStockThreshold ? '低库存' : '正常' }}
-        </span>
+        <span class="bizinv-unit">单位：{{ row.product.unit }}</span>
+        <span class="bizinv-num">进货合计：{{ purchaseTotals[row.product.id] ?? 0 }}</span>
+        <span class="bizinv-num">带出合计：{{ broughtOutTotals[row.product.id] ?? 0 }}</span>
       </div>
     </div>
   </div>
@@ -173,32 +174,27 @@ async function commitThreshold(): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-.bizinv-table-wrap {
+.bizinv-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.bizinv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
-  overflow-x: auto;
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+  transition: border-color var(--transition-fast, 0.15s ease);
 }
 
-.bizinv-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1.6fr) 70px 90px 90px 90px 90px 80px;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
-  min-width: 720px;
-}
-
-.bizinv-row:last-child {
-  border-bottom: none;
-}
-
-.bizinv-head-row {
-  background: var(--bg-secondary, var(--color-bg-hover));
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted, var(--color-text-muted));
+.bizinv-card:hover {
+  border-color: var(--accent-color, var(--color-primary));
 }
 
 .bizinv-name {
@@ -210,35 +206,15 @@ async function commitThreshold(): Promise<void> {
   white-space: nowrap;
 }
 
+.bizinv-unit {
+  font-size: 13px;
+  color: var(--text-primary, var(--color-text));
+}
+
 .bizinv-num {
   font-size: 13px;
   color: var(--text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
-}
-
-.bizinv-stock {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--success-color, var(--color-success));
-  font-variant-numeric: tabular-nums;
-}
-
-.bizinv-stock.low {
-  color: var(--error-color, var(--color-error));
-}
-
-.bizinv-status {
-  font-size: 12px;
-  padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
-  text-align: center;
-  color: #15803d;
-  background: #dcfce7;
-}
-
-.bizinv-status.low {
-  color: #b91c1c;
-  background: #fee2e2;
 }
 
 .biz-input {
@@ -257,7 +233,7 @@ async function commitThreshold(): Promise<void> {
 }
 
 :root.dark .bizinv-alert,
-:root.dark .bizinv-table-wrap {
+:root.dark .bizinv-card {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
 }
@@ -278,5 +254,11 @@ async function commitThreshold(): Promise<void> {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
   border-color: var(--border-color, #374151);
+}
+
+@media (max-width: 640px) {
+  .bizinv-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

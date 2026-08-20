@@ -203,6 +203,19 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.navFiltersExpanded === 'boolean') {
     out.navFiltersExpanded = data.navFiltersExpanded
   }
+  // 页面命名与可见性（工作台/销售记账）
+  if (typeof data.workbenchPageName === 'string') {
+    out.workbenchPageName = data.workbenchPageName.trim()
+  }
+  if (typeof data.workbenchPageVisible === 'boolean') {
+    out.workbenchPageVisible = data.workbenchPageVisible
+  }
+  if (typeof data.businessPageName === 'string') {
+    out.businessPageName = data.businessPageName.trim()
+  }
+  if (typeof data.businessPageVisible === 'boolean') {
+    out.businessPageVisible = data.businessPageVisible
+  }
   // 工作台城市：仅采纳 trim 后非空字符串；空串/undefined/null/非字符串一律视为「未配置」
   // （清除城市后重载不复活旧值，非法值回退默认即未配置）
   if (typeof data.workbenchCity === 'string' && data.workbenchCity.trim() !== '') {
@@ -242,6 +255,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航管理页分类/标签栏展开态：默认收起（false）
   const navFiltersExpanded = ref<boolean>(false)
 
+  // 页面命名与可见性（工作台/销售记账）
+  const workbenchPageName = ref<string>('')
+  const workbenchPageVisible = ref<boolean>(true)
+  const businessPageName = ref<string>('')
+  const businessPageVisible = ref<boolean>(true)
+
   // 提醒设置：桌面通知开关 + 邮件提醒（EmailJS）开关与四字段配置——默认关闭/空串
   const desktopNotifyEnabled = ref<boolean>(false)
   const reminderEmailEnabled = ref<boolean>(false)
@@ -266,6 +285,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchCity: toRaw(workbenchCity.value),
       workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value),
       navFiltersExpanded: navFiltersExpanded.value,
+      workbenchPageName: workbenchPageName.value,
+      workbenchPageVisible: workbenchPageVisible.value,
+      businessPageName: businessPageName.value,
+      businessPageVisible: businessPageVisible.value,
       desktopNotifyEnabled: desktopNotifyEnabled.value,
       reminderEmailEnabled: reminderEmailEnabled.value,
       reminderEmailTo: reminderEmailTo.value,
@@ -342,6 +365,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchMenuLabels.value = menu.labels
       workbenchMenuVisibility.value = normalizeWorkbenchMenuVisibility(effective.workbenchMenuVisibility)
       navFiltersExpanded.value = effective.navFiltersExpanded === true
+      workbenchPageName.value = typeof effective.workbenchPageName === 'string' ? effective.workbenchPageName.trim() : ''
+      workbenchPageVisible.value = effective.workbenchPageVisible !== false
+      businessPageName.value = typeof effective.businessPageName === 'string' ? effective.businessPageName.trim() : ''
+      businessPageVisible.value = effective.businessPageVisible !== false
       for (const id of DIALOG_IDS) {
         const size = effective.dialogSizes[id]
         if (size) {
@@ -424,6 +451,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchCity.value = undefined
     workbenchSidebarCollapsed.value = undefined
     navFiltersExpanded.value = false
+    workbenchPageName.value = ''
+    workbenchPageVisible.value = true
+    businessPageName.value = ''
+    businessPageVisible.value = true
     desktopNotifyEnabled.value = false
     reminderEmailEnabled.value = false
     reminderEmailTo.value = ''
@@ -495,6 +526,28 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 页面命名与可见性 setters
+  function setWorkbenchPageName(s: string) {
+    workbenchPageName.value = s
+    persist()
+  }
+  function setWorkbenchPageVisible(v: boolean) {
+    workbenchPageVisible.value = v
+    persist()
+  }
+  function setBusinessPageName(s: string) {
+    businessPageName.value = s
+    persist()
+  }
+  function setBusinessPageVisible(v: boolean) {
+    businessPageVisible.value = v
+    persist()
+  }
+
+  // 页面显示名 computed
+  const workbenchPageDisplayName = computed(() => workbenchPageName.value || '工作台')
+  const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
+
   // 提醒设置：桌面通知/邮件提醒开关（纯布尔）+ 邮件配置四字段（原样透传不 trim）——更新 ref → persist
   function setDesktopNotifyEnabled(v: boolean) {
     desktopNotifyEnabled.value = v
@@ -564,6 +617,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchCity,
     workbenchSidebarCollapsed,
     navFiltersExpanded,
+    workbenchPageName,
+    workbenchPageVisible,
+    businessPageName,
+    businessPageVisible,
+    workbenchPageDisplayName,
+    businessPageDisplayName,
     desktopNotifyEnabled,
     reminderEmailEnabled,
     reminderEmailTo,
@@ -580,6 +639,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setWorkbenchMenuVisibility,
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,
+    setWorkbenchPageName,
+    setWorkbenchPageVisible,
+    setBusinessPageName,
+    setBusinessPageVisible,
     setDesktopNotifyEnabled,
     setReminderEmailEnabled,
     setReminderEmailTo,

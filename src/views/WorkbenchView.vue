@@ -277,7 +277,7 @@ async function handleImportFile(event: Event) {
     <header class="wb-header">
       <div class="wb-header-left">
         <button class="wb-btn" @click="router.push('/')">← 管理页</button>
-        <h1>工作台</h1>
+        <h1>{{ settingsStore.workbenchPageDisplayName }}</h1>
       </div>
       <div class="wb-header-right">
         <button class="wb-btn" @click="handleImportClick">导入</button>

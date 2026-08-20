@@ -3,6 +3,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
+import { useAppSettingsStore } from '@/stores/settings'
 import BusinessHome from '@/components/business/BusinessHome.vue'
 import BusinessProducts from '@/components/business/BusinessProducts.vue'
 import BusinessPurchases from '@/components/business/BusinessPurchases.vue'
@@ -14,6 +15,7 @@ import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 
 const router = useRouter()
 const store = useWorkbenchBusinessStore()
+const settingsStore = useAppSettingsStore()
 
 // 左树 7 项（固定顺序，emoji 图标常量渲染，不接工作台菜单开关系统）
 const SECTIONS = [
@@ -50,7 +52,7 @@ onMounted(() => {
     <header class="bs-header">
       <div class="bs-header-left">
         <button class="bs-btn" @click="router.push('/')">← 管理页</button>
-        <h1>📊 销售记账</h1>
+        <h1>📊 {{ settingsStore.businessPageDisplayName }}</h1>
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">

@@ -1,0 +1,114 @@
+/* ============================================
+   Shared Animation Tokens & Transition Classes
+   ============================================ */
+
+/* --- Timing tokens --- */
+:root {
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}
+
+/* --- Z-index tokens --- */
+:root {
+  --z-dropdown: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 9999;
+}
+
+/* --- Dialog transition (overlay fade) --- */
+.dialog-enter-active,
+.dialog-leave-active {
+  transition: opacity 200ms ease;
+}
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+}
+
+/* --- Grid list transition (card add/remove/move) --- */
+.grid-enter-active,
+.grid-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.grid-enter-from,
+.grid-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+.grid-move {
+  transition: transform 200ms ease;
+}
+
+/* --- Pagination suppression: when switching pages,
+     suppress enter/leave animations on card lists --- */
+.grid-paging .grid-enter-active,
+.grid-paging .grid-leave-active {
+  transition: none !important;
+}
+
+/* --- Route transition (legacy, kept for reference) --- */
+.route-enter-active,
+.route-leave-active {
+  transition: opacity 200ms ease;
+}
+.route-enter-from,
+.route-leave-to {
+  opacity: 0;
+}
+
+/* --- Route fade-in animation (used by App.vue route-transition class) ---
+     Works with both single-root and fragment components.
+     :key="$route.path" on <component> forces recreation → animation replays. */
+.route-transition {
+  animation: route-fade-in 200ms ease;
+}
+@keyframes route-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- Prefers reduced motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Glass morphism on overlay backdrops --- */
+@supports (backdrop-filter: blur(8px)) {
+  .dialog-overlay,
+  .manager-overlay,
+  .modal-overlay,
+  .pwd-modal-overlay,
+  .note-overlay,
+  .reminder-overlay,
+  .sp-overlay,
+  .biz-dialog-overlay,
+  .bizcat-overlay {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay,
+  .manager-overlay,
+  .modal-overlay,
+  .pwd-modal-overlay,
+  .note-overlay,
+  .reminder-overlay,
+  .sp-overlay,
+  .biz-dialog-overlay,
+  .bizcat-overlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

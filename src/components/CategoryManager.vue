@@ -101,6 +101,7 @@ const sortedCustomCategories = computed(() =>
 </script>
 
 <template>
+  <Transition name="dialog">
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
@@ -233,6 +234,7 @@ const sortedCustomCategories = computed(() =>
       </div>
     </div>
   </div>
+  </Transition>
 </template>
 
 <style scoped>

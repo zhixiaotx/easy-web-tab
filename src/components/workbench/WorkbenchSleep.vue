@@ -261,6 +261,7 @@ onUnmounted(() => {
     <!-- 记录列表 -->
     <template v-else-if="listExpanded">
       <div ref="listEl" class="ex-list" :class="{ 'ex-list-scroll': !paging.fitsOnePage }">
+        <TransitionGroup name="grid">
         <div v-for="rec in paging.pageItems" :key="rec.id" class="ex-item" data-testid="sl-item">
           <div class="ex-item-head">
             <span class="ex-date">{{ rec.date }}</span>
@@ -275,11 +276,13 @@ onUnmounted(() => {
             </button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
       <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </template>
 
     <!-- 目标弹框 -->
+    <Transition name="dialog">
     <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
       <div class="dialog" data-testid="sl-dialog">
         <div class="dialog-header">
@@ -319,8 +322,10 @@ onUnmounted(() => {
         </form>
       </div>
     </div>
+    </Transition>
 
     <!-- 新增/编辑记录弹框 -->
+    <Transition name="dialog">
     <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">
       <div class="dialog" data-testid="sl-dialog">
         <div class="dialog-header">
@@ -388,6 +393,7 @@ onUnmounted(() => {
         </form>
       </div>
     </div>
+    </Transition>
   </div>
 </template>
 

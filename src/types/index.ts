@@ -206,6 +206,10 @@ export interface AppSettingsData {
   reminderEmailServiceId?: string // EmailJS Service ID
   reminderEmailTemplateId?: string // EmailJS Template ID
   reminderEmailPublicKey?: string // EmailJS Public Key
+  workbenchPageName?: string           // 工作台页面自定义名称（默认 '工作台'）
+  workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 true）
+  businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
+  businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

@@ -176,6 +176,7 @@ function getIconId(icon: MergedIcon): string {
 </script>
 
 <template>
+  <Transition name="dialog">
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
@@ -299,6 +300,7 @@ function getIconId(icon: MergedIcon): string {
       </div>
     </div>
   </div>
+  </Transition>
 </template>
 
 <style scoped>

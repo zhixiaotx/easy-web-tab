@@ -238,6 +238,7 @@ onMounted(() => {
       </div>
 
       <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
+        <TransitionGroup name="grid">
         <div
           v-for="v in pageItems"
           :key="v.habit.id"
@@ -273,6 +274,7 @@ onMounted(() => {
             <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
 
       <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />

@@ -536,6 +536,7 @@ onUnmounted(() => {
 
     <template v-else-if="listExpanded">
       <div ref="listEl" class="ld-list" :class="{ 'ld-list-scroll': !paging.fitsOnePage }">
+        <TransitionGroup name="grid">
         <div v-for="v in paging.pageItems" :key="v.entry.id" class="ld-item" data-testid="ld-item">
           <span class="ld-date">{{ v.entry.date }}</span>
           <span
@@ -555,13 +556,15 @@ onUnmounted(() => {
             <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
 
       <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </template>
 
     <!-- 新增/编辑记录弹框 -->
-    <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
+    <Transition name="dialog">
+      <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
       <div class="dialog" data-testid="ld-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
@@ -618,10 +621,12 @@ onUnmounted(() => {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </Transition>
 
     <!-- 分组管理弹框 -->
-    <div v-if="showCatManager" class="dialog-overlay" @click.self="closeCatManager">
+    <Transition name="dialog">
+      <div v-if="showCatManager" class="dialog-overlay" @click.self="closeCatManager">
       <div class="dialog" data-testid="ld-cat-dialog">
         <div class="dialog-header">
           <h3>管理分组</h3>
@@ -686,7 +691,8 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </Transition>
   </div>
 </template>
 

@@ -530,6 +530,19 @@ watch(
   }
 )
 
+// 当工作台/销售记账可见性关闭时，自动切离对应 tab
+watch(
+  [() => store.workbenchPageVisible, () => store.businessPageVisible],
+  () => {
+    if (store.workbenchPageVisible === false && (activeTab.value === 'wb' || activeTab.value === 'remind')) {
+      activeTab.value = 'nav'
+    }
+    if (store.businessPageVisible === false && activeTab.value === 'business') {
+      activeTab.value = 'nav'
+    }
+  }
+)
+
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   stopWatchSettings?.()
@@ -537,7 +550,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="manager-overlay" @click.self="emit('close')">
+  <Transition name="dialog">
+    <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
         <h2>⚙️ 设置</h2>
@@ -555,6 +569,7 @@ onUnmounted(() => {
             @click="activeTab = 'nav'"
           >导航设置</button>
           <button
+            v-if="store.workbenchPageVisible !== false"
             type="button"
             role="tab"
             class="tab-btn"
@@ -563,6 +578,7 @@ onUnmounted(() => {
             @click="activeTab = 'wb'"
           >工作台设置</button>
           <button
+            v-if="store.workbenchPageVisible !== false"
             type="button"
             role="tab"
             class="tab-btn"
@@ -571,6 +587,7 @@ onUnmounted(() => {
             @click="activeTab = 'remind'"
           >提醒设置</button>
           <button
+            v-if="store.businessPageVisible !== false"
             type="button"
             role="tab"
             class="tab-btn"
@@ -578,7 +595,7 @@ onUnmounted(() => {
             :aria-selected="activeTab === 'business'"
             data-testid="settings-tab-business"
             @click="activeTab = 'business'"
-          >销售记账</button>
+          >{{ store.businessPageDisplayName }}</button>
         </div>
 
         <p v-if="activeTab === 'nav' || activeTab === 'wb'" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
@@ -601,6 +618,63 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">
             控制导航管理页「分类 · 标签」筛选栏的展开与收起：{{ store.navFiltersExpanded ? '当前为展开模式' : '当前为收起模式（默认）' }}
+          </p>
+        </div>
+
+        <!-- 页面导航名称与可见性 -->
+        <div v-if="activeTab === 'nav'" class="wb-menu-config">
+          <h3 class="wb-menu-title">页面导航</h3>
+
+          <!-- 工作台 -->
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">工作台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.workbenchPageName"
+                placeholder="工作台"
+                maxlength="20"
+                @input="store.setWorkbenchPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.workbenchPageVisible !== false }"
+                role="switch"
+                :aria-checked="store.workbenchPageVisible !== false"
+                data-testid="workbench-visible-switch"
+                @click="store.setWorkbenchPageVisible(store.workbenchPageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制管理页「工作台」按钮的显示。关闭后工作台设置和提醒设置一并隐藏。
+          </p>
+
+          <!-- 销售记账 -->
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">销售记账</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.businessPageName"
+                placeholder="销售记账"
+                maxlength="20"
+                @input="store.setBusinessPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.businessPageVisible !== false }"
+                role="switch"
+                :aria-checked="store.businessPageVisible !== false"
+                data-testid="business-visible-switch"
+                @click="store.setBusinessPageVisible(store.businessPageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制管理页「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
           </p>
         </div>
 
@@ -1084,6 +1158,7 @@ onUnmounted(() => {
     <!-- 销售记账分类管理（共享弹框，z-index 高于设置弹窗） -->
     <BusinessCategoryManager v-if="bizCatManagerKind" :kind="bizCatManagerKind" @close="bizCatManagerKind = null" />
   </div>
+  </Transition>
 </template>
 
 <style scoped>

@@ -270,6 +270,7 @@ onUnmounted(() => {
     <!-- 记录列表 -->
     <template v-else-if="listExpanded">
       <div ref="listEl" class="ex-list" :class="{ 'ex-list-scroll': !paging.fitsOnePage }">
+        <TransitionGroup name="grid">
         <div v-for="rec in paging.pageItems" :key="rec.id" class="ex-item" data-testid="ex-item">
           <div class="ex-item-head">
             <span class="ex-date">{{ rec.date }}</span>
@@ -288,141 +289,146 @@ onUnmounted(() => {
             </button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
       <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </template>
 
     <!-- 目标弹框 -->
-    <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
-      <div class="dialog" data-testid="ex-dialog">
-        <div class="dialog-header">
-          <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
-          <button class="close-btn" @click="closeTargetDialog">✕</button>
-        </div>
-        <form class="dialog-body" @submit.prevent="handleSaveTarget">
-          <div class="form-group">
-            <label>目标指标</label>
-            <select v-model="formMetric" class="form-input" data-testid="ex-metric">
-              <option v-for="opt in METRIC_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
+    <Transition name="dialog">
+      <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
+        <div class="dialog" data-testid="ex-dialog">
+          <div class="dialog-header">
+            <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
+            <button class="close-btn" @click="closeTargetDialog">✕</button>
           </div>
-
-          <div class="form-group">
-            <label>每周目标 *</label>
-            <input
-              v-model="formTarget"
-              type="number"
-              min="1"
-              step="1"
-              class="form-input"
-              placeholder="例如：3"
-              data-testid="ex-target-input"
-            />
-          </div>
-
-          <div class="form-actions">
-            <button
-              v-if="targetView"
-              type="button"
-              class="btn-clear"
-              data-testid="ex-clear-target"
-              @click="handleClearTarget"
-            >
-              清除目标
-            </button>
-            <span class="form-actions-spacer"></span>
-            <button type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">取消</button>
-            <button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- 新增/编辑记录弹框 -->
-    <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">
-      <div class="dialog" data-testid="ex-dialog">
-        <div class="dialog-header">
-          <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <button class="close-btn" @click="cancelRecordForm">✕</button>
-        </div>
-        <form class="dialog-body" @submit.prevent="handleSaveRecord">
-          <div class="form-row-fields">
-            <div class="field">
-              <label class="field-label">日期 *</label>
-              <input v-model="formDate" type="date" class="form-input field-date" data-testid="ex-form-date" />
-            </div>
-            <div class="field">
-              <label class="field-label">运动类型 *</label>
-              <select v-model="formType" class="form-input field-type" data-testid="ex-form-type">
-                <option v-for="t in EXERCISE_TYPES" :key="t" :value="t">{{ t }}</option>
+          <form class="dialog-body" @submit.prevent="handleSaveTarget">
+            <div class="form-group">
+              <label>目标指标</label>
+              <select v-model="formMetric" class="form-input" data-testid="ex-metric">
+                <option v-for="opt in METRIC_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </div>
-          </div>
 
-          <div class="form-row-fields">
-            <div class="field">
-              <label class="field-label">时长（分钟）*</label>
+            <div class="form-group">
+              <label>每周目标 *</label>
               <input
-                v-model="formDuration"
+                v-model="formTarget"
                 type="number"
                 min="1"
                 step="1"
-                class="form-input field-duration"
-                placeholder="例如：30"
-                data-testid="ex-form-duration"
+                class="form-input"
+                placeholder="例如：3"
+                data-testid="ex-target-input"
               />
             </div>
-            <div class="field">
-              <label class="field-label">热量（千卡）</label>
-              <input
-                v-model="formCalories"
-                type="number"
-                min="0"
-                step="1"
-                class="form-input field-calories"
-                placeholder="例如：200"
-                data-testid="ex-form-calories"
-              />
+
+            <div class="form-actions">
+              <button
+                v-if="targetView"
+                type="button"
+                class="btn-clear"
+                data-testid="ex-clear-target"
+                @click="handleClearTarget"
+              >
+                清除目标
+              </button>
+              <span class="form-actions-spacer"></span>
+              <button type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">取消</button>
+              <button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</button>
             </div>
-          </div>
-
-          <div v-if="showDistanceField" class="form-row-fields">
-            <div class="field">
-              <label class="field-label">距离（公里）</label>
-              <input
-                v-model="formDistance"
-                type="number"
-                min="0"
-                step="0.1"
-                class="form-input field-distance"
-                placeholder="例如：5.2"
-                data-testid="ex-form-distance"
-              />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>备注（可选）</label>
-            <textarea
-              v-model="formNote"
-              class="form-input desc-input"
-              rows="2"
-              placeholder="补充说明…"
-              data-testid="ex-form-note"
-            ></textarea>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
-              取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
-              {{ editingId ? '保存' : '添加' }}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+    </Transition>
+
+    <!-- 新增/编辑记录弹框 -->
+    <Transition name="dialog">
+      <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">
+        <div class="dialog" data-testid="ex-dialog">
+          <div class="dialog-header">
+            <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
+            <button class="close-btn" @click="cancelRecordForm">✕</button>
+          </div>
+          <form class="dialog-body" @submit.prevent="handleSaveRecord">
+            <div class="form-row-fields">
+              <div class="field">
+                <label class="field-label">日期 *</label>
+                <input v-model="formDate" type="date" class="form-input field-date" data-testid="ex-form-date" />
+              </div>
+              <div class="field">
+                <label class="field-label">运动类型 *</label>
+                <select v-model="formType" class="form-input field-type" data-testid="ex-form-type">
+                  <option v-for="t in EXERCISE_TYPES" :key="t" :value="t">{{ t }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-fields">
+              <div class="field">
+                <label class="field-label">时长（分钟）*</label>
+                <input
+                  v-model="formDuration"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="form-input field-duration"
+                  placeholder="例如：30"
+                  data-testid="ex-form-duration"
+                />
+              </div>
+              <div class="field">
+                <label class="field-label">热量（千卡）</label>
+                <input
+                  v-model="formCalories"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="form-input field-calories"
+                  placeholder="例如：200"
+                  data-testid="ex-form-calories"
+                />
+              </div>
+            </div>
+
+            <div v-if="showDistanceField" class="form-row-fields">
+              <div class="field">
+                <label class="field-label">距离（公里）</label>
+                <input
+                  v-model="formDistance"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  class="form-input field-distance"
+                  placeholder="例如：5.2"
+                  data-testid="ex-form-distance"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>备注（可选）</label>
+              <textarea
+                v-model="formNote"
+                class="form-input desc-input"
+                rows="2"
+                placeholder="补充说明…"
+                data-testid="ex-form-note"
+              ></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
+                取消
+              </button>
+              <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
+                {{ editingId ? '保存' : '添加' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 

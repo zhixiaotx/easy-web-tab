@@ -115,6 +115,7 @@ function truncateUrl(url: string, maxLength = 40) {
 </script>
 
 <template>
+  <Transition name="dialog">
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
@@ -254,6 +255,7 @@ function truncateUrl(url: string, maxLength = 40) {
       </div>
     </div>
   </div>
+  </Transition>
 </template>
 
 <style scoped>

@@ -352,6 +352,7 @@ onUnmounted(() => {
 
       <!-- 条目列表（6 列卡片网格：桌面 3 行 × 6 列 = 18 卡/页；移动端 2 列全量渲染） -->
       <div v-else class="pwd-list" :class="{ 'pwd-list-scroll': !paging.fitsOnePage }" ref="listEl">
+        <TransitionGroup name="grid">
         <div v-for="entry in paging.pageItems" :key="entry.id" class="pwd-item" data-testid="pwd-item">
           <div class="pwd-card-head">
             <img
@@ -413,6 +414,7 @@ onUnmounted(() => {
             >🗑️</button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
 
       <!-- 自适应分页（仅已解锁列表可见时渲染；totalPages>1 才显示） -->
@@ -421,12 +423,13 @@ onUnmounted(() => {
 
     <!-- 新增/编辑弹窗 -->
     <Teleport to="body">
-      <div
-        v-if="showForm"
-        class="pwd-modal-overlay"
-        data-testid="pwd-form-modal"
-        @click.self="cancelForm"
-      >
+      <Transition name="dialog">
+        <div
+          v-if="showForm"
+          class="pwd-modal-overlay"
+          data-testid="pwd-form-modal"
+          @click.self="cancelForm"
+        >
         <div class="pwd-modal">
           <div class="pwd-modal-header">
             <h3>{{ editingId ? '编辑密码' : '新增密码' }}</h3>
@@ -512,6 +515,7 @@ onUnmounted(() => {
           </form>
         </div>
       </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

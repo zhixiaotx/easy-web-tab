@@ -301,6 +301,7 @@ onUnmounted(() => {
     </div>
 
     <div v-else ref="gridEl" class="td-grid" :class="{ 'td-grid-scroll': !paging.fitsOnePage }">
+      <TransitionGroup name="grid">
       <div
         v-for="v in paging.pageItems"
         :key="v.todo.id"
@@ -357,6 +358,7 @@ onUnmounted(() => {
           <button class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</button>
         </div>
       </div>
+      </TransitionGroup>
     </div>
 
     <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />

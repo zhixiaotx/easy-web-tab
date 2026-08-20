@@ -113,11 +113,11 @@ onUnmounted(() => {
 
 /* Toast transition animations */
 .toast-enter-active {
-  animation: slideInRight var(--anim-base, 250ms) var(--ease-out, cubic-bezier(0.34, 1.56, 0.64, 1));
+  animation: slideInRight var(--transition-fast, 0.15s ease) var(--ease-out, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
 
 .toast-leave-active {
-  animation: slideOutRight var(--anim-base, 250ms) ease-in;
+  animation: slideOutRight var(--transition-fast, 0.15s ease) ease-in;
 }
 
 @keyframes slideInRight {

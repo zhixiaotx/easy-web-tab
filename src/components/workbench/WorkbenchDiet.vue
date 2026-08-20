@@ -245,6 +245,7 @@ onUnmounted(() => {
     <!-- 记录列表 -->
     <template v-else-if="listExpanded">
       <div ref="listEl" class="dt-list" :class="{ 'dt-list-scroll': !paging.fitsOnePage }">
+        <TransitionGroup name="grid">
         <div v-for="rec in paging.pageItems" :key="rec.id" class="dt-item" data-testid="dt-item">
           <div class="dt-item-head">
             <span class="dt-date">{{ rec.date }}</span>
@@ -259,48 +260,51 @@ onUnmounted(() => {
             </button>
           </div>
         </div>
+        </TransitionGroup>
       </div>
       <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
     </template>
 
     <!-- 目标弹框 -->
-    <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
-      <div class="dialog" data-testid="dt-dialog">
-        <div class="dialog-header">
-          <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
-          <button class="close-btn" @click="closeTargetDialog">✕</button>
-        </div>
-        <form class="dialog-body" @submit.prevent="handleSaveTarget">
-          <div class="form-group">
-            <label>每日热量目标（千卡）*</label>
-            <input
-              v-model="formTarget"
-              type="number"
-              min="1"
-              step="1"
-              class="form-input"
-              placeholder="例如：2000"
-              data-testid="dt-target-input"
-            />
+    <Transition name="dialog">
+      <div v-if="showTargetDialog" class="dialog-overlay" @click.self="closeTargetDialog">
+        <div class="dialog" data-testid="dt-dialog">
+          <div class="dialog-header">
+            <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
+            <button class="close-btn" @click="closeTargetDialog">✕</button>
           </div>
+          <form class="dialog-body" @submit.prevent="handleSaveTarget">
+            <div class="form-group">
+              <label>每日热量目标（千卡）*</label>
+              <input
+                v-model="formTarget"
+                type="number"
+                min="1"
+                step="1"
+                class="form-input"
+                placeholder="例如：2000"
+                data-testid="dt-target-input"
+              />
+            </div>
 
-          <div class="form-actions">
-            <button
-              v-if="targetView"
-              type="button"
-              class="btn-clear"
-              data-testid="dt-clear-target"
-              @click="handleClearTarget"
-            >
-              清除目标
-            </button>
-            <span class="form-actions-spacer"></span>
-            <button type="button" class="btn-cancel" data-testid="dt-cancel" @click="closeTargetDialog">取消</button>
-            <button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="dt-save">保存</button>
-          </div>
-        </form>
+            <div class="form-actions">
+              <button
+                v-if="targetView"
+                type="button"
+                class="btn-clear"
+                data-testid="dt-clear-target"
+                @click="handleClearTarget"
+              >
+                清除目标
+              </button>
+              <span class="form-actions-spacer"></span>
+              <button type="button" class="btn-cancel" data-testid="dt-cancel" @click="closeTargetDialog">取消</button>
+              <button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="dt-save">保存</button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- 新增/编辑记录弹框 -->
     <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">

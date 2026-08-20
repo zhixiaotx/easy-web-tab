@@ -22,6 +22,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 </script>
 
 <template>
+  <Transition name="dialog">
   <div v-if="state.open && state.items.length > 0" class="reminder-overlay">
     <div class="reminder-card">
       <h2 class="reminder-title">⏰ 定时提醒</h2>
@@ -44,6 +45,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
       <button class="reminder-close" @click="close">关闭</button>
     </div>
   </div>
+  </Transition>
 </template>
 
 <style scoped>

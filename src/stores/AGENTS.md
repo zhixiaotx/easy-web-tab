@@ -23,7 +23,7 @@ stores/
 ├── workbenchHabits.ts    # 工作台习惯打卡：习惯定义 + 打卡记录 CRUD (IndexedDB store 'habits')
 ├── workbenchHealth.ts    # 健康数据：height/plans/records 四模块（exercise/diet/sleep/weight）CRUD (IndexedDB store 'health')
 ├── workbenchLedger.ts    # 记账：categories/entries CRUD + 分组管理（内置 8 组不可删，被引用禁删）+ loadLedger 自动复制上月 salary/mortgage + 金额可见性开关 showAmount/toggleAmountVisibility（纯内存不持久化） (IndexedDB store 'ledger')
-└── workbenchBusiness.ts  # 销售记账：商品/支出双分类 CRUD + 商品/进货/收摊/支出 CRUD + 设置（stallName/lowStockThreshold）；全部薄委托 businessCore 纯函数；商品被进货/收摊引用禁删（in-use，停售用 active）；支出内置 5 不可删（builtin）；商品分类种子可删（删除后商品归未分类）；收摊 upsertDailyRecord date 唯一 + totalRevenue 由 core 算好落库；saveBusiness 七字段逐 toRaw (IndexedDB store 'business')
+└── workbenchBusiness.ts  # 销售记账：商品/支出双分类 CRUD + 商品/进货/收摊/支出 CRUD + 设置（stallName/lowStockThreshold）+ importData（整包导入，normalizeBusinessData 归一化 → 七 ref 赋值 → saveBusiness）；全部薄委托 businessCore 纯函数；商品被进货/收摊引用禁删（in-use，停售用 active）；支出内置 5 不可删（builtin）；商品分类种子可删（删除后商品归未分类）；收摊 upsertDailyRecord date 唯一 + totalRevenue 由 core 算好落库；saveBusiness 七字段逐 toRaw (IndexedDB store 'business')
 ```
 
 ## WHERE TO LOOK
@@ -47,7 +47,7 @@ stores/
 | 工作台日记 | `workbenchDiary.ts` | `loadDiary()`（idbGet + `normalizeDiaryData` 幂等归一，catch → 空）/`saveDiary()`（**写 DiaryData 对象形状 `{ entries: toRaw(entries.value) }`——normalizeDiaryData 拒绝裸数组，写裸数组会导致保存后刷新日记全部丢失，勿改回**）/`upsertEntry(date, content)`（content trim 空 → 跳过不保存；同日期 → 更新 content/updatedAt；新日期 → push `dy_${Date.now()}_${rand4}`，恒 saveDiary）/`deleteEntry(id)`（在 `toRaw` 原始数组上 filter，防残留 Proxy 元素 DataCloneError）；`sortedEntries`=date 降序 → createdAt 降序（公式走 `sortDiaryEntries`，store 只做薄委托 + 持久化） |
 | 工作台健康 | `workbenchHealth.ts` | `loadHealth()`/`saveHealth()`/`setHeight()`/`setPlan()`/`addRecord()`/`updateRecord()`/`deleteRecord()`；数据归一化走 `normalizeHealthData`，达标率/BMI 等一律走 `healthCore` 纯函数（store 只保证状态与持久化） |
 | 工作台记账 | `workbenchLedger.ts` | `loadLedger()`/`addEntry()`/`updateEntry()`/`deleteEntry()`/`addCategory()`/`updateCategory()`/`deleteCategory()`（内置 8 组 isBuiltIn 不可删改，自定义组被任意月份记录引用时删除返回 { ok:false, reason:'in-use' }）；月统计走 `ledgerCore`；`loadLedger()` 成功后调 `applyMonthlyAutoCopy()` 补当前月（目标月缺 salary/mortgage 且上月有该类记录 → 生成草稿 date=当月-01、金额取上月最新一条，幂等不跨月回溯，条目 id 前缀 `ld_`）；金额掩码状态 `showAmount` 为纯内存开关（不参与 idbPut/导出） |
-| 销售记账 | `workbenchBusiness.ts` | `loadBusiness()`（normalizeBusinessData 幂等归一，内置支出缺失自动补回）/`saveBusiness()`（七字段逐 toRaw）；双分类 CRUD（add/rename/toggleVisible/move/delete 返回 `{ok, reason}` 全委托 businessCore；商品分类删除后该分类商品归未分类）；商品 CRUD（`deleteProduct` 被进货/收摊引用 → in-use 禁删）；进货 CRUD（total 自动=数量×单价）；收摊 `upsertDailyRecord(date, items, note)`（date 唯一 upsert、totalRevenue=calcDailyRevenue）；支出 CRUD；设置 `setStallName`/`setLowStockThreshold`；IDB store 'business' |
+| 销售记账 | `workbenchBusiness.ts` | `loadBusiness()`（normalizeBusinessData 幂等归一，内置支出缺失自动补回）/`saveBusiness()`（七字段逐 toRaw）/`importData(raw)`（整包导入：normalizeBusinessData 归一化 → 七 ref 赋值 → saveBusiness → 返回归一数据供 toast 计数）；双分类 CRUD（add/rename/toggleVisible/move/delete 返回 `{ok, reason}` 全委托 businessCore；商品分类删除后该分类商品归未分类）；商品 CRUD（`deleteProduct` 被进货/收摊引用 → in-use 禁删）；进货 CRUD（total 自动=数量×单价）；收摊 `upsertDailyRecord(date, items, note)`（date 唯一 upsert、totalRevenue=calcDailyRevenue）；支出 CRUD；设置 `setStallName`/`setLowStockThreshold`；IDB store 'business' |
 
 ## CONVENTIONS
 

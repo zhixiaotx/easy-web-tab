@@ -205,19 +205,35 @@ test('T13 calcInventory', () => {
   assert.equal(stock.p2, 30) // 50 - 20 + 0
 })
 
-// T14 — calcBusinessStats：营业额/成本/利润/毛利率
+// T14 — calcBusinessStats：营业额/成本/利润/毛利率（成本 = 纯 COGS：Σ售出数量 × 进货价，不计支出）
 test('T14 calcBusinessStats', () => {
   const d = buildData()
-  // 营业额 100（示例落库值）；成本 = 200+50+30 = 280
+  // 营业额 100（示例落库值）；成本 = 售出 24×2 + 20×1 = 68（不再含进货 250 / 支出 30）
   const s = calcBusinessStats(d)
   assert.equal(s.revenue, 100)
-  assert.equal(s.cost, 280)
-  assert.equal(s.profit, -180)
-  assert.equal(s.margin, -1.8) // 亏损时毛利率为负（-180/100）
+  assert.equal(s.cost, 68)
+  assert.equal(s.profit, 32)
+  assert.equal(s.margin, 0.32)
   const d2: BusinessData = { ...d, dailyRecords: [{ ...d.dailyRecords[0], totalRevenue: 400 }] }
   const s2 = calcBusinessStats(d2)
-  assert.equal(s2.profit, 120)
-  assert.ok(Math.abs(s2.margin - 0.3) < 1e-9)
+  assert.equal(s2.cost, 68)
+  assert.equal(s2.profit, 332)
+  assert.ok(Math.abs(s2.margin - 0.83) < 1e-9)
+})
+
+// T19 — calcBusinessStats 边界：缺失商品计 0、空数据成本 0 / 营业额 0 → 毛利率 0
+test('T19 calcBusinessStats edge', () => {
+  const d = buildData()
+  // 幽灵商品（无对应产品记录）→ COGS 计 0
+  const ghost = { ...d, dailyRecords: [{ ...d.dailyRecords[0], items: [...d.dailyRecords[0].items, { productId: 'ghost', broughtOut: 9, remaining: 0, loss: 0 }] }] }
+  const s1 = calcBusinessStats(ghost)
+  assert.equal(s1.cost, 68) // ghost 售出 9 个不计成本
+  assert.equal(s1.profit, 32)
+  const empty = calcBusinessStats(emptyBusinessData())
+  assert.equal(empty.revenue, 0)
+  assert.equal(empty.cost, 0)
+  assert.equal(empty.profit, 0)
+  assert.equal(empty.margin, 0) // 营业额 0 → 毛利率 0
 })
 
 // T15 — lowStockProducts：阈值过滤 + 升序

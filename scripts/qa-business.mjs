@@ -196,7 +196,7 @@ try {
     const stall = await page.locator('[data-testid="bizhome-stall-input"]').inputValue()
     record(
       'S1) 左树 7 项 + 首页统计卡数值',
-      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('240') && profit.includes('-40') && margin.includes('-20') && stall === 'QA 夜市摊',
+      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊',
       { menuCount, homeActive, revenue, cost, profit, margin, stall }
     )
   })

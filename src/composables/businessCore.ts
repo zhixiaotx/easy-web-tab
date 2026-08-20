@@ -409,7 +409,7 @@ export function calcInventory(
   return stock
 }
 
-/** 总统计：营业额 = Σ日记录收入；成本 = Σ进货总额 + Σ支出；利润/毛利率 */
+/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率 */
 export interface BusinessStats {
   revenue: number
   cost: number
@@ -419,7 +419,14 @@ export interface BusinessStats {
 
 export function calcBusinessStats(data: BusinessData): BusinessStats {
   const revenue = data.dailyRecords.reduce((s, r) => s + r.totalRevenue, 0)
-  const cost = data.purchases.reduce((s, p) => s + p.total, 0) + data.expenses.reduce((s, e) => s + e.amount, 0)
+  // 成本 = 售出商品成本（COGS）：按收摊记录售出数量 × 商品进货价；缺失商品计 0（与 calcDailyRevenue 同口径）
+  let cost = 0
+  for (const r of data.dailyRecords) {
+    for (const item of r.items) {
+      const product = data.products.find(p => p.id === item.productId)
+      cost += soldCount(item) * (product?.purchasePrice ?? 0)
+    }
+  }
   const profit = revenue - cost
   const margin = revenue > 0 ? profit / revenue : 0
   return {

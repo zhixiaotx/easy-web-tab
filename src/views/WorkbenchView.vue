@@ -276,7 +276,7 @@ async function handleImportFile(event: Event) {
     <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 设置 + 导入导出 -->
     <header class="wb-header">
       <div class="wb-header-left">
-        <button class="wb-btn" @click="router.back()">← 返回</button>
+        <button class="wb-btn" @click="router.push('/')">← 管理页</button>
         <h1>工作台</h1>
       </div>
       <div class="wb-header-right">

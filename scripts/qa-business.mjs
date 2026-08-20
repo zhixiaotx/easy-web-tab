@@ -3,7 +3,7 @@
  * 后台启动/复用 vite dev（16718-16726）→ 注入 IndexedDB easy-web-tab v6 store 'business' → /business：
  *  S1 左树 7 项 + 首页默认激活 + 4 统计卡数值（营业额/成本/利润/毛利率）
  *  S2 商品页：分类 tabs + 商品卡 + 新增弹框保存 + 停售开关
- *  S3 进货页：列表行 + 新增进货自动合计
+ *  S3 进货页：分类 tabs（全部+可见分类）+ 行分类徽标 + 分类过滤 + 新增进货自动合计
  *  S4 收摊页：日记录卡 + 编辑弹框（带出/剩余/损耗）+ 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
  *  S6 库存页：低库存预警 + 库存表 + 阈值修改
@@ -225,10 +225,25 @@ try {
     )
   })
 
-  await guard('S3) 进货页：列表 + 新增自动合计', async () => {
+  await guard('S3) 进货页：分类 tabs + 行分类徽标 + 新增自动合计', async () => {
     await page.locator('[data-testid="bs-menu-purchases"]').click()
     await page.waitForSelector('[data-testid="bizpur-row"]', { state: 'visible', timeout: 8000 })
+    // 分类 tabs：全部 + 5 可见分类（小吃/饮品/水果/日用品/服饰），badge 以 bizpur-cat-badge- 开头需排除
+    const tabCount = await page.locator('button.bizpur-tab').count()
+    const catAllVisible = await page.locator('[data-testid="bizpur-cat-all"]').isVisible()
+    // 行分类徽标：qa-b1=烤肠→小吃
+    const badgeText = (await page.locator('[data-testid="bizpur-cat-badge-qa-b1"]').textContent()).trim()
     const rowsBefore = await page.locator('[data-testid="bizpur-row"]').count()
+    // 点击「小吃」tab → 仍见 qa-b1；点击「饮品」tab → 无进货记录空态
+    await page.locator('[data-testid="bizpur-cat-product-snack"]').click()
+    await page.waitForTimeout(200)
+    const rowsAfterSnack = await page.locator('[data-testid="bizpur-row"]').count()
+    await page.locator('[data-testid="bizpur-cat-product-drink"]').click()
+    await page.waitForTimeout(200)
+    const emptyVisible = await page.locator('[data-testid="bizpur-empty"]').isVisible()
+    // 回「全部」新增进货
+    await page.locator('[data-testid="bizpur-cat-all"]').click()
+    await page.waitForTimeout(200)
     await page.locator('[data-testid="bizpur-add"]').click()
     await page.waitForSelector('[data-testid="bizpur-dialog"]', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="bizpur-form-qty"]').fill('10')
@@ -237,7 +252,12 @@ try {
     await page.locator('[data-testid="bizpur-save"]').click()
     await page.waitForTimeout(400)
     const rowsAfter = await page.locator('[data-testid="bizpur-row"]').count()
-    record('S3) 进货页：列表 1→2 行 + 合计 20.00', rowsBefore === 1 && rowsAfter === 2 && totalText.includes('20.00'), { rowsBefore, rowsAfter, totalText })
+    const countText = (await page.locator('.bizpur-count').textContent()).trim()
+    record(
+      'S3) 进货页：tabs 6 + 徽标小吃 + 小吃1行/饮品空 + 列表 1→2 + 合计 20.00',
+      tabCount === 6 && catAllVisible && badgeText === '小吃' && rowsBefore === 1 && rowsAfterSnack === 1 && emptyVisible && rowsAfter === 2 && totalText.includes('20.00') && countText.includes('2'),
+      { tabCount, catAllVisible, badgeText, rowsBefore, rowsAfterSnack, emptyVisible, rowsAfter, totalText, countText }
+    )
   })
 
   await guard('S4) 收摊页：卡片 + 同日 upsert 覆盖 + 收入自动重算', async () => {

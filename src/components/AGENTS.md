@@ -26,7 +26,7 @@ components/
 └── business/              # 销售记账（摆摊进销存）8 SFC：BusinessView 页面的 7 功能面板 + 共享分类管理弹框
     ├── BusinessHome.vue        # 首页：4 统计卡（营业额/成本/利润/毛利率，calcBusinessStats）+ 摊位名称编辑 + 低库存概览 + 6 快捷入口（navigate emit）
     ├── BusinessProducts.vue    # 商品管理：分类 tabs（全部+可见分类+⚙️）+ 商品卡片网格（进价/售价/在售开关/编辑/删除）+ 新增/编辑弹框
-    ├── BusinessPurchases.vue   # 进货记录：行式列表 + 新增/编辑弹框（数量×单价自动合计）
+    ├── BusinessPurchases.vue   # 进货记录：分类筛选 tabs（全部+可见商品分类，bizpur-cat-all/bizpur-cat-<id>，分类取自关联商品 categoryId）+ 行式列表含分类徽标（bizpur-cat-badge-<purchaseId>，已删商品/未分类仅在「全部」可见）+ 新增/编辑弹框（数量×单价自动合计）
     ├── BusinessDaily.vue       # 收摊记录：日记录卡片（date 唯一 upsert）+ 编辑弹框（动态商品行：带出/剩余/损耗 + 收入自动预览）
     ├── BusinessExpenses.vue    # 支出记录：tabs 容器（受控 activeTab+change，仿 WorkbenchHealth）+ 4 列卡片 + ⚙️
     ├── BusinessInventory.vue   # 库存管理：低库存预警清单 + 库存总览表 + 阈值可配置

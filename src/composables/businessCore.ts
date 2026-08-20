@@ -362,6 +362,20 @@ export function sortPurchases(purchases: BusinessPurchase[]): BusinessPurchase[]
   return [...purchases].sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 }
 
+/** 按商品分类过滤进货记录：'all' 返回全部；其余返回 linked 商品分类匹配项。
+ *  已删除商品（product 不存在）与未分类商品（categoryId 为 undefined）仅在 'all' 下可见，分类过滤排除。 */
+export function filterPurchasesByCategory(
+  purchases: BusinessPurchase[],
+  products: BusinessProduct[],
+  categoryId: string
+): BusinessPurchase[] {
+  if (categoryId === 'all') return sortPurchases(purchases)
+  return sortPurchases(purchases.filter(p => {
+    const product = products.find(pr => pr.id === p.productId)
+    return product?.categoryId === categoryId
+  }))
+}
+
 export function sortDailyRecords(records: BusinessDailyRecord[]): BusinessDailyRecord[] {
   return [...records].sort((a, b) => (a.date === b.date ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 }

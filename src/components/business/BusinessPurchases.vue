@@ -1,16 +1,23 @@
 <script setup lang="ts">
-// 进货记录：行式列表（日期/商品/数量/单价/总额/备注/操作）+ 新增/编辑弹框
+// 进货记录：分类 tabs（全部+可见分类）+ 行式列表（分类徽标）+ 新增/编辑弹框
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { findProduct, formatYuanOf, localDateKey, sortPurchases } from '@/composables/businessCore'
+import { filterPurchasesByCategory, findProduct, findProductCategory, formatYuanOf, localDateKey, visibleProductCategories } from '@/composables/businessCore'
 import type { BusinessPurchase } from '@/types'
 
 const store = useWorkbenchBusinessStore()
 
-const sorted = computed(() => sortPurchases(store.purchases))
+const activeCat = ref('all')
+const tabs = computed(() => visibleProductCategories(store.productCategories))
+const filtered = computed(() => filterPurchasesByCategory(store.purchases, store.products, activeCat.value))
 
 function productNameOf(id: string): string {
   return findProduct(store.products, id)?.name ?? '（已删除商品）'
+}
+
+function catNameOf(productId: string): string {
+  const catId = findProduct(store.products, productId)?.categoryId
+  return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
 
 // ===== 新增/编辑弹框 =====
@@ -77,19 +84,37 @@ async function handleDelete(id: string): Promise<void> {
 
 <template>
   <div class="bizpur">
+    <!-- 分类 tabs + 新增 -->
     <div class="bizpur-bar">
-      <span class="bizpur-count">共 {{ store.purchases.length }} 笔</span>
+      <div class="bizpur-tabs">
+        <button
+          class="bizpur-tab"
+          :class="{ active: activeCat === 'all' }"
+          data-testid="bizpur-cat-all"
+          @click="activeCat = 'all'"
+        >全部</button>
+        <button
+          v-for="cat in tabs"
+          :key="cat.id"
+          class="bizpur-tab"
+          :class="{ active: activeCat === cat.id }"
+          :data-testid="`bizpur-cat-${cat.id}`"
+          @click="activeCat = cat.id"
+        >{{ cat.name }}</button>
+      </div>
+      <span class="bizpur-count">共 {{ filtered.length }} 笔</span>
       <button class="bizpur-add" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</button>
     </div>
 
-    <div v-if="sorted.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
+    <div v-if="filtered.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
     <div v-else class="bizpur-list">
       <div class="bizpur-row bizpur-head-row">
-        <span>日期</span><span>商品</span><span>数量</span><span>单价</span><span>总额</span><span>备注</span><span></span>
+        <span>日期</span><span>商品</span><span>分类</span><span>数量</span><span>单价</span><span>总额</span><span>备注</span><span></span>
       </div>
-      <div v-for="p in sorted" :key="p.id" class="bizpur-row" data-testid="bizpur-row">
+      <div v-for="p in filtered" :key="p.id" class="bizpur-row" data-testid="bizpur-row">
         <span class="bizpur-date">{{ p.date }}</span>
         <span class="bizpur-product">{{ productNameOf(p.productId) }}</span>
+        <span class="bizpur-cat" :data-testid="`bizpur-cat-badge-${p.id}`">{{ catNameOf(p.productId) }}</span>
         <span class="bizpur-num">{{ p.quantity }}</span>
         <span class="bizpur-num">{{ formatYuanOf(p.unitPrice) }}</span>
         <span class="bizpur-total">{{ formatYuanOf(p.total) }}</span>
@@ -163,6 +188,36 @@ async function handleDelete(id: string): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bizpur-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bizpur-tab {
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-full, 999px);
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.bizpur-tab:hover {
+  color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+}
+
+.bizpur-tab.active {
+  background: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+  color: #fff;
 }
 
 .bizpur-count {
@@ -204,12 +259,12 @@ async function handleDelete(id: string): Promise<void> {
 
 .bizpur-row {
   display: grid;
-  grid-template-columns: 110px minmax(120px, 1.4fr) 70px 90px 100px minmax(80px, 1fr) auto;
+  grid-template-columns: 110px minmax(120px, 1.4fr) minmax(90px, 0.8fr) 70px 90px 100px minmax(80px, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-color, var(--color-border));
-  min-width: 760px;
+  min-width: 900px;
 }
 
 .bizpur-row:last-child {
@@ -236,6 +291,23 @@ async function handleDelete(id: string): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.bizpur-cat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--accent-color, var(--color-primary));
+  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color, var(--color-primary)) 30%, transparent);
+  border-radius: var(--radius-full, 999px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .bizpur-num,
@@ -395,6 +467,24 @@ async function handleDelete(id: string): Promise<void> {
 :root.dark .biz-dialog {
   background-color: var(--bg-secondary, #1f2937);
   box-shadow: none;
+}
+
+:root.dark .bizpur-tab {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .bizpur-tab.active {
+  background-color: var(--accent-color, var(--color-primary));
+  border-color: var(--accent-color, var(--color-primary));
+  color: #fff;
+}
+
+:root.dark .bizpur-cat {
+  color: var(--accent-color, var(--color-primary));
+  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-color, var(--color-primary)) 35%, transparent);
 }
 
 :root.dark .bizpur-date,

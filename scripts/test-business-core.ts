@@ -14,6 +14,7 @@ import {
   deleteExpenseCategory,
   deleteProductCategory,
   emptyBusinessData,
+  filterPurchasesByCategory,
   isCategoryNameTaken,
   isValidDateKey,
   lowStockProducts,
@@ -290,6 +291,45 @@ test('T18 businessTrendScale', () => {
   assert.ok(s2)
   assert.equal(s2!.allZero, true)
   assert.equal(businessTrendScale([], 900, 260), null)
+})
+
+// T20 — filterPurchasesByCategory：all 返回全部 / 按分类过滤 / 已删商品排除 / 未分类排除 / 空分类
+test('T20 filterPurchasesByCategory', () => {
+  const d = buildData()
+  // 自定义错开日期的进货（避免 buildData 同日期 tie 顺序不确定）
+  const mk = (id: string, productId: string, date: string): BusinessPurchase =>
+    ({ id, productId, quantity: 10, unitPrice: 1, total: 10, date, createdAt: date + 'T00:00:00.000Z' })
+  const purchases = [mk('b1', 'p1', '2026-08-01'), mk('b2', 'p2', '2026-08-02')]
+  // 'all' → 全部 2 笔，日期降序（b2 08-02 在前）
+  const all = filterPurchasesByCategory(purchases, d.products, 'all')
+  assert.equal(all.length, 2)
+  assert.equal(all[0].id, 'b2')
+  // product-snack → 仅 b1（p1 烤肠/小吃）
+  const snack = filterPurchasesByCategory(purchases, d.products, 'product-snack')
+  assert.equal(snack.length, 1)
+  assert.equal(snack[0].id, 'b1')
+  // product-drink → 仅 b2（p2 柠檬水/饮品）
+  const drink = filterPurchasesByCategory(purchases, d.products, 'product-drink')
+  assert.equal(drink.length, 1)
+  assert.equal(drink[0].id, 'b2')
+  // 不存在的分类 → 空
+  const none = filterPurchasesByCategory(purchases, d.products, 'product-fruit')
+  assert.equal(none.length, 0)
+  // 已删除商品的进货 → 仅 'all' 可见，分类过滤排除
+  const withGhost = [...purchases, mk('b3', 'ghost', '2026-08-03')]
+  const allGhost = filterPurchasesByCategory(withGhost, d.products, 'all')
+  assert.equal(allGhost.length, 3, 'all 含已删除商品进货')
+  const snackGhost = filterPurchasesByCategory(withGhost, d.products, 'product-snack')
+  assert.equal(snackGhost.length, 1, '分类过滤排除已删除商品进货')
+  // 无 categoryId 的商品进货 → 仅 'all' 可见
+  const noCatProduct: BusinessProduct = { ...d.products[0], id: 'p3', name: '无分类', categoryId: undefined }
+  const withNoCat = [...purchases, mk('b4', 'p3', '2026-08-04')]
+  const allNoCat = filterPurchasesByCategory(withNoCat, [...d.products, noCatProduct], 'all')
+  assert.equal(allNoCat.length, 3, 'all 含无分类商品进货')
+  const snackNoCat = filterPurchasesByCategory(withNoCat, [...d.products, noCatProduct], 'product-snack')
+  assert.equal(snackNoCat.length, 1, '分类过滤排除无分类商品进货')
+  // 空数组 → []
+  assert.equal(filterPurchasesByCategory([], [], 'all').length, 0)
 })
 
 let passed = 0

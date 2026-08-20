@@ -16,10 +16,18 @@ onMounted(() => {
 </script>
 
 <template>
+  <!--
+    Route transition: <Transition mode="out-in"> fails when the OLD component
+    is a Vue fragment (multiple root elements, e.g. HomeView) because Vue
+    cannot apply CSS transition classes to a fragment. The leave phase "completes"
+    instantly but the enter phase never starts, leaving a blank page.
+
+    Fix: CSS @keyframes fade-in + :key="$route.path" forces component
+    recreation on navigation. Works with both single-root and fragment components.
+    The route-transition CSS class is defined in animations.css.
+  -->
   <router-view v-slot="{ Component }">
-    <Transition name="route" mode="out-in">
-      <component :is="Component" />
-    </Transition>
+    <component :is="Component" :key="$route.path" class="route-transition" />
   </router-view>
   <Toast :toasts="toasts as any" @remove="removeToast" />
   <CountdownReminder />

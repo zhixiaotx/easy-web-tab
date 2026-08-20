@@ -40,6 +40,7 @@ nul
 .omo
 .playwright-mcp
 site.md
+.opencode 
 
 # Playwright
 /test-results/

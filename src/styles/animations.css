@@ -48,7 +48,7 @@
   transition: none !important;
 }
 
-/* --- Route transition --- */
+/* --- Route transition (legacy, kept for reference) --- */
 .route-enter-active,
 .route-leave-active {
   transition: opacity 200ms ease;
@@ -56,6 +56,17 @@
 .route-enter-from,
 .route-leave-to {
   opacity: 0;
+}
+
+/* --- Route fade-in animation (used by App.vue route-transition class) ---
+     Works with both single-root and fragment components.
+     :key="$route.path" on <component> forces recreation → animation replays. */
+.route-transition {
+  animation: route-fade-in 200ms ease;
+}
+@keyframes route-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* --- Prefers reduced motion --- */

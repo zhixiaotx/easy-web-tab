@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 统计报表：近 N 天营业额/成本/利润趋势分组柱状图（每日固定 3 槽位异色、非零才渲染、负值向下、顶部金额标签；全部/营业额/利润模式切换；坐标走 businessCore）
+// 统计报表：近 N 天营业额/成本/利润趋势图——每日一柱堆叠分色（盈利=成本琥珀底+利润绿顶、段高和=营业额；亏损=红段悬挂零下；顶部单标签，亏损日显负利润；全部/营业额/利润模式切换；坐标走 businessCore）
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
@@ -21,9 +21,9 @@ const data = computed(() => ({
   settings: store.settings
 }))
 
-// 趋势窗口：30 / 14 / 7 天切换；展示模式：全部（3 柱）/ 仅营业额 / 仅利润
+// 趋势窗口：30 / 14 / 7 天切换；展示模式：全部（每日一柱堆叠分色）/ 仅营业额 / 仅利润
 const TREND_W = 900
-const TREND_H = 260
+const TREND_H = 320
 const trendDays = ref(30)
 const trendMode = ref<'all' | 'revenue' | 'profit'>('all')
 
@@ -36,7 +36,7 @@ const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, 
     <!-- 趋势图 -->
     <section class="bizstats-card" data-testid="bizstats-trend">
       <div class="bizstats-head">
-        <h3>近 {{ trendDays }} 天营业额 / 成本 / 利润趋势</h3>
+        <h3>近 {{ trendDays }} 天经营趋势 · 每日一柱</h3>
         <div class="bizstats-head-btns">
           <div class="bizstats-days">
             <button class="bizstats-btn" :class="{ active: trendDays === 7 }" data-testid="bizstats-days-7" @click="trendDays = 7">7 天</button>
@@ -57,30 +57,29 @@ const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, 
             <line v-for="(g, gi) in trendScale.gridlines" :key="'gl' + gi" class="bizstats-gridline" x1="24" :x2="TREND_W - 24" :y1="g.y" :y2="g.y" />
             <text v-for="(g, gi) in trendScale.gridlines" :key="'glt' + gi" class="bizstats-axis" x="6" :y="g.y + 4" font-size="11">{{ g.label }}</text>
           </g>
-          <!-- 零基线（负值向下） -->
+          <!-- 零基线（亏损红段悬挂其下） -->
           <line class="bizstats-zero" x1="24" :x2="TREND_W - 24" :y1="trendScale.zeroY" :y2="trendScale.zeroY" />
-          <!-- 分组柱（每日 营业额/成本/利润，非零才渲染） -->
-          <g v-for="grp in trendScale.groups" :key="grp.date">
+          <!-- 每日一柱（堆叠分色：盈利 成本琥珀+利润绿 / 亏损 红段悬挂零下；非零段才渲染） -->
+          <g v-for="d in trendScale.days" :key="d.date">
             <rect
-              v-for="b in grp.bars"
-              :key="b.key"
+              v-for="s in d.segs"
+              :key="d.date + '-' + s.key"
               class="bizstats-bar"
-              :class="b.key"
-              :x="b.x"
-              :y="b.y"
-              :width="b.w"
-              :height="b.height"
-              rx="2"
+              :class="s.key"
+              :x="s.x"
+              :y="s.y"
+              :width="s.w"
+              :height="s.h"
+              :rx="s.h >= 4 ? 2 : 0"
             />
             <text
-              v-for="b in grp.bars"
-              :key="b.key + '-label'"
+              v-if="d.segs.length > 0"
               class="bizstats-bar-label"
-              :x="b.labelX"
-              :y="b.labelY"
-              font-size="9"
+              :x="d.labelX"
+              :y="d.labelY"
+              font-size="10"
               text-anchor="middle"
-            >{{ compactAmount(b.value) }}</text>
+            >{{ compactAmount(d.labelValue) }}</text>
           </g>
           <!-- 日期刻度 -->
           <text v-for="(l, li) in trendScale.dayLabels" :key="'d' + li" class="bizstats-axis" :x="l.x" :y="TREND_H - 6" font-size="11" text-anchor="middle">{{ l.label }}</text>
@@ -89,6 +88,7 @@ const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, 
           <span class="bizstats-legend-item"><i class="dot revenue"></i>营业额</span>
           <span class="bizstats-legend-item"><i class="dot cost"></i>成本</span>
           <span class="bizstats-legend-item"><i class="dot profit"></i>利润</span>
+          <span class="bizstats-legend-item"><i class="dot loss"></i>亏损</span>
         </div>
       </div>
       <p v-else class="bizstats-empty" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与收摊记录吧</p>
@@ -202,6 +202,10 @@ const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, 
   fill: var(--success-color, var(--color-success));
 }
 
+.bizstats-bar.loss {
+  fill: var(--danger-color, #ef4444);
+}
+
 .bizstats-bar-label {
   fill: var(--text-muted, #94a3b8);
   font-variant-numeric: tabular-nums;
@@ -240,6 +244,10 @@ const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, 
   background: var(--success-color, var(--color-success));
 }
 
+.dot.loss {
+  background: var(--danger-color, #ef4444);
+}
+
 .bizstats-empty {
   margin: 0;
   padding: 20px 0;
@@ -265,5 +273,13 @@ const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, 
 
 :root.dark .bizstats-bar.profit {
   fill: #4ade80;
+}
+
+:root.dark .bizstats-bar.loss {
+  fill: #f87171;
+}
+
+:root.dark .dot.loss {
+  background: #f87171;
 }
 </style>

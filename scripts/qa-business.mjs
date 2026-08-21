@@ -7,7 +7,7 @@
  *  S4 收摊页：日记录卡（营业额/成本/利润/损耗四项）+ 编辑弹框四项预览 + 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
  *  S6 库存页：库存卡片网格（桌面 5 列，卡片含库存剩余）+ 低库存预警（停售商品排除）+ 阈值修改
- *  S7 统计页：趋势分组柱状图按收摊记录口径（仅收摊日渲染 营业额/成本/利润 3 柱异色 + 顶部金额标签 + 全部/营业额/利润模式切换；分类/商品排行已移至首页）
+ *  S7 统计页：趋势每日一柱堆叠分色按收摊记录口径（仅收摊日渲染 成本琥珀+利润绿两段（段高和=营业额）+ 单标签 + 柱宽>12/viewBox 320 放大 + 全部/营业额/利润模式切换；分类/商品排行已移至首页）
  *  S8 设置弹窗「销售记账」tab：摊位名称/阈值/分类管理入口
  *  S9 明暗全页截图 + 移动端 375 无横向滚动
  * 与其它 QA 脚本禁止并行（同端口域）。运行：node scripts/qa-business.mjs
@@ -373,21 +373,26 @@ try {
     )
   })
 
-  await guard('S7) 统计页：趋势分组柱状图（排行已移至首页）', async () => {
+  await guard('S7) 统计页：趋势每日一柱堆叠分色（排行已移至首页）', async () => {
     await page.locator('[data-testid="bs-menu-stats"]').click()
     await page.waitForSelector('[data-testid="bizstats-trend"]', { state: 'visible', timeout: 8000 })
     // 排行已移首页：统计页不再渲染排行行
     const catRows = await page.locator('[data-testid^="bizstats-cat-"]').count()
     const prodRows = await page.locator('[data-testid^="bizstats-prod-"]').count()
-    // 按收摊记录口径：仅收摊日 08-02 渲染 3 柱（收入50/成本20/利润30）；进货日 08-01 与今日（进货20+支出15）无收摊记录全 0 不渲染
+    // 每日一柱堆叠分色按收摊记录口径：仅收摊日 08-02 两段（成本琥珀+利润绿，段高和=营业额50）；进货日/今日无收摊记录全 0 无段
     const barsAll = await page.locator('.bizstats-bar').count()
+    const costSegs = await page.locator('.bizstats-bar.cost').count()
+    const profitSegs = await page.locator('.bizstats-bar.profit').count()
     const labelsAll = await page.locator('.bizstats-bar-label').count()
     const gridlines = await page.locator('.bizstats-gridline').count()
-    // 单独看营业额：仅 08-02 一根
+    // 视觉放大：单柱宽（900 宽/30 天 → barW≈20.4 > 12）远超旧分组槽位柱；viewBox 高度放大至 320
+    const firstBarW = Number(await page.locator('.bizstats-bar').first().getAttribute('width'))
+    const svgViewBox = String(await page.locator('.bizstats-svg').getAttribute('viewBox'))
+    // 单独看营业额：仅 08-02 一段
     await page.locator('[data-testid="bizstats-mode-revenue"]').click()
     await page.waitForTimeout(300)
     const barsRevenue = await page.locator('.bizstats-bar.revenue').count()
-    // 单独看利润：仅收摊日 1 根
+    // 单独看利润：仅收摊日 1 段
     await page.locator('[data-testid="bizstats-mode-profit"]').click()
     await page.waitForTimeout(300)
     const barsProfit = await page.locator('.bizstats-bar.profit').count()
@@ -396,9 +401,9 @@ try {
     await page.waitForTimeout(300)
     const barsBack = await page.locator('.bizstats-bar').count()
     record(
-      'S7) 统计页：无排行（已移首页）+ 趋势分组柱状图按收摊记录（模式切换/顶部金额/负值向下）',
-      catRows === 0 && prodRows === 0 && barsAll === 3 && labelsAll === 3 && gridlines === 5 && barsRevenue === 1 && barsProfit === 1 && barsBack === 3,
-      { catRows, prodRows, barsAll, labelsAll, gridlines, barsRevenue, barsProfit, barsBack }
+      'S7) 统计页：无排行（已移首页）+ 趋势每日一柱堆叠分色按收摊记录（2 段/单标签/宽>12/viewBox 320/模式切换）',
+      catRows === 0 && prodRows === 0 && barsAll === 2 && costSegs === 1 && profitSegs === 1 && labelsAll === 1 && gridlines === 5 && firstBarW > 12 && svgViewBox.includes('900 320') && barsRevenue === 1 && barsProfit === 1 && barsBack === 2,
+      { catRows, prodRows, barsAll, costSegs, profitSegs, labelsAll, gridlines, firstBarW, svgViewBox, barsRevenue, barsProfit, barsBack }
     )
   })
 

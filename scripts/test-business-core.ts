@@ -293,52 +293,75 @@ test('T17 calcBusinessTrend', () => {
   assert.equal(calcBusinessTrend(d, 'bad-date').length, 0)
 })
 
-// T18 — businessTrendBars：分组柱坐标/模式过滤/负值向下/全零态/compactAmount
+// T18 — businessTrendBars：每日一柱堆叠分段/模式过滤/亏损悬挂/全零态/compactAmount
 test('T18 businessTrendBars', () => {
-  const d = buildData()
-  const series = calcBusinessTrend(d, '2026-08-05', 7)
-  // 全部模式：7 组、5 网格线、日期刻度非空；非零柱恒 3 根（仅收摊日 08-02：收入100/成本68/利润32）
-  const s1 = businessTrendBars(series, 900, 260, 'all')
+  // 手搭序列隔离几何（不经 calcBusinessTrend）：零日 / 盈利日 / 亏损日
+  const pt = (date: string, revenue: number, cost: number, profit: number) => ({ date, revenue, cost, profit })
+  const series = [
+    pt('2026-08-01', 0, 0, 0),
+    pt('2026-08-02', 100, 68, 32), // 盈利：成本段(0→68)+利润段(68→100)，段高和=revenue
+    pt('2026-08-03', 50, 68, -18) // 亏损：成本色收入段(0→50)+红色亏损悬挂零下(0→-18)
+  ]
+  // 几何基准（width300/height320/pad24）：dayW=(300-48)/3=84、barW=min(48,84*0.72)=48、x(i)=24+84i+18；
+  // all 尺度：max=niceCeil(100)=100、min=-niceCeil(18)=-20 → yOf(v)=24+(100-v)/120*272、zeroY≈250.67
+  const s1 = businessTrendBars(series, 300, 320, 'all')
   assert.ok(s1)
   assert.equal(s1!.gridlines.length, 5)
-  assert.equal(s1!.groups.length, 7)
-  assert.equal(s1!.dayLabels.length > 0, true)
-  assert.equal(s1!.groups.reduce((a, g) => a + g.bars.length, 0), 3)
-  // 正值柱：08-02 收入 100 向上（y 在零线上方）
-  const d2 = s1!.groups.find(g => g.date === '2026-08-02')!
-  const revBar = d2.bars.find(b => b.key === 'revenue')!
-  assert.equal(revBar.value, 100)
-  assert.equal(revBar.y < s1!.zeroY, true)
-  assert.equal(revBar.height > 0, true)
-  // 合成负值：收摊日利润为负（totalRevenue 50 < COGS 68 → 利润 -18）向下渲染
-  const dNeg = { ...d, dailyRecords: [{ ...d.dailyRecords[0], totalRevenue: 50 }] }
-  const negSeries = calcBusinessTrend(dNeg, '2026-08-05', 7)
-  const sNeg = businessTrendBars(negSeries, 900, 260, 'all')
-  assert.ok(sNeg)
-  const negGroup = sNeg!.groups.find(g => g.date === '2026-08-02')!
-  const profitBar = negGroup.bars.find(b => b.key === 'profit')!
-  assert.equal(profitBar.value, -18)
-  assert.equal(profitBar.y >= sNeg!.zeroY, true)
-  assert.equal(profitBar.height > 0, true)
-  assert.equal(profitBar.labelY > sNeg!.zeroY, true)
-  // 单独看营业额：仅收入柱 1 根
-  const s2 = businessTrendBars(series, 900, 260, 'revenue')
-  assert.equal(s2!.groups.reduce((a, g) => a + g.bars.length, 0), 1)
-  assert.equal(s2!.groups.every(g => g.bars.every(b => b.key === 'revenue')), true)
-  // 单独看利润：仅利润柱 1 根
-  const s3 = businessTrendBars(series, 900, 260, 'profit')
-  const pbars = s3!.groups.flatMap(g => g.bars)
-  assert.equal(pbars.length, 1)
-  assert.equal(pbars.every(b => b.key === 'profit'), true)
-  // 全零态：无柱、allZero true
-  const empty = calcBusinessTrend(emptyBusinessData(), '2026-08-05', 7)
-  const s4 = businessTrendBars(empty, 900, 260, 'all')
+  assert.equal(s1!.maxY, 100)
+  assert.equal(s1!.minY, -20)
+  assert.equal(Math.round(s1!.zeroY * 100) / 100, 250.67)
+  // 每日恰一柱位；零日无段无标签（labelValue 归 0）
+  assert.equal(s1!.days.length, 3)
+  assert.equal(s1!.days[0].segs.length, 0)
+  assert.equal(s1!.days[0].labelValue, 0)
+  // 盈利日：两段堆叠（成本琥珀底 + 利润绿顶），顶部单标签=营业额
+  const d2 = s1!.days[1]
+  assert.equal(d2.segs.length, 2)
+  const costSeg = d2.segs.find(s => s.key === 'cost')!
+  const profitSeg = d2.segs.find(s => s.key === 'profit')!
+  assert.equal(costSeg.x, 126)
+  assert.equal(costSeg.w, 48)
+  assert.equal(Math.round(costSeg.y * 100) / 100, 96.53)
+  assert.equal(Math.round(costSeg.h * 100) / 100, 154.13)
+  assert.equal(profitSeg.y, 24)
+  assert.equal(Math.round(profitSeg.h * 100) / 100, 72.53)
+  assert.equal(d2.labelValue, 100)
+  assert.equal(d2.labelY, 20)
+  // 堆叠恒等：段高和=营业额高度（容差吸收双重舍入）
+  assert.ok(Math.abs(costSeg.h + profitSeg.h - (s1!.zeroY - 24)) < 0.02)
+  // 亏损日：收入全高成本色 + 亏损红段悬挂零下；标签在悬挂底下方
+  const d3 = s1!.days[2]
+  assert.equal(d3.segs.length, 2)
+  const lossCost = d3.segs.find(s => s.key === 'cost')!
+  const lossSeg = d3.segs.find(s => s.key === 'loss')!
+  assert.equal(lossCost.x, 210)
+  assert.equal(Math.round(lossCost.y * 100) / 100, 137.33)
+  assert.equal(Math.round(lossCost.h * 100) / 100, 113.33)
+  assert.equal(lossSeg.y, Math.round(s1!.zeroY * 100) / 100)
+  assert.equal(Math.round(lossSeg.h * 100) / 100, 40.8)
+  assert.equal(d3.labelValue, -18)
+  assert.equal(Math.round(d3.labelY * 100) / 100, 302.47)
+  // 营业额模式：非零日各一段 key revenue（模式自尺度 span=100 → 满值占满正区间）
+  const s2 = businessTrendBars(series, 300, 320, 'revenue')
+  const revSegs = s2!.days.flatMap(x => x.segs)
+  assert.equal(revSegs.length, 2)
+  assert.equal(revSegs.every(s => s.key === 'revenue'), true)
+  assert.deepEqual(revSegs.map(s => s.value), [100, 50])
+  assert.equal(Math.round(revSegs[0].h * 100) / 100, 272)
+  // 利润模式：正值绿段 / 亏损红段（loss）
+  const s3 = businessTrendBars(series, 300, 320, 'profit')
+  const pSegs = s3!.days.flatMap(x => x.segs)
+  assert.equal(pSegs.length, 2)
+  assert.deepEqual(pSegs.map(s => s.key).sort(), ['loss', 'profit'])
+  // 全零态：无段、allZero true
+  const zeros = [pt('2026-08-01', 0, 0, 0), pt('2026-08-02', 0, 0, 0)]
+  const s4 = businessTrendBars(zeros, 300, 320, 'all')
   assert.ok(s4)
   assert.equal(s4!.allZero, true)
-  assert.equal(s4!.groups.every(g => g.bars.length === 0), true)
+  assert.equal(s4!.days.every(x => x.segs.length === 0), true)
   // 空序列/非法尺寸 → null
   assert.equal(businessTrendBars([], 900, 260, 'all'), null)
-  assert.equal(businessTrendBars(series, 0, 260, 'all'), null)
+  assert.equal(businessTrendBars(series, 0, 320, 'all'), null)
   // compactAmount：万/k 缩写与负号
   assert.equal(compactAmount(200), '200')
   assert.equal(compactAmount(-12345), '-1.2万')

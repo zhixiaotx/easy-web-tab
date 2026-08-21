@@ -597,32 +597,39 @@ export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30
   return out
 }
 
-/** 分组柱状图单根柱几何（仅非零值生成；负值向下） */
-export interface TrendBar {
-  key: 'revenue' | 'cost' | 'profit'
+/** 每日一柱堆叠分段几何（仅非零值生成；loss=亏损悬挂零下红段） */
+export interface TrendSegment {
+  key: 'revenue' | 'cost' | 'profit' | 'loss'
   x: number
   y: number
   w: number
-  height: number
+  h: number
   value: number
-  labelX: number
-  labelY: number
 }
 
-/** 柱状图坐标（每日固定 3 槽位 营业额/成本/利润、隐藏键留空保持对齐稳定；nice 天花板+底部 {1,2,5}×10^k、5 网格线、日期刻度） */
+/** 每日一柱：柱位 + 堆叠分段 + 单标签（空日无段，组件不渲染标签） */
+export interface TrendDayBar {
+  date: string
+  x: number
+  w: number
+  segs: TrendSegment[]
+  labelX: number
+  labelY: number
+  labelValue: number
+}
+
+/** 柱状图坐标（每日一柱堆叠分色：all=成本琥珀底+利润绿顶（段高和=营业额）、亏损红段悬挂零下、单标签（亏损日显负利润）；nice 天花板+底部 {1,2,5}×10^k、5 网格线、日期刻度） */
 export interface TrendBarsScale {
   maxY: number
   minY: number
   zeroY: number
   gridlines: { y: number; label: string }[]
-  groups: { date: string; bars: TrendBar[] }[]
+  days: TrendDayBar[]
   dayLabels: { x: number; label: string }[]
   allZero: boolean
 }
 
 export type TrendBarMode = 'all' | 'revenue' | 'profit'
-
-const TREND_BAR_KEYS = ['revenue', 'cost', 'profit'] as const
 
 /** 金额紧凑格式（柱顶标签）：≥1万 → X.X万、≥1千 → X.Xk、其余四舍五入取整 */
 export function compactAmount(n: number): string {
@@ -652,13 +659,15 @@ export function businessTrendBars(
   pad = 24
 ): TrendBarsScale | null {
   if (!Array.isArray(series) || series.length === 0 || width <= 0 || height <= 0) return null
-  const visibleKeys: (typeof TREND_BAR_KEYS)[number][] =
-    mode === 'revenue' ? ['revenue'] : mode === 'profit' ? ['profit'] : [...TREND_BAR_KEYS]
-  const values = series.flatMap(p => visibleKeys.map(k => p[k]))
+  // 尺度口径：all → 营业额天花板 + 利润负值底部；单值模式 → 该值自身 ±
+  const values =
+    mode === 'all'
+      ? series.flatMap(p => [p.revenue, p.profit])
+      : series.map(p => (mode === 'revenue' ? p.revenue : p.profit))
   const maxVal = Math.max(0, ...values)
   const minVal = Math.min(0, ...values)
   const allZero = maxVal <= 0 && minVal >= 0
-  // nice 天花板/底部 {1,2,5}×10^k（负值向下，minY 对称取 nice 底）
+  // nice 天花板/底部 {1,2,5}×10^k（minY 对称取 nice 底）
   const maxY = allZero ? 10 : niceCeil(maxVal)
   const minY = minVal < 0 ? -niceCeil(-minVal) : 0
   const innerW = width - pad * 2
@@ -666,40 +675,63 @@ export function businessTrendBars(
   const span = maxY - minY || 1
   const yOf = (v: number) => pad + ((maxY - v) / span) * innerH
   const zeroY = yOf(0)
+  const r2 = (v: number) => Math.round(v * 100) / 100
   const gridlines = Array.from({ length: 5 }, (_, i) => {
     const value = minY + (span * i) / 4
-    return { y: Math.round(yOf(value) * 100) / 100, label: formatYuan(value) }
+    return { y: r2(yOf(value)), label: formatYuan(value) }
   })
   const n = series.length
   const dayW = innerW / n
-  const slotW = dayW / TREND_BAR_KEYS.length
-  const barW = Math.max(2, Math.min(28, slotW * 0.68))
-  const groups = series.map((p, i) => {
-    const groupX = pad + dayW * i
-    const bars: TrendBar[] = []
-    for (const k of visibleKeys) {
-      const value = p[k]
-      if (value === 0) continue // 非零才渲染
-      const slot = TREND_BAR_KEYS.indexOf(k)
-      const x = groupX + slot * slotW + (slotW - barW) / 2
-      const y = value > 0 ? yOf(value) : zeroY
-      const h = value > 0 ? zeroY - yOf(value) : yOf(value) - zeroY
-      bars.push({
-        key: k,
-        x: Math.round(x * 100) / 100,
-        y: Math.round(y * 100) / 100,
-        w: Math.round(barW * 100) / 100,
-        height: Math.round(h * 100) / 100,
-        value,
-        labelX: Math.round((x + barW / 2) * 100) / 100,
-        labelY: Math.round((value > 0 ? y - 4 : yOf(value) + 11) * 100) / 100
-      })
+  // 视觉放大：单柱宽上限从分组槽位 28px 提到 48px（72% 日宽）
+  const barW = Math.max(2, Math.min(48, dayW * 0.72))
+  const days: TrendDayBar[] = series.map((p, i) => {
+    const x = pad + dayW * i + (dayW - barW) / 2
+    const segs: TrendSegment[] = []
+    if (mode === 'all') {
+      if (p.profit >= 0) {
+        // 盈利日：成本琥珀段(0→cost) + 利润绿段(cost→revenue)，段高和=营业额
+        if (p.cost > 0)
+          segs.push({ key: 'cost', x: r2(x), y: r2(yOf(p.cost)), w: r2(barW), h: r2(zeroY - yOf(p.cost)), value: p.cost })
+        if (p.profit > 0)
+          segs.push({
+            key: 'profit',
+            x: r2(x),
+            y: r2(yOf(p.revenue)),
+            w: r2(barW),
+            h: r2(yOf(p.cost) - yOf(p.revenue)),
+            value: p.profit
+          })
+      } else {
+        // 亏损日：营业额全高成本色 + 亏损红段悬挂零下
+        if (p.revenue > 0)
+          segs.push({ key: 'cost', x: r2(x), y: r2(yOf(p.revenue)), w: r2(barW), h: r2(zeroY - yOf(p.revenue)), value: p.revenue })
+        segs.push({ key: 'loss', x: r2(x), y: r2(zeroY), w: r2(barW), h: r2(yOf(p.profit) - zeroY), value: p.profit })
+      }
+    } else if (mode === 'revenue') {
+      if (p.revenue !== 0)
+        segs.push({ key: 'revenue', x: r2(x), y: r2(yOf(p.revenue)), w: r2(barW), h: r2(zeroY - yOf(p.revenue)), value: p.revenue })
+    } else if (p.profit > 0) {
+      segs.push({ key: 'profit', x: r2(x), y: r2(yOf(p.profit)), w: r2(barW), h: r2(zeroY - yOf(p.profit)), value: p.profit })
+    } else if (p.profit < 0) {
+      segs.push({ key: 'loss', x: r2(x), y: r2(zeroY), w: r2(barW), h: r2(yOf(p.profit) - zeroY), value: p.profit })
     }
-    return { date: p.date, bars }
+    // 单标签：亏损日显负利润，其余显营业额（利润模式显利润）；空日无标签
+    const labelValue = segs.length === 0 ? 0 : mode === 'revenue' || (mode === 'all' && p.profit >= 0) ? p.revenue : p.profit
+    let labelY = zeroY
+    if (segs.length > 0) {
+      if (labelValue < 0) {
+        const bottom = Math.max(...segs.map(s => s.y + s.h))
+        labelY = bottom + 11
+      } else {
+        const top = Math.min(...segs.map(s => s.y))
+        labelY = top - 4
+      }
+    }
+    return { date: p.date, x: r2(x), w: r2(barW), segs, labelX: r2(x + barW / 2), labelY: r2(labelY), labelValue }
   })
   const labelEvery = Math.max(1, Math.ceil(n / 6))
   const dayLabels = series
-    .map((p, i) => ({ x: Math.round((pad + dayW * i + dayW / 2) * 100) / 100, label: p.date.slice(5) }))
+    .map((p, i) => ({ x: r2(pad + dayW * i + dayW / 2), label: p.date.slice(5) }))
     .filter((_, i) => i % labelEvery === 0 || i === n - 1)
-  return { maxY, minY, zeroY: Math.round(zeroY * 100) / 100, gridlines, groups, dayLabels, allZero }
+  return { maxY, minY, zeroY: r2(zeroY), gridlines, days, dayLabels, allZero }
 }

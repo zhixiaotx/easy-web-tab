@@ -1,13 +1,13 @@
 /**
  * QA: 销售记账（摆摊进销存）全量契约 S1-S9（qa-business）
  * 后台启动/复用 vite dev（16718-16726）→ 注入 IndexedDB easy-web-tab v6 store 'business' → /business：
- *  S1 左树 7 项 + 首页默认激活 + 4 统计卡数值（营业额/成本/利润/毛利率）+ 分类/商品排行（bizhome-cat-/bizhome-prod- 各 2 行）
+ *  S1 左树 7 项 + 首页默认激活 + 5 统计卡数值（营业额/成本/支出/利润/毛利率）+ 分类/商品排行（bizhome-cat-/bizhome-prod- 各 2 行）+ 无快捷操作
  *  S2 商品页：分类 tabs + 商品卡 + 新增弹框保存 + 停售开关
  *  S3 进货页：卡片网格（桌面 5 列）+ 分类 tabs（全部+可见分类）+ 卡片分类徽标 + 分类过滤 + 新增进货自动合计
  *  S4 收摊页：日记录卡（营业额/成本/利润/损耗四项）+ 编辑弹框四项预览 + 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
  *  S6 库存页：库存卡片网格（桌面 5 列，卡片含库存剩余）+ 低库存预警（停售商品排除）+ 阈值修改
- *  S7 统计页：趋势分组柱状图（每日营业额/成本/利润 3 柱异色 + 顶部金额标签 + 全部/营业额/利润模式切换；分类/商品排行已移至首页）
+ *  S7 统计页：趋势分组柱状图按收摊记录口径（仅收摊日渲染 营业额/成本/利润 3 柱异色 + 顶部金额标签 + 全部/营业额/利润模式切换；分类/商品排行已移至首页）
  *  S8 设置弹窗「销售记账」tab：摊位名称/阈值/分类管理入口
  *  S9 明暗全页截图 + 移动端 375 无横向滚动
  * 与其它 QA 脚本禁止并行（同端口域）。运行：node scripts/qa-business.mjs
@@ -191,18 +191,21 @@ try {
     const homeActive = await page.locator('[data-testid="bs-menu-home"]').evaluate((el) => el.classList.contains('active'))
     const revenue = (await page.locator('[data-testid="bizhome-revenue"]').textContent()).trim()
     const cost = (await page.locator('[data-testid="bizhome-cost"]').textContent()).trim()
+    const expense = (await page.locator('[data-testid="bizhome-expense"]').textContent()).trim()
     const profit = (await page.locator('[data-testid="bizhome-profit"]').textContent()).trim()
     const margin = (await page.locator('[data-testid="bizhome-margin"]').textContent()).trim()
     const stall = await page.locator('[data-testid="bizhome-stall-input"]').inputValue()
+    // 快捷操作已删除：首页不再渲染任何 bizhome-nav-* 入口
+    const navCount = await page.locator('[data-testid^="bizhome-nav-"]').count()
     // 排行已移至首页：仅含有销量条目（种子当日 qa-p1 卖 24、qa-p2 卖 20，双分类双商品均上榜）
     const homeCatSnack = await page.locator('[data-testid="bizhome-cat-product-snack"]').count()
     const homeCatDrink = await page.locator('[data-testid="bizhome-cat-product-drink"]').count()
     const homeProdP1 = await page.locator('[data-testid="bizhome-prod-qa-p1"]').count()
     const homeProdP2 = await page.locator('[data-testid="bizhome-prod-qa-p2"]').count()
     record(
-      'S1) 左树 7 项 + 首页统计卡数值 + 分类/商品排行',
-      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊' && homeCatSnack === 1 && homeCatDrink === 1 && homeProdP1 === 1 && homeProdP2 === 1,
-      { menuCount, homeActive, revenue, cost, profit, margin, stall, homeCatSnack, homeCatDrink, homeProdP1, homeProdP2 }
+      'S1) 左树 7 项 + 首页统计卡数值（含支出）+ 分类/商品排行 + 无快捷操作',
+      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && expense.includes('40') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊' && navCount === 0 && homeCatSnack === 1 && homeCatDrink === 1 && homeProdP1 === 1 && homeProdP2 === 1,
+      { menuCount, homeActive, revenue, cost, expense, profit, margin, stall, navCount, homeCatSnack, homeCatDrink, homeProdP1, homeProdP2 }
     )
   })
 
@@ -376,7 +379,7 @@ try {
     // 排行已移首页：统计页不再渲染排行行
     const catRows = await page.locator('[data-testid^="bizstats-cat-"]').count()
     const prodRows = await page.locator('[data-testid^="bizstats-prod-"]').count()
-    // 全部模式非零柱：08-01 成本200/利润-200、08-02 收入50/成本40/利润10、今日 成本35(进货20+支出15)/利润-35 → 恒 7 根 + 顶部金额标签
+    // 按收摊记录口径：仅收摊日 08-02 渲染 3 柱（收入50/成本20/利润30）；进货日 08-01 与今日（进货20+支出15）无收摊记录全 0 不渲染
     const barsAll = await page.locator('.bizstats-bar').count()
     const labelsAll = await page.locator('.bizstats-bar-label').count()
     const gridlines = await page.locator('.bizstats-gridline').count()
@@ -384,7 +387,7 @@ try {
     await page.locator('[data-testid="bizstats-mode-revenue"]').click()
     await page.waitForTimeout(300)
     const barsRevenue = await page.locator('.bizstats-bar.revenue').count()
-    // 单独看利润：3 根（含负值向下）
+    // 单独看利润：仅收摊日 1 根
     await page.locator('[data-testid="bizstats-mode-profit"]').click()
     await page.waitForTimeout(300)
     const barsProfit = await page.locator('.bizstats-bar.profit').count()
@@ -393,8 +396,8 @@ try {
     await page.waitForTimeout(300)
     const barsBack = await page.locator('.bizstats-bar').count()
     record(
-      'S7) 统计页：无排行（已移首页）+ 趋势分组柱状图（模式切换/顶部金额/负值向下）',
-      catRows === 0 && prodRows === 0 && barsAll === 7 && labelsAll === 7 && gridlines === 5 && barsRevenue === 1 && barsProfit === 3 && barsBack === 7,
+      'S7) 统计页：无排行（已移首页）+ 趋势分组柱状图按收摊记录（模式切换/顶部金额/负值向下）',
+      catRows === 0 && prodRows === 0 && barsAll === 3 && labelsAll === 3 && gridlines === 5 && barsRevenue === 1 && barsProfit === 1 && barsBack === 3,
       { catRows, prodRows, barsAll, labelsAll, gridlines, barsRevenue, barsProfit, barsBack }
     )
   })

@@ -463,12 +463,13 @@ export function calcBroughtOutTotals(dailyRecords: BusinessDailyRecord[]): Recor
   return totals
 }
 
-/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率 */
+/** 总统计：营业额 = Σ日记录收入；成本 = 纯 COGS（Σ售出数量 × 进货价，按收摊记录，不计支出）；利润/毛利率；支出 = Σ支出金额 */
 export interface BusinessStats {
   revenue: number
   cost: number
   profit: number
   margin: number // 0-1 小数（营业额 0 → 0）
+  expenseTotal: number // Σ支出金额（全部支出记录）
 }
 
 export function calcBusinessStats(data: BusinessData): BusinessStats {
@@ -483,11 +484,13 @@ export function calcBusinessStats(data: BusinessData): BusinessStats {
   }
   const profit = revenue - cost
   const margin = revenue > 0 ? profit / revenue : 0
+  const expenseTotal = data.expenses.reduce((s, e) => s + e.amount, 0)
   return {
     revenue: Math.round(revenue * 100) / 100,
     cost: Math.round(cost * 100) / 100,
     profit: Math.round(profit * 100) / 100,
-    margin: Math.round(margin * 10000) / 10000
+    margin: Math.round(margin * 10000) / 10000,
+    expenseTotal: Math.round(expenseTotal * 100) / 100
   }
 }
 
@@ -576,7 +579,7 @@ export interface TrendPoint {
   profit: number
 }
 
-/** 近 days 天趋势（含 endDate 当天，升序）：revenue=当日收摊收入；cost=当日进货+支出；profit=差 */
+/** 近 days 天趋势（含 endDate 当天，升序）：按收摊记录口径——revenue=当日收摊收入；cost=当日收摊 COGS（售出×进货价，缺失商品计 0）；profit=差；进货/支出不入趋势（无收摊记录日全 0） */
 export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30): TrendPoint[] {
   if (!isValidDateKey(endDate) || days <= 0) return []
   const end = new Date(endDate + 'T00:00:00')
@@ -584,10 +587,9 @@ export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i)
     const key = localDateKey(d)
-    const revenue = data.dailyRecords.filter(r => r.date === key).reduce((s, r) => s + r.totalRevenue, 0)
-    const cost =
-      data.purchases.filter(p => p.date === key).reduce((s, p) => s + p.total, 0) +
-      data.expenses.filter(e => e.date === key).reduce((s, e) => s + e.amount, 0)
+    const dayRecords = data.dailyRecords.filter(r => r.date === key)
+    const revenue = dayRecords.reduce((s, r) => s + r.totalRevenue, 0)
+    const cost = dayRecords.reduce((s, r) => s + calcDailyCost(r.items, data.products), 0)
     const revenueR = Math.round(revenue * 100) / 100
     const costR = Math.round(cost * 100) / 100
     out.push({ date: key, revenue: revenueR, cost: costR, profit: Math.round((revenueR - costR) * 100) / 100 })

@@ -1,11 +1,9 @@
 <script setup lang="ts">
-// 销售记账首页：4 统计卡（营业额/成本/利润/毛利率）+ 快捷入口 + 摊位名称/低库存概览 + 分类/商品排行
+// 销售记账首页：5 统计卡（营业额/成本/支出/利润/毛利率）+ 摊位名称/低库存概览 + 分类/商品排行
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcBusinessStats, calcCategoryRanking, calcProductRanking, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
-
-const emit = defineEmits<{ navigate: [section: string] }>()
 
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
@@ -38,15 +36,6 @@ async function commitStallName(): Promise<void> {
   await store.setStallName(stallDraft.value)
   toast.success('摊位名称已保存')
 }
-
-const NAV_ITEMS = [
-  { key: 'products', icon: '📦', label: '商品管理' },
-  { key: 'purchases', icon: '🛒', label: '进货记录' },
-  { key: 'daily', icon: '📋', label: '收摊记录' },
-  { key: 'expenses', icon: '💰', label: '支出记录' },
-  { key: 'inventory', icon: '📈', label: '库存管理' },
-  { key: 'stats', icon: '📊', label: '统计报表' }
-]
 </script>
 
 <template>
@@ -60,6 +49,10 @@ const NAV_ITEMS = [
       <div class="stat-card" data-testid="bizhome-cost">
         <div class="stat-label">📦 成本</div>
         <div class="stat-value">{{ formatYuanOf(stats.cost) }}</div>
+      </div>
+      <div class="stat-card" data-testid="bizhome-expense">
+        <div class="stat-label">💸 支出</div>
+        <div class="stat-value">{{ formatYuanOf(stats.expenseTotal) }}</div>
       </div>
       <div class="stat-card" data-testid="bizhome-profit">
         <div class="stat-label">📈 利润</div>
@@ -98,23 +91,6 @@ const NAV_ITEMS = [
             <span class="bizhome-low-stock">{{ item.stock }} {{ item.product.unit }}</span>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 快捷入口 -->
-    <div class="bizhome-card">
-      <div class="bizhome-card-title">🚀 快捷操作</div>
-      <div class="bizhome-nav-grid">
-        <button
-          v-for="item in NAV_ITEMS"
-          :key="item.key"
-          class="bizhome-nav"
-          :data-testid="`bizhome-nav-${item.key}`"
-          @click="emit('navigate', item.key)"
-        >
-          <span class="bizhome-nav-icon">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
-        </button>
       </div>
     </div>
 
@@ -165,7 +141,7 @@ const NAV_ITEMS = [
 
 .bizhome-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -269,35 +245,6 @@ const NAV_ITEMS = [
   font-variant-numeric: tabular-nums;
 }
 
-.bizhome-nav-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-}
-
-.bizhome-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--text-primary, var(--color-text));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizhome-nav:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-}
-
-.bizhome-nav-icon {
-  font-size: 18px;
-}
-
 .bizhome-rank-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -380,8 +327,7 @@ const NAV_ITEMS = [
   box-shadow: none;
 }
 
-:root.dark .bizhome-low-item,
-:root.dark .bizhome-nav {
+:root.dark .bizhome-low-item {
   background-color: var(--bg-card, #1f2937);
   border-color: var(--border-color, #374151);
 }

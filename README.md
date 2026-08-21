@@ -108,7 +108,7 @@ pm2 restart easywebtab
  - **导入** 点击「导出」下载 `sites.md`，包含所有分类、搜索引擎和网址
  - **清除** F12 打开 Application，在 IndexedDB 下找到 `easy-web-tab` 数据库，选中点击右键 → Delete database，即可清掉倒计时/密码/待办/便签。仅清除 Local storage 已不再清掉这些数据（它们存于 IndexedDB）。
    - 注意：只清 IndexedDB 时，若 Local storage 仍残留旧快照（`user-countdowns` / `user-passwords`），下次启动会从这些陈旧快照重新迁移出旧数据，需要一并清除 Local storage 下对应 key 才干净。
-   - 多浏览器迁移提示：在个人工作台页点「导出」下载 JSON 备份，再到另一浏览器导入；该导出不含密码加密密钥，密码数据仅原设备（原浏览器）可恢复。
+   - 多浏览器迁移提示：在个人工作台页点「导出」下载 JSON 备份，再到另一浏览器导入；v8 起备份内嵌密码加密身份（盐+验证串）：跨浏览器/设备导入后，使用原设备的主密码即可解锁密码管理；v7 及更早备份仍不迁移密码库。
  - **导入**：上传 `.md` 文件（支持含 YAML frontmatter 的格式），按 URL 去重，保留原有数据
 
 ## 项目结构

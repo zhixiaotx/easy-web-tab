@@ -21,7 +21,7 @@ easy-web-tab/
 │   ├── stores/                   # 16 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchDiary.ts, workbenchHealth.ts, workbenchLedger.ts, workbenchBusiness.ts, workbenchPomodoro.ts, workbenchHabits.ts)
 │   ├── views/                    # 4 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台), BusinessView (销售记账/摆摊进销存)
 │   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台, /business → 销售记账 (eager imports)
-│   ├── types/index.ts            # Site, Category, WorkbenchDiary/DiaryData interfaces + Business 摆摊进销存接口/种子常量 + DEFAULT_CATEGORIES + WORKBENCH_DATA_VERSION=7
+│   ├── types/index.ts            # Site, Category, WorkbenchDiary/DiaryData interfaces + Business 摆摊进销存接口/种子常量 + DEFAULT_CATEGORIES + WORKBENCH_DATA_VERSION=8（v8 内嵌 passwordsSalt/passwordVerification 密码加密身份）
 │   └── styles/                   # dark.css, background.css
 ├── public/
 │   ├── data/myself-sites.md      # Only data file — sample sites downloaded via HelpModal.vue
@@ -44,7 +44,7 @@ easy-web-tab/
 | Add/edit bookmark UI | `src/components/SiteModal.vue` | Auto-fetches metadata via Jina.ai |
 | Bookmark CRUD logic | `src/stores/sites.ts` | God store: filtering, pagination, import/export |
 | Add new route | `src/router/index.ts` | Eager-loaded (no lazy loading) |
-| Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 + `Countdown.emailReminder` opt-in + Business 摆摊进销存全部接口与种子常量 `DEFAULT_BUSINESS_EXPENSE_CATEGORIES`/`DEFAULT_BUSINESS_PRODUCT_CATEGORIES`；`WORKBENCH_DATA_VERSION=7`） |
+| Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 + `Countdown.emailReminder` opt-in + Business 摆摊进销存全部接口与种子常量 `DEFAULT_BUSINESS_EXPENSE_CATEGORIES`/`DEFAULT_BUSINESS_PRODUCT_CATEGORIES`；`WORKBENCH_DATA_VERSION=8（v8 内嵌 passwordsSalt/passwordVerification 密码加密身份）`） |
 | Dark mode styles | `src/styles/dark.css` | CSS variables, class toggle |
 | Sample data | `public/data/myself-sites.md` | Fetched by `HelpModal.vue` (「下载示例数据」source) |
 | Keyboard shortcuts | `src/composables/useKeyboardShortcuts.ts` | Ctrl+N/B/D, Esc |
@@ -112,7 +112,7 @@ easy-web-tab/
 | `notificationsSupported` / `notificationPermission` / `requestNotifyPermission` / `sendDesktopNotification` | functions | `src/composables/useDesktopNotify.ts` | 桌面通知封装：浏览器不支持→'unsupported'、异常→'denied'；仅 permission==='granted' 才 new Notification（tag 去重），失败 false 静默；不主动请求权限（请求属 UI 层职责） |
 | `sendReminderEmail` | function | `src/composables/reminderEmail.ts` | EmailJS v4 邮件发送：send(serviceId, templateId, params, { publicKey })（options 传公钥免全局 init），res?.status===200 判定，失败 console.warn 返回 false 不重试不 toast |
 | `useCrypto` | composable | `src/composables/useCrypto.ts` | crypto-js AES-CBC + PBKDF2 encryption |
-| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v6, 9 core stores: todos/notes/diary/countdowns/passwords/health/ledger/settings/business + 3 aux stores: pomodoro/habits/snapshots; backup 导出 version 7, v1-v7 兼容导入, `idbImportAll` 版本范围守卫 `<1 || >7` 拒绝，v1-v6 补 business 空数据) |
+| `idbGet` / `idbPut` / `idbExportAll` / `idbImportAll` | functions | `src/composables/useIdb.ts` | IndexedDB wrapper (DB `easy-web-tab` v6, 9 core stores: todos/notes/diary/countdowns/passwords/health/ledger/settings/business + 3 aux stores: pomodoro/habits/snapshots; backup 导出 version 8, v1-v8 兼容导入, `idbImportAll` 版本范围守卫 `<1 || >8` 拒绝，v1-v7 补 business 空数据；v8 起备份内嵌 passwordsSalt/passwordVerification，idbImportAll 在事务成功后经 useCrypto.adoptPasswordIdentity 成对接管加密身份（仅当身份完整且密码库非空）；导入后 UI 强制锁定密码面板，解锁密码=备份来源设备主密码) |
 
 ## CONVENTIONS
 
@@ -125,7 +125,7 @@ easy-web-tab/
 - **Module type**: ESM (`"type": "module"`, `.cjs` for CommonJS scripts including PM2 configs)
 - **TypeScript**: Strict + noUnusedLocals + noUnusedParameters
 - **Commits**: Chinese messages prefixed `fix-` / `feat-` (e.g. `fix-导出不导出默认引擎`)
-- **IndexedDB persistence**: 工作台数据（待办/便签/日记/倒计时/密码/健康/记账/设置/销售记账/番茄钟/习惯打卡/快照）存浏览器 IndexedDB — DB 名 `easy-web-tab` v6，12 个 object store（9 核心 todos/notes/diary/countdowns/passwords/health/ledger/settings/business + 3 辅助 pomodoro/habits/snapshots），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）；notes store 存 NoteData `{categories, notes}` 双数组；diary store 存 DiaryData `{entries}` 对象（勿写裸数组，normalizeDiaryData 拒绝）；business store 存 BusinessData（七字段）；导出备份 version 7，v1-v7 备份导入时兼容（范围守卫 `<1 || >7` 拒绝；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据，v1-v6 补 business 空数据；notes 旧数组格式归一为 `{categories:[], notes:[...]}`，snapshots 永不进备份）
+- **IndexedDB persistence**: 工作台数据（待办/便签/日记/倒计时/密码/健康/记账/设置/销售记账/番茄钟/习惯打卡/快照）存浏览器 IndexedDB — DB 名 `easy-web-tab` v6，12 个 object store（9 核心 todos/notes/diary/countdowns/passwords/health/ledger/settings/business + 3 辅助 pomodoro/habits/snapshots），由 `useIdb.ts` 封装；写入前需 `toRaw()`（IDB 结构化克隆无法处理 Vue reactive Proxy，否则 DataCloneError）；notes store 存 NoteData `{categories, notes}` 双数组；diary store 存 DiaryData `{entries}` 对象（勿写裸数组，normalizeDiaryData 拒绝）；business store 存 BusinessData（七字段）；导出备份 version 8，v1-v8 备份导入时兼容（范围守卫 `<1 || >8` 拒绝；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据，v1-v7 补 business 空数据；notes 旧数组格式归一为 `{categories:[], notes:[...]}`，snapshots 永不进备份）；v8 起备份内嵌 passwordsSalt/passwordVerification，idbImportAll 在事务成功后经 useCrypto.adoptPasswordIdentity 成对接管加密身份（仅当身份完整且密码库非空）；导入后 UI 强制锁定密码面板，解锁密码=备份来源设备主密码）
 - **倒计时 repeat 规范**: `once` 规范存 `null`；旧字符串 `'yearly'` → `{type:'yearly'}`；所有入口（loadCountdowns/importCountdowns/addCountdown/updateCountdown/useMarkdown 解析）经 `normalizeCountdown`/`parseRepeat` 归一化，幂等
 - **倒计时分类规范**: 内置 6 类（work/life/study/exercise/diet/sleep）+ 自定义分类注册表（`customCategories`，localStorage `user-countdown-categories`，不随 JSON 备份导出，与排序偏好同策略）；标签页可见分类 `tabCategories` 默认 exercise/diet/sleep（localStorage `user-countdown-tab-categories`，首次无记录时落默认值）；`normalizeCountdown` 保留任意 trim 后非空的自定义分类值（不再剥离为 'work'），`categoryLabel` 对未知分类回退原名；`CountdownCategory` 类型 = `string`；表单下拉全量取 `store.allCategories`（内置+自定义）；自定义分类被倒计时引用时删除返回 `{ ok:false, reason:'in-use' }`；重命名会同步存量条目 category 字段（toRaw 重建后 idbPut）
 - **倒计时邮件提醒规范**: `emailReminder` opt-in——缺省/非布尔（normalizeCountdown 不输出该字段）= 默认不发邮件；仅当倒计时 `emailReminder === true` 且设置中邮件配置完整（`isEmailConfigured`）才发；模板变量契约 to_email/countdown_name/occurrence_time/app_url（`buildEmailParams` 唯一来源，组件禁止内联拼参）；导出 Markdown 仅 emailReminder===true 才输出 `emailReminder: true` 行

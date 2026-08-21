@@ -86,6 +86,7 @@ async function commitThreshold(): Promise<void> {
         <span class="bizinv-unit">单位：{{ row.product.unit }}</span>
         <span class="bizinv-num">进货合计：{{ purchaseTotals[row.product.id] ?? 0 }}</span>
         <span class="bizinv-num">带出合计：{{ broughtOutTotals[row.product.id] ?? 0 }}</span>
+        <span class="bizinv-num">库存剩余：{{ row.stock }}</span>
       </div>
     </div>
   </div>

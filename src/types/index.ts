@@ -217,7 +217,7 @@ export function emptyAppSettingsData(): AppSettingsData {
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 7
+export const WORKBENCH_DATA_VERSION = 8
 
 export interface WorkbenchData {
   version: number
@@ -233,6 +233,8 @@ export interface WorkbenchData {
   pomodoro?: unknown // v5 新增：番茄钟数据（后续 Todo 定义具体类型后收紧）
   habits?: unknown // v5 新增：习惯打卡数据（后续 Todo 定义具体类型后收紧）
   business?: BusinessData // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
+  passwordsSalt?: string // v8 新增：密码库 PBKDF2 盐 hex（内嵌自 localStorage password-salt-v2；与 passwordVerification 成对出现才有效）
+  passwordVerification?: string // v8 新增：主密码验证串密文（内嵌自 localStorage password-verification-v2 原样）
 }
 
 // ==================== 健康管理 ====================

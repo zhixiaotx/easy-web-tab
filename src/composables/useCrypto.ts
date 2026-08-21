@@ -126,3 +126,28 @@ export function hasMasterPassword(): boolean {
 export function getSaltHex(): string {
   return getSalt().toString(CryptoJS.enc.Hex)
 }
+
+/**
+ * 只读读取已存盐的 hex 字符串（不生成——导出侧不得凭空制造加密身份；未设置返回 null）
+ */
+export function getStoredSaltHex(): string | null {
+  return localStorage.getItem(SALT_KEY)
+}
+
+/**
+ * 只读读取主密码验证串密文（未设置返回 null）
+ */
+export function getStoredVerification(): string | null {
+  return localStorage.getItem(VERIFICATION_KEY)
+}
+
+/**
+ * 接管备份来源设备的加密身份：盐 + 验证串成对写入。
+ * 任一参数为空字符串/非字符串 → no-op。调用方须保证 IDB 写入成功之后再调用。
+ * 效果：备份中的密码 blob 在本设备可用「原设备的主密码」解锁验证并解密。
+ */
+export function adoptPasswordIdentity(saltHex: string, verification: string): void {
+  if (!saltHex || !verification) return
+  localStorage.setItem(SALT_KEY, saltHex)
+  localStorage.setItem(VERIFICATION_KEY, verification)
+}

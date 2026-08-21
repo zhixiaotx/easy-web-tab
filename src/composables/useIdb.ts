@@ -1,12 +1,13 @@
 /**
  * 零依赖 IndexedDB 封装（工作台数据层）
  * DB: easy-web-tab v5；object store 均无 keyPath，统一使用 out-of-line 键 'items'
- * 核心 8 store + 辅助 pomodoro/habits 参与 JSON 备份导出/导入（备份格式 v6 起）
+ * 核心 8 store + 辅助 pomodoro/habits 参与 JSON 备份导出/导入（备份格式 v8 起）
  * snapshots 仅本地使用，不参与备份导出/导入
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
 import type { AppSettingsData, BusinessData, Countdown, DiaryData, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
+import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { emptyBusinessData } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
 import { emptyHabitsData } from './habitCore'
@@ -113,14 +114,16 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     settings: settings ?? emptyAppSettingsData(),
     pomodoro: pomodoro ?? emptyPomodoroData(),
     habits: habits ?? emptyHabitsData(),
-    business: business ?? emptyBusinessData()
+    business: business ?? emptyBusinessData(),
+    passwordsSalt: getStoredSaltHex() ?? undefined,
+    passwordVerification: getStoredVerification() ?? undefined
   }
 }
 
-export async function idbImportAll(data: WorkbenchData): Promise<void> {
-  // 版本白名单：接受 v1-v7（v1-v6 旧备份兼容导入，不拒绝——AGENTS.md 硬性规范）；
-  // 拒绝 v0 与未来 v8+（范围守卫保留 number 类型，下方 v1 分支可正常判定）
-  if (data.version < 1 || data.version > 7) {
+export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswordIdentity: boolean }> {
+  // 版本白名单：接受 v1-v8（v1-v7 旧备份兼容导入，不拒绝——AGENTS.md 硬性规范）；
+  // 拒绝 v0 与未来 v9+（范围守卫保留 number 类型，下方 v1 分支可正常判定）
+  if (data.version < 1 || data.version > 8) {
     throw new Error('备份文件版本不兼容')
   }
   // notes 兼容旧数组（v1/v2 纯便签列表）与新对象（v3 NoteData）两种格式
@@ -160,8 +163,14 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
   // diary 兼容 v1-v5 备份（无该字段 → empty 兜底）；v6 备份原样透传。
   // 兜底同样放在写入循环之前 → 键存在性守卫对 diary 恒有键可写（v1-v5 导入后日记为空）
   data = { ...data, diary: data.diary ?? emptyDiaryData() }
-  // business 兼容 v1-v6 备份（无该字段 → empty 兜底）；v7 备份原样透传（含内置种子分类契约）
+  // business 兼容 v1-v7 备份（无该字段 → empty 兜底）；v8 备份原样透传（含内置种子分类契约）
   data = { ...data, business: data.business ?? emptyBusinessData() }
+  // 密码加密身份归一化（v8）：仅当备份携带完整身份（盐+验证串均为非空字符串）且密码库非空时才采纳；
+  // 字段存在但畸形 → 视同缺失（向后兼容，不硬失败）。身份与密文绑定，二者必须成套迁移。
+  const backupSalt = typeof data.passwordsSalt === 'string' && data.passwordsSalt ? data.passwordsSalt : undefined
+  const backupVerification =
+    typeof data.passwordVerification === 'string' && data.passwordVerification ? data.passwordVerification : undefined
+  const adoptedPasswordIdentity = !!(backupSalt && backupVerification && data.passwords)
   const db = await openIdb()
   // 事务范围覆盖核心+辅助全部 store（循环只写 data 中存在的键，
   // v1-v5 备份缺 snapshots 字段 → 跳过写入，绝不 put undefined 进新 store）
@@ -180,4 +189,9 @@ export async function idbImportAll(data: WorkbenchData): Promise<void> {
     tx.onerror = () => reject(tx.error)
     tx.onabort = () => reject(tx.error)
   })
+  // 接管加密身份必须在 IDB 事务成功之后：事务失败不应污染本机加密身份
+  if (adoptedPasswordIdentity && backupSalt && backupVerification) {
+    adoptPasswordIdentity(backupSalt, backupVerification)
+  }
+  return { adoptedPasswordIdentity }
 }

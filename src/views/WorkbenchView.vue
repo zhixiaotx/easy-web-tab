@@ -221,16 +221,18 @@ async function handleImportFile(event: Event) {
       return
     }
 
-    // 密码分支先决：本设备没有 v2 主密码验证键（新设备/新 profile）→
-    // 备份中的密码 blob 无法用本设备密钥解密，跳过密码导入（不写入 IDB，避免被空库覆盖）
-    const skipPasswords = localStorage.getItem('password-verification-v2') === null
+    // 密码分支先决：
+    // - 备份携带完整加密身份（v8：盐+验证串+非空密码库）→ 整包导入并接管身份，解锁密码=备份来源设备的主密码
+    // - 备份无身份且本设备无 v2 验证键（旧 v1-v7 备份导入到新设备）→ 跳过密码导入（写入也无法解密）
+    const hasVaultIdentity = !!parsed.passwordsSalt && !!parsed.passwordVerification && !!parsed.passwords
+    const localHasPassword = localStorage.getItem('password-verification-v2') !== null
+    const skipPasswords = !hasVaultIdentity && !localHasPassword
 
+    let adoptedIdentity = false
     try {
-      if (skipPasswords) {
-        await idbImportAll({ ...parsed, passwords: '' })
-      } else {
-        await idbImportAll(parsed)
-      }
+      adoptedIdentity = (
+        await idbImportAll(skipPasswords ? { ...parsed, passwords: '' } : parsed)
+      ).adoptedPasswordIdentity
     } catch (err) {
       const msg = err instanceof Error ? err.message : '文件格式无效'
       toast.error(`导入失败：${msg}`)
@@ -249,12 +251,13 @@ async function handleImportFile(event: Event) {
     ])
 
     if (skipPasswords) {
-      toast.warning('备份中的密码数据无法在本设备解密（缺少加密密钥），已跳过密码导入')
+      toast.warning('备份未内嵌密码加密身份（旧格式），已跳过密码导入')
     } else {
-      // 用户此前已解锁过密码库 → 锁定，强制重新解锁后查看新数据
-      if (passwordsStore.isUnlocked) {
-        passwordsStore.lock()
-        toast.success('密码库已导入，请重新解锁查看')
+      // 身份接管可能已替换本机加密凭据（或覆盖已解锁会话的密文）→ 无条件锁定，
+      // 强制重新解锁后查看新数据（已锁时 lock 为廉价 no-op）
+      passwordsStore.lock()
+      if (adoptedIdentity) {
+        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码管理')
       }
     }
 

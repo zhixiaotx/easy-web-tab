@@ -220,20 +220,27 @@ async function handleSnapshotNow(): Promise<void> {
 }
 
 // 恢复快照：confirm → 密码双分支 → idbImportAll → 重载各 store → 清理更新快照 → toast
-// （镜像 WorkbenchView.handleImportFile：password-verification-v2 缺失时跳过密码恢复）
+// （镜像 WorkbenchView.handleImportFile：备份携带完整加密身份则接管，password-verification-v2 缺失且无身份时跳过密码恢复）
 async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
   if (!confirm(`确定要恢复到 ${snapshotTime(snapshot.createdAt)} 的快照吗？当前工作台数据将被覆盖。`)) return
   if (snapshotBusy.value) return
   snapshotBusy.value = true
   try {
-    // 密码分支先决：本设备没有 v2 主密码验证键（新设备）→ 快照密码 blob 无法解密，跳过
-    // （写空串 passwords:'' —— idbImportAll 校验 passwords 为 string，与 handleImportFile 一致）
-    const skipPasswords = localStorage.getItem('password-verification-v2') === null
     // 快照来自 reactive ref（snapshotList.value），嵌套字段是 Vue proxy —— IDB 结构化克隆无法处理
     // proxy（DataCloneError: could not be cloned），深拷贝脱 proxy 后再写 IDB（WorkbenchView
     // handleImportFile 从文件读纯对象故无此问题；快照数据本身是 JSON 兼容纯数据，JSON 往返安全）
     const rawData = JSON.parse(JSON.stringify(snapshot.data)) as WorkbenchData
-    await idbImportAll(skipPasswords ? { ...rawData, passwords: '' } : rawData)
+    // 密码分支先决（镜像 WorkbenchView.handleImportFile）：
+    // - 备份携带完整加密身份（v8：盐+验证串+非空密码库）→ 整包恢复并接管身份，解锁密码=来源设备的主密码
+    // - 备份无身份且本设备无 v2 验证键（旧 v1-v7 数据恢复到新设备）→ 跳过密码恢复
+    //   （写空串 passwords:'' —— idbImportAll 校验 passwords 为 string）
+    const hasVaultIdentity = !!rawData.passwordsSalt && !!rawData.passwordVerification && !!rawData.passwords
+    const localHasPassword = localStorage.getItem('password-verification-v2') !== null
+    const skipPasswords = !hasVaultIdentity && !localHasPassword
+
+    const { adoptedPasswordIdentity: adoptedIdentity } = await idbImportAll(
+      skipPasswords ? { ...rawData, passwords: '' } : rawData
+    )
 
     // 重载各 store（内存与 IDB 同步；密码库不重载——恢复后若已解锁则强制锁定重新解锁）
     const todosStore = useWorkbenchTodosStore()
@@ -255,7 +262,14 @@ async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
       settingsStore.initSettings()
     ])
     const passwordsStore = usePasswordsStore()
-    if (passwordsStore.isUnlocked) passwordsStore.lock()
+    if (!skipPasswords) {
+      // 身份接管可能已替换本机加密凭据（或覆盖已解锁会话的密文）→ 无条件锁定，
+      // 强制重新解锁后查看新数据（已锁时 lock 为廉价 no-op）
+      passwordsStore.lock()
+      if (adoptedIdentity) {
+        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码管理')
+      }
+    }
 
     // 清理：删除 createdAt 晚于所恢复快照的快照（Date.parse 精确比较；
     // 覆盖 wb-snapshot-now 同日多份场景，防下次进入工作台自动快照覆盖刚恢复的状态）。
@@ -270,7 +284,7 @@ async function handleRestoreSnapshot(snapshot: SnapshotRecord): Promise<void> {
     snapshotList.value = trimmed as SnapshotWithSource[]
 
     toast.success('已恢复快照')
-    if (skipPasswords) toast.warning('快照中的密码数据无法在本设备解密（缺少加密密钥），已跳过密码恢复')
+    if (skipPasswords) toast.warning('备份未内嵌密码加密身份（旧格式），已跳过密码恢复')
   } catch (e) {
     const msg = e instanceof Error ? e.message : '恢复失败'
     toast.error(`恢复失败：${msg}`)

@@ -1,13 +1,13 @@
 /**
  * QA: 销售记账（摆摊进销存）全量契约 S1-S9（qa-business）
  * 后台启动/复用 vite dev（16718-16726）→ 注入 IndexedDB easy-web-tab v6 store 'business' → /business：
- *  S1 左树 7 项 + 首页默认激活 + 4 统计卡数值（营业额/成本/利润/毛利率）
+ *  S1 左树 7 项 + 首页默认激活 + 4 统计卡数值（营业额/成本/利润/毛利率）+ 分类/商品排行（bizhome-cat-/bizhome-prod- 各 2 行）
  *  S2 商品页：分类 tabs + 商品卡 + 新增弹框保存 + 停售开关
  *  S3 进货页：卡片网格（桌面 5 列）+ 分类 tabs（全部+可见分类）+ 卡片分类徽标 + 分类过滤 + 新增进货自动合计
  *  S4 收摊页：日记录卡（营业额/成本/利润/损耗四项）+ 编辑弹框四项预览 + 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
  *  S6 库存页：库存卡片网格（桌面 5 列，卡片含库存剩余）+ 低库存预警（停售商品排除）+ 阈值修改
- *  S7 统计页：分类排行 + 商品排行 + 趋势双折线 SVG
+ *  S7 统计页：趋势双折线 SVG（分类/商品排行已移至首页，统计页不再渲染）
  *  S8 设置弹窗「销售记账」tab：摊位名称/阈值/分类管理入口
  *  S9 明暗全页截图 + 移动端 375 无横向滚动
  * 与其它 QA 脚本禁止并行（同端口域）。运行：node scripts/qa-business.mjs
@@ -194,10 +194,15 @@ try {
     const profit = (await page.locator('[data-testid="bizhome-profit"]').textContent()).trim()
     const margin = (await page.locator('[data-testid="bizhome-margin"]').textContent()).trim()
     const stall = await page.locator('[data-testid="bizhome-stall-input"]').inputValue()
+    // 排行已移至首页：仅含有销量条目（种子当日 qa-p1 卖 24、qa-p2 卖 20，双分类双商品均上榜）
+    const homeCatSnack = await page.locator('[data-testid="bizhome-cat-product-snack"]').count()
+    const homeCatDrink = await page.locator('[data-testid="bizhome-cat-product-drink"]').count()
+    const homeProdP1 = await page.locator('[data-testid="bizhome-prod-qa-p1"]').count()
+    const homeProdP2 = await page.locator('[data-testid="bizhome-prod-qa-p2"]').count()
     record(
-      'S1) 左树 7 项 + 首页统计卡数值',
-      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊',
-      { menuCount, homeActive, revenue, cost, profit, margin, stall }
+      'S1) 左树 7 项 + 首页统计卡数值 + 分类/商品排行',
+      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊' && homeCatSnack === 1 && homeCatDrink === 1 && homeProdP1 === 1 && homeProdP2 === 1,
+      { menuCount, homeActive, revenue, cost, profit, margin, stall, homeCatSnack, homeCatDrink, homeProdP1, homeProdP2 }
     )
   })
 
@@ -365,13 +370,13 @@ try {
     )
   })
 
-  await guard('S7) 统计页：排行 + 趋势双折线', async () => {
+  await guard('S7) 统计页：趋势双折线（排行已移至首页）', async () => {
     await page.locator('[data-testid="bs-menu-stats"]').click()
     await page.waitForSelector('[data-testid="bizstats-trend"]', { state: 'visible', timeout: 8000 })
     const catRows = await page.locator('[data-testid^="bizstats-cat-"]').count()
     const prodRows = await page.locator('[data-testid^="bizstats-prod-"]').count()
     const lines = await page.locator('.bizstats-line').count()
-    record('S7) 统计页：分类排行 2 + 商品排行 2 + 双折线 SVG', catRows === 2 && prodRows === 2 && lines === 2, { catRows, prodRows, lines })
+    record('S7) 统计页：无排行（已移首页）+ 双折线 SVG', catRows === 0 && prodRows === 0 && lines === 2, { catRows, prodRows, lines })
   })
 
   await guard('S8) 设置弹窗销售记账 tab', async () => {

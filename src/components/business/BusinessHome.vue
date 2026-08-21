@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// 销售记账首页：4 统计卡（营业额/成本/利润/毛利率）+ 快捷入口 + 摊位名称/低库存概览
+// 销售记账首页：4 统计卡（营业额/成本/利润/毛利率）+ 快捷入口 + 摊位名称/低库存概览 + 分类/商品排行
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryRanking, calcProductRanking, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 
 const emit = defineEmits<{ navigate: [section: string] }>()
@@ -10,7 +10,7 @@ const emit = defineEmits<{ navigate: [section: string] }>()
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
 
-const stats = computed(() => calcBusinessStats({
+const data = computed(() => ({
   productCategories: store.productCategories,
   expenseCategories: store.expenseCategories,
   products: store.products,
@@ -20,15 +20,17 @@ const stats = computed(() => calcBusinessStats({
   settings: store.settings
 }))
 
-const lowStock = computed(() => lowStockProducts({
-  productCategories: store.productCategories,
-  expenseCategories: store.expenseCategories,
-  products: store.products,
-  purchases: store.purchases,
-  dailyRecords: store.dailyRecords,
-  expenses: store.expenses,
-  settings: store.settings
-}))
+const stats = computed(() => calcBusinessStats(data.value))
+
+const lowStock = computed(() => lowStockProducts(data.value))
+
+// 排行（自统计页移入）：按销售额 top 8
+const categoryRank = computed(() => calcCategoryRanking(data.value).slice(0, 8))
+const productRank = computed(() => calcProductRanking(data.value).slice(0, 8))
+
+function maxRankValue(rank: { revenue: number }[]): number {
+  return Math.max(1, ...rank.map(r => r.revenue))
+}
 
 const stallDraft = ref('')
 
@@ -114,6 +116,41 @@ const NAV_ITEMS = [
           <span>{{ item.label }}</span>
         </button>
       </div>
+    </div>
+
+    <!-- 分类排行 + 商品排行（自统计页移入） -->
+    <div class="bizhome-rank-grid">
+      <section class="bizhome-card" data-testid="bizhome-rank-cat">
+        <div class="bizhome-card-title">分类排行（按销售额）</div>
+        <p v-if="categoryRank.length === 0" class="bizhome-empty">暂无数据</p>
+        <div v-else class="bizhome-rank-list">
+          <div v-for="(item, i) in categoryRank" :key="item.categoryId" class="bizhome-rank-row" :data-testid="'bizhome-cat-' + item.categoryId">
+            <span class="bizhome-rank-idx">{{ i + 1 }}</span>
+            <span class="bizhome-rank-name">{{ item.name }}</span>
+            <div class="bizhome-rank-bar">
+              <div class="bizhome-rank-fill" :style="{ width: (item.revenue / maxRankValue(categoryRank)) * 100 + '%' }"></div>
+            </div>
+            <span class="bizhome-rank-val">{{ formatYuanOf(item.revenue) }}</span>
+            <span class="bizhome-rank-sold">×{{ item.sold }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="bizhome-card" data-testid="bizhome-rank-prod">
+        <div class="bizhome-card-title">商品排行（按销售额）</div>
+        <p v-if="productRank.length === 0" class="bizhome-empty">暂无数据</p>
+        <div v-else class="bizhome-rank-list">
+          <div v-for="(item, i) in productRank" :key="item.productId" class="bizhome-rank-row" :data-testid="'bizhome-prod-' + item.productId">
+            <span class="bizhome-rank-idx">{{ i + 1 }}</span>
+            <span class="bizhome-rank-name">{{ item.name }}</span>
+            <div class="bizhome-rank-bar">
+              <div class="bizhome-rank-fill" :style="{ width: (item.revenue / maxRankValue(productRank)) * 100 + '%' }"></div>
+            </div>
+            <span class="bizhome-rank-val">{{ formatYuanOf(item.revenue) }}</span>
+            <span class="bizhome-rank-sold">×{{ item.sold }}</span>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -261,6 +298,82 @@ const NAV_ITEMS = [
   font-size: 18px;
 }
 
+.bizhome-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.bizhome-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bizhome-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bizhome-rank-idx {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: 50%;
+}
+
+.bizhome-rank-name {
+  flex-shrink: 0;
+  min-width: 64px;
+  max-width: 110px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bizhome-rank-bar {
+  flex: 1;
+  min-width: 40px;
+  height: 8px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bizhome-rank-fill {
+  height: 100%;
+  background: var(--accent-color, var(--color-primary));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.bizhome-rank-val {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-color, var(--color-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.bizhome-rank-sold {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
+}
+
 :root.dark .stat-card,
 :root.dark .bizhome-card {
   background-color: var(--bg-secondary, #1f2937);
@@ -292,7 +405,8 @@ const NAV_ITEMS = [
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bizhome-row {
+  .bizhome-row,
+  .bizhome-rank-grid {
     grid-template-columns: 1fr;
   }
 }

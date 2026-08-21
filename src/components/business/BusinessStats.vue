@@ -1,13 +1,10 @@
 <script setup lang="ts">
-// 统计报表：分类排行 + 商品排行 + 近 30 天营业额/利润趋势折线（内联 SVG，坐标走 businessCore）
+// 统计报表：近 30 天营业额/利润趋势折线（内联 SVG，坐标走 businessCore；分类/商品排行已移至首页）
 import { computed, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import {
   businessTrendScale,
   calcBusinessTrend,
-  calcCategoryRanking,
-  calcProductRanking,
-  formatYuanOf,
   localDateKey
 } from '@/composables/businessCore'
 
@@ -23,9 +20,6 @@ const data = computed(() => ({
   settings: store.settings
 }))
 
-const categoryRank = computed(() => calcCategoryRanking(data.value).slice(0, 8))
-const productRank = computed(() => calcProductRanking(data.value).slice(0, 8))
-
 // 趋势窗口：30 / 14 / 7 天切换
 const TREND_W = 900
 const TREND_H = 260
@@ -33,10 +27,6 @@ const trendDays = ref(30)
 
 const trendSeries = computed(() => calcBusinessTrend(data.value, localDateKey(), trendDays.value))
 const trendScale = computed(() => businessTrendScale(trendSeries.value, TREND_W, TREND_H))
-
-function maxRankValue(rank: { revenue: number }[]): number {
-  return Math.max(1, ...rank.map(r => r.revenue))
-}
 </script>
 
 <template>
@@ -78,41 +68,6 @@ function maxRankValue(rank: { revenue: number }[]): number {
       </div>
       <p v-else class="bizstats-empty" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与收摊记录吧</p>
     </section>
-
-    <!-- 分类排行 + 商品排行 -->
-    <div class="bizstats-rank-grid">
-      <section class="bizstats-card" data-testid="bizstats-cat-rank">
-        <h3>分类排行（按销售额）</h3>
-        <p v-if="categoryRank.length === 0" class="bizstats-empty">暂无数据</p>
-        <div v-else class="bizstats-rank-list">
-          <div v-for="(item, i) in categoryRank" :key="item.categoryId" class="bizstats-rank-row" :data-testid="'bizstats-cat-' + item.categoryId">
-            <span class="bizstats-rank-idx">{{ i + 1 }}</span>
-            <span class="bizstats-rank-name">{{ item.name }}</span>
-            <div class="bizstats-rank-bar">
-              <div class="bizstats-rank-fill" :style="{ width: (item.revenue / maxRankValue(categoryRank)) * 100 + '%' }"></div>
-            </div>
-            <span class="bizstats-rank-val">{{ formatYuanOf(item.revenue) }}</span>
-            <span class="bizstats-rank-sold">×{{ item.sold }}</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="bizstats-card" data-testid="bizstats-prod-rank">
-        <h3>商品排行（按销售额）</h3>
-        <p v-if="productRank.length === 0" class="bizstats-empty">暂无数据</p>
-        <div v-else class="bizstats-rank-list">
-          <div v-for="(item, i) in productRank" :key="item.productId" class="bizstats-rank-row" :data-testid="'bizstats-prod-' + item.productId">
-            <span class="bizstats-rank-idx">{{ i + 1 }}</span>
-            <span class="bizstats-rank-name">{{ item.name }}</span>
-            <div class="bizstats-rank-bar">
-              <div class="bizstats-rank-fill" :style="{ width: (item.revenue / maxRankValue(productRank)) * 100 + '%' }"></div>
-            </div>
-            <span class="bizstats-rank-val">{{ formatYuanOf(item.revenue) }}</span>
-            <span class="bizstats-rank-sold">×{{ item.sold }}</span>
-          </div>
-        </div>
-      </section>
-    </div>
   </div>
 </template>
 
@@ -241,82 +196,6 @@ function maxRankValue(rank: { revenue: number }[]): number {
   background: var(--success-color, var(--color-success));
 }
 
-.bizstats-rank-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.bizstats-rank-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.bizstats-rank-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.bizstats-rank-idx {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border-radius: 50%;
-}
-
-.bizstats-rank-name {
-  flex-shrink: 0;
-  min-width: 64px;
-  max-width: 110px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary, var(--color-text));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bizstats-rank-bar {
-  flex: 1;
-  min-width: 40px;
-  height: 8px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.bizstats-rank-fill {
-  height: 100%;
-  background: var(--accent-color, var(--color-primary));
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-.bizstats-rank-val {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent-color, var(--color-primary));
-  font-variant-numeric: tabular-nums;
-}
-
-.bizstats-rank-sold {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  font-variant-numeric: tabular-nums;
-}
-
 .bizstats-empty {
   margin: 0;
   padding: 20px 0;
@@ -330,10 +209,6 @@ function maxRankValue(rank: { revenue: number }[]): number {
   box-shadow: none;
 }
 
-:root.dark .bizstats-rank-name {
-  color: var(--text-primary, #f9fafb);
-}
-
 :root.dark .bizstats-btn {
   background-color: var(--bg-card, #1f2937);
   color: var(--text-secondary, #d1d5db);
@@ -342,11 +217,5 @@ function maxRankValue(rank: { revenue: number }[]): number {
 
 :root.dark .bizstats-line.profit {
   stroke: #4ade80;
-}
-
-@media (max-width: 900px) {
-  .bizstats-rank-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

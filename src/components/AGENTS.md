@@ -30,7 +30,7 @@ components/
     ├── BusinessDaily.vue       # 收摊记录：日记录卡片四项（date 唯一 upsert；营业额=落库 totalRevenue + 成本/利润/损耗实时按 items×现价走 calcDailyCost/calcDailyLossAmount，testid bizday-revenue/cost/profit/loss-<id>）+ 编辑弹框（动态商品行：带出/剩余/损耗 + 四项预览 营业额/成本/利润/损耗，bizday-form-revenue/cost/profit/loss）
     ├── BusinessExpenses.vue    # 支出记录：tabs 容器（受控 activeTab+change，仿 WorkbenchHealth）+ 4 列卡片 + ⚙️
     ├── BusinessInventory.vue   # 库存管理：低库存预警清单（停售商品排除）+ 库存卡片网格（桌面 5 列/≤640px 单列，bizinv-card-<id> 五项：商品/单位/进货合计/带出合计/库存剩余（row.stock 走 calcInventory），聚合走 businessCore.calcPurchaseTotals/calcBroughtOutTotals）+ 阈值可配置
-    ├── BusinessStats.vue       # 统计报表：近 7/14/30 天趋势双折线 SVG（坐标走 businessCore；分类/商品排行已移至 BusinessHome）
+    ├── BusinessStats.vue       # 统计报表：近 7/14/30 天营业额/成本/利润分组柱状图 SVG（每日 3 槽位异色、非零渲染、负值向下、顶部金额标签、全部/营业额/利润模式切换 bizstats-mode-*；坐标走 businessCore.businessTrendBars；分类/商品排行已移至 BusinessHome）
     └── BusinessCategoryManager.vue # 共享分类管理弹框（props kind: product/expense；标签页勾选/改名/上下移/删除/新增；Esc 关闭）
 ├── ThemeToggle.vue       # Dark mode toggle
 ├── HelpModal.vue         # Keyboard shortcuts help

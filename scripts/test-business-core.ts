@@ -14,7 +14,8 @@ import {
   calcInventory,
   calcProductRanking,
   calcPurchaseTotals,
-  businessTrendScale,
+  businessTrendBars,
+  compactAmount,
   deleteExpenseCategory,
   deleteProductCategory,
   emptyBusinessData,
@@ -286,20 +287,52 @@ test('T17 calcBusinessTrend', () => {
   assert.equal(calcBusinessTrend(d, 'bad-date').length, 0)
 })
 
-// T18 — businessTrendScale：坐标/网格线/全零态
-test('T18 businessTrendScale', () => {
+// T18 — businessTrendBars：分组柱坐标/模式过滤/负值向下/全零态/compactAmount
+test('T18 businessTrendBars', () => {
   const d = buildData()
   const series = calcBusinessTrend(d, '2026-08-05', 7)
-  const scale = businessTrendScale(series, 900, 260)
-  assert.ok(scale)
-  assert.equal(scale!.gridlines.length, 5)
-  assert.equal(scale!.points.length, 7)
-  assert.equal(scale!.dayLabels.length > 0, true)
+  // 全部模式：7 组、5 网格线、日期刻度非空；非零柱恒 5 根（08-01 成本250/利润-250 + 08-02 收入100/成本30/利润70）
+  const s1 = businessTrendBars(series, 900, 260, 'all')
+  assert.ok(s1)
+  assert.equal(s1!.gridlines.length, 5)
+  assert.equal(s1!.groups.length, 7)
+  assert.equal(s1!.dayLabels.length > 0, true)
+  assert.equal(s1!.groups.reduce((a, g) => a + g.bars.length, 0), 5)
+  // 负值柱：08-01 利润 -250 向下（y 自零线起、高度为正、标签在零线下方）
+  const d1 = s1!.groups.find(g => g.date === '2026-08-01')!
+  const profitBar = d1.bars.find(b => b.key === 'profit')!
+  assert.equal(profitBar.value, -250)
+  assert.equal(profitBar.y >= s1!.zeroY, true)
+  assert.equal(profitBar.height > 0, true)
+  assert.equal(profitBar.labelY > s1!.zeroY, true)
+  // 正值柱：08-02 收入 100 向上（y 在零线上方）
+  const d2 = s1!.groups.find(g => g.date === '2026-08-02')!
+  const revBar = d2.bars.find(b => b.key === 'revenue')!
+  assert.equal(revBar.value, 100)
+  assert.equal(revBar.y < s1!.zeroY, true)
+  assert.equal(revBar.height > 0, true)
+  // 单独看营业额：仅收入柱 1 根
+  const s2 = businessTrendBars(series, 900, 260, 'revenue')
+  assert.equal(s2!.groups.reduce((a, g) => a + g.bars.length, 0), 1)
+  assert.equal(s2!.groups.every(g => g.bars.every(b => b.key === 'revenue')), true)
+  // 单独看利润：仅利润柱 2 根（含负值）
+  const s3 = businessTrendBars(series, 900, 260, 'profit')
+  const pbars = s3!.groups.flatMap(g => g.bars)
+  assert.equal(pbars.length, 2)
+  assert.equal(pbars.every(b => b.key === 'profit'), true)
+  // 全零态：无柱、allZero true
   const empty = calcBusinessTrend(emptyBusinessData(), '2026-08-05', 7)
-  const s2 = businessTrendScale(empty, 900, 260)
-  assert.ok(s2)
-  assert.equal(s2!.allZero, true)
-  assert.equal(businessTrendScale([], 900, 260), null)
+  const s4 = businessTrendBars(empty, 900, 260, 'all')
+  assert.ok(s4)
+  assert.equal(s4!.allZero, true)
+  assert.equal(s4!.groups.every(g => g.bars.length === 0), true)
+  // 空序列/非法尺寸 → null
+  assert.equal(businessTrendBars([], 900, 260, 'all'), null)
+  assert.equal(businessTrendBars(series, 0, 260, 'all'), null)
+  // compactAmount：万/k 缩写与负号
+  assert.equal(compactAmount(200), '200')
+  assert.equal(compactAmount(-12345), '-1.2万')
+  assert.equal(compactAmount(1500), '1.5k')
 })
 
 // T20 — filterPurchasesByCategory：all 返回全部 / 按分类过滤 / 已删商品排除 / 未分类排除 / 空分类

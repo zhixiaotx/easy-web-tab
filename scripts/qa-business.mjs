@@ -7,7 +7,7 @@
  *  S4 收摊页：日记录卡（营业额/成本/利润/损耗四项）+ 编辑弹框四项预览 + 同日 upsert 覆盖
  *  S5 支出页：分类 tabs（内置 5）+ ⚙️ 分类管理新增分类 + 支出卡 + 新增支出
  *  S6 库存页：库存卡片网格（桌面 5 列，卡片含库存剩余）+ 低库存预警（停售商品排除）+ 阈值修改
- *  S7 统计页：趋势双折线 SVG（分类/商品排行已移至首页，统计页不再渲染）
+ *  S7 统计页：趋势分组柱状图（每日营业额/成本/利润 3 柱异色 + 顶部金额标签 + 全部/营业额/利润模式切换；分类/商品排行已移至首页）
  *  S8 设置弹窗「销售记账」tab：摊位名称/阈值/分类管理入口
  *  S9 明暗全页截图 + 移动端 375 无横向滚动
  * 与其它 QA 脚本禁止并行（同端口域）。运行：node scripts/qa-business.mjs
@@ -370,13 +370,33 @@ try {
     )
   })
 
-  await guard('S7) 统计页：趋势双折线（排行已移至首页）', async () => {
+  await guard('S7) 统计页：趋势分组柱状图（排行已移至首页）', async () => {
     await page.locator('[data-testid="bs-menu-stats"]').click()
     await page.waitForSelector('[data-testid="bizstats-trend"]', { state: 'visible', timeout: 8000 })
+    // 排行已移首页：统计页不再渲染排行行
     const catRows = await page.locator('[data-testid^="bizstats-cat-"]').count()
     const prodRows = await page.locator('[data-testid^="bizstats-prod-"]').count()
-    const lines = await page.locator('.bizstats-line').count()
-    record('S7) 统计页：无排行（已移首页）+ 双折线 SVG', catRows === 0 && prodRows === 0 && lines === 2, { catRows, prodRows, lines })
+    // 全部模式非零柱：08-01 成本200/利润-200、08-02 收入50/成本40/利润10、今日 成本35(进货20+支出15)/利润-35 → 恒 7 根 + 顶部金额标签
+    const barsAll = await page.locator('.bizstats-bar').count()
+    const labelsAll = await page.locator('.bizstats-bar-label').count()
+    const gridlines = await page.locator('.bizstats-gridline').count()
+    // 单独看营业额：仅 08-02 一根
+    await page.locator('[data-testid="bizstats-mode-revenue"]').click()
+    await page.waitForTimeout(300)
+    const barsRevenue = await page.locator('.bizstats-bar.revenue').count()
+    // 单独看利润：3 根（含负值向下）
+    await page.locator('[data-testid="bizstats-mode-profit"]').click()
+    await page.waitForTimeout(300)
+    const barsProfit = await page.locator('.bizstats-bar.profit').count()
+    // 回到全部模式
+    await page.locator('[data-testid="bizstats-mode-all"]').click()
+    await page.waitForTimeout(300)
+    const barsBack = await page.locator('.bizstats-bar').count()
+    record(
+      'S7) 统计页：无排行（已移首页）+ 趋势分组柱状图（模式切换/顶部金额/负值向下）',
+      catRows === 0 && prodRows === 0 && barsAll === 7 && labelsAll === 7 && gridlines === 5 && barsRevenue === 1 && barsProfit === 3 && barsBack === 7,
+      { catRows, prodRows, barsAll, labelsAll, gridlines, barsRevenue, barsProfit, barsBack }
+    )
   })
 
   await guard('S8) 设置弹窗销售记账 tab', async () => {

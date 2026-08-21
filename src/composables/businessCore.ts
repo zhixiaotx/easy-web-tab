@@ -595,55 +595,109 @@ export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30
   return out
 }
 
-/** 折线图坐标（仿 ledger trendChartScale：nice 天花板 {1,2,5}×10^k、5 网格线、逐点坐标、日期刻度） */
-export interface TrendChartScale {
+/** 分组柱状图单根柱几何（仅非零值生成；负值向下） */
+export interface TrendBar {
+  key: 'revenue' | 'cost' | 'profit'
+  x: number
+  y: number
+  w: number
+  height: number
+  value: number
+  labelX: number
+  labelY: number
+}
+
+/** 柱状图坐标（每日固定 3 槽位 营业额/成本/利润、隐藏键留空保持对齐稳定；nice 天花板+底部 {1,2,5}×10^k、5 网格线、日期刻度） */
+export interface TrendBarsScale {
   maxY: number
+  minY: number
+  zeroY: number
   gridlines: { y: number; label: string }[]
-  points: { date: string; revX: number; revY: number; profitX: number; profitY: number }[]
+  groups: { date: string; bars: TrendBar[] }[]
   dayLabels: { x: number; label: string }[]
   allZero: boolean
 }
 
-export function businessTrendScale(series: TrendPoint[], width: number, height: number, pad = 24): TrendChartScale | null {
-  if (series.length === 0 || width <= 0 || height <= 0) return null
-  const maxVal = Math.max(0, ...series.flatMap(p => [p.revenue, p.profit]))
-  const allZero = maxVal <= 0
-  // nice 天花板 {1,2,5}×10^k
-  let maxY = 0
-  if (!allZero) {
-    const exp = Math.floor(Math.log10(maxVal))
-    const base = Math.pow(10, exp)
-    for (const m of [1, 2, 5, 10]) {
-      if (m * base >= maxVal) {
-        maxY = m * base
-        break
-      }
-    }
-    if (maxY === 0) maxY = Math.ceil(maxVal)
-  } else {
-    maxY = 10
+export type TrendBarMode = 'all' | 'revenue' | 'profit'
+
+const TREND_BAR_KEYS = ['revenue', 'cost', 'profit'] as const
+
+/** 金额紧凑格式（柱顶标签）：≥1万 → X.X万、≥1千 → X.Xk、其余四舍五入取整 */
+export function compactAmount(n: number): string {
+  if (!Number.isFinite(n)) return '0'
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs >= 10000) return sign + Math.round(abs / 1000) / 10 + '万'
+  if (abs >= 1000) return sign + Math.round(abs / 100) / 10 + 'k'
+  return sign + String(Math.round(abs))
+}
+
+function niceCeil(v: number): number {
+  if (v <= 0) return 0
+  const exp = Math.floor(Math.log10(v))
+  const base = Math.pow(10, exp)
+  for (const m of [1, 2, 5, 10]) {
+    if (m * base >= v) return m * base
   }
+  return Math.ceil(v)
+}
+
+export function businessTrendBars(
+  series: TrendPoint[],
+  width: number,
+  height: number,
+  mode: TrendBarMode,
+  pad = 24
+): TrendBarsScale | null {
+  if (!Array.isArray(series) || series.length === 0 || width <= 0 || height <= 0) return null
+  const visibleKeys: (typeof TREND_BAR_KEYS)[number][] =
+    mode === 'revenue' ? ['revenue'] : mode === 'profit' ? ['profit'] : [...TREND_BAR_KEYS]
+  const values = series.flatMap(p => visibleKeys.map(k => p[k]))
+  const maxVal = Math.max(0, ...values)
+  const minVal = Math.min(0, ...values)
+  const allZero = maxVal <= 0 && minVal >= 0
+  // nice 天花板/底部 {1,2,5}×10^k（负值向下，minY 对称取 nice 底）
+  const maxY = allZero ? 10 : niceCeil(maxVal)
+  const minY = minVal < 0 ? -niceCeil(-minVal) : 0
   const innerW = width - pad * 2
   const innerH = height - pad * 2
+  const span = maxY - minY || 1
+  const yOf = (v: number) => pad + ((maxY - v) / span) * innerH
+  const zeroY = yOf(0)
   const gridlines = Array.from({ length: 5 }, (_, i) => {
-    const frac = i / 4
-    const y = pad + (1 - frac) * innerH
-    return { y: Math.round(y * 100) / 100, label: formatYuan((maxY * frac) * 1) }
+    const value = minY + (span * i) / 4
+    return { y: Math.round(yOf(value) * 100) / 100, label: formatYuan(value) }
   })
   const n = series.length
-  const stepX = n > 1 ? innerW / (n - 1) : 0
-  const xOf = (i: number) => (n > 1 ? pad + i * stepX : width / 2)
-  const yOf = (v: number) => pad + (1 - Math.min(v, maxY) / maxY) * innerH
-  const points = series.map((p, i) => ({
-    date: p.date,
-    revX: Math.round(xOf(i) * 100) / 100,
-    revY: Math.round(yOf(p.revenue) * 100) / 100,
-    profitX: Math.round(xOf(i) * 100) / 100,
-    profitY: Math.round(yOf(p.profit) * 100) / 100
-  }))
+  const dayW = innerW / n
+  const slotW = dayW / TREND_BAR_KEYS.length
+  const barW = Math.max(2, Math.min(28, slotW * 0.68))
+  const groups = series.map((p, i) => {
+    const groupX = pad + dayW * i
+    const bars: TrendBar[] = []
+    for (const k of visibleKeys) {
+      const value = p[k]
+      if (value === 0) continue // 非零才渲染
+      const slot = TREND_BAR_KEYS.indexOf(k)
+      const x = groupX + slot * slotW + (slotW - barW) / 2
+      const y = value > 0 ? yOf(value) : zeroY
+      const h = value > 0 ? zeroY - yOf(value) : yOf(value) - zeroY
+      bars.push({
+        key: k,
+        x: Math.round(x * 100) / 100,
+        y: Math.round(y * 100) / 100,
+        w: Math.round(barW * 100) / 100,
+        height: Math.round(h * 100) / 100,
+        value,
+        labelX: Math.round((x + barW / 2) * 100) / 100,
+        labelY: Math.round((value > 0 ? y - 4 : yOf(value) + 11) * 100) / 100
+      })
+    }
+    return { date: p.date, bars }
+  })
   const labelEvery = Math.max(1, Math.ceil(n / 6))
   const dayLabels = series
-    .map((p, i) => ({ x: Math.round(xOf(i) * 100) / 100, label: p.date.slice(5) }))
-    .filter((_, i) => i % labelEvery === 0 || i === series.length - 1)
-  return { maxY, gridlines, points, dayLabels, allZero }
+    .map((p, i) => ({ x: Math.round((pad + dayW * i + dayW / 2) * 100) / 100, label: p.date.slice(5) }))
+    .filter((_, i) => i % labelEvery === 0 || i === n - 1)
+  return { maxY, minY, zeroY: Math.round(zeroY * 100) / 100, gridlines, groups, dayLabels, allZero }
 }

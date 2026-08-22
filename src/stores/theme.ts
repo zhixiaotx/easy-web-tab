@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { markDirty } from '@/composables/useCloudSync'
 
 const THEME_STORAGE_KEY = 'user-theme'
 const BG_STORAGE_KEY = 'user-background'
@@ -50,6 +51,7 @@ export const useThemeStore = defineStore('theme', () => {
   function toggleTheme() {
     theme.value = theme.value === 'light' ? 'dark' : 'light'
     localStorage.setItem(THEME_STORAGE_KEY, theme.value)
+    markDirty()
     applyTheme()
   }
 
@@ -156,6 +158,7 @@ export const useThemeStore = defineStore('theme', () => {
       customs: customBackgrounds.value
     }
     localStorage.setItem(BG_STORAGE_KEY, JSON.stringify(data))
+    markDirty()
   }
 
   // 应用背景到 DOM

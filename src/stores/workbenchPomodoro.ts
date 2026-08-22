@@ -3,6 +3,7 @@ import { ref, toRaw } from 'vue'
 import type { PomodoroData, PomodoroSettings } from '@/composables/pomodoroCore'
 import { emptyPomodoroData, normalizePomodoroData, todayStats as pomodoroTodayStats } from '@/composables/pomodoroCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 工作台番茄钟 store（数据存 IndexedDB store 'pomodoro'，key 'items'；经 pomodoroCore 归一化后读写）。
 // 今日统计等纯逻辑一律委托 pomodoroCore，store 只做薄委托 + 持久化。
@@ -30,6 +31,7 @@ export const useWorkbenchPomodoroStore = defineStore('workbenchPomodoro', () => 
         settings: toRaw(data.value.settings),
         records: toRaw(data.value.records)
       })
+      markDirty()
     } catch (e) {
       console.error('[workbenchPomodoro] savePomodoro', e)
     }

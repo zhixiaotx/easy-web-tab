@@ -9,6 +9,7 @@ import {
   normalizeWeightRecord
 } from '@/composables/healthCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 各模块记录 id 前缀
 const RECORD_PREFIX: Record<HealthModule, string> = {
@@ -56,6 +57,7 @@ export const useWorkbenchHealthStore = defineStore('workbenchHealth', () => {
         plans: toRaw(plans.value),
         records: toRaw(records.value)
       })
+      markDirty()
     } catch (e) {
       console.error('[workbenchHealth] saveHealth', e)
     }

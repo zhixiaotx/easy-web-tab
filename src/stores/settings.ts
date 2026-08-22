@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
 import { idbGet, idbPut, idbClear } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import {
   WORKBENCH_MENU_DEFAULT_ORDER,
   WORKBENCH_MENU_KEYS,
@@ -232,6 +233,16 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   out.reminderEmailServiceId = typeof data.reminderEmailServiceId === 'string' ? data.reminderEmailServiceId : ''
   out.reminderEmailTemplateId = typeof data.reminderEmailTemplateId === 'string' ? data.reminderEmailTemplateId : ''
   out.reminderEmailPublicKey = typeof data.reminderEmailPublicKey === 'string' ? data.reminderEmailPublicKey : ''
+  // 云同步：5 字段解析（布尔仅采纳 true/false，字符串原样透传，数字 clamp >=0 整数，非法/缺失回退默认）
+  out.cloudSyncEnabled = typeof data.cloudSyncEnabled === 'boolean' ? data.cloudSyncEnabled : false
+  out.cloudSyncUrl = typeof data.cloudSyncUrl === 'string' ? data.cloudSyncUrl : ''
+  out.cloudSyncUsername = typeof data.cloudSyncUsername === 'string' ? data.cloudSyncUsername : ''
+  out.cloudSyncPassword = typeof data.cloudSyncPassword === 'string' ? data.cloudSyncPassword : ''
+  if (typeof data.cloudSyncInterval === 'number' && Number.isFinite(data.cloudSyncInterval)) {
+    out.cloudSyncInterval = Math.max(0, Math.floor(data.cloudSyncInterval))
+  } else {
+    out.cloudSyncInterval = 0
+  }
   return out
 }
 
@@ -269,6 +280,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const reminderEmailTemplateId = ref<string>('')
   const reminderEmailPublicKey = ref<string>('')
 
+  // 云同步配置（5 字段）：默认关闭/空串
+  const cloudSyncEnabled = ref<boolean>(false)
+  const cloudSyncUrl = ref<string>('')
+  const cloudSyncUsername = ref<string>('')
+  const cloudSyncPassword = ref<string>('')
+  const cloudSyncInterval = ref<number>(0)
+
   // ========================================
   // 持久化
   // ========================================
@@ -294,10 +312,16 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       reminderEmailTo: reminderEmailTo.value,
       reminderEmailServiceId: reminderEmailServiceId.value,
       reminderEmailTemplateId: reminderEmailTemplateId.value,
-      reminderEmailPublicKey: reminderEmailPublicKey.value
+      reminderEmailPublicKey: reminderEmailPublicKey.value,
+      cloudSyncEnabled: cloudSyncEnabled.value,
+      cloudSyncUrl: cloudSyncUrl.value,
+      cloudSyncUsername: cloudSyncUsername.value,
+      cloudSyncPassword: cloudSyncPassword.value,
+      cloudSyncInterval: cloudSyncInterval.value
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
+    markDirty()
   }
 
   // ========================================
@@ -397,6 +421,16 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       reminderEmailServiceId.value = typeof effective.reminderEmailServiceId === 'string' ? effective.reminderEmailServiceId : ''
       reminderEmailTemplateId.value = typeof effective.reminderEmailTemplateId === 'string' ? effective.reminderEmailTemplateId : ''
       reminderEmailPublicKey.value = typeof effective.reminderEmailPublicKey === 'string' ? effective.reminderEmailPublicKey : ''
+      // 云同步：5 字段白名单应用
+      cloudSyncEnabled.value = effective.cloudSyncEnabled === true
+      cloudSyncUrl.value = typeof effective.cloudSyncUrl === 'string' ? effective.cloudSyncUrl : ''
+      cloudSyncUsername.value = typeof effective.cloudSyncUsername === 'string' ? effective.cloudSyncUsername : ''
+      cloudSyncPassword.value = typeof effective.cloudSyncPassword === 'string' ? effective.cloudSyncPassword : ''
+      if (typeof effective.cloudSyncInterval === 'number' && Number.isFinite(effective.cloudSyncInterval)) {
+        cloudSyncInterval.value = Math.max(0, Math.floor(effective.cloudSyncInterval))
+      } else {
+        cloudSyncInterval.value = 0
+      }
       // 归一化结果写回 IDB（fire-and-forget）：保证导出/导入往返幂等，镜像迁移分支的 idbPut
       persist()
     }
@@ -579,6 +613,28 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 云同步 setters
+  function setCloudSyncEnabled(v: boolean) {
+    cloudSyncEnabled.value = v
+    persist()
+  }
+  function setCloudSyncUrl(s: string) {
+    cloudSyncUrl.value = s
+    persist()
+  }
+  function setCloudSyncUsername(s: string) {
+    cloudSyncUsername.value = s
+    persist()
+  }
+  function setCloudSyncPassword(s: string) {
+    cloudSyncPassword.value = s
+    persist()
+  }
+  function setCloudSyncInterval(n: number) {
+    cloudSyncInterval.value = Math.max(0, Math.floor(n))
+    persist()
+  }
+
   // 菜单开关判定（缺失键 = 显示）；home 恒显示（视图/设置弹窗锁定其开关）
   function isWorkbenchMenuEnabled(key: string): boolean {
     return workbenchMenuVisibility.value[key] !== false
@@ -629,6 +685,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     reminderEmailServiceId,
     reminderEmailTemplateId,
     reminderEmailPublicKey,
+    cloudSyncEnabled,
+    cloudSyncUrl,
+    cloudSyncUsername,
+    cloudSyncPassword,
+    cloudSyncInterval,
     initSettings,
     applySettings,
     setDialogSize,
@@ -649,6 +710,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setReminderEmailServiceId,
     setReminderEmailTemplateId,
     setReminderEmailPublicKey,
+    setCloudSyncEnabled,
+    setCloudSyncUrl,
+    setCloudSyncUsername,
+    setCloudSyncPassword,
+    setCloudSyncInterval,
     resetDefaults,
     moveWorkbenchMenuItem,
     renameWorkbenchMenuItem,

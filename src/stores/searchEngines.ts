@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { markDirty } from '@/composables/useCloudSync'
 
 export interface SearchEngine {
   id: string
@@ -120,11 +121,13 @@ export const useSearchEnginesStore = defineStore('searchEngines', () => {
   // 持久化自定义引擎
   function saveEngines() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(customEngines.value))
+    markDirty()
   }
 
   // 持久化内置引擎覆盖
   function saveBuiltInOverrides() {
     localStorage.setItem(BUILT_IN_OVERRIDES_KEY, JSON.stringify(builtInOverrides.value))
+    markDirty()
   }
 
   // 添加引擎

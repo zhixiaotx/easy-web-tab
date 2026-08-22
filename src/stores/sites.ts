@@ -15,6 +15,7 @@ import {
   type CheckProgress
 } from '../composables/useDeadLinkChecker'
 import { scheduleAutoBackup } from '../composables/useBackup'
+import { markDirty } from '@/composables/useCloudSync'
 
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<Site[]>([])
@@ -411,6 +412,7 @@ export const useSitesStore = defineStore('sites', () => {
   function saveUserSites() {
     // 只保存非内置的网站（这里简化处理，保存所有）
     localStorage.setItem('user-sites', JSON.stringify(sites.value))
+    markDirty()
     
     // 触发自动备份（5分钟后执行，如中途有修改则重新计时）
     const categoriesStore = useCategoriesStore()

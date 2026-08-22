@@ -1,5 +1,8 @@
-// Simple startup script for PM2
-// This ensures the server runs correctly on Windows
+// Production startup script (PM2 / node server.cjs)
+// 功能与 scripts/serve-with-rewrites.cjs 一致：
+//   - 静态托管 dist/ + SPA fallback + 小游戏重写
+//   - 挂载 /api/webdav-proxy 同源代理（坚果云等 WebDAV 服务商不允许浏览器 CORS，需 Node 服务端代发请求）
+// 原 server.cjs 走 npx serve -s（无 rewrite、无云同步代理）已被替换，避免与 scripts/serve-with-rewrites.cjs 分叉。
 
 const { spawn } = require('child_process');
 const path = require('path');
@@ -16,7 +19,7 @@ if (!fs.existsSync(distDir)) {
     shell: true,
     stdio: 'inherit'
   });
-  
+
   build.on('close', (code) => {
     if (code !== 0) {
       console.error('Build failed!');
@@ -29,16 +32,8 @@ if (!fs.existsSync(distDir)) {
 }
 
 function startServer() {
-  console.log('Starting server on http://localhost:16718');
-  
-  const server = spawn('npx', ['serve', '-s', 'dist', '-l', '16718'], {
-    cwd: projectDir,
-    shell: true,
-    stdio: 'inherit'
-  });
-  
-  server.on('close', (code) => {
-    console.log(`Server exited with code ${code}`);
-    process.exit(code);
-  });
+  console.log('Starting server on http://localhost:16718 (with WebDAV proxy)');
+  // 直接 require 本项目自定义 HTTP 服务器（含游戏重写 + 云同步代理）
+  // serve-with-rewrites.cjs 会调用 http.createServer(...).listen(16718)，与旧行为端口一致
+  require(path.join(projectDir, 'scripts', 'serve-with-rewrites.cjs'));
 }

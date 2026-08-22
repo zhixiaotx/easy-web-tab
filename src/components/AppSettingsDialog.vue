@@ -35,15 +35,17 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
+import { useCloudSync } from '@/composables/useCloudSync'
 import Icon from '@/components/Icon.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
+import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 
 // 弹窗 id 列表：从导出的契约表派生（与 store 内部 DIALOG_IDS 顺序一致），
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账）
-const activeTab = ref<'nav' | 'wb' | 'remind' | 'business'>('nav')
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 云同步）
+const activeTab = ref<'nav' | 'wb' | 'remind' | 'business' | 'sync'>('nav')
 
 const emit = defineEmits<{
   close: []
@@ -400,6 +402,48 @@ async function handleTestEmail(): Promise<void> {
   }
 }
 
+// ====================
+// 云同步（仅云同步 tab）
+// ====================
+const cloudSync = useCloudSync()
+const syncTestBusy = ref(false)
+const syncNowBusy = ref(false)
+
+const lastSyncText = computed(() => {
+  const t = cloudSync.lastSyncAt.value
+  if (!t) return '未同步'
+  const d = new Date(t)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+})
+
+async function onToggleCloudSync(): Promise<void> {
+  const next = !store.cloudSyncEnabled
+  store.setCloudSyncEnabled(next)
+  if (next) {
+    toast.info('云同步已启用，请填入 WebDAV 配置后点「测试连接」')
+  }
+}
+
+async function handleSyncTest(): Promise<void> {
+  if (syncTestBusy.value) return
+  syncTestBusy.value = true
+  const result = await cloudSync.testConnection(store.cloudSyncUrl, store.cloudSyncUsername, store.cloudSyncPassword)
+  syncTestBusy.value = false
+  if (result.ok) {
+    toast.success('连接成功')
+  } else {
+    toast.error(result.error ?? '连接失败')
+  }
+}
+
+async function handleSyncNow(): Promise<void> {
+  if (syncNowBusy.value) return
+  syncNowBusy.value = true
+  await cloudSync.syncNow()
+  syncNowBusy.value = false
+}
+
 // ESC 键关闭弹框
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -613,7 +657,7 @@ watch(
 watch(
   [() => store.workbenchPageVisible, () => store.businessPageVisible],
   () => {
-    if (store.workbenchPageVisible === false && (activeTab.value === 'wb' || activeTab.value === 'remind')) {
+    if (store.workbenchPageVisible === false && (activeTab.value === 'wb' || activeTab.value === 'remind' || activeTab.value === 'sync')) {
       activeTab.value = 'nav'
     }
     if (store.businessPageVisible === false && activeTab.value === 'business') {
@@ -675,6 +719,14 @@ onUnmounted(() => {
             data-testid="settings-tab-business"
             @click="activeTab = 'business'"
           >{{ store.businessPageDisplayName }}</button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'sync' }"
+            :aria-selected="activeTab === 'sync'"
+            @click="activeTab = 'sync'"
+          >云同步</button>
         </div>
 
         <p v-if="activeTab === 'nav' || activeTab === 'wb'" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
@@ -1211,6 +1263,95 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- 云同步（仅云同步 tab）：WebDAV 配置（开关 + 三字段 + 测试连接 + 立即同步 + 上次同步时间 + 首次使用引导） -->
+        <div v-if="activeTab === 'sync'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">云同步总开关</h3>
+            <button
+              type="button"
+              class="switch-btn"
+              :class="{ on: store.cloudSyncEnabled }"
+              role="switch"
+              :aria-checked="store.cloudSyncEnabled"
+              data-testid="sync-switch"
+              @click="onToggleCloudSync"
+            >
+              <span class="switch-thumb"></span>
+            </button>
+          </div>
+          <p class="wb-menu-hint">
+            启用后将通过 WebDAV 同步导航、工作台、销售记账等全部数据（不含自定义图标）。推荐使用坚果云（国内访问稳定）或任意支持 WebDAV 的服务。
+          </p>
+          <p v-if="!store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; margin-top: 0;">
+            首次使用指引：① 注册坚果云账号；② 账户信息 → 安全选项 → 添加应用，获取应用密码（非账户密码）；③ 开启开关，填入下方配置；④ 点「测试连接」确认无误后点「立即同步」。
+          </p>
+          <div class="wb-menu-hint" style="background: var(--color-bg-2); border-left: 3px solid var(--color-primary); padding: 10px 14px; border-radius: 4px; margin: 8px 0 16px;">
+            <strong style="color: var(--color-text);">CORS 兼容说明：</strong>坚果云 / Nextcloud 等 WebDAV 服务商默认不返回 CORS 预检响应头（浏览器 MKCOL+Authorization 会触发 OPTIONS 拦截）。<br />
+            本应用已自动在以下三种启动方式内置「同源代理」<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，可直接跨域：
+            <ul style="margin: 6px 0 0 20px; padding: 0;">
+              <li>开发环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run dev</code>（Vite dev 中间件）</li>
+              <li>预览环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run serve / node server.cjs / pm2 start pm2.config.cjs</code>（内置 Node HTTP 服务）</li>
+              <li>预览构建包：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run preview</code>（Vite preview 已附加代理）</li>
+            </ul>
+            ❗ 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
+          </div>
+
+          <div v-if="store.cloudSyncEnabled" class="remind-fields">
+            <label class="remind-field">
+              <span class="remind-label">WebDAV URL</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="https://dav.jianguake.com/dav/"
+                data-testid="sync-url"
+                :value="store.cloudSyncUrl"
+                @input="store.setCloudSyncUrl(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">用户名</span>
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                placeholder="云盘账号邮箱"
+                data-testid="sync-username"
+                :value="store.cloudSyncUsername"
+                @input="store.setCloudSyncUsername(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <label class="remind-field">
+              <span class="remind-label">应用密码</span>
+              <input
+                type="password"
+                class="wb-menu-name-input"
+                placeholder="云盘应用密码（非账户密码）"
+                data-testid="sync-password"
+                :value="store.cloudSyncPassword"
+                @input="store.setCloudSyncPassword(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+          </div>
+
+          <div v-if="store.cloudSyncEnabled" class="remind-actions" style="display: flex; align-items: center; gap: 12px;">
+            <button
+              type="button"
+              class="wb-menu-btn"
+              data-testid="sync-test"
+              :disabled="syncTestBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              @click="handleSyncTest"
+            >测试连接</button>
+            <button
+              type="button"
+              class="wb-menu-btn"
+              style="background: var(--color-primary); color: #fff; border-color: var(--color-primary);"
+              data-testid="sync-now"
+              :disabled="syncNowBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              @click="handleSyncNow"
+            >立即同步</button>
+            <span data-testid="sync-last" class="wb-menu-hint" style="margin-left: auto;">上次同步：{{ lastSyncText }}</span>
+          </div>
+        </div>
+
         <div class="settings-grid" v-if="activeTab === 'nav' || activeTab === 'wb'">
           <div class="grid-header">
             <span class="col-label">弹窗</span>
@@ -1268,6 +1409,9 @@ onUnmounted(() => {
 
     <!-- 销售记账分类管理（共享弹框，z-index 高于设置弹窗） -->
     <BusinessCategoryManager v-if="bizCatManagerKind" :kind="bizCatManagerKind" @close="bizCatManagerKind = null" />
+
+    <!-- 云同步冲突弹框（z-index 高于设置弹窗） -->
+    <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
   </div>
   </Transition>
 </template>

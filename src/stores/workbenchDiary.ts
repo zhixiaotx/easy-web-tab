@@ -3,6 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import type { DiaryData, WorkbenchDiary } from '@/types'
 import { emptyDiaryData, findDiaryByDate, normalizeDiaryData, sortDiaryEntries } from '../composables/diaryCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 工作台日记本 store（数据存 IndexedDB store 'diary'：每天一条，date 本地 'YYYY-MM-DD' 唯一，upsert 语义，经 diaryCore 归一化后读写）
 export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
@@ -24,6 +25,7 @@ export const useWorkbenchDiaryStore = defineStore('workbench-diary', () => {
       // 存 DiaryData 对象形状 { entries }——normalizeDiaryData 拒绝裸数组（diary 无旧数组格式，
       // 见 diaryCore normalizeDiaryData Array.isArray → empty），写裸数组会导致保存后刷新日记全部丢失（T5 QA 实证）
       await idbPut('diary', { entries: toRaw(entries.value) })
+      markDirty()
     } catch (e) {
       console.error('[Diary] save failed', e)
     }

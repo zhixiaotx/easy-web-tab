@@ -3,16 +3,20 @@ import { onMounted } from 'vue'
 import { useThemeStore } from './stores/theme'
 import Toast from './components/Toast.vue'
 import CountdownReminder from './components/CountdownReminder.vue'
+import CloudSyncConflictModal from './components/CloudSyncConflictModal.vue'
 import BeianFooter from './components/BeianFooter.vue'
 import { useToast } from './composables/useToast'
 import { useCountdownReminder } from './composables/useCountdownReminder'
+import { useCloudSync } from './composables/useCloudSync'
 
 const themeStore = useThemeStore()
 const { toasts, removeToast } = useToast()
+const cloudSync = useCloudSync()
 
 onMounted(() => {
   themeStore.initTheme()
   useCountdownReminder().init()
+  cloudSync.init()
 })
 </script>
 
@@ -32,6 +36,7 @@ onMounted(() => {
   </router-view>
   <Toast :toasts="toasts as any" @remove="removeToast" />
   <CountdownReminder />
+  <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
   <BeianFooter />
 </template>
 

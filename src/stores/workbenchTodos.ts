@@ -8,6 +8,7 @@ import {
   purgeLegacyBuiltinCategories
 } from '@/composables/todoCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 优先级排序权重：高(0) → 中(1) → 低(2)
 const PRIORITY_ORDER: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 }
@@ -153,6 +154,7 @@ export const useWorkbenchTodosStore = defineStore('workbenchTodos', () => {
     try {
       // toRaw：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError），需写入原始数组
       await idbPut('todos', toRaw(todos.value))
+      markDirty()
     } catch (e) {
       console.error('[Todos] save failed', e)
     }

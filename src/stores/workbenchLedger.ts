@@ -3,6 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import type { LedgerCategory, LedgerData, LedgerEntry } from '@/types'
 import { emptyLedgerData, localDateStr, monthKeyOf, normalizeLedgerData, normalizeLedgerEntry, planAutoCopy } from '@/composables/ledgerCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 工作台记账本 store（数据存 IndexedDB store 'ledger'，经 ledgerCore 归一化后读写）
 export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
@@ -58,6 +59,7 @@ export const useWorkbenchLedgerStore = defineStore('workbenchLedger', () => {
       // toRaw 只解开最外层代理，故对每个 reactive 数组分别 toRaw 后再放入普通对象——
       // 对 { ... } 字面量整体 toRaw 无效（字面量本身非响应式，嵌套 Proxy 不会被解开）。
       await idbPut('ledger', { categories: toRaw(categories.value), entries: toRaw(entries.value) })
+      markDirty()
     } catch (e) {
       console.error('[Ledger] save failed', e)
     }

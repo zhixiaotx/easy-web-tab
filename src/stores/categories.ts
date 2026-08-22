@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Category } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
+import { markDirty } from '@/composables/useCloudSync'
 
 const STORAGE_KEY = 'user-categories'
 const DELETED_LEGACY_KEY = 'user-deleted-legacy-ids'
@@ -50,6 +51,7 @@ export const useCategoriesStore = defineStore('categories', () => {
   // Persist to localStorage
   function saveCustomCategories() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(customCategories.value))
+    markDirty()
   }
 
   // Merged view: built-in + custom, sorted by sort field

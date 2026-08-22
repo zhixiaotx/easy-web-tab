@@ -11,6 +11,7 @@ import {
   weeklyAttainment
 } from '@/composables/habitCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 习惯 CRUD 操作错误语义：empty 空名 / duplicate 重名 / not-found 不存在。
 export type HabitOpError = 'empty' | 'duplicate' | 'not-found'
@@ -42,6 +43,7 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
       // toRaw 只解开最外层代理，故对每个 reactive 数组分别 toRaw 后再放入普通对象——
       // 对 { ... } 字面量整体 toRaw 无效（字面量本身非响应式，嵌套 Proxy 不会被解开）。
       await idbPut('habits', { habits: toRaw(habits.value), records: toRaw(records.value) })
+      markDirty()
     } catch (e) {
       console.error('[Habits] save failed', e)
     }

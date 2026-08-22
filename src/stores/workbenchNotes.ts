@@ -3,6 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import type { NoteCategory, NoteColor, NoteData, NoteType, TimelineEntry, WorkbenchNote } from '@/types'
 import { emptyNoteData, normalizeNoteData, sortNotes } from '../composables/noteCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 工作台便签 store（数据存 IndexedDB store 'notes'：便签分类 + 时光轴条目 混合模型，经 noteCore 归一化后读写）
 export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
@@ -29,6 +30,7 @@ export const useWorkbenchNotesStore = defineStore('workbenchNotes', () => {
       // toRaw 只解开最外层代理，故对每个 reactive 数组分别 toRaw 后再放入普通对象——
       // 对 { ... } 字面量整体 toRaw 无效（字面量本身非响应式，嵌套 Proxy 不会被解开）。
       await idbPut('notes', { categories: toRaw(categories.value), notes: toRaw(notes.value) })
+      markDirty()
     } catch (e) {
       console.error('[Notes] save failed', e)
     }

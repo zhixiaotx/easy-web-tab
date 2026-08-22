@@ -87,6 +87,46 @@ export function idbClear(store: IdbStore): Promise<void> {
   })
 }
 
+/** 云同步 prefs 白名单（仅这些 localStorage key 打包到 v9 信封，不含图标、不含加密身份键） */
+export const WORKBENCH_PREFS_KEYS = [
+  'user-sites',
+  'user-categories',
+  'user-deleted-legacy-ids',
+  'user-search-engines',
+  'built-in-engine-overrides',
+  'built-in-engine-default',
+  'user-theme',
+  'user-background',
+  'user-countdown-categories',
+  'user-countdown-tab-categories',
+  'user-countdown-sort',
+  'user-todo-categories',
+  'user-todo-tab-categories'
+] as const
+
+/** 打包 localStorage 偏好为 Record<string, string>；idbExportAll 直接调用 */
+export function packPrefsFromLocalStorage(): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const k of WORKBENCH_PREFS_KEYS) {
+    const v = localStorage.getItem(k)
+    if (v !== null) out[k] = v
+  }
+  return out
+}
+
+/** 从 WorkbenchData.prefs 回写 localStorage；idbImportAll 事务成功后调用 */
+export function applyPrefsToLocalStorage(prefs: Record<string, string> | undefined): void {
+  if (!prefs) return
+  for (const k of WORKBENCH_PREFS_KEYS) {
+    const v = prefs[k]
+    if (v !== undefined) {
+      localStorage.setItem(k, v)
+    } else {
+      localStorage.removeItem(k)
+    }
+  }
+}
+
 export async function idbExportAll(): Promise<WorkbenchData> {
   const [todos, notes, diary, countdowns, passwords, health, ledger, settings, pomodoro, habits, business] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
@@ -116,14 +156,15 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     habits: habits ?? emptyHabitsData(),
     business: business ?? emptyBusinessData(),
     passwordsSalt: getStoredSaltHex() ?? undefined,
-    passwordVerification: getStoredVerification() ?? undefined
+    passwordVerification: getStoredVerification() ?? undefined,
+    prefs: packPrefsFromLocalStorage()
   }
 }
 
-export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswordIdentity: boolean }> {
-  // 版本白名单：接受 v1-v8（v1-v7 旧备份兼容导入，不拒绝——AGENTS.md 硬性规范）；
-  // 拒绝 v0 与未来 v9+（范围守卫保留 number 类型，下方 v1 分支可正常判定）
-  if (data.version < 1 || data.version > 8) {
+export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswordIdentity: boolean; appliedPrefs: boolean }> {
+  // 版本白名单：接受 v1-v9（v1-v7 旧备份兼容导入，不拒绝——AGENTS.md 硬性规范）；
+  // 拒绝 v0 与未来 v10+（范围守卫保留 number 类型，下方 v1 分支可正常判定）
+  if (data.version < 1 || data.version > 9) {
     throw new Error('备份文件版本不兼容')
   }
   // notes 兼容旧数组（v1/v2 纯便签列表）与新对象（v3 NoteData）两种格式
@@ -165,6 +206,8 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   data = { ...data, diary: data.diary ?? emptyDiaryData() }
   // business 兼容 v1-v7 备份（无该字段 → empty 兜底）；v8 备份原样透传（含内置种子分类契约）
   data = { ...data, business: data.business ?? emptyBusinessData() }
+  // prefs 兼容 v1-v8 备份（无该字段 → {} 空对象兜底，导入后不回写任何 localStorage）
+  data = { ...data, prefs: (typeof data.prefs === 'object' && data.prefs !== null) ? data.prefs : {} }
   // 密码加密身份归一化（v8）：仅当备份携带完整身份（盐+验证串均为非空字符串）且密码库非空时才采纳；
   // 字段存在但畸形 → 视同缺失（向后兼容，不硬失败）。身份与密文绑定，二者必须成套迁移。
   const backupSalt = typeof data.passwordsSalt === 'string' && data.passwordsSalt ? data.passwordsSalt : undefined
@@ -193,5 +236,8 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   if (adoptedPasswordIdentity && backupSalt && backupVerification) {
     adoptPasswordIdentity(backupSalt, backupVerification)
   }
-  return { adoptedPasswordIdentity }
+  // v9 prefs 回写 localStorage（事务成功后再回写，失败不影响 localStorage）
+  const hasPrefs = typeof data.prefs === 'object' && data.prefs !== null && Object.keys(data.prefs).length > 0
+  if (hasPrefs) applyPrefsToLocalStorage(data.prefs)
+  return { adoptedPasswordIdentity, appliedPrefs: hasPrefs }
 }

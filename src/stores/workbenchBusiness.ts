@@ -25,6 +25,7 @@ import {
 } from '@/composables/businessCore'
 import type { CategoryOpResult } from '@/composables/businessCore'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 销售记账 store（数据存 IndexedDB store 'business'，key 'items'；随备份 v7 导出/导入）
 export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => {
@@ -65,6 +66,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
         expenses: toRaw(expenses.value),
         settings: toRaw(settings.value)
       })
+      markDirty()
     } catch (e) {
       console.error('[workbenchBusiness] saveBusiness', e)
     }

@@ -11,6 +11,7 @@ import {
   getSaltHex
 } from '../composables/useCrypto'
 import { idbGet, idbPut } from '../composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 const STORAGE_KEY = 'user-passwords'
 
@@ -65,6 +66,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     const encrypted = await encrypt(json, currentMasterPassword)
     try {
       await idbPut('passwords', encrypted)
+      markDirty()
     } catch (e) {
       console.error('[Passwords] save failed', e)
     }

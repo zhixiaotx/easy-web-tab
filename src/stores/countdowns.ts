@@ -11,6 +11,7 @@ import {
   type CountdownSortMode as SortMode,
   type CountdownSortDirection as SortDirection
 } from '../composables/countdownCore'
+import { markDirty } from '@/composables/useCloudSync'
 
 export type { CountdownItem, CountdownRemaining } from '@/types'
 export { calcRemaining, sortCountdowns } from '../composables/countdownCore'
@@ -143,6 +144,7 @@ export const useCountdownsStore = defineStore('countdowns', () => {
     try {
       // toRaw：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError），需写入原始数组
       await idbPut('countdowns', toRaw(countdowns.value))
+      markDirty()
     } catch (e) {
       console.error('[Countdowns] save failed', e)
     }

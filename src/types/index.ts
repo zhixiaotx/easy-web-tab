@@ -210,6 +210,11 @@ export interface AppSettingsData {
   workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 true）
   businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
   businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
+  cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
+  cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
+  cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
+  cloudSyncPassword?: string           // WebDAV 应用密码（空串 = 未配置，存 IDB 非 localStorage）
+  cloudSyncInterval?: number           // 后台定时同步间隔（0 = 仅触发式，>0 = 分钟数）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {
@@ -217,7 +222,7 @@ export function emptyAppSettingsData(): AppSettingsData {
 }
 
 // 工作台数据导出/导入格式
-export const WORKBENCH_DATA_VERSION = 8
+export const WORKBENCH_DATA_VERSION = 9
 
 export interface WorkbenchData {
   version: number
@@ -235,6 +240,9 @@ export interface WorkbenchData {
   business?: BusinessData // v7 新增：摆摊进销存（v1-v6 导入补空、v7 原样透传）
   passwordsSalt?: string // v8 新增：密码库 PBKDF2 盐 hex（内嵌自 localStorage password-salt-v2；与 passwordVerification 成对出现才有效）
   passwordVerification?: string // v8 新增：主密码验证串密文（内嵌自 localStorage password-verification-v2 原样）
+  clientId?: string          // v9 新增：推送设备标识（首次同步时生成 uuid，存 localStorage）
+  pushedAt?: number          // v9 新增：远端推送时间戳（ms）；idbExportAll 不主动输出此字段，仅云端往返携带
+  prefs?: Record<string, string>  // v9 新增：localStorage 偏好打包（导航 + 主题 + 工作台偏好；不含图标、不含加密身份键）
 }
 
 // ==================== 健康管理 ====================

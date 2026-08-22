@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-24 Vue 3 SFCs in the root plus 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+23 Vue 3 SFCs in the root plus 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -12,7 +12,7 @@ components/
 ├── GlobalSearch.vue      # Multi-engine search bar (583 lines)
 ├── BackgroundManager.vue # Background image picker (876 lines)
 ├── BackupManager.vue     # Import/export UI
-├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航管理页分类/标签栏展开收起）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-）+ 「销售记账」tab（activeTab +'business'：摊位名称 bizsettings-stall/低库存阈值 bizsettings-threshold/商品与支出分类管理入口 bizsettings-product-cats、bizsettings-expense-cats → 打开共享 BusinessCategoryManager 弹框；uses `useWorkbenchBusinessStore`）
+├── AppSettingsDialog.vue # 设置弹窗：弹窗尺寸设置 UI + 「导航设置」tab「导航筛选栏」开关（navfilter-switch，控制导航管理页分类/标签栏展开收起）+ 「导航设置」tab「站点管理」区块（原管理页工具栏九动作迁移入口：容器 stg-site-actions + 九钮 stg-act-import/export/add/check-links/engines/background/category/backup/icons；弹窗类先 emit close 再经 URL query modal=<key> 打开目标，导出/断链检测就地执行，导入走隐藏 file input 含搜索引擎整链）+ 「工作台设置」tab「工作台菜单」区块（排序/改名/显示开关/恢复默认，testid 前缀 wbmenu-；列表走 store.workbenchMenuAllItems 全量渲染保证关闭项可重新开启；uses `useAppSettingsStore` from settings.ts）+ 「提醒设置」tab（activeTab 'nav'|'wb'|'remind'，testid 前缀 remind-）+ 「销售记账」tab（activeTab +'business'：摊位名称 bizsettings-stall/低库存阈值 bizsettings-threshold/商品与支出分类管理入口 bizsettings-product-cats、bizsettings-expense-cats → 打开共享 BusinessCategoryManager 弹框；uses `useWorkbenchBusinessStore`）
 ├── CategoryManager.vue   # Category CRUD modal (built-in: only `video` locked)
 ├── CategoryTabs.vue      # Horizontal tab bar
 ├── CountdownModal.vue    # 前台倒计时弹框（/display，repeatLabel + categoryLabel 徽标；卡片底部新增可交互邮件提醒开关 `cd-email-toggle`/`cd-email-switch`：`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；启用成功 toast 提示需在设置-提醒设置配置邮箱）
@@ -21,7 +21,6 @@ components/
 ├── IconManager.vue       # Custom icon upload & management (617 lines)
 ├── SearchBar.vue         # Search input
 ├── SearchEngineManager.vue # Search engine CRUD
-├── SettingsButton.vue    # Settings gear
 ├── SiteCard.vue          # Bookmark card (hover → edit/delete)
 ├── TagFilter.vue         # Tag filter bar
 └── business/              # 销售记账（摆摊进销存）8 SFC：BusinessView 页面的 7 功能面板 + 共享分类管理弹框

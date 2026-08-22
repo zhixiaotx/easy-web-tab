@@ -5,7 +5,7 @@ Personal browser new-tab page / bookmark manager. Vue 3 + Pinia + TypeScript SPA
 ## HIERARCHICAL AGENTS.md
 
 Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read the relevant one before working in that area:
-- `src/components/AGENTS.md` — the 24 root SFCs + 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡), sizes, component-level anti-patterns
+- `src/components/AGENTS.md` — the 23 root SFCs + 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡), sizes, component-level anti-patterns
 - `src/stores/AGENTS.md` — the 15 Pinia stores and data-layer invariants
 - `src/composables/AGENTS.md` — the 33 composables (incl. auto-generated `presetIcons.ts`)
 - `scripts/AGENTS.md` — build/serve scripts, test scripts, and game rewrite rules
@@ -15,7 +15,7 @@ Subdirectory `AGENTS.md` files hold per-file detail not repeated here — read t
 ```
 easy-web-tab/
 ├── src/                          # Vue 3 SPA
-│   ├── components/               # 24 root SFCs + workbench/ subdir (UI layer)
+│   ├── components/               # 23 root SFCs + workbench/ subdir (UI layer)
 │   │   └── workbench/            # 18 SFC：13 面板（主页/待办/便签/日记本/倒计时/番茄钟/习惯打卡/密码/记账 + 运动/饮食/睡眠/体重）+ PanelPager 共享分页条 + WorkbenchHealth tabs 容器 + WorkbenchHealthReminders 只读提醒 + WeatherCard/CalendarAnchorCard 主页内嵌卡
 │   ├── composables/              # 34 composables (reusable logic, 1 auto-generated; incl. useIdb.ts IndexedDB wrapper, workbenchMenuCore.ts, panelPagingCore.ts, usePanelPaging.ts, diaryCore.ts, noteCore.ts, noteMarkdown.ts, healthCore.ts, ledgerCore.ts, businessCore.ts, reminderCore.ts, useDesktopNotify.ts, reminderEmail.ts, spotlightCore.ts, habitCore.ts, pomodoroCore.ts)
 │   ├── stores/                   # 16 Pinia stores (data layer; incl. workbenchTodos.ts, workbenchNotes.ts, workbenchDiary.ts, workbenchHealth.ts, workbenchLedger.ts, workbenchBusiness.ts, workbenchPomodoro.ts, workbenchHabits.ts)

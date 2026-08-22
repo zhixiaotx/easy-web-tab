@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useThemeStore } from './stores/theme'
 import Toast from './components/Toast.vue'
 import CountdownReminder from './components/CountdownReminder.vue'
+import BeianFooter from './components/BeianFooter.vue'
 import { useToast } from './composables/useToast'
 import { useCountdownReminder } from './composables/useCountdownReminder'
 
@@ -31,6 +32,7 @@ onMounted(() => {
   </router-view>
   <Toast :toasts="toasts as any" @remove="removeToast" />
   <CountdownReminder />
+  <BeianFooter />
 </template>
 
 <style>

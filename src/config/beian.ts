@@ -7,7 +7,7 @@
  * 空串语义：空串 = 页脚对应段落不显示（两段都空 = 整个页脚不渲染）
  * 变更后需 npm run build 重新构建部署才生效
  */
-export const ICP_NUMBER = '粤ICP备12345678号'
+export const ICP_NUMBER = ''
 
 /**
  * 公安备案号
@@ -16,7 +16,7 @@ export const ICP_NUMBER = '粤ICP备12345678号'
  * 空串语义：空串 = 页脚对应段落不显示（两段都空 = 整个页脚不渲染）
  * 变更后需 npm run build 重新构建部署才生效
  */
-export const PSB_NUMBER = '粤公网安备44030402001234号'
+export const PSB_NUMBER = ''
 
 /** ICP 备案号唯一合法链接目标（工信部统一查询页），必须 target=_blank */
 export const MIIT_BEIAN_URL = 'https://beian.miit.gov.cn/'

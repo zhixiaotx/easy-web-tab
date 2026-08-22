@@ -15,6 +15,10 @@ import { idbGet, idbPut, idbImportAll } from '@/composables/useIdb'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
+import yaml from 'js-yaml'
+import { useRouter } from 'vue-router'
+import { useSitesStore } from '@/stores/sites'
+import { useSearchEnginesStore } from '@/stores/searchEngines'
 import { captureSnapshot } from '@/composables/useSnapshots'
 import type { SnapshotWithSource } from '@/composables/useSnapshots'
 import { normalizeSnapshotList } from '@/composables/snapshotCore'
@@ -52,6 +56,67 @@ const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 // 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
 const appSettings = useAppSettingsDialog()
 const cityInput = ref<HTMLInputElement | null>(null)
+
+// ========================================
+// 站点管理（导航设置 tab）：原管理页工具栏九动作的迁移入口。
+// 弹窗类动作 = 先关本设置弹窗，再经 URL query 打开目标（与 HomeView 既有 URL 协议一致）；
+// 纯动作（导出/检测断链/导入）= 就地执行，不关设置。
+// ========================================
+const router = useRouter()
+const sitesStore = useSitesStore()
+const enginesStore = useSearchEnginesStore()
+const siteImportInput = ref<HTMLInputElement | null>(null)
+
+type SiteActionModalKey = 'add' | 'engines' | 'background' | 'category' | 'backup' | 'icons'
+
+function openSiteManagerViaQuery(key: SiteActionModalKey) {
+  emit('close')
+  router.push({ query: { modal: key } })
+}
+
+function triggerSiteImport() {
+  siteImportInput.value?.click()
+}
+
+function handleSiteImport(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    const content = e.target?.result as string
+
+    // 导入网站
+    const result = await sitesStore.importFromMarkdown(content)
+
+    // 如果有错误，直接显示错误信息
+    if (result.error) {
+      toast.error(`导入失败：${result.error}`)
+      input.value = ''
+      return
+    }
+
+    // 尝试导入搜索引擎
+    let msg = `导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`
+    try {
+      const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*/)
+      if (frontmatterMatch) {
+        const data = yaml.load(frontmatterMatch[1]) as Record<string, unknown>
+        if (data?.searchEngines && Array.isArray(data.searchEngines)) {
+          enginesStore.importEngines(data.searchEngines)
+          msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
+        }
+      }
+    } catch {
+      // 忽略搜索引擎导入错误
+    }
+
+    toast.success(msg)
+    input.value = ''
+  }
+  reader.readAsText(file)
+}
 
 // ========================================
 // 草稿状态：以字符串保存，允许输入框为空/未提交；
@@ -690,6 +755,38 @@ onUnmounted(() => {
           <p class="wb-menu-hint">
             控制管理页「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
           </p>
+        </div>
+
+        <!-- 站点管理（仅导航设置 tab）：原管理页工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
+        <div v-if="activeTab === 'nav'" class="wb-menu-config">
+          <h3 class="wb-menu-title">站点管理</h3>
+          <div class="site-actions-grid" data-testid="stg-site-actions">
+            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport">📥 导入</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-export" @click="sitesStore.exportToMarkdown()">📤 导出</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-add" @click="openSiteManagerViaQuery('add')">＋ 添加网址</button>
+            <button
+              type="button"
+              class="site-action-btn"
+              data-testid="stg-act-check-links"
+              :disabled="sitesStore.isCheckingLinks"
+              @click="sitesStore.checkDeadLinks()"
+            >
+              <span v-if="sitesStore.isCheckingLinks">⏳ 检测中 ({{ sitesStore.linkCheckProgress?.current }}/{{ sitesStore.linkCheckProgress?.total }})</span>
+              <span v-else>🔗 检测断链<span v-if="sitesStore.invalidCount > 0" class="site-invalid-count">({{ sitesStore.invalidCount }})</span></span>
+            </button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-engines" @click="openSiteManagerViaQuery('engines')">🔍 引擎管理</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-background" @click="openSiteManagerViaQuery('background')">🖼️ 背景</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-category" @click="openSiteManagerViaQuery('category')">⚙️ 分类管理</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-backup" @click="openSiteManagerViaQuery('backup')">📦 备份</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-icons" @click="openSiteManagerViaQuery('icons')">🎨 图标管理</button>
+          </div>
+          <input
+            ref="siteImportInput"
+            type="file"
+            accept=".md,text/markdown"
+            style="display: none"
+            @change="handleSiteImport"
+          />
         </div>
 
         <!-- 天气城市（仅工作台设置 tab）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
@@ -1735,5 +1832,56 @@ onUnmounted(() => {
     grid-column: 1 / -1;
     justify-self: end;
   }
+}
+
+/* ========================================
+   站点管理（导航设置 tab）：原管理页工具栏九动作按钮网格。
+   风格沿用管理页原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 :root.dark 变量惯例
+   ======================================== */
+.site-actions-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.site-action-btn {
+  padding: 8px 14px;
+  background-color: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.site-action-btn:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.site-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.site-invalid-count {
+  margin-left: 4px;
+  font-weight: 600;
+  color: #ef4444;
+}
+
+/* 站点管理暗色模式 */
+:root.dark .site-action-btn {
+  background-color: var(--bg-card, #1f2937);
+  color: var(--text-secondary, #d1d5db);
+  border-color: var(--border-color, #374151);
+}
+
+:root.dark .site-action-btn:hover:not(:disabled) {
+  background-color: var(--hover-bg, #374151);
+  color: var(--accent-color, #3b82f6);
+  border-color: var(--accent-color, #3b82f6);
 }
 </style>

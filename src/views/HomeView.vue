@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watchEffect } from 'vue'
-import yaml from 'js-yaml'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -9,29 +8,32 @@ import CategoryTabs from '../components/CategoryTabs.vue'
 import TagFilter from '../components/TagFilter.vue'
 import Pagination from '../components/Pagination.vue'
 import SiteModal from '../components/SiteModal.vue'
-import SettingsButton from '../components/SettingsButton.vue'
+import BackgroundManager from '../components/BackgroundManager.vue'
+import CategoryManager from '../components/CategoryManager.vue'
+import BackupManager from '../components/BackupManager.vue'
+import IconManager from '../components/IconManager.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
-import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useThemeStore } from '../stores/theme'
 import { useAppSettingsStore } from '../stores/settings'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
-import { useToast } from '../composables/useToast'
 import { useHelpModal } from '../composables/useHelpModal'
 
 const store = useSitesStore()
-const enginesStore = useSearchEnginesStore()
 const themeStore = useThemeStore()
 const settingsStore = useAppSettingsStore()
-const toast = useToast()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
 const showEngineManager = ref(false)
+const showBackgroundManager = ref(false)
+const showCategoryManager = ref(false)
+const showBackupManager = ref(false)
+const showIconManager = ref(false)
 const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
 
@@ -103,10 +105,34 @@ watchEffect(() => {
     openHelp()
     showModal.value = false
     showEngineManager.value = false
+  } else if (modal === 'background') {
+    showBackgroundManager.value = true
+    showModal.value = false
+    showEngineManager.value = false
+    closeHelp()
+  } else if (modal === 'category') {
+    showCategoryManager.value = true
+    showModal.value = false
+    showEngineManager.value = false
+    closeHelp()
+  } else if (modal === 'backup') {
+    showBackupManager.value = true
+    showModal.value = false
+    showEngineManager.value = false
+    closeHelp()
+  } else if (modal === 'icons') {
+    showIconManager.value = true
+    showModal.value = false
+    showEngineManager.value = false
+    closeHelp()
   } else {
     // 无 modal query → 关闭所有弹框（URL 清除时）
     showModal.value = false
     showEngineManager.value = false
+    showBackgroundManager.value = false
+    showCategoryManager.value = false
+    showBackupManager.value = false
+    showIconManager.value = false
     closeHelp()
     editingSite.value = null
   }
@@ -118,6 +144,10 @@ const filteredSites = computed(() => store.paginatedSites)
 const closeAllModals = () => {
   showModal.value = false
   showEngineManager.value = false
+  showBackgroundManager.value = false
+  showCategoryManager.value = false
+  showBackupManager.value = false
+  showIconManager.value = false
   showSettingsDialog.value = false
   closeHelp()
   editingSite.value = null
@@ -138,11 +168,6 @@ useKeyboardShortcuts({
   onToggleAdmin: toggleAdmin,
   onToggleTheme: () => themeStore.toggleTheme()
 })
-
-const handleAdd = () => {
-  editingSite.value = null
-  router.push({ query: { modal: 'add' } })
-}
 
 const handleEdit = (site: Site) => {
   editingSite.value = { ...site }
@@ -185,53 +210,6 @@ const handleSave = (site: Site) => {
   closeAllModals()
 }
 
-// 处理文件导入
-const handleImport = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    const content = e.target?.result as string
-    
-    // 导入网站
-    const result = await store.importFromMarkdown(content)
-    
-    // 如果有错误，直接显示错误信息
-    if (result.error) {
-      toast.error(`导入失败：${result.error}`)
-      input.value = ''
-      return
-    }
-    
-    // 尝试导入搜索引擎和密码
-    let msg = `导入完成！新增 ${result.added} 条，跳过 ${result.skipped} 条`
-    try {
-      const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*/)
-      if (frontmatterMatch) {
-        const data = yaml.load(frontmatterMatch[1]) as Record<string, unknown>
-        if (data?.searchEngines && Array.isArray(data.searchEngines)) {
-          enginesStore.importEngines(data.searchEngines)
-          msg += `；搜索引擎：已导入 ${data.searchEngines.length} 个`
-        }
-      }
-    } catch {
-      // 忽略搜索引擎/密码导入错误
-    }
-    
-    toast.success(msg)
-    input.value = ''
-  }
-  reader.readAsText(file)
-}
-
-// 触发文件选择
-const triggerImport = () => {
-  const input = document.getElementById('import-file') as HTMLInputElement
-  input?.click()
-}
-
 // 分页切换时只滚动网站区域
 const sitesGridRef = ref<HTMLElement | null>(null)
 const handlePageChange = () => {
@@ -243,15 +221,6 @@ const handlePageChange = () => {
 </script>
 
 <template>
-  <!-- 隐藏的文件输入框 -->
-  <input
-    id="import-file"
-    type="file"
-    accept=".md,text/markdown"
-    style="display: none"
-    @change="handleImport"
-  />
-
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
@@ -272,19 +241,6 @@ const handlePageChange = () => {
     <header class="header">
       <div class="search-section">
         <GlobalSearch class="global-search-bar" />
-      </div>
-      <div class="actions-row">
-        <div class="action-buttons">
-          <button class="btn-action" @click="triggerImport">导入</button>
-          <button class="btn-action" @click="store.exportToMarkdown()">导出</button>
-          <button class="btn-action" @click="handleAdd">+ 添加网址</button>
-          <button class="btn-action" @click="store.checkDeadLinks">
-            <span v-if="store.isCheckingLinks">⏳ 检测中 ({{ store.linkCheckProgress?.current }}/{{ store.linkCheckProgress?.total }})</span>
-            <span v-else>🔗 检测断链<span v-if="store.invalidCount > 0" class="invalid-count">({{ store.invalidCount }})</span></span>
-          </button>
-          <button class="btn-action" @click="router.push({ query: { modal: 'engines' } })">🔍 引擎管理</button>
-          <SettingsButton />
-        </div>
       </div>
     </header>
 
@@ -356,6 +312,14 @@ const handlePageChange = () => {
       v-if="showSettingsDialog"
       @close="showSettingsDialog = false"
     />
+
+    <BackgroundManager v-if="showBackgroundManager" @close="closeAllModals" />
+
+    <CategoryManager v-if="showCategoryManager" @close="closeAllModals" />
+
+    <BackupManager v-if="showBackupManager" @close="closeAllModals" />
+
+    <IconManager v-if="showIconManager" @close="closeAllModals" />
   </div>
 </template>
 
@@ -437,38 +401,6 @@ const handlePageChange = () => {
 .global-search-bar {
   max-width: 750px;
   width: 100%;
-}
-
-.actions-row {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.btn-action {
-  padding: 10px 16px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-action:hover {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
 }
 
 .sites-grid {
@@ -586,21 +518,6 @@ const handlePageChange = () => {
 
   .container {
     padding-top: 60px;
-  }
-
-  .actions-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-buttons {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .btn-action {
-    flex: 1;
-    min-width: 80px;
   }
 }
 </style>

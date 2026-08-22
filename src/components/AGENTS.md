@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-23 Vue 3 SFCs in the root plus 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+24 Vue 3 SFCs in the root plus 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -17,6 +17,7 @@ components/
 ├── CategoryTabs.vue      # Horizontal tab bar
 ├── CountdownModal.vue    # 前台倒计时弹框（/display，repeatLabel + categoryLabel 徽标；卡片底部新增可交互邮件提醒开关 `cd-email-toggle`/`cd-email-switch`：`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；启用成功 toast 提示需在设置-提醒设置配置邮箱）
 ├── CountdownReminder.vue # 全局提醒弹框（z-index 2000，读 useCountdownReminder 单例，仅「关闭」可关）
+├── BeianFooter.vue      # 全站备案页脚（ICP+公安双段，号码写死 src/config/beian.ts 空串休眠，App.vue 第 4 兄弟挂载覆盖四视图，双空整行不渲染，公安徽标 @error 降级隐藏，testid beian-footer/beian-icp-link/beian-psb-link）
 ├── IconManager.vue       # Custom icon upload & management (617 lines)
 ├── SearchBar.vue         # Search input
 ├── SearchEngineManager.vue # Search engine CRUD

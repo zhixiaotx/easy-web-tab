@@ -137,17 +137,19 @@ const monthEntries = computed(() =>
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
 
-// ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/统计不受影响）=====
-const listExpanded = ref(false)
+// ===== 记录弹框（点击「展开记录」弹出弹框，卡片网格每行 5 条）=====
+const showRecordsModal = ref(false)
 
-// ===== 图表区展开/折叠（默认展开）。一屏布局下统计卡+图表会压塌列表区（实测列表仅剩 2-91px、0-1 行可见），
-// 故展开记录时自动收起图表腾出列表空间，收起记录时恢复图表（手动开关仍可覆盖）=====
+// ===== 图表区展开/折叠（默认展开）=====
 const chartsExpanded = ref(true)
 
-function toggleList(): void {
-  listExpanded.value = !listExpanded.value
-  chartsExpanded.value = !listExpanded.value // 展开记录 → 收起图表；收起记录 → 恢复图表
-  paging.goto(1) // 列表展开/收起后回第 1 页
+function openRecordsModal(): void {
+  showRecordsModal.value = true
+  paging.goto(1)
+}
+
+function closeRecordsModal(): void {
+  showRecordsModal.value = false
 }
 
 interface EntryView {
@@ -165,9 +167,10 @@ const listEl = ref<HTMLElement | null>(null)
 // （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证；与 Todo/Diary 面板同构）
 const paging = reactive(usePanelPaging({
   items: () => viewEntries.value,
-  rowHeight: 49, // row-heights.json: ledger = 49 (MAX 47 + 2px，R4)
+  rowHeight: 49,
+  maxRows: 6,
   containerRef: listEl,
-  gridRef: undefined
+  gridRef: listEl
 }))
 
 function catNameOf(categoryId: string): string {
@@ -523,44 +526,16 @@ onUnmounted(() => {
 
     <!-- 操作栏：数量 + 管理分组 + 新增 -->
     <div class="ld-headbar">
-      <button class="btn-manage" data-testid="ld-toggle-list" @click="toggleList">
-        {{ listExpanded ? '收起记录' : '展开记录' }}（{{ monthEntries.length }}）
+      <button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
+        展开记录（{{ monthEntries.length }}）
       </button>
     </div>
 
-    <!-- 空月态 / 记录列表 -->
+    <!-- 空月态 -->
     <div v-if="monthEntries.length === 0" class="empty-state empty-invite" data-testid="ld-empty" @click="startAdd">
       <div class="ld-empty-title">本月暂无记账记录</div>
       <div class="ld-empty-sub">＋ 新增第一笔记录</div>
     </div>
-
-    <template v-else-if="listExpanded">
-      <div ref="listEl" class="ld-list" :class="{ 'ld-list-scroll': !paging.fitsOnePage }">
-        <TransitionGroup name="grid">
-        <div v-for="v in paging.pageItems" :key="v.entry.id" class="ld-item" data-testid="ld-item">
-          <span class="ld-date">{{ v.entry.date }}</span>
-          <span
-            class="ld-cat-badge"
-            :class="{ 'is-income': v.cat?.type === 'income' }"
-            :data-testid="`ld-cat-${v.entry.categoryId}`"
-          >
-            {{ v.cat?.name ?? '未知' }}
-          </span>
-          <span v-if="v.entry.note" class="ld-note">{{ v.entry.note }}</span>
-          <span v-else class="ld-note">—</span>
-          <span class="ld-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
-            {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
-          </span>
-          <div class="ld-actions">
-            <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
-            <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
-          </div>
-        </div>
-        </TransitionGroup>
-      </div>
-
-      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
-    </template>
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
@@ -621,6 +596,48 @@ onUnmounted(() => {
           </div>
         </form>
       </div>
+      </div>
+    </Transition>
+
+    <!-- 记录弹框（卡片网格，每行 5 条） -->
+    <Transition name="dialog">
+      <div v-if="showRecordsModal" class="dialog-overlay" @click.self="closeRecordsModal">
+        <div class="dialog ld-records-dialog" data-testid="ld-records-dialog">
+          <div class="dialog-header">
+            <h3>本月记录（{{ monthEntries.length }} 条）</h3>
+            <button class="close-btn" @click="closeRecordsModal">✕</button>
+          </div>
+          <div ref="listEl" class="ld-records-body" :class="{ 'ld-records-scroll': !paging.fitsOnePage }">
+            <TransitionGroup name="grid">
+              <div
+                v-for="v in paging.pageItems"
+                :key="v.entry.id"
+                class="ld-record-card"
+                :class="{ 'is-income': v.cat?.type === 'income' }"
+                :data-testid="`ld-item`"
+              >
+                <div class="ld-record-date">{{ v.entry.date }}</div>
+                <span
+                  class="ld-cat-badge"
+                  :class="{ 'is-income': v.cat?.type === 'income' }"
+                  :data-testid="`ld-cat-${v.entry.categoryId}`"
+                >
+                  {{ v.cat?.name ?? '未知' }}
+                </span>
+                <div v-if="v.entry.note" class="ld-record-note">{{ v.entry.note }}</div>
+                <div v-else class="ld-record-note ld-record-note-empty">—</div>
+                <div class="ld-record-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
+                  {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
+                </div>
+                <div class="ld-actions">
+                  <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
+                  <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
+                </div>
+              </div>
+            </TransitionGroup>
+          </div>
+          <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+        </div>
       </div>
     </Transition>
 
@@ -1236,6 +1253,85 @@ onUnmounted(() => {
 .dialog[data-testid="ld-cat-dialog"] {
   max-width: var(--dlg-w-wb-ledger-cat, 480px);
   max-height: var(--dlg-h-wb-ledger-cat, 85vh);
+}
+
+/* 记录弹框（宽 90%，高 60%） */
+.dialog[data-testid="ld-records-dialog"] {
+  max-width: 90vw;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 记录卡片网格容器：每行 6 个，maxRows 6 行 */
+.ld-records-body {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+.ld-records-scroll {
+  overflow-y: auto;
+}
+
+/* 单条记录卡片 */
+.ld-record-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-left: 4px solid var(--accent-color, var(--color-primary));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+  transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.ld-record-card.is-income {
+  border-left-color: var(--success-color, var(--color-success));
+}
+
+.ld-record-card:hover {
+  border-color: color-mix(in srgb, var(--accent-color, #3b82f6) 45%, var(--border-color, #e2e8f0));
+  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+
+.ld-record-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ld-record-note {
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ld-record-note-empty {
+  opacity: 0.4;
+}
+
+.ld-record-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-record-amount.is-income {
+  color: var(--success-color, var(--color-success));
 }
 
 .dialog-header {

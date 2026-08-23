@@ -79,7 +79,8 @@ const gridEl = ref<HTMLElement | null>(null)
 // （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证）
 const paging = reactive(usePanelPaging({
   items: () => viewTodos.value,
-  rowHeight: 214, // row-heights.json: todo = 214（两视口 MAX 211.56 + 2px，R4）
+  rowHeight: 148,
+  maxRows: 2,
   containerRef: gridEl,
   gridRef: gridEl
 }))
@@ -588,8 +589,10 @@ onUnmounted(() => {
 /* ===== 卡片墙 ===== */
 .td-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 148px;
+  gap: 10px;
+  align-content: start;
 }
 
 .td-card {
@@ -597,8 +600,8 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 14px 12px;
+  gap: 6px;
+  padding: 10px;
   background-color: var(--bg-card, var(--color-bg-card));
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--td-color) 8%, transparent), transparent 55%);
   border: 1px solid var(--border-color, var(--color-border));
@@ -620,13 +623,13 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
 }
 
 .td-title {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
@@ -674,11 +677,11 @@ onUnmounted(() => {
 }
 
 .td-hero-value {
-  font-size: 24px;
+  font-size: 14px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .td-normal {
@@ -700,10 +703,10 @@ onUnmounted(() => {
 }
 
 .td-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary, var(--color-text-secondary));
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 0;
@@ -771,8 +774,8 @@ onUnmounted(() => {
 
 .btn-edit,
 .btn-delete {
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-sm, 6px);

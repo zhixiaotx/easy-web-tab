@@ -54,7 +54,8 @@ const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, 
 const gridEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => filteredItems.value,
-  rowHeight: 158, // row-heights.json: countdown = 158 (MAX 155.38 + 2px)
+  rowHeight: 150,
+  maxRows: 2,
   containerRef: gridEl,
   gridRef: gridEl
 })
@@ -722,8 +723,10 @@ onUnmounted(() => {
 /* ===== 卡片墙 ===== */
 .cd-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 150px;
+  gap: 10px;
+  align-content: start;
 }
 
 .cd-card {
@@ -731,8 +734,8 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 14px 12px;
+  gap: 6px;
+  padding: 10px;
   background-color: var(--bg-card, var(--color-bg-card));
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--cd-color) 8%, transparent), transparent 55%);
   border: 1px solid var(--border-color, var(--color-border));
@@ -754,7 +757,7 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .cd-title {
@@ -766,7 +769,7 @@ onUnmounted(() => {
 }
 
 .cd-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
@@ -853,10 +856,10 @@ onUnmounted(() => {
 }
 
 .cd-remaining-value {
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
   line-height: 1.15;
 }
 
@@ -950,8 +953,8 @@ onUnmounted(() => {
 
 .btn-edit,
 .btn-delete {
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-sm, 6px);

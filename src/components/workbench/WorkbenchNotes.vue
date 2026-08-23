@@ -85,7 +85,8 @@ const normalGridEl = ref<HTMLElement | null>(null)
 const timelineGridEl = ref<HTMLElement | null>(null)
 const normalPaging = reactive(usePanelPaging({
   items: () => filteredNormal.value,
-  rowHeight: 287, // row-heights.json: notes = 287 (MAX 285 + 2px)
+  rowHeight: 150,
+  maxRows: 2,
   containerRef: normalGridEl,
   gridRef: normalGridEl
 }))
@@ -402,8 +403,8 @@ onUnmounted(() => {
       >{{ cat.name }}</button>
     </div>
 
-    <!-- 时光轴（类型下拉=时光轴/'all' 双段渲染之一）：filterNotes 过滤后的时光轴卡片网格（复用分类下拉/关键词查询联动）；空态沿用 emptyText 逻辑 -->
-    <template v-if="activeType !== 'normal'">
+    <!-- 时光轴便签（仅在类型=时光轴时渲染，'all' 视图只显示普通便签） -->
+    <template v-if="activeType === 'timeline'">
       <div
         v-if="filteredTimeline.length > 0"
         ref="timelineGridEl"
@@ -698,7 +699,7 @@ onUnmounted(() => {
         @next="normalPaging.next()"
       />
 
-      <div v-if="filteredNormal.length === 0 && (activeType === 'normal' || filteredTimeline.length === 0)" class="empty-state" data-testid="note-empty">
+      <div v-if="filteredNormal.length === 0" class="empty-state" data-testid="note-empty">
         {{ emptyText }}
       </div>
     </template>
@@ -958,26 +959,28 @@ onUnmounted(() => {
 /* ===== 网格卡片 ===== */
 .notes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 150px;
+  gap: 10px;
+  align-content: start;
 }
 
 .note-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  min-height: 285px;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid transparent;
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
-  transition: box-shadow var(--transition-fast, 0.15s ease);
+  transition: box-shadow var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
 }
 
 .note-card:hover {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
+  transform: translateY(-2px);
 }
 
 .note-card-header {
@@ -1016,7 +1019,7 @@ onUnmounted(() => {
 }
 
 .note-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1024,12 +1027,12 @@ onUnmounted(() => {
 }
 
 .note-content {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
   word-break: break-word;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 11;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 

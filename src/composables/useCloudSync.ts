@@ -164,16 +164,56 @@ function davErrorLabel(method: string, upstreamStatus: string | null, snippet: s
   return detail ? `${base}\n服务端返回：${detail}` : base
 }
 
-async function webdavGet(url: string, username: string, password: string): Promise<WorkbenchData | null> {
+// ========== 内容 hash（双兜底：优先 SubtleCrypto SHA-1，非安全上下文退化到 32bit FNV-1a）==========
+
+async function sha1Hash(text: string): Promise<string> {
+  // SubtleCrypto 仅在 localhost / HTTPS / file:// 可用（浏览器定义）；
+  // 生产环境如果部署在内网 HTTP IP，会抛 "SubtleCrypto only available in secure contexts"。
+  // 这时退化 FNV-1a 32bit，虽然碰撞概率高但 600KB 同步文件级去重够用，且总比 hash 比较缺失强。
+  if (typeof crypto !== 'undefined' && 'subtle' in crypto && crypto.subtle && typeof crypto.subtle.digest === 'function') {
+    try {
+      const bytes = new TextEncoder().encode(text)
+      const digest = await crypto.subtle.digest('SHA-1', bytes)
+      const arr = new Uint8Array(digest)
+      let hex = ''
+      for (let i = 0; i < arr.length; i++) hex += arr[i].toString(16).padStart(2, '0')
+      return 'sha1:' + hex
+    } catch {
+      /* fallback to FNV-1a below */
+    }
+  }
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)
+  }
+  return 'fnv1a:' + (h >>> 0).toString(16).padStart(8, '0')
+}
+
+interface WebdavGetResult {
+  data: WorkbenchData | null
+  /** 响应头 Last-Modified 解析成的 ms（解析失败 = 0） */
+  lastModifiedMs: number
+  /** 原始 JSON 字符串（供 hash 比对，避免重复 fetch） */
+  rawText: string
+}
+
+async function webdavGet(url: string, username: string, password: string): Promise<WebdavGetResult> {
   const res = await proxyDav(url, 'GET', username, password)
-  if (res.status === 404) return null
+  if (res.status === 404) return { data: null, lastModifiedMs: 0, rawText: '' }
   if (!res.ok) {
     const diag = await readDavDiagnostics(res)
     throw new Error(davErrorLabel('GET', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
   }
   const text = await res.text()
-  if (!text) return null
-  return JSON.parse(text) as WorkbenchData
+  let lastModifiedMs = 0
+  const lm = res.headers.get('Last-Modified')
+  if (lm) {
+    const t = new Date(lm).getTime()
+    if (!Number.isNaN(t)) lastModifiedMs = t
+  }
+  if (!text) return { data: null, lastModifiedMs, rawText: '' }
+  return { data: JSON.parse(text) as WorkbenchData, lastModifiedMs, rawText: text }
 }
 
 async function webdavPut(url: string, username: string, password: string, body: string): Promise<void> {
@@ -209,7 +249,10 @@ export async function testConnection(
     await webdavMkcol(dir, username, password)
     // 探测 GET（404 正常，因为第一次可能无文件）
     try {
-      await webdavGet(`${dir}/${BACKUP_FILE}`, username, password)
+      const probe = await webdavGet(`${dir}/${BACKUP_FILE}`, username, password)
+      // 404 已经在 webdavGet 内部返回 data=null，data===null 即等价 404；
+      // 其余 status code（比如 401/403）在 webdavGet 里已经 throw
+      void probe
     } catch (e) {
       const msg = e instanceof Error ? e.message : ''
       if (!msg.includes('404')) throw e
@@ -335,36 +378,74 @@ async function pullNow(): Promise<void> {
   errorMessage.value = ''
   try {
     const dir = dirUrl(settings.cloudSyncUrl!)
-    const remote = await webdavGet(`${dir}/${BACKUP_FILE}`, settings.cloudSyncUsername!, settings.cloudSyncPassword!)
+    const getResult = await webdavGet(`${dir}/${BACKUP_FILE}`, settings.cloudSyncUsername!, settings.cloudSyncPassword!)
+    const remote = getResult.data
     if (!remote) {
       status.value = 'idle'
       // 远端无备份（首次使用）→ 若本地 dirty 则推送
       if (isDirty()) await pushNow()
       return
     }
-    const remoteTs = remote.pushedAt ?? 0
+    // ===== 修复方案 B：双兜底判定 =====
+    // 1) 时间戳：remote.pushedAt（信封内嵌）和 Last-Modified（WebDAV 响应头）取较大值
+    //    解决：用户手动改坚果云文件没更新 pushedAt → Last-Modified 兜底
+    const remoteTs = Math.max(remote.pushedAt ?? 0, getResult.lastModifiedMs)
     const localTs = Number(localStorage.getItem(LAST_SYNC_KEY) || '0')
     const dirty = isDirty()
 
+    // 2) 内容 hash：远端原始 rawText 和 本地导出 JSON 分别 hash
+    //    解决：pushedAt 和 Last-Modified 都没变化（比如代理响应头丢了、系统时间被回拨）
+    //    时，只要内容变了就不会盲推
+    const remoteHash = await sha1Hash(getResult.rawText)
+    const localExport = await idbExportAll()
+    const localRaw = JSON.stringify(localExport)
+    const localHash = await sha1Hash(localRaw)
+    const contentSame = remoteHash === localHash
+
+    // ===== 快速路径：内容完全一致 → noop =====
+    if (contentSame) {
+      // lastSyncAt 补到最新（避免下次再走重复流程），但不做任何导入/推送
+      const ceiling = Math.max(remoteTs, localTs)
+      if (ceiling > 0 && ceiling !== localTs) {
+        localStorage.setItem(LAST_SYNC_KEY, String(ceiling))
+        lastSyncAt.value = ceiling
+      }
+      clearDirty()
+      status.value = 'idle'
+      return
+    }
+
+    // ===== 内容不同：走 4 分支决策 =====
+    // 注意：remoteTs <= localTs 的场景现在也不能盲推，因为"外部手动改文件
+    // 但 pushedAt 没动 + Last-Modified 没变化 / 代理丢头"时 hash 已经判定内容不同。
     if (dirty && remoteTs > localTs) {
-      // 双方都有新变更 → 冲突
-      const local = await idbExportAll()
+      // 双方都有新变更（时间戳维度）→ 冲突
+      const local = localExport
       conflictData.value = { local, remote }
       status.value = 'conflict'
       useToast().warning('云同步检测到冲突，请选择解决方式')
       return
     }
     if (dirty && remoteTs <= localTs) {
-      // 本地有新变更、远端无新变更 → 推送覆盖远端
-      await pushNow()
+      // 本地 dirty 但 remoteTs 看起来没更新 —— 不能盲推！
+      // 内容 hash 已不同，说明要么：
+      //   a) 时间戳机制全部失效（Last-Modified 丢头 + pushedAt 被外部改文件保留）
+      //   b) 外部设备写了内容但由于某种原因时钟比本地慢
+      // 安全选择：仍然触发冲突（至少不会静默回滚用户手动改的文件）
+      const local = localExport
+      conflictData.value = { local, remote }
+      status.value = 'conflict'
+      useToast().warning('云同步检测到内容不一致（本地有未同步变更），请选择解决方式')
       return
     }
-    if (!dirty && remoteTs > localTs) {
-      // 本地无变更、远端有新变更 → 拉取覆盖本地
+    if (!dirty) {
+      // 本地无变更、内容 hash 不同 → 远端有新变更（不管时间戳维度谁大）→ 直接拉取覆盖本地
+      // 这正是"用户在坚果云手动改 backup.json → 回到 Web 端点立即同步"的目标场景：
+      //   → 直接 applyRemote（不会盲推覆盖远端了！）
       await applyRemote(remote)
       return
     }
-    // 都无新变更 → noop
+    // 都无新变更 → noop（理论上已被 contentSame 短路吞掉，留作兜底）
     status.value = 'idle'
   } catch (e) {
     status.value = 'error'

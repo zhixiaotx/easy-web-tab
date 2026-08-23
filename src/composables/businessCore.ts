@@ -735,3 +735,257 @@ export function businessTrendBars(
     .filter((_, i) => i % labelEvery === 0 || i === n - 1)
   return { maxY, minY, zeroY: r2(zeroY), gridlines, days, dayLabels, allZero }
 }
+
+// ===== P0/P1/P2 新增纯函数 =====
+
+/** 加价率 = (售价 - 进价) / 进价 × 100%（进价 0 → Infinity 用 null 表示无法计算） */
+export function calcMarkupRate(sellingPrice: number, purchasePrice: number): number | null {
+  if (purchasePrice <= 0) return null
+  return Math.round(((sellingPrice - purchasePrice) / purchasePrice) * 10000) / 100
+}
+
+/** P0-1：收摊记录结构化商品明细行 */
+export interface DailyItemDetail {
+  productId: string
+  name: string
+  unit: string
+  broughtOut: number
+  remaining: number
+  loss: number
+  sold: number
+  sellingPrice: number
+  subtotal: number
+  deleted: boolean
+}
+
+/** 计算收摊记录的结构化商品明细行列表 */
+export function calcDailyItemDetails(
+  record: BusinessDailyRecord,
+  products: BusinessProduct[]
+): DailyItemDetail[] {
+  return record.items.map(item => {
+    const product = findProduct(products, item.productId)
+    const sold = soldCount(item)
+    const sellingPrice = product?.sellingPrice ?? 0
+    return {
+      productId: item.productId,
+      name: product?.name ?? '（已删除商品）',
+      unit: product?.unit ?? '件',
+      broughtOut: item.broughtOut,
+      remaining: item.remaining,
+      loss: item.loss,
+      sold,
+      sellingPrice,
+      subtotal: Math.round(sold * sellingPrice * 100) / 100,
+      deleted: !product
+    }
+  })
+}
+
+/** P1-1：分类→商品树状排行节点 */
+export interface CategoryProductRankNode {
+  categoryId: string
+  categoryName: string
+  categoryRevenue: number
+  categorySold: number
+  products: ProductRankItem[]
+}
+
+/** 计算分类→商品树状排行（分类按销售额降序，商品取 top N） */
+export function calcCategoryProductRanking(data: BusinessData, topN = 5): CategoryProductRankNode[] {
+  const catRank = calcCategoryRanking(data)
+  const prodRank = calcProductRanking(data)
+  // 按分类 id 归组商品排行
+  const byCat: Record<string, ProductRankItem[]> = {}
+  for (const p of prodRank) {
+    const product = data.products.find(pr => pr.id === p.productId)
+    const catId = product?.categoryId ?? 'uncategorized'
+    ;(byCat[catId] ??= []).push(p)
+  }
+  return catRank.map(cat => ({
+    categoryId: cat.categoryId,
+    categoryName: cat.name,
+    categoryRevenue: cat.revenue,
+    categorySold: cat.sold,
+    products: (byCat[cat.categoryId] ?? []).slice(0, topN)
+  }))
+}
+
+/** P2-1：支出趋势点 */
+export interface ExpenseTrendPoint {
+  date: string
+  amount: number
+}
+
+/** 近 days 天支出趋势（含 endDate 当天，升序） */
+export function calcExpenseTrend(data: BusinessData, endDate: string, days = 30): ExpenseTrendPoint[] {
+  if (!isValidDateKey(endDate) || days <= 0) return []
+  const end = new Date(endDate + 'T00:00:00')
+  const out: ExpenseTrendPoint[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i)
+    const key = localDateKey(d)
+    const amount = data.expenses
+      .filter(e => e.date === key)
+      .reduce((s, e) => s + e.amount, 0)
+    out.push({ date: key, amount: Math.round(amount * 100) / 100 })
+  }
+  return out
+}
+
+/** P2-1：支出分类占比 */
+export interface ExpenseCategoryBreakdown {
+  categoryId: string
+  name: string
+  amount: number
+  percent: number // 0-100
+}
+
+/** 计算各支出分类金额占比 */
+export function calcExpenseCategoryBreakdown(data: BusinessData): ExpenseCategoryBreakdown[] {
+  const total = data.expenses.reduce((s, e) => s + e.amount, 0)
+  const byCat: Record<string, number> = {}
+  for (const e of data.expenses) {
+    byCat[e.categoryId] = (byCat[e.categoryId] ?? 0) + e.amount
+  }
+  return Object.entries(byCat)
+    .map(([categoryId, amount]) => {
+      const cat = data.expenseCategories.find(c => c.id === categoryId)
+      return {
+        categoryId,
+        name: cat?.name ?? '未知',
+        amount: Math.round(amount * 100) / 100,
+        percent: total > 0 ? Math.round((amount / total) * 10000) / 100 : 0
+      }
+    })
+    .sort((a, b) => b.amount - a.amount)
+}
+
+/** P2-1：分类营业额占比 */
+export interface CategoryRevenueBreakdown {
+  categoryId: string
+  name: string
+  revenue: number
+  percent: number // 0-100
+}
+
+/** 计算各商品分类营业额占比 */
+export function calcCategoryRevenueBreakdown(data: BusinessData): CategoryRevenueBreakdown[] {
+  const catRank = calcCategoryRanking(data)
+  const total = catRank.reduce((s, c) => s + c.revenue, 0)
+  return catRank.map(cat => ({
+    categoryId: cat.categoryId,
+    name: cat.name,
+    revenue: cat.revenue,
+    percent: total > 0 ? Math.round((cat.revenue / total) * 10000) / 100 : 0
+  }))
+}
+
+/** P2-2：商品聚合摘要 */
+export interface ProductSummary {
+  product: BusinessProduct | null
+  totalPurchased: number
+  totalBroughtOut: number
+  totalSold: number
+  totalLoss: number
+  currentStock: number
+  totalRevenue: number
+  totalCost: number
+  totalProfit: number
+  recentPurchases: BusinessPurchase[]
+  recentDailyRecords: BusinessDailyRecord[]
+}
+
+/** 计算商品聚合摘要（进货/带出/售出/损耗/库存/营业额/成本/利润 + 最近记录） */
+export function calcProductSummary(data: BusinessData, productId: string): ProductSummary {
+  const product = data.products.find(p => p.id === productId) ?? null
+  const stock = calcInventory(data.products, data.purchases, data.dailyRecords)
+  const purchases = data.purchases.filter(p => p.productId === productId)
+  const dailyRecords = data.dailyRecords.filter(r => r.items.some(it => it.productId === productId))
+
+  let totalPurchased = 0
+  for (const p of purchases) totalPurchased += p.quantity
+
+  let totalBroughtOut = 0
+  let totalSold = 0
+  let totalLoss = 0
+  let totalRevenue = 0
+  let totalCost = 0
+  for (const r of dailyRecords) {
+    for (const item of r.items) {
+      if (item.productId !== productId) continue
+      totalBroughtOut += item.broughtOut
+      totalLoss += item.loss
+      const sold = soldCount(item)
+      totalSold += sold
+      totalRevenue = Math.round((totalRevenue + sold * (product?.sellingPrice ?? 0)) * 100) / 100
+      totalCost = Math.round((totalCost + sold * (product?.purchasePrice ?? 0)) * 100) / 100
+    }
+  }
+
+  const recentPurchases = sortPurchases(purchases).slice(0, 5)
+  const recentDailyRecords = sortDailyRecords(dailyRecords).slice(0, 5)
+
+  return {
+    product,
+    totalPurchased,
+    totalBroughtOut,
+    totalSold,
+    totalLoss,
+    currentStock: stock[productId] ?? 0,
+    totalRevenue,
+    totalCost,
+    totalProfit: Math.round((totalRevenue - totalCost) * 100) / 100,
+    recentPurchases,
+    recentDailyRecords
+  }
+}
+
+/** P1-2：库存溯源明细（某商品的进货记录 + 收摊带出记录） */
+export interface InventorySourcePurchase {
+  type: 'purchase'
+  id: string
+  date: string
+  quantity: number
+  unitPrice: number
+  total: number
+}
+
+export interface InventorySourceDaily {
+  type: 'daily'
+  id: string
+  date: string
+  broughtOut: number
+  remaining: number
+  loss: number
+  sold: number
+}
+
+export type InventorySource = InventorySourcePurchase | InventorySourceDaily
+
+/** 获取某商品的库存溯源记录（按日期降序混合排列） */
+export function calcInventorySources(
+  productId: string,
+  purchases: BusinessPurchase[],
+  dailyRecords: BusinessDailyRecord[]
+): InventorySource[] {
+  const sources: InventorySource[] = []
+  for (const p of purchases) {
+    if (p.productId !== productId) continue
+    sources.push({ type: 'purchase', id: p.id, date: p.date, quantity: p.quantity, unitPrice: p.unitPrice, total: p.total })
+  }
+  for (const r of dailyRecords) {
+    const item = r.items.find(it => it.productId === productId)
+    if (!item) continue
+    sources.push({
+      type: 'daily',
+      id: r.id,
+      date: r.date,
+      broughtOut: item.broughtOut,
+      remaining: item.remaining,
+      loss: item.loss,
+      sold: soldCount(item)
+    })
+  }
+  return sources.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+}

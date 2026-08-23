@@ -1,9 +1,13 @@
 <script setup lang="ts">
-// 销售记账首页：5 统计卡（营业额/成本/支出/利润/毛利率）+ 摊位名称/低库存概览 + 分类/商品排行
-import { computed, ref } from 'vue'
+// 销售记账首页：5 统计卡（营业额/成本/支出/利润/毛利率）+ 摊位名称/低库存概览 + 销售排行（树状）
+// P1-1：合并分类/商品排行为树状展开结构
+import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBusinessStats, calcCategoryRanking, calcProductRanking, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
+import { calcBusinessStats, calcCategoryProductRanking, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
+
+// P1-3：跨模块联动跳转 emit
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
@@ -22,12 +26,38 @@ const stats = computed(() => calcBusinessStats(data.value))
 
 const lowStock = computed(() => lowStockProducts(data.value))
 
-// 排行（自统计页移入）：按销售额 top 8
-const categoryRank = computed(() => calcCategoryRanking(data.value).slice(0, 8))
-const productRank = computed(() => calcProductRanking(data.value).slice(0, 8))
+// P1-1：分类→商品树状排行（top 5 per category）
+const treeRank = computed(() => calcCategoryProductRanking(data.value, 5))
 
-function maxRankValue(rank: { revenue: number }[]): number {
-  return Math.max(1, ...rank.map(r => r.revenue))
+// 展开的分类 id 集合（默认展开销售额最高的前 2 个分类）
+const expandedCategories = ref<Set<string>>(new Set())
+
+// 初始化默认展开（treeRank 变化时自动填充前 2 个）
+function ensureDefaultExpanded(): void {
+  if (expandedCategories.value.size > 0) return
+  for (const node of treeRank.value.slice(0, 2)) {
+    expandedCategories.value.add(node.categoryId)
+  }
+}
+
+// 监听 treeRank 变化时填充默认展开
+watch(treeRank, () => ensureDefaultExpanded(), { immediate: true })
+
+function toggleCategory(categoryId: string): void {
+  if (expandedCategories.value.has(categoryId)) {
+    expandedCategories.value.delete(categoryId)
+  } else {
+    expandedCategories.value.add(categoryId)
+  }
+}
+
+function isCategoryExpanded(categoryId: string): boolean {
+  return expandedCategories.value.has(categoryId)
+}
+
+/** 分类内最大销售额（用于商品进度条比例） */
+function maxProductRevenue(node: { products: { revenue: number }[] }): number {
+  return Math.max(1, ...node.products.map(p => p.revenue))
 }
 
 const stallDraft = ref('')
@@ -94,40 +124,41 @@ async function commitStallName(): Promise<void> {
       </div>
     </div>
 
-    <!-- 分类排行 + 商品排行（自统计页移入） -->
-    <div class="bizhome-rank-grid">
-      <section class="bizhome-card" data-testid="bizhome-rank-cat">
-        <div class="bizhome-card-title">分类排行（按销售额）</div>
-        <p v-if="categoryRank.length === 0" class="bizhome-empty">暂无数据</p>
-        <div v-else class="bizhome-rank-list">
-          <div v-for="(item, i) in categoryRank" :key="item.categoryId" class="bizhome-rank-row" :data-testid="'bizhome-cat-' + item.categoryId">
-            <span class="bizhome-rank-idx">{{ i + 1 }}</span>
-            <span class="bizhome-rank-name">{{ item.name }}</span>
-            <div class="bizhome-rank-bar">
-              <div class="bizhome-rank-fill" :style="{ width: (item.revenue / maxRankValue(categoryRank)) * 100 + '%' }"></div>
+    <!-- P1-1：销售排行（分类→商品树状展开） -->
+    <section class="bizhome-card" data-testid="bizhome-rank-tree">
+      <div class="bizhome-card-title">📊 销售排行（分类→商品）</div>
+      <p v-if="treeRank.length === 0" class="bizhome-empty">暂无数据</p>
+      <div v-else class="bizhome-tree">
+        <div v-for="node in treeRank" :key="node.categoryId" class="bizhome-tree-node" :data-testid="'bizhome-tree-cat-' + node.categoryId">
+          <!-- 分类行 -->
+          <div class="bizhome-tree-cat" @click="toggleCategory(node.categoryId)">
+            <span class="bizhome-tree-arrow">{{ isCategoryExpanded(node.categoryId) ? '▾' : '▸' }}</span>
+            <span class="bizhome-tree-cat-name">{{ node.categoryName }}</span>
+            <span class="bizhome-tree-cat-val">{{ formatYuanOf(node.categoryRevenue) }}</span>
+            <span class="bizhome-tree-cat-sold">×{{ node.categorySold }}</span>
+          </div>
+          <!-- 商品排行（展开后显示） -->
+          <div v-if="isCategoryExpanded(node.categoryId)" class="bizhome-tree-products">
+            <div
+              v-for="(prod, pi) in node.products"
+              :key="prod.productId"
+              class="bizhome-tree-prod"
+              :data-testid="'bizhome-tree-prod-' + prod.productId"
+              @click="emit('navigate', 'purchases', prod.productId)"
+            >
+              <span class="bizhome-tree-prod-idx">{{ pi + 1 }}</span>
+              <span class="bizhome-tree-prod-name">{{ prod.name }}</span>
+              <div class="bizhome-tree-prod-bar">
+                <div class="bizhome-tree-prod-fill" :style="{ width: (prod.revenue / maxProductRevenue(node)) * 100 + '%' }"></div>
+              </div>
+              <span class="bizhome-tree-prod-val">{{ formatYuanOf(prod.revenue) }}</span>
+              <span class="bizhome-tree-prod-sold">×{{ prod.sold }}</span>
             </div>
-            <span class="bizhome-rank-val">{{ formatYuanOf(item.revenue) }}</span>
-            <span class="bizhome-rank-sold">×{{ item.sold }}</span>
+            <p v-if="node.products.length === 0" class="bizhome-tree-empty">该分类暂无商品销售数据</p>
           </div>
         </div>
-      </section>
-
-      <section class="bizhome-card" data-testid="bizhome-rank-prod">
-        <div class="bizhome-card-title">商品排行（按销售额）</div>
-        <p v-if="productRank.length === 0" class="bizhome-empty">暂无数据</p>
-        <div v-else class="bizhome-rank-list">
-          <div v-for="(item, i) in productRank" :key="item.productId" class="bizhome-rank-row" :data-testid="'bizhome-prod-' + item.productId">
-            <span class="bizhome-rank-idx">{{ i + 1 }}</span>
-            <span class="bizhome-rank-name">{{ item.name }}</span>
-            <div class="bizhome-rank-bar">
-              <div class="bizhome-rank-fill" :style="{ width: (item.revenue / maxRankValue(productRank)) * 100 + '%' }"></div>
-            </div>
-            <span class="bizhome-rank-val">{{ formatYuanOf(item.revenue) }}</span>
-            <span class="bizhome-rank-sold">×{{ item.sold }}</span>
-          </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -245,68 +276,130 @@ async function commitStallName(): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-.bizhome-rank-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.bizhome-rank-list {
+/* P1-1：树状排行 */
+.bizhome-tree {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-.bizhome-rank-row {
+.bizhome-tree-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bizhome-tree-cat {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.bizhome-rank-idx {
+.bizhome-tree-cat:hover {
+  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 10%, var(--bg-secondary, var(--color-bg-hover)));
+}
+
+.bizhome-tree-arrow {
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  width: 14px;
+}
+
+.bizhome-tree-cat-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bizhome-tree-cat-val {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-color, var(--color-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.bizhome-tree-cat-sold {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
+}
+
+.bizhome-tree-products {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 4px 24px;
+}
+
+.bizhome-tree-prod {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.bizhome-tree-prod:hover {
+  background: var(--bg-secondary, var(--color-bg-hover));
+}
+
+.bizhome-tree-prod-idx {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary, var(--color-text-secondary));
   background: var(--bg-secondary, var(--color-bg-hover));
   border-radius: 50%;
 }
 
-.bizhome-rank-name {
+.bizhome-tree-prod-name {
   flex-shrink: 0;
-  min-width: 64px;
-  max-width: 110px;
+  min-width: 60px;
+  max-width: 120px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.bizhome-rank-bar {
+.bizhome-tree-prod-bar {
   flex: 1;
-  min-width: 40px;
-  height: 8px;
+  min-width: 30px;
+  height: 6px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border-radius: 999px;
   overflow: hidden;
 }
 
-.bizhome-rank-fill {
+.bizhome-tree-prod-fill {
   height: 100%;
   background: var(--accent-color, var(--color-primary));
   border-radius: 999px;
   transition: width 0.3s ease;
 }
 
-.bizhome-rank-val {
+.bizhome-tree-prod-val {
   flex-shrink: 0;
   font-size: 13px;
   font-weight: 700;
@@ -314,11 +407,18 @@ async function commitStallName(): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-.bizhome-rank-sold {
+.bizhome-tree-prod-sold {
   flex-shrink: 0;
   font-size: 12px;
   color: var(--text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
+}
+
+.bizhome-tree-empty {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
 }
 
 :root.dark .stat-card,
@@ -351,8 +451,7 @@ async function commitStallName(): Promise<void> {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bizhome-row,
-  .bizhome-rank-grid {
+  .bizhome-row {
     grid-template-columns: 1fr;
   }
 }

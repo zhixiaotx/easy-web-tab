@@ -1,22 +1,38 @@
 <script setup lang="ts">
 // 收摊记录：日记录卡片（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
-import { computed, reactive, ref } from 'vue'
+// P0-1：结构化商品明细行展示（折叠/展开、损耗高亮、已删除标记）
+// P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
+import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcDailyCost, calcDailyLossAmount, calcDailyRevenue, findProduct, formatYuanOf, localDateKey, soldCount, sortDailyRecords } from '@/composables/businessCore'
+import { calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, findProduct, formatYuanOf, localDateKey, sortDailyRecords } from '@/composables/businessCore'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from '@/components/workbench/PanelPager.vue'
+
+// P1-3：跨模块联动跳转 emit
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
 
 const sorted = computed(() => sortDailyRecords(store.dailyRecords))
 
-function productNameOf(id: string): string {
-  return findProduct(store.products, id)?.name ?? '（已删除商品）'
-}
+// ===== 自适应分页（usePanelPaging：ResizeObserver 测可用高 + grid 实测列数）=====
+// rowHeight = 卡片固定 250 + gap 12 = 262
+const listEl = ref<HTMLElement | null>(null)
+const gridEl = ref<HTMLElement | null>(null)
+const paging = usePanelPaging({
+  items: () => sorted.value,
+  rowHeight: 262,
+  gap: 12,
+  containerRef: listEl,
+  gridRef: gridEl
+})
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+watch(sorted, () => goto(1))
 
-function itemSummary(record: BusinessDailyRecord): string {
-  return record.items
-    .map(it => `${productNameOf(it.productId)} ×${soldCount(it)}`)
-    .join('、')
+/** 获取某条记录的结构化商品明细 */
+function dailyItemDetails(record: BusinessDailyRecord) {
+  return calcDailyItemDetails(record, store.products)
 }
 
 // ===== 编辑弹框（动态商品行） =====
@@ -24,6 +40,31 @@ const showDialog = ref(false)
 const editingDate = ref(localDateKey())
 const formNote = ref('')
 const rows = reactive<{ productId: string; broughtOut: number; remaining: number; loss: number }[]>([])
+
+// P0-3：当前库存 map（编辑弹框用）
+const stockMap = computed(() => calcInventory(store.products, store.purchases, store.dailyRecords))
+
+/** 获取行的商品对象 */
+function rowProduct(productId: string) {
+  return findProduct(store.products, productId)
+}
+
+/** 获取行当前库存 */
+function rowStock(productId: string): number {
+  return stockMap.value[productId] ?? 0
+}
+
+/** 带出后预计库存 */
+function rowExpectedStock(productId: string, broughtOut: number): number {
+  return rowStock(productId) - broughtOut
+}
+
+/** 行小计：售出 × 售价 */
+function rowSubtotal(productId: string, broughtOut: number, remaining: number, loss: number): number {
+  const product = rowProduct(productId)
+  const sold = Math.max(0, broughtOut - remaining - loss)
+  return Math.round(sold * (product?.sellingPrice ?? 0) * 100) / 100
+}
 
 const formRevenue = computed(() =>
   calcDailyRevenue(rows.map(r => ({ ...r })), store.products)
@@ -115,8 +156,9 @@ async function handleDelete(id: string): Promise<void> {
     </div>
 
     <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击右上角记下今天的第一笔</div>
-    <div v-else class="bizday-grid">
-      <div v-for="r in sorted" :key="r.id" class="bizday-card" :data-testid="`bizday-card-${r.id}`">
+    <div v-else ref="listEl" class="bizday-list" :class="{ 'bizday-list-scroll': !fitsOnePage }">
+      <div ref="gridEl" class="bizday-grid">
+        <div v-for="r in pageItems" :key="r.id" class="bizday-card" :data-testid="`bizday-card-${r.id}`">
         <div class="bizday-head">
           <span class="bizday-date">{{ r.date }}</span>
           <span class="bizday-revenue" :data-testid="`bizday-revenue-${r.id}`">{{ formatYuanOf(r.totalRevenue) }}</span>
@@ -126,13 +168,44 @@ async function handleDelete(id: string): Promise<void> {
           <span class="bizday-stat">利润 <strong :data-testid="`bizday-profit-${r.id}`">{{ formatYuanOf(recordProfit(r)) }}</strong></span>
           <span class="bizday-stat">损耗 <strong :data-testid="`bizday-loss-${r.id}`">{{ formatYuanOf(recordLossAmount(r)) }}</strong></span>
         </div>
-        <div class="bizday-items" :data-testid="`bizday-summary-${r.id}`">{{ itemSummary(r) || '无商品明细' }}</div>
-        <div class="bizday-note">{{ r.note || '—' }}</div>
+        <!-- P0-1：结构化商品明细行（固定 3 条） -->
+        <div class="bizday-details" :data-testid="`bizday-details-${r.id}`">
+          <div class="bizday-detail-head">
+            <span class="bizday-detail-th name">商品</span>
+            <span class="bizday-detail-th">带出</span>
+            <span class="bizday-detail-th">售出</span>
+            <span class="bizday-detail-th">单价</span>
+            <span class="bizday-detail-th sub">小计</span>
+          </div>
+          <div
+            v-for="d in dailyItemDetails(r).slice(0, 3)"
+            :key="d.productId"
+            class="bizday-detail-row"
+            :class="{ deleted: d.deleted }"
+          >
+            <span class="bizday-detail-td name" @click="!d.deleted && emit('navigate', 'products', d.productId)">
+              {{ d.name }}{{ d.deleted ? '（已删除商品）' : '' }}
+            </span>
+            <span class="bizday-detail-td">{{ d.broughtOut }}</span>
+            <span class="bizday-detail-td sold-bold">{{ d.sold }}</span>
+            <span class="bizday-detail-td">@¥{{ d.sellingPrice.toFixed(2) }}</span>
+            <span class="bizday-detail-td sub-bold">¥{{ d.subtotal.toFixed(2) }}</span>
+          </div>
+        </div>
         <div class="bizday-actions">
           <button class="bizday-btn" :data-testid="`bizday-edit-${r.id}`" @click="startEdit(r)">编辑</button>
           <button class="bizday-btn del" :data-testid="`bizday-del-${r.id}`" @click="handleDelete(r.id)">删除</button>
         </div>
       </div>
+      </div>
+      <PanelPager
+        v-if="totalPages > 1"
+        :page="currentPage"
+        :total="totalPages"
+        data-testid="panel-pager"
+        @prev="prev()"
+        @next="next()"
+      />
     </div>
 
     <!-- 编辑弹框（商品行动态增删） -->
@@ -150,26 +223,50 @@ async function handleDelete(id: string): Promise<void> {
 
           <div class="bizday-rows">
             <div v-for="(row, i) in rows" :key="i" class="bizday-row" data-testid="bizday-row">
-              <select v-model="row.productId" class="biz-input bizday-product" data-testid="bizday-row-product">
-                <option v-for="p in store.products" :key="p.id" :value="p.id">
-                  {{ p.name }}{{ p.active ? '' : '（停售）' }}
-                </option>
-              </select>
-              <div class="bizday-nums">
-                <label class="bizday-num">
-                  带出
-                  <input v-model.number="row.broughtOut" type="number" min="0" step="1" class="biz-input" />
-                </label>
-                <label class="bizday-num">
-                  剩余
-                  <input v-model.number="row.remaining" type="number" min="0" step="1" class="biz-input" />
-                </label>
-                <label class="bizday-num">
-                  损耗
-                  <input v-model.number="row.loss" type="number" min="0" step="1" class="biz-input" />
-                </label>
+              <div class="bizday-row-main">
+                <div class="bizday-product-wrap">
+                  <select v-model="row.productId" class="biz-input bizday-product" data-testid="bizday-row-product">
+                    <option v-for="p in store.products" :key="p.id" :value="p.id">
+                      {{ p.name }}{{ p.active ? '' : '（停售）' }}
+                    </option>
+                  </select>
+                  <!-- P0-3：商品进价/售价 + 当前库存 -->
+                  <div v-if="row.productId && rowProduct(row.productId)" class="bizday-row-context">
+                    <span class="bizday-row-price">
+                      {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
+                    </span>
+                    <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} 件</span>
+                  </div>
+                </div>
+                <div class="bizday-nums">
+                  <label class="bizday-num">
+                    带出
+                    <input v-model.number="row.broughtOut" type="number" min="0" step="1" class="biz-input" />
+                  </label>
+                  <label class="bizday-num">
+                    剩余
+                    <input v-model.number="row.remaining" type="number" min="0" step="1" class="biz-input" />
+                  </label>
+                  <label class="bizday-num">
+                    损耗
+                    <input v-model.number="row.loss" type="number" min="0" step="1" class="biz-input" />
+                  </label>
+                </div>
+                <button type="button" class="bizday-btn del" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</button>
               </div>
-              <button type="button" class="bizday-btn del" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</button>
+              <!-- P0-3：带出后预计库存 + 行小计 -->
+              <div v-if="row.productId" class="bizday-row-preview">
+                <span
+                  class="bizday-row-expected"
+                  :class="{ 'stock-warn': rowExpectedStock(row.productId, row.broughtOut) < 0 }"
+                >
+                  带出后预计库存：{{ rowStock(row.productId) }} - {{ row.broughtOut }} = {{ rowExpectedStock(row.productId, row.broughtOut) }} 件
+                  <span v-if="rowExpectedStock(row.productId, row.broughtOut) < 0" class="bizday-stock-warn">超出库存</span>
+                </span>
+                <span class="bizday-row-subtotal">
+                  售出 {{ Math.max(0, row.broughtOut - row.remaining - row.loss) }} × ¥{{ (rowProduct(row.productId)?.sellingPrice ?? 0).toFixed(2) }} = ¥{{ rowSubtotal(row.productId, row.broughtOut, row.remaining, row.loss).toFixed(2) }}
+                </span>
+              </div>
             </div>
             <button type="button" class="bizday-add-row" data-testid="bizday-row-add" @click="addRow">＋ 添加商品行</button>
           </div>
@@ -201,6 +298,30 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bizday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bizday-list.bizday-list-scroll {
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .bizday {
+    min-height: 0;
+  }
+  .bizday-list {
+    flex: none;
+    overflow: visible;
+  }
 }
 
 .bizday-bar {
@@ -242,7 +363,7 @@ async function handleDelete(id: string): Promise<void> {
 
 .bizday-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   align-content: start;
 }
@@ -257,6 +378,10 @@ async function handleDelete(id: string): Promise<void> {
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
+  height: 250px;
+  min-height: 250px;
+  max-height: 250px;
+  overflow: hidden;
 }
 
 .bizday-card:hover {
@@ -284,9 +409,134 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-.bizday-items {
-  font-size: 13px;
+/* P0-1：结构化商品明细行 */
+.bizday-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.bizday-detail-head {
+  display: grid;
+  grid-template-columns: minmax(60px, 1.1fr) minmax(32px, 0.55fr) minmax(32px, 0.55fr) minmax(44px, 0.65fr) minmax(56px, 0.85fr);
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted, var(--color-text-muted));
+  padding: 0 2px 4px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+}
+
+.bizday-detail-th {
+  text-align: right;
+  font-weight: 600;
+}
+
+.bizday-detail-th.name,
+.bizday-detail-th.sub {
+  text-align: left;
+}
+
+.bizday-detail-row {
+  display: grid;
+  grid-template-columns: minmax(60px, 1.1fr) minmax(32px, 0.55fr) minmax(32px, 0.55fr) minmax(44px, 0.65fr) minmax(56px, 0.85fr);
+  gap: 3px;
+  padding: 3px 2px;
+  font-size: 12px;
   color: var(--text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+  align-items: center;
+}
+
+.bizday-detail-row.deleted {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.bizday-detail-td {
+  text-align: right;
+}
+
+.bizday-detail-td.name {
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bizday-detail-row:not(.deleted) .bizday-detail-td.name:hover {
+  color: var(--accent-color, var(--color-primary));
+  text-decoration: underline;
+}
+
+.bizday-detail-td.loss-red {
+  color: var(--error-color, var(--color-error));
+  font-weight: 700;
+}
+
+.bizday-detail-td.sold-bold {
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+}
+
+.bizday-detail-td.sub-bold {
+  font-weight: 700;
+  color: var(--success-color, var(--color-success));
+}
+
+/* P0-3：编辑弹框行库存上下文 */
+.bizday-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.bizday-product-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1;
+}
+
+.bizday-row-context {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted, var(--color-text-muted));
+  flex-wrap: wrap;
+}
+
+.bizday-row-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.bizday-row-preview {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-muted, var(--color-text-muted));
+  padding: 4px 4px 0;
+  flex-wrap: wrap;
+}
+
+.bizday-row-expected.stock-warn {
+  color: var(--error-color, var(--color-error));
+}
+
+.bizday-stock-warn {
+  color: var(--error-color, var(--color-error));
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.bizday-row-subtotal {
+  font-variant-numeric: tabular-nums;
+  color: var(--success-color, var(--color-success));
+  font-weight: 600;
 }
 
 .bizday-stats {
@@ -309,18 +559,11 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
 }
 
-.bizday-note {
-  font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .bizday-actions {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+  margin-top: auto;
 }
 
 .bizday-btn {
@@ -373,12 +616,11 @@ async function handleDelete(id: string): Promise<void> {
 
 .bizday-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px;
   background: var(--bg-secondary, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
-  flex-wrap: wrap;
 }
 
 .bizday-product {
@@ -546,5 +788,17 @@ async function handleDelete(id: string): Promise<void> {
   background-color: var(--input-bg, #374151);
   color: var(--text-primary, #f9fafb);
   border-color: var(--border-color, #374151);
+}
+
+@media (max-width: 1200px) {
+  .bizday-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .bizday-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

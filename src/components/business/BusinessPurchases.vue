@@ -1,9 +1,16 @@
 <script setup lang="ts">
 // 进货记录：分类 tabs（全部+可见分类）+ 行式列表（分类徽标）+ 新增/编辑弹框
-import { computed, ref } from 'vue'
+// P0-2：进货卡片增加售价与加价率对照
+// P1-3：跨模块联动跳转
+import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { filterPurchasesByCategory, findProduct, findProductCategory, formatYuanOf, localDateKey, visibleProductCategories } from '@/composables/businessCore'
+import { calcMarkupRate, filterPurchasesByCategory, findProduct, findProductCategory, formatYuanOf, localDateKey, visibleProductCategories } from '@/composables/businessCore'
 import type { BusinessPurchase } from '@/types'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from '@/components/workbench/PanelPager.vue'
+
+// P1-3：跨模块联动跳转 emit
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
 
@@ -19,6 +26,45 @@ function catNameOf(productId: string): string {
   const catId = findProduct(store.products, productId)?.categoryId
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
 }
+
+// P0-2：获取商品售价
+function productSellingPrice(productId: string): number | null {
+  return findProduct(store.products, productId)?.sellingPrice ?? null
+}
+
+// P0-2：计算加价率（售价 vs 进价）
+function markupRateOf(productId: string, unitPrice: number): number | null {
+  const product = findProduct(store.products, productId)
+  if (!product) return null
+  return calcMarkupRate(product.sellingPrice, unitPrice)
+}
+
+// P1-3：按商品筛选 prop
+const props = defineProps<{ productFilter?: string }>()
+
+// P1-3：实际过滤后的列表（叠加 productFilter）
+const filteredWithProductFilter = computed(() => {
+  let list = filtered.value
+  if (props.productFilter) {
+    list = list.filter(p => p.productId === props.productFilter)
+  }
+  return list
+})
+
+// ===== 自适应分页（5 列，rowHeight 估算 240）=====
+const listEl = ref<HTMLElement | null>(null)
+const gridEl = ref<HTMLElement | null>(null)
+const paging = usePanelPaging({
+  items: () => filteredWithProductFilter.value,
+  rowHeight: 240,
+  gap: 12,
+  containerRef: listEl,
+  gridRef: gridEl
+})
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+watch(activeCat, () => goto(1))
+watch(() => props.productFilter, () => goto(1))
+watch(filteredWithProductFilter, () => nextTick(() => goto(1)))
 
 // ===== 新增/编辑弹框 =====
 const showDialog = ref(false)
@@ -102,29 +148,50 @@ async function handleDelete(id: string): Promise<void> {
           @click="activeCat = cat.id"
         >{{ cat.name }}</button>
       </div>
-      <span class="bizpur-count">共 {{ filtered.length }} 笔</span>
+      <span class="bizpur-count">共 {{ filteredWithProductFilter.length }} 笔</span>
       <button class="bizpur-add" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</button>
     </div>
 
-    <div v-if="filtered.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
-    <div v-else class="bizpur-grid">
-      <div v-for="p in filtered" :key="p.id" class="bizpur-card" :data-testid="`bizpur-card-${p.id}`">
+    <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
+    <div v-else ref="listEl" class="bizpur-list" :class="{ 'bizpur-list-scroll': !fitsOnePage }">
+      <div ref="gridEl" class="bizpur-grid">
+      <div v-for="p in pageItems" :key="p.id" class="bizpur-card" :data-testid="`bizpur-card-${p.id}`">
         <div class="bizpur-card-head">
           <span class="bizpur-date">{{ p.date }}</span>
           <span class="bizpur-cat" :data-testid="`bizpur-cat-badge-${p.id}`">{{ catNameOf(p.productId) }}</span>
         </div>
-        <div class="bizpur-product">{{ productNameOf(p.productId) }}</div>
+        <div class="bizpur-product" @click="findProduct(store.products, p.productId) && emit('navigate', 'products', p.productId)">{{ productNameOf(p.productId) }}</div>
         <div class="bizpur-card-detail">
           <span class="bizpur-num">×{{ p.quantity }}</span>
           <span class="bizpur-num">@{{ formatYuanOf(p.unitPrice) }}</span>
         </div>
         <div class="bizpur-total">{{ formatYuanOf(p.total) }}</div>
+        <!-- P0-2：售价与加价率对照（商品已删除不显示） -->
+        <div v-if="findProduct(store.products, p.productId)" class="bizpur-markup">
+          <span class="bizpur-markup-price">售价 {{ formatYuanOf(productSellingPrice(p.productId)!) }}/件</span>
+          <span
+            class="bizpur-markup-rate"
+            :class="{
+              'rate-high': (markupRateOf(p.productId, p.unitPrice) ?? 0) > 0,
+              'rate-low': (markupRateOf(p.productId, p.unitPrice) ?? 0) <= 0
+            }"
+          >加价率 {{ markupRateOf(p.productId, p.unitPrice) ?? '—' }}%</span>
+        </div>
         <div class="bizpur-note">{{ p.note || '—' }}</div>
         <div class="bizpur-actions">
           <button class="bizpur-btn" :data-testid="`bizpur-edit-${p.id}`" @click="startEdit(p)">编辑</button>
           <button class="bizpur-btn del" :data-testid="`bizpur-del-${p.id}`" @click="handleDelete(p.id)">删除</button>
         </div>
       </div>
+      </div>
+      <PanelPager
+        v-if="totalPages > 1"
+        :page="currentPage"
+        :total="totalPages"
+        data-testid="panel-pager"
+        @prev="prev()"
+        @next="next()"
+      />
     </div>
 
     <!-- 新增/编辑弹框 -->
@@ -142,6 +209,10 @@ async function handleDelete(id: string): Promise<void> {
                 {{ p.name }}{{ p.active ? '' : '（已停售）' }}
               </option>
             </select>
+            <!-- P0-2：选中商品后回显当前售价作为参考 -->
+            <span v-if="formProductId && findProduct(store.products, formProductId)" class="bizpur-form-price-ref">
+              当前售价参考：{{ formatYuanOf(findProduct(store.products, formProductId)!.sellingPrice) }}/件
+            </span>
           </div>
           <div class="biz-form-row">
             <div class="biz-field">
@@ -182,6 +253,24 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bizpur-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.bizpur-list.bizpur-list-scroll {
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .bizpur { min-height: 0; }
+  .bizpur-list { flex: none; overflow: visible; }
 }
 
 .bizpur-bar {
@@ -333,6 +422,46 @@ async function handleDelete(id: string): Promise<void> {
   font-weight: 700;
   color: var(--accent-color, var(--color-primary));
   font-variant-numeric: tabular-nums;
+}
+
+/* P0-2：售价与加价率对照 */
+.bizpur-markup {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 0;
+  border-top: 1px dashed var(--border-color, var(--color-border));
+}
+
+.bizpur-markup-price {
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.bizpur-markup-rate.rate-high {
+  color: var(--success-color, var(--color-success));
+  font-weight: 600;
+}
+
+.bizpur-markup-rate.rate-low {
+  color: var(--error-color, var(--color-error));
+  font-weight: 600;
+}
+
+/* P0-2：编辑弹框售价参考 */
+.bizpur-form-price-ref {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
+}
+
+/* P1-3：商品名可点击 */
+.bizpur-product {
+  cursor: pointer;
+}
+
+.bizpur-product:hover {
+  color: var(--accent-color, var(--color-primary));
 }
 
 .bizpur-actions {

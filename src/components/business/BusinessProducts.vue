@@ -1,11 +1,19 @@
 <script setup lang="ts">
 // 商品管理：分类 tabs（全部 + 可见分类）+ 商品卡片网格 + 新增/编辑弹框 + ⚙️ 分类管理
-import { computed, ref } from 'vue'
+// P1-3：跨模块联动跳转（商品名可点击跳转进货页）
+// P2-2：商品详情抽屉
+import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { findProductCategory, formatYuanOf, sortProducts, visibleProductCategories } from '@/composables/businessCore'
+import { calcMarkupRate, calcProductSummary, findProductCategory, formatYuanOf, sortProducts, visibleProductCategories } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
 import type { BusinessProduct } from '@/types'
 import BusinessCategoryManager from './BusinessCategoryManager.vue'
+import { usePanelPaging } from '@/composables/usePanelPaging'
+import PanelPager from '@/components/workbench/PanelPager.vue'
+
+// P1-3：高亮商品 prop + 跨模块导航 emit
+const props = defineProps<{ highlightId?: string }>()
+const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
 
 const store = useWorkbenchBusinessStore()
 const toast = useToast()
@@ -20,6 +28,20 @@ const filteredProducts = computed(() => {
   if (activeCat.value === 'all') return all
   return all.filter(p => p.categoryId === activeCat.value)
 })
+
+// ===== 自适应分页（5 列，rowHeight 估算 200）=====
+const listEl = ref<HTMLElement | null>(null)
+const gridEl = ref<HTMLElement | null>(null)
+const paging = usePanelPaging({
+  items: () => filteredProducts.value,
+  rowHeight: 200,
+  gap: 12,
+  containerRef: listEl,
+  gridRef: gridEl
+})
+const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+watch(activeCat, () => goto(1))
+watch(filteredProducts, () => nextTick(() => goto(1)))
 
 function catNameOf(categoryId?: string): string {
   if (!categoryId) return '未分类'
@@ -96,6 +118,46 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
     toast.error(r.reason === 'in-use' ? '该商品已有进货或收摊记录，无法删除（可改为停售）' : '商品不存在')
   }
 }
+
+// P1-3：高亮商品
+function isHighlighted(id: string): boolean {
+  return props.highlightId === id
+}
+
+// ===== P2-2：商品详情抽屉 =====
+const showDrawer = ref(false)
+const drawerProductId = ref<string | null>(null)
+
+const data = computed(() => ({
+  productCategories: store.productCategories,
+  expenseCategories: store.expenseCategories,
+  products: store.products,
+  purchases: store.purchases,
+  dailyRecords: store.dailyRecords,
+  expenses: store.expenses,
+  settings: store.settings
+}))
+
+const drawerSummary = computed(() => {
+  if (!drawerProductId.value) return null
+  return calcProductSummary(data.value, drawerProductId.value)
+})
+
+function openDetail(p: BusinessProduct): void {
+  drawerProductId.value = p.id
+  showDrawer.value = true
+}
+
+function closeDrawer(): void {
+  showDrawer.value = false
+  drawerProductId.value = null
+}
+
+/** 抽屉内加价率 */
+function drawerMarkupRate(): number | null {
+  if (!drawerSummary.value?.product) return null
+  return calcMarkupRate(drawerSummary.value.product.sellingPrice, drawerSummary.value.product.purchasePrice)
+}
 </script>
 
 <template>
@@ -126,16 +188,17 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
     <div v-if="filteredProducts.length === 0" class="bizprod-empty" data-testid="bizprod-empty">
       暂无商品，点击右上角「新增商品」添加
     </div>
-    <div v-else class="bizprod-grid">
+    <div v-else ref="listEl" class="bizprod-list" :class="{ 'bizprod-list-scroll': !fitsOnePage }">
+      <div ref="gridEl" class="bizprod-grid">
       <div
-        v-for="p in filteredProducts"
+        v-for="p in pageItems"
         :key="p.id"
         class="bizprod-card"
-        :class="{ inactive: !p.active }"
+        :class="{ inactive: !p.active, highlighted: isHighlighted(p.id) }"
         :data-testid="`bizprod-card-${p.id}`"
       >
         <div class="bizprod-head">
-          <span class="bizprod-name">{{ p.name }}</span>
+          <span class="bizprod-name" @click="emit('navigate', 'purchases', p.id)">{{ p.name }}</span>
           <span class="bizprod-cat">{{ catNameOf(p.categoryId) }}</span>
         </div>
         <div class="bizprod-prices">
@@ -153,11 +216,21 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
             {{ p.active ? '在售' : '停售' }}
           </label>
           <div class="bizprod-actions">
+            <button class="bizprod-btn" :data-testid="`bizprod-detail-${p.id}`" @click="openDetail(p)">详情</button>
             <button class="bizprod-btn" :data-testid="`bizprod-edit-${p.id}`" @click="startEdit(p)">编辑</button>
             <button class="bizprod-btn del" :data-testid="`bizprod-del-${p.id}`" @click="handleDelete(p)">删除</button>
           </div>
         </div>
       </div>
+      </div>
+      <PanelPager
+        v-if="totalPages > 1"
+        :page="currentPage"
+        :total="totalPages"
+        data-testid="panel-pager"
+        @prev="prev()"
+        @next="next()"
+      />
     </div>
 
     <!-- 新增/编辑弹框 -->
@@ -210,6 +283,120 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
     </div>
 
     <BusinessCategoryManager v-if="showCatManager" kind="product" @close="showCatManager = false" />
+
+    <!-- P2-2：商品详情抽屉 -->
+    <Teleport to="body">
+      <div v-if="showDrawer && drawerSummary" class="bizprod-drawer-overlay" @click.self="closeDrawer">
+        <div class="bizprod-drawer" data-testid="bizprod-drawer">
+          <div class="bizprod-drawer-header">
+            <h3>商品详情</h3>
+            <button class="bizprod-drawer-close" @click="closeDrawer">✕</button>
+          </div>
+          <div class="bizprod-drawer-body" v-if="drawerSummary.product">
+            <!-- 基础信息 -->
+            <div class="bizprod-drawer-section">
+              <div class="bizprod-drawer-info-row">
+                <span class="bizprod-drawer-label">商品名</span>
+                <span class="bizprod-drawer-value">{{ drawerSummary.product.name }}</span>
+              </div>
+              <div class="bizprod-drawer-info-row">
+                <span class="bizprod-drawer-label">分类</span>
+                <span class="bizprod-drawer-value">{{ catNameOf(drawerSummary.product.categoryId) }}</span>
+              </div>
+              <div class="bizprod-drawer-info-row">
+                <span class="bizprod-drawer-label">状态</span>
+                <span class="bizprod-drawer-value" :class="{ 'status-active': drawerSummary.product.active, 'status-inactive': !drawerSummary.product.active }">
+                  {{ drawerSummary.product.active ? '在售' : '停售' }}
+                </span>
+              </div>
+              <div class="bizprod-drawer-info-row">
+                <span class="bizprod-drawer-label">进价/售价</span>
+                <span class="bizprod-drawer-value">
+                  {{ formatYuanOf(drawerSummary.product.purchasePrice) }} → {{ formatYuanOf(drawerSummary.product.sellingPrice) }}
+                  <span class="bizprod-drawer-markup" :class="{ 'rate-high': (drawerMarkupRate() ?? 0) > 0, 'rate-low': (drawerMarkupRate() ?? 0) <= 0 }">
+                    加价率 {{ drawerMarkupRate() ?? '—' }}%
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <!-- 经营数据 -->
+            <div class="bizprod-drawer-section">
+              <div class="bizprod-drawer-section-title">📊 经营数据</div>
+              <div class="bizprod-drawer-stats">
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">总进货</span>
+                  <span class="bizprod-drawer-stat-value">{{ drawerSummary.totalPurchased }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">总带出</span>
+                  <span class="bizprod-drawer-stat-value">{{ drawerSummary.totalBroughtOut }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">总售出</span>
+                  <span class="bizprod-drawer-stat-value">{{ drawerSummary.totalSold }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">总损耗</span>
+                  <span class="bizprod-drawer-stat-value">{{ drawerSummary.totalLoss }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">当前库存</span>
+                  <span class="bizprod-drawer-stat-value">{{ drawerSummary.currentStock }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">累计营业额</span>
+                  <span class="bizprod-drawer-stat-value">{{ formatYuanOf(drawerSummary.totalRevenue) }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">累计成本</span>
+                  <span class="bizprod-drawer-stat-value">{{ formatYuanOf(drawerSummary.totalCost) }}</span>
+                </div>
+                <div class="bizprod-drawer-stat">
+                  <span class="bizprod-drawer-stat-label">累计利润</span>
+                  <span class="bizprod-drawer-stat-value" :class="{ negative: drawerSummary.totalProfit < 0 }">{{ formatYuanOf(drawerSummary.totalProfit) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 进货记录（最近 5 笔） -->
+            <div class="bizprod-drawer-section">
+              <div class="bizprod-drawer-section-title">🛒 进货记录（最近 5 笔）</div>
+              <p v-if="drawerSummary.recentPurchases.length === 0" class="bizprod-drawer-empty">暂无进货记录</p>
+              <div v-else class="bizprod-drawer-records">
+                <div
+                  v-for="pur in drawerSummary.recentPurchases"
+                  :key="pur.id"
+                  class="bizprod-drawer-record"
+                  @click="emit('navigate', 'purchases', drawerSummary.product!.id)"
+                >
+                  <span class="bizprod-drawer-record-date">{{ pur.date }}</span>
+                  <span class="bizprod-drawer-record-detail">×{{ pur.quantity }} @{{ formatYuanOf(pur.unitPrice) }}</span>
+                  <span class="bizprod-drawer-record-total">{{ formatYuanOf(pur.total) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 收摊记录（最近 5 笔） -->
+            <div class="bizprod-drawer-section">
+              <div class="bizprod-drawer-section-title">📋 收摊记录（最近 5 笔）</div>
+              <p v-if="drawerSummary.recentDailyRecords.length === 0" class="bizprod-drawer-empty">暂无收摊记录</p>
+              <div v-else class="bizprod-drawer-records">
+                <div
+                  v-for="rec in drawerSummary.recentDailyRecords"
+                  :key="rec.id"
+                  class="bizprod-drawer-record"
+                  @click="emit('navigate', 'daily')"
+                >
+                  <span class="bizprod-drawer-record-date">{{ rec.date }}</span>
+                  <span class="bizprod-drawer-record-detail">营业额 {{ formatYuanOf(rec.totalRevenue) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -218,6 +405,24 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.bizprod-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.bizprod-list.bizprod-list-scroll {
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .bizprod { min-height: 0; }
+  .bizprod-list { flex: none; overflow: visible; }
 }
 
 .bizprod-bar {
@@ -288,7 +493,7 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
 
 .bizprod-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   align-content: start;
 }
@@ -544,5 +749,223 @@ async function handleDelete(p: BusinessProduct): Promise<void> {
   .bizprod-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* P1-3：高亮商品 */
+.bizprod-card.highlighted {
+  border-color: var(--accent-color, var(--color-primary));
+  box-shadow: 0 0 0 2px var(--accent-color, var(--color-primary));
+}
+
+.bizprod-name {
+  cursor: pointer;
+}
+
+.bizprod-name:hover {
+  color: var(--accent-color, var(--color-primary));
+  text-decoration: underline;
+}
+
+/* P2-2：商品详情抽屉 */
+.bizprod-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 400;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bizprod-drawer {
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  background-color: var(--bg-card, var(--color-bg-card));
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+  animation: bizprod-drawer-slide-in 0.25s ease;
+}
+
+@keyframes bizprod-drawer-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.bizprod-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+  flex-shrink: 0;
+}
+
+.bizprod-drawer-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.bizprod-drawer-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-muted, var(--color-text-muted));
+  cursor: pointer;
+}
+
+.bizprod-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bizprod-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bizprod-drawer-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, var(--color-text-secondary));
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+}
+
+.bizprod-drawer-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.bizprod-drawer-label {
+  color: var(--text-muted, var(--color-text-muted));
+  flex-shrink: 0;
+}
+
+.bizprod-drawer-value {
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bizprod-drawer-markup.rate-high {
+  color: var(--success-color, var(--color-success));
+  font-size: 12px;
+}
+
+.bizprod-drawer-markup.rate-low {
+  color: var(--error-color, var(--color-error));
+  font-size: 12px;
+}
+
+.bizprod-drawer-value.status-active {
+  color: var(--success-color, var(--color-success));
+}
+
+.bizprod-drawer-value.status-inactive {
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.bizprod-drawer-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.bizprod-drawer-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: var(--radius-sm, 6px);
+}
+
+.bizprod-drawer-stat-label {
+  font-size: 11px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.bizprod-drawer-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.bizprod-drawer-stat-value.negative {
+  color: var(--error-color, var(--color-error));
+}
+
+.bizprod-drawer-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+.bizprod-drawer-records {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bizprod-drawer-record {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--bg-secondary, var(--color-bg-hover));
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.bizprod-drawer-record:hover {
+  background: var(--bg-card, var(--color-bg-card));
+}
+
+.bizprod-drawer-record-date {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-primary, var(--color-text));
+}
+
+.bizprod-drawer-record-detail {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bizprod-drawer-record-total {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--accent-color, var(--color-primary));
+}
+
+:root.dark .bizprod-drawer {
+  background-color: var(--bg-secondary, #1f2937);
+}
+
+:root.dark .bizprod-drawer-stat {
+  background-color: var(--bg-card, #1f2937);
+}
+
+:root.dark .bizprod-drawer-record {
+  background-color: var(--bg-card, #1f2937);
 }
 </style>

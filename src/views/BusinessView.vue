@@ -32,12 +32,20 @@ const SECTIONS = [
 type SectionKey = (typeof SECTIONS)[number]['key']
 
 const activeSection = ref<SectionKey>('home')
-// 支出记录 tabs 受控状态（仿 WorkbenchHealth：切走再回来保留上次激活分类）
-const expenseTab = ref('all')
 
-function navigateTo(section: string): void {
+// P1-3：跨模块联动过滤状态
+const productFilter = ref<string | undefined>(undefined)
+const purchaseFilter = ref<string | undefined>(undefined)
+
+function navigateTo(section: string, filter?: string): void {
   if ((SECTIONS as readonly { key: string }[]).some(s => s.key === section)) {
     activeSection.value = section as SectionKey
+    // 设置过滤状态
+    if (section === 'purchases') {
+      purchaseFilter.value = filter
+    } else if (section === 'products') {
+      productFilter.value = filter
+    }
   }
 }
 
@@ -126,15 +134,13 @@ onMounted(() => {
 
       <main class="bs-content">
         <BusinessHome v-if="activeSection === 'home'" @navigate="navigateTo" />
-        <BusinessProducts v-else-if="activeSection === 'products'" />
-        <BusinessPurchases v-else-if="activeSection === 'purchases'" />
-        <BusinessDaily v-else-if="activeSection === 'daily'" />
+        <BusinessProducts v-else-if="activeSection === 'products'" :highlight-id="productFilter" @navigate="navigateTo" />
+        <BusinessPurchases v-else-if="activeSection === 'purchases'" :product-filter="purchaseFilter" @navigate="navigateTo" />
+        <BusinessDaily v-else-if="activeSection === 'daily'" @navigate="navigateTo" />
         <BusinessExpenses
           v-else-if="activeSection === 'expenses'"
-          :active-tab="expenseTab"
-          @change="expenseTab = $event"
         />
-        <BusinessInventory v-else-if="activeSection === 'inventory'" />
+        <BusinessInventory v-else-if="activeSection === 'inventory'" @navigate="navigateTo" />
         <BusinessStats v-else-if="activeSection === 'stats'" />
       </main>
     </div>

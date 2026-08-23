@@ -681,7 +681,7 @@ onUnmounted(() => {
 /* ===== 列表（卡片网格）===== */
 .pwd-list {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
 }

@@ -99,6 +99,8 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
             <div class="conflict-diff-title">未检测到明显模块差异</div>
             <p class="diff-hint">但双方都有新变更时间戳，仍需选择处理方式。</p>
           </div>
+
+          <p class="merge-hint">🔀 合并：按模块逐条按 ID 去重，保留双方新增项；同条目取较新版本。密码库与本地设置保留当前设备。</p>
         </div>
 
         <footer class="conflict-foot">
@@ -112,6 +114,11 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
             class="conflict-btn conflict-btn-primary"
             @click="cloudSync.resolveConflict('local')"
           >💻 本地覆盖云端</button>
+          <button
+            type="button"
+            class="conflict-btn conflict-btn-merge"
+            @click="cloudSync.resolveConflict('merge')"
+          >🔀 合并双方数据</button>
           <button
             type="button"
             class="conflict-btn conflict-btn-ghost"
@@ -256,6 +263,17 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
 .conflict-btn-ghost {
   background: transparent;
   color: var(--color-text-muted);
+}
+.conflict-btn-merge {
+  background: color-mix(in srgb, #22c55e 12%, var(--color-bg));
+  color: #16a34a;
+  border-color: color-mix(in srgb, #22c55e 40%, var(--color-border));
+}
+.merge-hint {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: #16a34a;
+  line-height: 1.5;
 }
 .modal-enter-active,
 .modal-leave-active {

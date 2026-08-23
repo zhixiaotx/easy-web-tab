@@ -20,7 +20,10 @@ import { idbExportAll, idbImportAll } from './useIdb'
 import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
-import type { WorkbenchData } from '../types'
+import { WORKBENCH_DATA_VERSION } from '../types'
+import type { WorkbenchData, WorkbenchTodo, NoteData, DiaryData, Countdown, HealthData, LedgerData, BusinessData, AppSettingsData } from '../types'
+import type { PomodoroData } from './pomodoroCore'
+import type { HabitsData } from './habitCore'
 
 const CLIENT_ID_KEY = 'easy-web-tab-client-id'
 const LAST_SYNC_KEY = 'easy-web-tab-last-sync'
@@ -322,7 +325,7 @@ async function reloadAllStores(): Promise<void> {
 
 // ========== 核心同步流程 ==========
 
-async function pushNow(): Promise<boolean> {
+async function pushNow(silent = false): Promise<boolean> {
   const settings = useAppSettingsStore()
   if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
     return false
@@ -345,17 +348,17 @@ async function pushNow(): Promise<boolean> {
     lastSyncAt.value = now
     clearDirty()
     status.value = 'idle'
-    useToast().success('云同步推送成功')
+    if (!silent) useToast().success('云同步推送成功')
     return true
   } catch (e) {
     status.value = 'error'
     errorMessage.value = e instanceof Error ? e.message : '推送失败'
-    useToast().error(`云同步推送失败：${errorMessage.value}`)
+    if (!silent) useToast().error(`云同步推送失败：${errorMessage.value}`)
     return false
   }
 }
 
-async function applyRemote(remote: WorkbenchData): Promise<void> {
+async function applyRemote(remote: WorkbenchData, silent = false): Promise<void> {
   // 在 idbImportAll 覆盖前，先保存本地已有的密码身份
   const localSaltBefore = getStoredSaltHex()
   const localVerificationBefore = getStoredVerification()
@@ -367,18 +370,297 @@ async function applyRemote(remote: WorkbenchData): Promise<void> {
   // 同设备推后拉、或远端密码身份未变时 → 不提示"已锁定"，避免频繁打扰
   const identityChanged = result.adoptedPasswordIdentity
     && (remote.passwordsSalt !== localSaltBefore || remote.passwordVerification !== localVerificationBefore)
-  if (identityChanged) {
-    useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
-  } else {
-    useToast().success('云同步完成')
+  if (!silent) {
+    if (identityChanged) {
+      useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
+    } else {
+      useToast().success('云同步完成')
+    }
   }
   status.value = 'idle'
   await reloadAllStores()
 }
 
-export async function resolveConflict(decision: 'remote' | 'local' | 'cancel'): Promise<void> {
+// ========== 字段级合并辅助函数 ==========
+
+/**
+ * 按 idKey 做并集（union）；同 id 时若 tsKey 存在则取该字段较大者，
+ * ISO 字符串用字符串比较、number 用数值比较；tsKey 不存在则取本地。
+ * 对 undefined/null 入参用空数组兜底。
+ */
+function mergeById<T>(local: T[] | undefined | null, remote: T[] | undefined | null, idKey: keyof T, tsKey?: keyof T): T[] {
+  const l = local ?? []
+  const r = remote ?? []
+  const map = new Map<string, T>()
+  for (const item of l) map.set(String(item[idKey]), item)
+  for (const item of r) {
+    const id = String(item[idKey])
+    const existing = map.get(id)
+    if (!existing) {
+      map.set(id, item)
+    } else if (tsKey) {
+      const lTs = existing[tsKey]
+      const rTs = item[tsKey]
+      let rNewer = false
+      if (typeof lTs === 'number' && typeof rTs === 'number') {
+        rNewer = rTs > lTs
+      } else if (typeof lTs === 'string' && typeof rTs === 'string') {
+        rNewer = rTs > lTs
+      }
+      if (rNewer) map.set(id, item)
+    }
+  }
+  return [...map.values()]
+}
+
+/** 专为 pomodoro.records：按 date 去重，同 date 取 workSessions 较大者。 */
+function mergeByDateWithMax<T extends { date: string; workSessions: number }>(local: T[] | undefined, remote: T[] | undefined): T[] {
+  const l = local ?? []
+  const r = remote ?? []
+  const map = new Map<string, T>()
+  for (const item of l) map.set(item.date, item)
+  for (const item of r) {
+    const existing = map.get(item.date)
+    if (!existing) {
+      map.set(item.date, item)
+    } else if (item.workSessions > existing.workSessions) {
+      map.set(item.date, item)
+    }
+  }
+  return [...map.values()]
+}
+
+/** 用于 diary.entries / business.dailyRecords 的二次去重：同 date 只保留 updatedAt（或 createdAt）最新的一条。 */
+function dedupeByDateKeepNewest<T extends { date: string; updatedAt?: string; createdAt?: string; id: string }>(arr: T[]): T[] {
+  const map = new Map<string, T>()
+  for (const item of arr) {
+    const existing = map.get(item.date)
+    if (!existing) {
+      map.set(item.date, item)
+    } else {
+      const exTs = existing.updatedAt ?? existing.createdAt ?? ''
+      const itemTs = item.updatedAt ?? item.createdAt ?? ''
+      if (itemTs > exTs) map.set(item.date, item)
+    }
+  }
+  return [...map.values()]
+}
+
+// ========== 模块级合并函数 ==========
+
+function mergeTodos(l: WorkbenchTodo[], r: WorkbenchTodo[]): WorkbenchTodo[] {
+  return mergeById(l ?? [], r ?? [], 'id', 'updatedAt')
+}
+
+function mergeNotes(l: NoteData | undefined, r: NoteData | undefined): NoteData {
+  const lc = l?.categories ?? []
+  const rc = r?.categories ?? []
+  const categories = mergeById(lc, rc, 'id') // 同 id 取本地
+
+  const ln = l?.notes ?? []
+  const rn = r?.notes ?? []
+  const notes = mergeById(ln, rn, 'id', 'updatedAt').map(note => {
+    if (note.type !== 'timeline') return note
+    const localNote = ln.find(n => n.id === note.id)
+    const remoteNote = rn.find(n => n.id === note.id)
+    if (localNote?.entries && remoteNote?.entries) {
+      return { ...note, entries: mergeById(localNote.entries, remoteNote.entries, 'id', 'createdAt') }
+    }
+    return note
+  })
+  return { categories, notes }
+}
+
+function mergeDiary(l: DiaryData | undefined, r: DiaryData | undefined): DiaryData {
+  const le = l?.entries ?? []
+  const re = r?.entries ?? []
+  return { entries: dedupeByDateKeepNewest(mergeById(le, re, 'id', 'updatedAt')) }
+}
+
+function mergeCountdowns(l: Countdown[], r: Countdown[]): Countdown[] {
+  return mergeById(l ?? [], r ?? [], 'id', 'updatedAt')
+}
+
+function mergeHealth(l: HealthData | undefined, r: HealthData | undefined): HealthData {
+  const lr = l?.records ?? { exercise: [], diet: [], sleep: [], weight: [] }
+  const rr = r?.records ?? { exercise: [], diet: [], sleep: [], weight: [] }
+  const records = {
+    exercise: mergeById(lr.exercise ?? [], rr.exercise ?? [], 'id', 'updatedAt'),
+    diet: mergeById(lr.diet ?? [], rr.diet ?? [], 'id', 'updatedAt'),
+    sleep: mergeById(lr.sleep ?? [], rr.sleep ?? [], 'id', 'updatedAt'),
+    weight: mergeById(lr.weight ?? [], rr.weight ?? [], 'id', 'updatedAt')
+  }
+  const lp: HealthData['plans'] = l?.plans ?? {}
+  const rp: HealthData['plans'] = r?.plans ?? {}
+  const plans: HealthData['plans'] = {}
+  for (const m of ['exercise', 'diet', 'sleep'] as const) {
+    const lPlan = lp[m]
+    const rPlan = rp[m]
+    if (lPlan && rPlan) {
+      plans[m] = lPlan.updatedAt >= rPlan.updatedAt ? lPlan : rPlan
+    } else {
+      plans[m] = lPlan ?? rPlan
+    }
+  }
+  const height = l?.height ?? r?.height
+  return { height, plans, records }
+}
+
+function mergeLedger(l: LedgerData | undefined, r: LedgerData | undefined): LedgerData {
+  const categories = mergeById(l?.categories ?? [], r?.categories ?? [], 'id') // 同 id 取本地
+  const entries = mergeById(l?.entries ?? [], r?.entries ?? [], 'id', 'updatedAt')
+  return { categories, entries }
+}
+
+function mergeHabits(l: HabitsData | undefined, r: HabitsData | undefined): HabitsData {
+  return {
+    habits: mergeById(l?.habits ?? [], r?.habits ?? [], 'id', 'createdAt'),
+    records: mergeById(l?.records ?? [], r?.records ?? [], 'id', 'createdAt')
+  }
+}
+
+function mergeBusiness(l: BusinessData | undefined, r: BusinessData | undefined): BusinessData {
+  const productCategories = mergeById(l?.productCategories ?? [], r?.productCategories ?? [], 'id')
+  const expenseCategories = mergeById(l?.expenseCategories ?? [], r?.expenseCategories ?? [], 'id')
+  const products = mergeById(l?.products ?? [], r?.products ?? [], 'id', 'createdAt')
+  const purchases = mergeById(l?.purchases ?? [], r?.purchases ?? [], 'id', 'createdAt')
+  const dailyRecords = dedupeByDateKeepNewest(mergeById(l?.dailyRecords ?? [], r?.dailyRecords ?? [], 'id', 'updatedAt'))
+  const expenses = mergeById(l?.expenses ?? [], r?.expenses ?? [], 'id', 'createdAt')
+  const settings = l?.settings ?? r?.settings ?? { stallName: '', lowStockThreshold: 20 }
+  return { productCategories, expenseCategories, products, purchases, dailyRecords, expenses, settings }
+}
+
+function mergePomodoro(l: PomodoroData | undefined, r: PomodoroData | undefined): PomodoroData {
+  return {
+    settings: l?.settings ?? r?.settings ?? { workMinutes: 25, breakMinutes: 5, longBreakMinutes: 15, sessionsPerCycle: 4 },
+    records: mergeByDateWithMax(l?.records ?? [], r?.records ?? [])
+  }
+}
+
+function mergeSettings(l: AppSettingsData, _r: AppSettingsData): AppSettingsData {
+  return l // 整体保留本地（包含云同步凭证）
+}
+
+/** 逐 key 合并 prefs（值均为 JSON 字符串）；单个 key 损坏不中断整体合并。 */
+function mergePrefs(l: Record<string, string> | undefined, r: Record<string, string> | undefined): Record<string, string> {
+  const local = l ?? {}
+  const remote = r ?? {}
+  const out: Record<string, string> = {}
+  const allKeys = new Set([...Object.keys(local), ...Object.keys(remote)])
+
+  for (const key of allKeys) {
+    try {
+      const lv = local[key]
+      const rv = remote[key]
+      // 远端有而本地缺失 → 补入
+      if (lv === undefined) { if (rv !== undefined) out[key] = rv; continue }
+      // 本地有而远端缺失 → 保留本地
+      if (rv === undefined) { out[key] = lv; continue }
+
+      // user-sites: JSON.parse 后按 url 去重，同 url 取 updatedAt 较新者
+      if (key === 'user-sites') {
+        try {
+          const ls = JSON.parse(lv) as { url: string; updatedAt?: string }[]
+          const rs = JSON.parse(rv) as { url: string; updatedAt?: string }[]
+          const map = new Map<string, { url: string; updatedAt?: string }>()
+          for (const s of ls) map.set(s.url, s)
+          for (const s of rs) {
+            const ex = map.get(s.url)
+            if (!ex) map.set(s.url, s)
+            else if ((s.updatedAt ?? '') > (ex.updatedAt ?? '')) map.set(s.url, s)
+          }
+          out[key] = JSON.stringify([...map.values()])
+        } catch { out[key] = lv } // 解析失败取本地
+        continue
+      }
+
+      // user-categories: JSON.parse 后按 id 去重，内置不丢（同 id 取本地）
+      if (key === 'user-categories') {
+        try {
+          const lc = JSON.parse(lv) as { id: string }[]
+          const rc = JSON.parse(rv) as { id: string }[]
+          const map = new Map<string, { id: string }>()
+          for (const c of lc) map.set(c.id, c)
+          for (const c of rc) { if (!map.has(c.id)) map.set(c.id, c) }
+          out[key] = JSON.stringify([...map.values()])
+        } catch { out[key] = lv }
+        continue
+      }
+
+      // 带结构的数组型 key：按 id 或按值去重
+      const ARRAY_KEYS = [
+        'user-search-engines', 'built-in-engine-overrides', 'built-in-engine-default',
+        'user-todo-categories', 'user-todo-tab-categories',
+        'user-countdown-categories', 'user-countdown-tab-categories',
+        'user-deleted-legacy-ids'
+      ]
+      if (ARRAY_KEYS.includes(key)) {
+        try {
+          const la = JSON.parse(lv)
+          const ra = JSON.parse(rv)
+          if (Array.isArray(la) && Array.isArray(ra)) {
+            const hasId = la.some((x: unknown) => x && typeof x === 'object' && 'id' in (x as object))
+            if (hasId) {
+              const map = new Map<string, unknown>()
+              for (const item of la) map.set(String((item as { id: string }).id), item)
+              for (const item of ra) {
+                const id = String((item as { id: string }).id)
+                if (!map.has(id)) map.set(id, item)
+              }
+              out[key] = JSON.stringify([...map.values()])
+            } else {
+              const set = new Set(la as (string | number)[])
+              for (const item of ra) set.add(item)
+              out[key] = JSON.stringify([...set])
+            }
+          } else {
+            out[key] = lv // 非数组取本地
+          }
+        } catch { out[key] = lv }
+        continue
+      }
+
+      // 非数组型 key（user-theme / user-background / user-countdown-sort 等）：取本地
+      out[key] = lv
+    } catch {
+      // 单 key 损坏不影响其他 key
+      if (local[key] !== undefined) out[key] = local[key]
+      else if (remote[key] !== undefined) out[key] = remote[key]!
+    }
+  }
+  return out
+}
+
+/**
+ * 顶层合并入口：调用各模块合并函数组装结果，修正元数据字段。
+ * 纯函数——不触碰 IDB / localStorage。密码字段与 settings 整体取本地。
+ */
+function mergeData(local: WorkbenchData, remote: WorkbenchData): WorkbenchData {
+  return {
+    version: WORKBENCH_DATA_VERSION,
+    exportedAt: new Date().toISOString(),
+    todos: mergeTodos(local.todos, remote.todos),
+    notes: mergeNotes(local.notes, remote.notes),
+    diary: mergeDiary(local.diary, remote.diary),
+    countdowns: mergeCountdowns(local.countdowns, remote.countdowns),
+    passwords: local.passwords, // 整体取本地（不拆分）
+    passwordsSalt: local.passwordsSalt,
+    passwordVerification: local.passwordVerification,
+    health: mergeHealth(local.health, remote.health),
+    ledger: mergeLedger(local.ledger, remote.ledger),
+    settings: mergeSettings(local.settings, remote.settings),
+    pomodoro: mergePomodoro(local.pomodoro as PomodoroData | undefined, remote.pomodoro as PomodoroData | undefined),
+    habits: mergeHabits(local.habits as HabitsData | undefined, remote.habits as HabitsData | undefined),
+    business: mergeBusiness(local.business, remote.business),
+    prefs: mergePrefs(local.prefs, remote.prefs),
+    clientId: getClientId()
+    // pushedAt 不设——由后续 pushNow 写入
+  }
+}
+
+export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 'merge'): Promise<void> {
   if (!conflictData.value) return
-  const { remote } = conflictData.value
+  const { local, remote } = conflictData.value
   if (decision === 'remote') {
     conflictData.value = null
     await applyRemote(remote)
@@ -387,6 +669,25 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel'): 
   if (decision === 'local') {
     conflictData.value = null
     await pushNow()
+    return
+  }
+  if (decision === 'merge') {
+    conflictData.value = null
+    status.value = 'pushing'
+    try {
+      const merged = mergeData(local, remote)
+      await applyRemote(merged, true) // 写本地 + reload stores（静默，不弹 toast）
+      const pushOk = await pushNow(true) // 推云端（静默）
+      if (pushOk) {
+        useToast().success('云同步合并完成')
+      } else {
+        useToast().error(`云同步合并失败：${errorMessage.value}`)
+      }
+    } catch (e) {
+      status.value = 'error'
+      errorMessage.value = e instanceof Error ? e.message : '合并同步失败'
+      useToast().error(`云同步合并失败：${errorMessage.value}`)
+    }
     return
   }
   // cancel：保留本地，但记下 lastSyncAt = remote.pushedAt 避免重复弹框

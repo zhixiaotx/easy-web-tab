@@ -16,7 +16,15 @@ function formatTime(isoOrTs: string | number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** 差异摘要：逐 store 比较 JSON 长度，简单判断哪些模块可能有差异 */
+/** 递归排序 key 后 JSON 序列化——消除 key 顺序差异 */
+function stableStringify(obj: unknown): string {
+  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj)
+  if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']'
+  const keys = Object.keys(obj as Record<string, unknown>).sort()
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((obj as Record<string, unknown>)[k])).join(',') + '}'
+}
+
+/** 差异摘要：逐 store 比较稳定序列化后字符串是否一致 */
 const diffSummary = computed<{ name: string; local: number; remote: number }[]>(() => {
   const data = cloudSync.conflictData.value
   if (!data) return []
@@ -35,8 +43,8 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
     const lv = data.local[k]
     const rv = data.remote[k]
     try {
-      const l = lv !== undefined ? JSON.stringify(lv).length : 0
-      const r = rv !== undefined ? JSON.stringify(rv).length : 0
+      const l = lv !== undefined ? stableStringify(lv).length : 0
+      const r = rv !== undefined ? stableStringify(rv).length : 0
       if (l !== r) out.push({ name, local: l, remote: r })
     } catch {}
   }

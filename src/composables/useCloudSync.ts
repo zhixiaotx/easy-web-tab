@@ -19,6 +19,7 @@ import { ref, shallowRef } from 'vue'
 import { idbExportAll, idbImportAll } from './useIdb'
 import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
+import { getStoredSaltHex, getStoredVerification } from './useCrypto'
 import type { WorkbenchData } from '../types'
 
 const CLIENT_ID_KEY = 'easy-web-tab-client-id'
@@ -165,6 +166,28 @@ function davErrorLabel(method: string, upstreamStatus: string | null, snippet: s
 }
 
 // ========== 内容 hash（双兜底：优先 SubtleCrypto SHA-1，非安全上下文退化到 32bit FNV-1a）==========
+
+/** 递归排序 key 后 JSON 序列化——消除 key 顺序差异，使相同语义的数据 hash 一致 */
+function stableStringify(obj: unknown): string {
+  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj)
+  if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']'
+  const keys = Object.keys(obj as Record<string, unknown>).sort()
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((obj as Record<string, unknown>)[k])).join(',') + '}'
+}
+
+/**
+ * 提取业务数据签名：剔除 exportedAt/pushedAt/clientId 等不稳定元数据字段后，
+ * 走 stableStringify（递归排序 key）→ 语义相同的数据必产出相同字符串。
+ * 解决：每次 idbExportAll() 的 exportedAt 时间戳不同、不同设备 clientId 不同、
+ * JSON key 顺序不同 → hash 永远不等 → 误判冲突。
+ */
+function businessSignature(data: WorkbenchData): string {
+  const copy: Record<string, unknown> = { ...data }
+  delete copy.exportedAt
+  delete copy.pushedAt
+  delete copy.clientId
+  return stableStringify(copy)
+}
 
 async function sha1Hash(text: string): Promise<string> {
   // SubtleCrypto 仅在 localhost / HTTPS / file:// 可用（浏览器定义）；
@@ -333,11 +356,18 @@ async function pushNow(): Promise<boolean> {
 }
 
 async function applyRemote(remote: WorkbenchData): Promise<void> {
+  // 在 idbImportAll 覆盖前，先保存本地已有的密码身份
+  const localSaltBefore = getStoredSaltHex()
+  const localVerificationBefore = getStoredVerification()
   const result = await idbImportAll(remote)
   localStorage.setItem(LAST_SYNC_KEY, String(remote.pushedAt ?? Date.now()))
   lastSyncAt.value = remote.pushedAt ?? Date.now()
   clearDirty()
-  if (result.adoptedPasswordIdentity) {
+  // 判断密码身份是否真的变了：远端 salt/verification 与本地已有不同才算"新身份"
+  // 同设备推后拉、或远端密码身份未变时 → 不提示"已锁定"，避免频繁打扰
+  const identityChanged = result.adoptedPasswordIdentity
+    && (remote.passwordsSalt !== localSaltBefore || remote.passwordVerification !== localVerificationBefore)
+  if (identityChanged) {
     useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
   } else {
     useToast().success('云同步完成')
@@ -393,13 +423,14 @@ async function pullNow(): Promise<void> {
     const localTs = Number(localStorage.getItem(LAST_SYNC_KEY) || '0')
     const dirty = isDirty()
 
-    // 2) 内容 hash：远端原始 rawText 和 本地导出 JSON 分别 hash
-    //    解决：pushedAt 和 Last-Modified 都没变化（比如代理响应头丢了、系统时间被回拨）
-    //    时，只要内容变了就不会盲推
-    const remoteHash = await sha1Hash(getResult.rawText)
+    // 2) 内容 hash：剔除元数据字段（exportedAt/pushedAt/clientId）+ 递归排序 key 后比较
+    //    解决：每次 idbExportAll() 的 exportedAt 时间戳不同、不同设备 clientId 不同、
+    //    JSON key 顺序不同 → hash 永远不等 → 误判冲突
+    const remoteSig = businessSignature(remote)
     const localExport = await idbExportAll()
-    const localRaw = JSON.stringify(localExport)
-    const localHash = await sha1Hash(localRaw)
+    const localSig = businessSignature(localExport)
+    const remoteHash = await sha1Hash(remoteSig)
+    const localHash = await sha1Hash(localSig)
     const contentSame = remoteHash === localHash
 
     // ===== 快速路径：内容完全一致 → noop =====

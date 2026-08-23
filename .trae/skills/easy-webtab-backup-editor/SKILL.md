@@ -441,3 +441,27 @@ Read 完整内容 → 能 JSON.parse 通过 → 进入修改。
 - 销售记账备份 UI 导入：`src/views/BusinessView.vue` 的 `handleBusinessExport / handleBusinessImportFile`
 - 导航 Markdown 解析/导入：`src/stores/sites.ts` `importFromMarkdown` + `src/composables/useMarkdown.ts`
 - 销售记账纯逻辑（商品引用禁删/内置分类补回/库存计算）：`src/composables/businessCore.ts`（`normalizeBusinessData` 等）
+
+---
+
+## 九、输出规则（成功记录后，覆盖 Step 5 的输出要求）
+
+**当技能执行成功（备份已写入并回验通过）后，输出内容只保留以下一句，不要输出其他任何内容：**
+
+```
+已记录完成：<备份记录名>，数据写入 <模块名> 模块。
+```
+
+其中：
+- 「备份记录名」= Step 1 生成的原文件副本文件名，即 `<原文件名>.bak.YYYYMMDD-HHMMSS` 形态（例：`backup.json.bak.20260823-173000`）。
+- 「模块名」= 数据实际写入的模块名称，如 `diary`（日记模块）、`notes`（便签模块）、`todos`（待办模块）、`ledger`（记账模块）、`health`（健康模块）、`countdowns`（倒计时模块）、`prefs["user-sites"]`（导航网站）等，按本次实际写入的位置填写。
+
+**禁止在成功输出中包含以下内容**（这些是本规则要刻意省略的）：
+- 验证细节（如 `version === 9`、`JSON.parse 通过` 等回验过程）
+- 操作步骤（如修改了哪个字段、push 了几条）
+- Web 端生效方式 / 导入指引（即 Step 5 场景 A / 场景 B 的整段说明——**本规则覆盖 Step 5，成功时不再输出**）
+- 其他冗余的提示或解释
+
+**说明**：
+- 本规则仅在「执行成功」时生效；若执行失败、遇阻需要用户决策、或文件不合法需用户确认，则不受本规则限制，应如实报告问题并请求用户输入。
+- Step 5 中关于「必须向用户说明下一步怎么让数据进 Web 端」的要求，在成功场景下被本规则覆盖；但 Step 5 的判定逻辑（目标文件是否在坚果云默认目录）仍需执行，仅是不再向用户输出该说明。

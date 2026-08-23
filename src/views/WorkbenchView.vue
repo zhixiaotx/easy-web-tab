@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
-import { idbExportAll, idbImportAll } from '@/composables/useIdb'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useCountdownsStore } from '@/stores/countdowns'
@@ -13,7 +12,7 @@ import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useAppSettingsStore } from '@/stores/settings'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
-import { HEALTH_TABS, type HealthModule, type WorkbenchData } from '@/types'
+import { HEALTH_TABS, type HealthModule } from '@/types'
 import WorkbenchHome from '@/components/workbench/WorkbenchHome.vue'
 import WorkbenchTodo from '@/components/workbench/WorkbenchTodo.vue'
 import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
@@ -31,6 +30,8 @@ import type { SpotlightData } from '@/composables/spotlightCore'
 import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
 import { captureSnapshot } from '@/composables/useSnapshots'
 import { useSitesStore } from '@/stores/sites'
+import { useCloudSync } from '@/composables/useCloudSync'
+import type { SyncStatus } from '@/composables/useCloudSync'
 
 const router = useRouter()
 const toast = useToast()
@@ -176,124 +177,60 @@ onMounted(async () => {
   captureSnapshot().catch(() => {})
 })
 
-// 导出：读取全部 4 store 打包为 JSON 下载
-async function handleExport() {
-  try {
-    const data = await idbExportAll()
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `工作台备份-${formatDate(new Date())}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    // 稍后撤销对象 URL，避免影响下载的发起
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  } catch (e) {
-    console.error('[Workbench] export failed', e)
-    toast.error('导出失败')
+// ===== 右上角云同步按钮（开关显示：cloudSyncEnabled 时在设置按钮左边新增）=====
+const cloudSync = useCloudSync()
+const syncBusy = ref(false)
+const cloudEnabled = computed(() => !!settingsStore.cloudSyncEnabled)
+const syncStatusClass = computed(
+  (): Record<string, boolean> => ({
+    'wb-sync-btn-pending': cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing',
+    'wb-sync-btn-conflict': cloudSync.status.value === 'conflict',
+    'wb-sync-btn-error': cloudSync.status.value === 'error'
+  })
+)
+const syncLabel = computed((): string => {
+  switch (cloudSync.status.value as SyncStatus) {
+    case 'pulling': return '拉取中…'
+    case 'pushing': return '推送中…'
+    case 'conflict': return '处理冲突'
+    case 'error': return '同步失败'
+    default: return '☁️ 云同步'
   }
-}
-
-// 导入：解析 JSON → 密码双分支 → idbImportAll → 重载 → toast
-const importInput = ref<HTMLInputElement | null>(null)
-
-function handleImportClick() {
-  importInput.value?.click()
-}
-
-async function handleImportFile(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    input.value = '' // 允许再次选择同一文件
-    const content = e.target?.result as string
-
-    let parsed: WorkbenchData
-    try {
-      parsed = JSON.parse(content) as WorkbenchData
-    } catch {
-      toast.error('文件不是有效 JSON')
-      return
-    }
-
-    // 密码分支先决：
-    // - 备份携带完整加密身份（v8：盐+验证串+非空密码库）→ 整包导入并接管身份，解锁密码=备份来源设备的主密码
-    // - 备份无身份且本设备无 v2 验证键（旧 v1-v7 备份导入到新设备）→ 跳过密码导入（写入也无法解密）
-    const hasVaultIdentity = !!parsed.passwordsSalt && !!parsed.passwordVerification && !!parsed.passwords
-    const localHasPassword = localStorage.getItem('password-verification-v2') !== null
-    const skipPasswords = !hasVaultIdentity && !localHasPassword
-
-    let adoptedIdentity = false
-    try {
-      adoptedIdentity = (
-        await idbImportAll(skipPasswords ? { ...parsed, passwords: '' } : parsed)
-      ).adoptedPasswordIdentity
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '文件格式无效'
-      toast.error(`导入失败：${msg}`)
-      return
-    }
-
-    // 重载各 store（数据在内存中与 IDB 同步）
-    await Promise.all([
-      todosStore.loadTodos(),
-      notesStore.loadNotes(),
-      diaryStore.loadDiary(),
-      countdownsStore.loadCountdowns(),
-      healthStore.loadHealth(),
-      ledgerStore.loadLedger(),
-      settingsStore.initSettings()
-    ])
-
-    if (skipPasswords) {
-      toast.warning('备份未内嵌密码加密身份（旧格式），已跳过密码导入')
-    } else {
-      // 身份接管可能已替换本机加密凭据（或覆盖已解锁会话的密文）→ 无条件锁定，
-      // 强制重新解锁后查看新数据（已锁时 lock 为廉价 no-op）
-      passwordsStore.lock()
-      if (adoptedIdentity) {
-        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码管理')
-      }
-    }
-
-    // 成功 toast：仅统计 todos/notes/diary/countdowns/健康/记账（密码不解密不计条数）
-    const healthCount =
-      healthStore.records.exercise.length +
-      healthStore.records.diet.length +
-      healthStore.records.sleep.length +
-      healthStore.records.weight.length
-    const countMsg = `导入成功：待办 ${todosStore.todos.length} 条，便签 ${notesStore.notes.length} 条，日记 ${diaryStore.entries.length} 篇，倒计时 ${countdownsStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledgerStore.entries.length} 笔`
-    toast.success(skipPasswords ? `${countMsg}（密码已跳过）` : `${countMsg}；密码库已导入`)
-  }
-  reader.readAsText(file)
+})
+const syncTip = computed((): string => {
+  const t = cloudSync.lastSyncAt.value
+  if (!t) return '未同步过；点击立即同步'
+  const d = new Date(t)
+  return `上次同步：${formatDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}；点击立即同步`
+})
+async function handleSyncNowClick(): Promise<void> {
+  if (syncBusy.value) return
+  syncBusy.value = true
+  await cloudSync.syncNow()
+  syncBusy.value = false
 }
 </script>
 
 <template>
   <div class="wb-shell">
-    <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 设置 + 导入导出 -->
+    <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 云同步（开关显示）+ 设置 -->
     <header class="wb-header">
       <div class="wb-header-left">
         <button class="wb-btn" @click="router.push('/')">← 管理页</button>
         <h1>{{ settingsStore.workbenchPageDisplayName }}</h1>
       </div>
       <div class="wb-header-right">
-        <button class="wb-btn" @click="handleImportClick">导入</button>
-        <button class="wb-btn" @click="handleExport">导出</button>
         <button class="wb-btn" data-testid="wb-spotlight-open" title="全局搜索 (Alt+K)" @click="spotlightOpen = true"><Icon name="search" /> 全局搜索</button>
-        <button class="wb-btn" title="设置" @click="showSettingsDialog = true">⚙️ 设置</button>
-        <input
-          ref="importInput"
-          type="file"
-          accept=".json,application/json"
-          style="display: none"
-          @change="handleImportFile"
-        />
+        <button
+          v-if="cloudEnabled"
+          class="wb-btn wb-sync-btn"
+          :class="syncStatusClass"
+          :title="syncTip"
+          data-testid="wb-sync-now"
+          :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
+          @click="handleSyncNowClick"
+        >{{ syncLabel }}</button>
+        <button class="wb-btn" title="设置" data-testid="wb-settings" @click="showSettingsDialog = true">⚙️ 设置</button>
       </div>
     </header>
 
@@ -643,5 +580,27 @@ async function handleImportFile(event: Event) {
     white-space: nowrap;
     scroll-snap-align: start;
   }
+}
+
+/* ===== 右上角云同步按钮（头部设置按钮左侧）状态视觉 ===== */
+.wb-sync-btn {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
+}
+.wb-sync-btn.wb-sync-btn-pending {
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--color-primary, #3b82f6);
+  opacity: 0.88;
+  cursor: progress !important;
+}
+.wb-sync-btn.wb-sync-btn-conflict {
+  background-color: #f59e0b;
+  color: #fff;
+  border-color: #f59e0b;
+}
+.wb-sync-btn.wb-sync-btn-error {
+  background-color: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
 }
 </style>

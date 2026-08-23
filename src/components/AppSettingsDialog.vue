@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted, watch, nextTick, toRaw } from 'vue'
 import {
   useAppSettingsStore,
   DIALOG_LABELS,
@@ -11,7 +11,8 @@ import type { DialogId } from '@/stores/settings'
 import type { WorkbenchMenuItem } from '@/composables/workbenchMenuCore'
 import { useAppSettingsDialog } from '@/composables/useAppSettingsDialog'
 import { useToast } from '@/composables/useToast'
-import { idbGet, idbPut, idbImportAll } from '@/composables/useIdb'
+import { idbGet, idbPut, idbImportAll, idbExportAll } from '@/composables/useIdb'
+import { localDateKey } from '@/composables/businessCore'
 import { isEmailConfigured, buildEmailParams } from '@/composables/reminderCore'
 import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
@@ -25,6 +26,7 @@ import { normalizeSnapshotList } from '@/composables/snapshotCore'
 import type { SnapshotRecord } from '@/composables/snapshotCore'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
+import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -400,6 +402,179 @@ async function handleTestEmail(): Promise<void> {
   } else {
     toast.error('测试邮件发送失败，请检查配置')
   }
+}
+
+// ====================
+// 工作台导入/导出（仅工作台设置 tab；原 WorkbenchView 头部按钮迁移过来）
+// ====================
+const wbTodosStore = useWorkbenchTodosStore()
+const wbNotesStore = useWorkbenchNotesStore()
+const wbDiaryStore = useWorkbenchDiaryStore()
+const cdStore = useCountdownsStore()
+const pwdsStore = usePasswordsStore()
+const hlthStore = useWorkbenchHealthStore()
+const ledStore = useWorkbenchLedgerStore()
+
+function wbPad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+function wbFormatDate(d: Date): string {
+  return `${d.getFullYear()}-${wbPad2(d.getMonth() + 1)}-${wbPad2(d.getDate())}`
+}
+
+const wbImportInput = ref<HTMLInputElement | null>(null)
+
+async function handleWbExport() {
+  try {
+    const data = await idbExportAll()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `工作台备份-${wbFormatDate(new Date())}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast.success('工作台数据已导出')
+  } catch (e) {
+    console.error('[AppSettings] wb export failed', e)
+    toast.error('导出失败')
+  }
+}
+function handleWbImportClick(): void {
+  wbImportInput.value?.click()
+}
+async function handleWbImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    input.value = ''
+    const content = e.target?.result as string
+    let parsed: WorkbenchData
+    try {
+      parsed = JSON.parse(content) as WorkbenchData
+    } catch {
+      toast.error('文件不是有效 JSON')
+      return
+    }
+    const hasVaultIdentity = !!parsed.passwordsSalt && !!parsed.passwordVerification && !!parsed.passwords
+    const localHasPassword = localStorage.getItem('password-verification-v2') !== null
+    const skipPasswords = !hasVaultIdentity && !localHasPassword
+    let adoptedIdentity = false
+    try {
+      adoptedIdentity = (
+        await idbImportAll(skipPasswords ? { ...parsed, passwords: '' } : parsed)
+      ).adoptedPasswordIdentity
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '文件格式无效'
+      toast.error(`导入失败：${msg}`)
+      return
+    }
+    await Promise.all([
+      wbTodosStore.loadTodos(),
+      wbNotesStore.loadNotes(),
+      wbDiaryStore.loadDiary(),
+      cdStore.loadCountdowns(),
+      hlthStore.loadHealth(),
+      ledStore.loadLedger(),
+      store.initSettings()
+    ])
+    if (skipPasswords) {
+      toast.warning('备份未内嵌密码加密身份（旧格式），已跳过密码导入')
+    } else {
+      pwdsStore.lock()
+      if (adoptedIdentity) {
+        toast.success('导入成功：密码库已随备份迁移，请使用原设备的主密码解锁密码管理')
+      }
+    }
+    const healthCount =
+      hlthStore.records.exercise.length +
+      hlthStore.records.diet.length +
+      hlthStore.records.sleep.length +
+      hlthStore.records.weight.length
+    const countMsg = `导入成功：待办 ${wbTodosStore.todos.length} 条，便签 ${wbNotesStore.notes.length} 条，日记 ${wbDiaryStore.entries.length} 篇，倒计时 ${cdStore.countdowns.length} 条，健康 运动/饮食/睡眠/体重 记录 ${healthCount} 条，记账 ${ledStore.entries.length} 笔`
+    toast.success(skipPasswords ? `${countMsg}（密码已跳过）` : `${countMsg}；密码库已导入`)
+  }
+  reader.readAsText(file)
+}
+
+// ====================
+// 销售记账导入/导出（仅销售记账 tab；原 BusinessView 头部按钮迁移过来）
+// ====================
+const bizImportInput = ref<HTMLInputElement | null>(null)
+function handleBizExport(): void {
+  try {
+    const payload = {
+      type: 'business-backup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        productCategories: toRaw(businessStore.productCategories),
+        expenseCategories: toRaw(businessStore.expenseCategories),
+        products: toRaw(businessStore.products),
+        purchases: toRaw(businessStore.purchases),
+        dailyRecords: toRaw(businessStore.dailyRecords),
+        expenses: toRaw(businessStore.expenses),
+        settings: toRaw(businessStore.settings)
+      }
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `销售记账备份-${localDateKey()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast.success('销售记账数据已导出')
+  } catch (e) {
+    console.error('[AppSettings] biz export failed', e)
+    toast.error('导出失败')
+  }
+}
+function handleBizImportClick(): void {
+  bizImportInput.value?.click()
+}
+async function handleBizImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    input.value = ''
+    const content = e.target?.result as string
+    let parsed: { type?: unknown; version?: unknown; data?: unknown }
+    try {
+      parsed = JSON.parse(content)
+    } catch {
+      toast.error('文件不是有效 JSON')
+      return
+    }
+    if (
+      parsed?.type !== 'business-backup' ||
+      parsed.version !== 1 ||
+      parsed.data === null ||
+      typeof parsed.data !== 'object' ||
+      Array.isArray(parsed.data)
+    ) {
+      toast.error('文件格式不正确（不是销售记账备份）')
+      return
+    }
+    if (!confirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
+    try {
+      const data = await businessStore.importData(parsed.data)
+      toast.success(
+        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，收摊记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
+      )
+    } catch (err) {
+      toast.error(`导入失败：${err instanceof Error ? err.message : '文件格式无效'}`)
+    }
+  }
+  reader.readAsText(file)
 }
 
 // ====================
@@ -839,6 +1014,20 @@ onUnmounted(() => {
             style="display: none"
             @change="handleSiteImport"
           />
+          <input
+            ref="wbImportInput"
+            type="file"
+            accept=".json,application/json"
+            style="display: none"
+            @change="handleWbImportFile"
+          />
+          <input
+            ref="bizImportInput"
+            type="file"
+            accept=".json,application/json"
+            style="display: none"
+            @change="handleBizImportFile"
+          />
         </div>
 
         <!-- 天气城市（仅工作台设置 tab）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
@@ -1091,6 +1280,18 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- 工作台导入/导出（仅工作台设置 tab；原 WorkbenchView 头部按钮迁移入口） -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">工作台备份（导入/导出）</h3>
+          </div>
+          <p class="wb-menu-hint">整包导出工作台所有数据（待办/便签/日记/倒计时/密码/健康/记账/销售记账/工作台设置）为 JSON 文件；导入时当前数据将被覆盖</p>
+          <div class="remind-actions">
+            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-export" @click="handleWbExport">📤 导出工作台备份</button>
+            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-import" @click="handleWbImportClick">📥 导入工作台备份</button>
+          </div>
+        </div>
+
         <!-- 数据时光机（仅工作台设置 tab）：快照列表 + 立即备份 + 单条恢复；数据存 IDB store 'snapshots' -->
         <div v-if="activeTab === 'wb'" class="wb-menu-config wb-snapshot-config">
           <div class="wb-menu-head">
@@ -1260,6 +1461,14 @@ onUnmounted(() => {
           <div class="remind-actions">
             <button type="button" class="wb-menu-btn" data-testid="bizsettings-product-cats" @click="bizCatManagerKind = 'product'">管理商品分类</button>
             <button type="button" class="wb-menu-btn" data-testid="bizsettings-expense-cats" @click="bizCatManagerKind = 'expense'">管理支出分类</button>
+          </div>
+          <div class="wb-menu-head" style="margin-top: 24px;">
+            <h3 class="wb-menu-title">销售记账备份（导入/导出）</h3>
+          </div>
+          <p class="wb-menu-hint">独立导出销售记账七字段（商品/进货/收摊/支出/分类/设置）为 JSON 文件；导入时当前销售记账数据将被覆盖</p>
+          <div class="remind-actions">
+            <button type="button" class="wb-menu-btn" data-testid="bizsettings-export" @click="handleBizExport">📤 导出销售备份</button>
+            <button type="button" class="wb-menu-btn" data-testid="bizsettings-import" @click="handleBizImportClick">📥 导入销售备份</button>
           </div>
         </div>
 

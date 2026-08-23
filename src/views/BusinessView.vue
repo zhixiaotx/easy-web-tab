@@ -1,10 +1,8 @@
 <script setup lang="ts">
 // 销售记账独立页面（摆摊进销存）：布局复刻 WorkbenchView（左树 + 右内容，桌面一屏钉满、移动端横排菜单）
-import { onMounted, ref, toRaw } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { useToast } from '@/composables/useToast'
-import { localDateKey } from '@/composables/businessCore'
 import { useAppSettingsStore } from '@/stores/settings'
 import BusinessHome from '@/components/business/BusinessHome.vue'
 import BusinessProducts from '@/components/business/BusinessProducts.vue'
@@ -14,10 +12,11 @@ import BusinessExpenses from '@/components/business/BusinessExpenses.vue'
 import BusinessInventory from '@/components/business/BusinessInventory.vue'
 import BusinessStats from '@/components/business/BusinessStats.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
+import { useCloudSync } from '@/composables/useCloudSync'
+import type { SyncStatus } from '@/composables/useCloudSync'
 
 const router = useRouter()
 const store = useWorkbenchBusinessStore()
-const toast = useToast()
 const settingsStore = useAppSettingsStore()
 
 // 左树 7 项（固定顺序，emoji 图标常量渲染，不接工作台菜单开关系统）
@@ -44,88 +43,40 @@ function navigateTo(section: string): void {
 
 const showSettingsDialog = ref(false)
 
-// ===== 销售记账独立 JSON 备份（business-backup v1，仅本模块七字段，不含其他工作台数据） =====
-// 导出：打包当前 store 七字段为 JSON 下载（嵌套 reactive 逐字段 toRaw，防 JSON 序列化 Proxy 残留）
-function handleBusinessExport(): void {
-  try {
-    const payload = {
-      type: 'business-backup',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      data: {
-        productCategories: toRaw(store.productCategories),
-        expenseCategories: toRaw(store.expenseCategories),
-        products: toRaw(store.products),
-        purchases: toRaw(store.purchases),
-        dailyRecords: toRaw(store.dailyRecords),
-        expenses: toRaw(store.expenses),
-        settings: toRaw(store.settings)
-      }
-    }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `销售记账备份-${localDateKey()}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    toast.success('导出成功')
-  } catch (e) {
-    console.error('[Business] export failed', e)
-    toast.error('导出失败')
-  }
+// ===== 右上角云同步按钮（与工作台复用同一套开关：cloudSyncEnabled 时在设置按钮左边显示） =====
+const cloudSync = useCloudSync()
+const syncBusy = ref(false)
+const cloudEnabled = computed(() => !!settingsStore.cloudSyncEnabled)
+function bizPad2(n: number): string { return String(n).padStart(2, '0') }
+function bizFmt(d: Date): string {
+  return `${d.getFullYear()}-${bizPad2(d.getMonth()+1)}-${bizPad2(d.getDate())} ${bizPad2(d.getHours())}:${bizPad2(d.getMinutes())}:${bizPad2(d.getSeconds())}`
 }
-
-// 导入：解析 JSON 备份 → 格式校验 → 确认覆盖 → importData 归一化写入 → toast
-const importInput = ref<HTMLInputElement | null>(null)
-
-function handleBusinessImportClick(): void {
-  importInput.value?.click()
-}
-
-async function handleBusinessImportFile(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    input.value = '' // 允许再次选择同一文件
-    const content = e.target?.result as string
-
-    let parsed: { type?: unknown; version?: unknown; data?: unknown }
-    try {
-      parsed = JSON.parse(content)
-    } catch {
-      toast.error('文件不是有效 JSON')
-      return
-    }
-
-    if (
-      parsed?.type !== 'business-backup' ||
-      parsed.version !== 1 ||
-      parsed.data === null ||
-      typeof parsed.data !== 'object' ||
-      Array.isArray(parsed.data)
-    ) {
-      toast.error('文件格式不正确（不是销售记账备份）')
-      return
-    }
-
-    if (!confirm('确定要导入此备份吗？当前销售记账数据将被覆盖。')) return
-
-    try {
-      const data = await store.importData(parsed.data)
-      toast.success(
-        `导入成功：商品 ${data.products.length} 个，进货 ${data.purchases.length} 条，收摊记录 ${data.dailyRecords.length} 条，支出 ${data.expenses.length} 笔`
-      )
-    } catch (err) {
-      toast.error(`导入失败：${err instanceof Error ? err.message : '文件格式无效'}`)
-    }
+const syncStatusClass = computed(
+  (): Record<string, boolean> => ({
+    'wb-sync-btn-pending': cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing',
+    'wb-sync-btn-conflict': cloudSync.status.value === 'conflict',
+    'wb-sync-btn-error': cloudSync.status.value === 'error'
+  })
+)
+const syncLabel = computed((): string => {
+  switch (cloudSync.status.value as SyncStatus) {
+    case 'pulling': return '拉取中…'
+    case 'pushing': return '推送中…'
+    case 'conflict': return '处理冲突'
+    case 'error': return '同步失败'
+    default: return '☁️ 云同步'
   }
-  reader.readAsText(file)
+})
+const syncTip = computed((): string => {
+  const t = cloudSync.lastSyncAt.value
+  if (!t) return '未同步过；点击立即同步'
+  return `上次同步：${bizFmt(new Date(t))}；点击立即同步`
+})
+async function handleSyncNowClick(): Promise<void> {
+  if (syncBusy.value) return
+  syncBusy.value = true
+  await cloudSync.syncNow()
+  syncBusy.value = false
 }
 
 onMounted(() => {
@@ -135,7 +86,7 @@ onMounted(() => {
 
 <template>
   <div class="bs-shell">
-    <!-- 头部：左 = 返回 + 标题；右 = 设置 -->
+    <!-- 头部：左 = 返回 + 标题；右 = 云同步（开关显示）+ 设置 -->
     <header class="bs-header">
       <div class="bs-header-left">
         <button class="bs-btn" @click="router.push('/')">← 管理页</button>
@@ -143,20 +94,18 @@ onMounted(() => {
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">
-        <button class="bs-btn" title="导出销售数据" data-testid="bs-export" @click="handleBusinessExport">📤 导出</button>
-        <button class="bs-btn" title="导入销售数据" data-testid="bs-import" @click="handleBusinessImportClick">📥 导入</button>
+        <button
+          v-if="cloudEnabled"
+          class="bs-btn wb-sync-btn"
+          :class="syncStatusClass"
+          :title="syncTip"
+          data-testid="bs-sync-now"
+          :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
+          @click="handleSyncNowClick"
+        >{{ syncLabel }}</button>
         <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true">⚙️ 设置</button>
       </div>
     </header>
-
-    <input
-      ref="importInput"
-      type="file"
-      accept=".json,application/json"
-      style="display: none"
-      data-testid="bs-import-input"
-      @change="handleBusinessImportFile"
-    />
 
     <!-- 主体：左树 + 右内容区 -->
     <div class="bs-body">
@@ -434,5 +383,27 @@ onMounted(() => {
     flex: 1;
     min-height: 0;
   }
+}
+
+/* ===== 右上角云同步按钮（头部设置按钮左侧）状态视觉 ===== */
+.wb-sync-btn {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
+}
+.wb-sync-btn.wb-sync-btn-pending {
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--color-primary, #3b82f6);
+  opacity: 0.88;
+  cursor: progress !important;
+}
+.wb-sync-btn.wb-sync-btn-conflict {
+  background-color: #f59e0b;
+  color: #fff;
+  border-color: #f59e0b;
+}
+.wb-sync-btn.wb-sync-btn-error {
+  background-color: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
 }
 </style>

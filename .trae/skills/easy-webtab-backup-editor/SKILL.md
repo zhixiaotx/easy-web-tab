@@ -1,6 +1,6 @@
 ---
 name: "easy-webtab-backup-editor"
-description: "读取/修改 easy-web-tab 项目的备份 JSON，根据用户输入新增数据（网站/待办/便签/倒计时/记账/运动/体重/习惯/进货/收摊）。默认从坚果云同步目录 C:\\Users\\YangLiJuan\\Nutstore\\1\\easy-web-tab\\backup.json 读取。"
+description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份时触发。支持：添加网站、记待办、写便签、加倒计时、记一笔消费/收入、记录运动/体重、添加习惯、新增商品/进货/收摊记录。禁止：修改、删除已有数据。数据文件位于 C:\\Users\\YangLiJuan\\Nutstore\\1\\easy-web-tab\\backup.json"
 ---
 
 # easy-web-tab 备份数据编辑器

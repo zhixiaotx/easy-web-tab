@@ -21,6 +21,8 @@ import { useThemeStore } from '../stores/theme'
 import { useAppSettingsStore } from '../stores/settings'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useHelpModal } from '../composables/useHelpModal'
+import { useCloudSync } from '../composables/useCloudSync'
+import type { SyncStatus } from '../composables/useCloudSync'
 
 const store = useSitesStore()
 const themeStore = useThemeStore()
@@ -36,6 +38,44 @@ const showBackupManager = ref(false)
 const showIconManager = ref(false)
 const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
+
+// ===== 右上角云同步快捷按钮（开关开启时显示；共享 useCloudSync 单例，与设置弹窗互相同步状态） =====
+const cloudSync = useCloudSync()
+const cloudEnabled = computed((): boolean => settingsStore.cloudSyncEnabled === true)
+const syncBusy = computed(
+  (): boolean => cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'
+)
+const syncStatusClass = computed(
+  (): Record<string, boolean> => ({
+    'wb-sync-btn-pending': cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing',
+    'wb-sync-btn-conflict': cloudSync.status.value === 'conflict',
+    'wb-sync-btn-error': cloudSync.status.value === 'error'
+  })
+)
+function pad2(n: number): string {
+  return n < 10 ? '0' + n : '' + n
+}
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+const syncLabel = computed((): string => {
+  switch (cloudSync.status.value as SyncStatus) {
+    case 'pulling': return '拉取中…'
+    case 'pushing': return '推送中…'
+    case 'conflict': return '处理冲突'
+    case 'error': return '同步失败'
+    default: return '☁️ 云同步'
+  }
+})
+const syncTip = computed((): string => {
+  const t = cloudSync.lastSyncAt.value
+  if (!t) return '未同步过；点击立即同步'
+  const d = new Date(t)
+  return `上次同步：${formatDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}；点击立即同步`
+})
+async function handleSyncNowClick(): Promise<void> {
+  await cloudSync.syncNow()
+}
 
 // 拖拽排序状态
 const dragSourceUrl = ref<string | null>(null)
@@ -224,6 +264,15 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
+    <button
+      v-if="cloudEnabled"
+      class="btn-help wb-sync-btn"
+      :class="syncStatusClass"
+      :title="syncTip"
+      data-testid="home-sync-now"
+      :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
+      @click="handleSyncNowClick"
+    >{{ syncLabel }}</button>
     <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
     <button class="btn-help" @click="openHelp" title="帮助">❓</button>
     <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
@@ -519,5 +568,27 @@ const handlePageChange = () => {
   .container {
     padding-top: 60px;
   }
+}
+
+/* ===== 右上角云同步按钮（设置按钮左侧）状态视觉 ===== */
+.wb-sync-btn {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 120ms ease;
+}
+.wb-sync-btn.wb-sync-btn-pending {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+  opacity: 0.88;
+  cursor: progress !important;
+}
+.wb-sync-btn.wb-sync-btn-conflict {
+  background-color: #f59e0b !important;
+  color: #fff !important;
+  border-color: #f59e0b !important;
+}
+.wb-sync-btn.wb-sync-btn-error {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+  border-color: #ef4444 !important;
 }
 </style>

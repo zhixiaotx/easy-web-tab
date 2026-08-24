@@ -24,13 +24,14 @@ const rows = computed(() =>
     .sort((a, b) => a.stock - b.stock)
 )
 
-// ===== 自适应分页（5 列，rowHeight 估算 220）=====
+// ===== 自适应分页（5 列，rowHeight 实测 ~110，maxRows 3 = 每页最多 15 卡）=====
 const listEl = ref<HTMLElement | null>(null)
 const gridEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => rows.value,
-  rowHeight: 220,
+  rowHeight: 110,
   gap: 12,
+  maxRows: 3,
   containerRef: listEl,
   gridRef: gridEl
 })

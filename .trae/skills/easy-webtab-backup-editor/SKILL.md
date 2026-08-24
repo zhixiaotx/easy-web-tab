@@ -1,11 +1,11 @@
 ---
 name: "easy-webtab-backup-editor"
-description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份时触发。支持：添加网站、记待办、写便签、加倒计时、记一笔消费/收入、记录运动/体重、添加习惯、新增商品/进货/收摊记录。禁止：修改、删除已有数据。数据文件位于 C:\\Users\\YangLiJuan\\Nutstore\\1\\easy-web-tab\\backup.json"
+description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份时触发。支持：添加网站、记待办、写便签、加倒计时、记一笔消费/收入、记录运动/体重、添加习惯、新增商品/进货/收摊/支出记录。禁止：删除已有数据。数据文件位于 C:\\Users\\YangLiJuan\\Nutstore\\1\\easy-web-tab\\backup.json"
 ---
 
 # easy-web-tab 备份数据编辑器
 
-**触发**：用户说"帮我新增 xxx 网站 / 加一条待办 / 记一笔消费 / 新增进货"等，向备份数据中**新增**条目。
+**触发**：用户说"帮我新增 xxx 网站 / 加一条待办 / 记一笔消费 / 新增进货 / 记一笔支出"等，向备份数据中**新增**条目。
 
 **禁止修改/删除**：本技能**只做新增**，不允许修改或删除已有条目。用户说"改一下 xxx 的标题/金额/日期"或"删掉这条记录"时，直接回复"本技能仅支持新增数据，不支持修改或删除操作"，不执行。
 
@@ -243,10 +243,12 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
 
 ### 11. 新增收摊记录 → `business.dailyRecords[]`（BusinessDailyRecord）
 
+**新增逻辑：先查同日期记录是否存在，存在则 items 追加，不存在直接新增。**
+
 ```json5
 {
   "id": "bd_20260823_120000_a1b2",
-  "date": "2026-08-23",       // YYYY-MM-DD，唯一（同日期 upsert 覆盖）
+  "date": "2026-08-23",       // YYYY-MM-DD
   "items": [                  // 每个商品一条
     {
       "productId": "bp_xxx",  // 必须对应 products 中的 id
@@ -262,7 +264,33 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
 }
 ```
 
-> 收摊记录的 `items` 中的 `productId` 必须能在 `business.products` 中找到。`totalRevenue` 需按 `sold × sellingPrice` 真实计算。
+> **操作步骤**：
+> 1. 在 `business.dailyRecords`（或格式 B 的 `data.dailyRecords`）中查找 `date` 相同的记录。
+> 2. **存在**：在已有记录的 `items` 数组末尾追加新商品行，`totalRevenue` 重算（Σ 所有 items 的 sold × 对应商品 sellingPrice），`updatedAt` 刷新为当前时间。
+> 3. **不存在**：push 新的完整记录（模板如上）。
+> 4. `items` 中的 `productId` 必须能在 `business.products` 中找到。`totalRevenue` 需按 `sold × sellingPrice` 真实计算。
+
+### 12. 新增支出记录 → `business.expenses[]`（BusinessExpense）
+
+**新增逻辑：先查同日期记录是否存在，存在则追加新条目，不存在直接添加。**
+
+```json5
+{
+  "id": "be_20260823_120000_a1b2",
+  "date": "2026-08-23",       // YYYY-MM-DD
+  "categoryId": "expense-gas", // 必须在 business.expenseCategories 中存在
+  "amount": 100,              // 数字，元
+  "note": "电动摩托车充电",    // 可选
+  "createdAt": "2026-08-23T12:00:00.000Z",
+  "updatedAt": "2026-08-23T12:00:00.000Z"
+}
+```
+
+> **操作步骤**：
+> 1. 在 `business.expenses`（或格式 B 的 `data.expenses`）中查找 `date` 相同的记录。
+> 2. **存在**：直接 push 新条目到 `expenses` 数组（同一天可有多条支出，无需合并到同一条）。
+> 3. **不存在**：直接 push 新条目（模板如上）。
+> 4. `categoryId` 必须在 `business.expenseCategories` 中存在。
 
 ---
 
@@ -282,6 +310,7 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
     // 新增商品 → data.products[]，模板同上面第 9 条
     // 新增进货 → data.purchases[]，模板同上面第 10 条
     // 新增收摊 → data.dailyRecords[]，模板同上面第 11 条
+    // 新增支出 → data.expenses[]，模板同上面第 12 条
   }
 }
 ```
@@ -334,6 +363,7 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
 | 9 | "商品"/"产品" | business.products |
 | 10 | "进货"/"采购"+商品+数量 | business.purchases |
 | 11 | "收摊"/"营业额"+日期 | business.dailyRecords |
+| 12 | "支出"+"充电"/"摊位费"/"交通费"等+金额+日期 | business.expenses |
 
 **无法判定时必须询问**：当用户输入无法匹配上表任何关键词，或语义模糊可归属多个模块时，**不要猜测**，直接列出可能的模块选项让用户确认。例如：
 

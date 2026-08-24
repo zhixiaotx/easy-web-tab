@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// 支出记录：按天合并卡片（对齐收摊记录），一天一张卡，内联多行支出条目（分类+金额+备注）
-// 编辑弹框：多行支出行动态增删；按 date upsert（删除旧行+逐条重加）
+// 支出记录：按天合并卡片（对齐收摊记录），一天一张卡，内联多行支出条目（分类+金额，备注仅弹框编辑）
+// 卡片固定高度 200px，只展示前 3 条，超出点击编辑查看；每页 8 卡（2 行 × 4 列）
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
@@ -38,31 +38,19 @@ function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
 }
 
-// ===== 自适应分页（4 列，rowHeight 估算 260）=====
+// ===== 自适应分页（4 列，rowHeight 200，maxRows 2 = 每页 8 卡）=====
 const listEl = ref<HTMLElement | null>(null)
 const gridEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => dayGroups.value,
-  rowHeight: 260,
+  rowHeight: 218,
   gap: 12,
+  maxRows: 2,
   containerRef: listEl,
   gridRef: gridEl
 })
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 watch(dayGroups, () => nextTick(() => goto(1)))
-
-// ===== 折叠/展开明细 =====
-const expandedCards = ref<Set<string>>(new Set())
-function toggleCard(date: string): void {
-  if (expandedCards.value.has(date)) expandedCards.value.delete(date)
-  else expandedCards.value.add(date)
-}
-function isCardExpanded(date: string): boolean {
-  return expandedCards.value.has(date)
-}
-function visibleItems(g: ExpenseDayGroup): BusinessExpense[] {
-  return isCardExpanded(g.date) ? g.items : g.items.slice(0, 3)
-}
 
 // ===== 新增/编辑弹框（多行支出行） =====
 const showDialog = ref(false)
@@ -113,7 +101,12 @@ function removeRow(i: number): void {
 
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
-  // 先删除旧日期下所有支出（若日期变更则删旧日期，也删目标日期确保幂等）
+  // 新增模式：同日期已有记录 → 阻止，提示编辑
+  if (!editingDateOrig.value && store.expenses.some(e => e.date === editingDate.value)) {
+    alert(`${editingDate.value} 当天已有支出记录，不能新增，请点击编辑追加。`)
+    return
+  }
+  // 编辑模式：先删除旧日期下所有支出（若日期变更则删旧日期，也删目标日期确保幂等）
   const datesToClear: string[] = []
   if (editingDateOrig.value) datesToClear.push(editingDateOrig.value)
   if (!datesToClear.includes(editingDate.value)) datesToClear.push(editingDate.value)
@@ -163,30 +156,20 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
           <span class="bizexp-total">{{ formatYuanOf(g.total) }}</span>
         </div>
 
-        <!-- 明细行（折叠前 3 条） -->
+        <!-- 明细行（固定展示前 3 条，超出点击编辑查看） -->
         <div class="bizexp-details">
           <div class="bizexp-detail-head">
             <span class="bizexp-detail-th name">分类</span>
             <span class="bizexp-detail-th amount">金额</span>
-            <span class="bizexp-detail-th note">备注</span>
           </div>
           <div
-            v-for="e in visibleItems(g)"
+            v-for="e in g.items.slice(0, 3)"
             :key="e.id"
             class="bizexp-detail-row"
           >
             <span class="bizexp-detail-td name bizexp-cat">{{ catNameOf(e.categoryId) }}</span>
             <span class="bizexp-detail-td amount bizexp-amt">{{ formatYuanOf(e.amount) }}</span>
-            <span v-if="e.note" class="bizexp-detail-td note">{{ e.note }}</span>
-            <span v-else class="bizexp-detail-td note muted">—</span>
           </div>
-          <button
-            v-if="g.items.length > 3"
-            class="bizexp-detail-toggle"
-            @click="toggleCard(g.date)"
-          >
-            {{ isCardExpanded(g.date) ? '收起' : `展开全部 ${g.items.length} 条` }}
-          </button>
         </div>
 
         <!-- 操作：编辑/删除 -->
@@ -362,13 +345,15 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .bizexp-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 14px 16px;
   background: var(--bg-card, var(--color-bg-card));
   border: 1px solid var(--border-color, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
+  height: 218px;
+  overflow: hidden;
 }
 
 .bizexp-card:hover {
@@ -405,7 +390,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 
 .bizexp-detail-head {
   display: grid;
-  grid-template-columns: 0.9fr 0.7fr 1.4fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
   font-size: 11px;
   color: var(--text-muted, var(--color-text-muted));
@@ -420,7 +405,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 
 .bizexp-detail-row {
   display: grid;
-  grid-template-columns: 0.9fr 0.7fr 1.4fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
   padding: 3px 4px;
   font-size: 12px;
@@ -454,22 +439,6 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .bizexp-amt {
   font-weight: 700;
   color: var(--error-color, var(--color-error));
-}
-
-.bizexp-detail-toggle {
-  align-self: flex-start;
-  padding: 4px 8px;
-  margin-top: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  color: var(--accent-color, var(--color-primary));
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm, 4px);
-}
-
-.bizexp-detail-toggle:hover {
-  text-decoration: underline;
 }
 
 .bizexp-actions {

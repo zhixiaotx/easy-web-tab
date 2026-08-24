@@ -177,7 +177,6 @@ async function handleDelete(id: string): Promise<void> {
             }"
           >加价率 {{ markupRateOf(p.productId, p.unitPrice) ?? '—' }}%</span>
         </div>
-        <div class="bizpur-note">{{ p.note || '—' }}</div>
         <div class="bizpur-actions">
           <button class="bizpur-btn" :data-testid="`bizpur-edit-${p.id}`" @click="startEdit(p)">编辑</button>
           <button class="bizpur-btn del" :data-testid="`bizpur-del-${p.id}`" @click="handleDelete(p.id)">删除</button>

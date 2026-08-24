@@ -188,7 +188,7 @@ async function handleDelete(id: string): Promise<void> {
             </span>
             <span class="bizday-detail-td">{{ d.broughtOut }}</span>
             <span class="bizday-detail-td sold-bold">{{ d.sold }}</span>
-            <span class="bizday-detail-td">@¥{{ d.sellingPrice.toFixed(2) }}</span>
+            <span class="bizday-detail-td">¥{{ d.sellingPrice.toFixed(2) }}</span>
             <span class="bizday-detail-td sub-bold">¥{{ d.subtotal.toFixed(2) }}</span>
           </div>
         </div>

@@ -36,7 +36,11 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
     { k: 'passwords', name: '密码' },
     { k: 'health', name: '健康' },
     { k: 'ledger', name: '记账' },
-    { k: 'business', name: '销售记账' }
+    { k: 'business', name: '销售记账' },
+    { k: 'settings', name: '设置' },
+    { k: 'pomodoro', name: '番茄钟' },
+    { k: 'habits', name: '习惯' },
+    { k: 'prefs', name: '偏好配置' }
   ]
   const out: { name: string; local: number; remote: number }[] = []
   for (const { k, name } of keys) {
@@ -97,7 +101,9 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
           </div>
           <div v-else class="conflict-diff">
             <div class="conflict-diff-title">未检测到明显模块差异</div>
-            <p class="diff-hint">但双方都有新变更时间戳，仍需选择处理方式。</p>
+            <p class="diff-hint">双方核心业务数据一致，但时间戳或设备级配置存在差异，仍需选择处理方式。</p>
+            <p class="diff-hint">常见原因：不同设备的 localStorage 偏好键不同、记账自动复制计划触发、设置归一化补默认值等。</p>
+            <p class="diff-hint" style="color: #16a34a;">建议选择「合并双方数据」，按模块取并集保留双方新增项。</p>
           </div>
 
           <p class="merge-hint">🔀 合并：按模块逐条按 ID 去重，保留双方新增项；同条目取较新版本。密码库与本地设置保留当前设备。</p>

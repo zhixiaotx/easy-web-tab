@@ -189,7 +189,29 @@ function businessSignature(data: WorkbenchData): string {
   delete copy.exportedAt
   delete copy.pushedAt
   delete copy.clientId
+  // prefs 包含设备级 localStorage 快照（如 user-todo-tab-categories 等可能不同步存在的 key），
+  // 不同设备间 prefs 内容天然可能不同 → 哈希永不等 → 误判冲突。
+  // prefs 的同步由 idbImportAll/applyPrefsToLocalStorage 负责，不参与内容哈希比较。
+  delete copy.prefs
   return stableStringify(copy)
+}
+
+/**
+ * 检测本地与远程是否有模块级差异（逐 store 比较 stableStringify 长度）。
+ * 无差异 → 内容哈希不同仅因 prefs/时间戳/归一化等设备级噪音，可自动合并不弹框。
+ */
+function hasModuleDifferences(local: WorkbenchData, remote: WorkbenchData): boolean {
+  const keys: Array<keyof WorkbenchData> = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'business', 'settings', 'pomodoro', 'habits']
+  for (const k of keys) {
+    const lv = local[k]
+    const rv = remote[k]
+    try {
+      const l = lv !== undefined ? stableStringify(lv).length : 0
+      const r = rv !== undefined ? stableStringify(rv).length : 0
+      if (l !== r) return true
+    } catch { /* ignore */ }
+  }
+  return false
 }
 
 async function sha1Hash(text: string): Promise<string> {
@@ -365,7 +387,6 @@ async function applyRemote(remote: WorkbenchData, silent = false): Promise<void>
   const result = await idbImportAll(remote)
   localStorage.setItem(LAST_SYNC_KEY, String(remote.pushedAt ?? Date.now()))
   lastSyncAt.value = remote.pushedAt ?? Date.now()
-  clearDirty()
   // 判断密码身份是否真的变了：远端 salt/verification 与本地已有不同才算"新身份"
   // 同设备推后拉、或远端密码身份未变时 → 不提示"已锁定"，避免频繁打扰
   const identityChanged = result.adoptedPasswordIdentity
@@ -379,6 +400,9 @@ async function applyRemote(remote: WorkbenchData, silent = false): Promise<void>
   }
   status.value = 'idle'
   await reloadAllStores()
+  // clearDirty 必须在 reloadAllStores 之后：部分 store 的 load 方法会触发 save（如记账自动复制计划），
+  // 若在 reload 之前清 dirty，reload 中的 markDirty 会重新置位 → 下次 pullNow 误判冲突。
+  clearDirty()
 }
 
 // ========== 字段级合并辅助函数 ==========
@@ -751,20 +775,31 @@ async function pullNow(): Promise<void> {
     // 注意：remoteTs <= localTs 的场景现在也不能盲推，因为"外部手动改文件
     // 但 pushedAt 没动 + Last-Modified 没变化 / 代理丢头"时 hash 已经判定内容不同。
     if (dirty && remoteTs > localTs) {
-      // 双方都有新变更（时间戳维度）→ 冲突
+      // 双方都有新变更（时间戳维度）→ 检测模块级差异
       const local = localExport
+      if (!hasModuleDifferences(local, remote)) {
+        // 无模块差异（仅 prefs/时间戳/归一化噪音）→ 静默合并，不弹框
+        const merged = mergeData(local, remote)
+        await applyRemote(merged, true)
+        await pushNow(true)
+        return
+      }
       conflictData.value = { local, remote }
       status.value = 'conflict'
       useToast().warning('云同步检测到冲突，请选择解决方式')
       return
     }
     if (dirty && remoteTs <= localTs) {
-      // 本地 dirty 但 remoteTs 看起来没更新 —— 不能盲推！
-      // 内容 hash 已不同，说明要么：
-      //   a) 时间戳机制全部失效（Last-Modified 丢头 + pushedAt 被外部改文件保留）
-      //   b) 外部设备写了内容但由于某种原因时钟比本地慢
-      // 安全选择：仍然触发冲突（至少不会静默回滚用户手动改的文件）
+      // 本地 dirty 但 remoteTs 看起来没更新 —— 检测模块级差异
       const local = localExport
+      if (!hasModuleDifferences(local, remote)) {
+        // 无模块差异 → 静默合并，不弹框
+        const merged = mergeData(local, remote)
+        await applyRemote(merged, true)
+        await pushNow(true)
+        return
+      }
+      // 有模块差异 + remoteTs 没更新 → 可能外部手动改文件，弹框让用户选择
       conflictData.value = { local, remote }
       status.value = 'conflict'
       useToast().warning('云同步检测到内容不一致（本地有未同步变更），请选择解决方式')

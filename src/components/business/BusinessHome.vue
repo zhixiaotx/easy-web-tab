@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // 销售记账首页：5 统计卡（营业额/成本/支出/利润/毛利率）+ 摊位名称/低库存概览 + 销售排行（树状）
 // P1-1：合并分类/商品排行为树状展开结构
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcBusinessStats, calcCategoryProductRanking, formatYuanOf, lowStockProducts } from '@/composables/businessCore'
 import { useToast } from '@/composables/useToast'
+import Icon from '@/components/Icon.vue'
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -66,30 +67,73 @@ async function commitStallName(): Promise<void> {
   await store.setStallName(stallDraft.value)
   toast.success('摊位名称已保存')
 }
+
+// ===== 问候 + 日期（按 now 时段问候：早上好/下午好/晚上好）=====
+const now = ref(new Date())
+let nowTimer = 0
+
+const greeting = computed(() => {
+  const h = now.value.getHours()
+  if (h < 12) return '早上好'
+  if (h < 18) return '下午好'
+  return '晚上好'
+})
+
+const dateText = computed(() =>
+  now.value.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+)
+
+// 摊位名称 / 日期 拼接到副标题
+const stallGreeting = computed(() => {
+  const n = (store.settings.stallName || '').trim()
+  return n ? `${n} · ${dateText}` : dateText
+})
+
+onMounted(() => {
+  nowTimer = window.setInterval(() => {
+    now.value = new Date()
+  }, 30000)
+})
+onUnmounted(() => {
+  window.clearInterval(nowTimer)
+})
 </script>
 
 <template>
   <div class="bizhome">
-    <!-- 统计卡 4 张 -->
+    <!-- 问候头（渐变背景，左问候+日期，右利润主指标） -->
+    <section class="bizhome-greeting" data-testid="bizhome-greeting">
+      <div class="greeting-info">
+        <h2 class="greeting-title">{{ greeting }}</h2>
+        <p class="greeting-sub">{{ stallGreeting }}</p>
+      </div>
+      <div class="greeting-hero">
+        <span class="hero-label">总利润</span>
+        <span class="hero-value" :class="{ negative: stats.profit < 0 }">{{ formatYuanOf(stats.profit) }}</span>
+        <span class="hero-sub">毛利率 {{ (stats.margin * 100).toFixed(1) }}%</span>
+      </div>
+    </section>
+
+    <!-- 统计卡 5 张 -->
     <div class="bizhome-stats">
       <div class="stat-card" data-testid="bizhome-revenue">
-        <div class="stat-label">💰 营业额</div>
+        <div class="stat-label"><Icon name="revenue" :size="16" />营业额</div>
         <div class="stat-value">{{ formatYuanOf(stats.revenue) }}</div>
       </div>
       <div class="stat-card" data-testid="bizhome-cost">
-        <div class="stat-label">📦 成本</div>
+        <div class="stat-label"><Icon name="cost" :size="16" />成本</div>
         <div class="stat-value">{{ formatYuanOf(stats.cost) }}</div>
       </div>
       <div class="stat-card" data-testid="bizhome-expense">
-        <div class="stat-label">💸 支出</div>
+        <div class="stat-label"><Icon name="expenses" :size="16" />支出</div>
         <div class="stat-value">{{ formatYuanOf(stats.expenseTotal) }}</div>
       </div>
       <div class="stat-card" data-testid="bizhome-profit">
-        <div class="stat-label">📈 利润</div>
+        <div class="stat-label"><Icon name="profit" :size="16" />利润</div>
         <div class="stat-value" :class="{ negative: stats.profit < 0 }">{{ formatYuanOf(stats.profit) }}</div>
       </div>
       <div class="stat-card" data-testid="bizhome-margin">
-        <div class="stat-label">💵 毛利率</div>
+        <div class="stat-label"><Icon name="stats" :size="16" />毛利率</div>
         <div class="stat-value">{{ (stats.margin * 100).toFixed(1) }}%</div>
       </div>
     </div>
@@ -97,7 +141,7 @@ async function commitStallName(): Promise<void> {
     <!-- 摊位名称 + 低库存概览 -->
     <div class="bizhome-row">
       <div class="bizhome-card">
-        <div class="bizhome-card-title">🏪 摊位名称</div>
+        <div class="bizhome-card-title"><Icon name="store" :size="15" />摊位名称</div>
         <div class="bizhome-stall">
           <input
             type="text"
@@ -113,7 +157,7 @@ async function commitStallName(): Promise<void> {
         </div>
       </div>
       <div class="bizhome-card" data-testid="bizhome-lowstock">
-        <div class="bizhome-card-title">⚠️ 低库存预警（阈值 {{ store.settings.lowStockThreshold }}）</div>
+        <div class="bizhome-card-title"><Icon name="alert" :size="15" />低库存预警（阈值 {{ store.settings.lowStockThreshold }}）</div>
         <p v-if="lowStock.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">暂无低库存商品</p>
         <div v-else class="bizhome-low-list">
           <div v-for="item in lowStock.slice(0, 5)" :key="item.product.id" class="bizhome-low-item">
@@ -126,7 +170,7 @@ async function commitStallName(): Promise<void> {
 
     <!-- P1-1：销售排行（分类→商品树状展开） -->
     <section class="bizhome-card" data-testid="bizhome-rank-tree">
-      <div class="bizhome-card-title">📊 销售排行（分类→商品）</div>
+      <div class="bizhome-card-title"><Icon name="stats" :size="15" />销售排行（分类→商品）</div>
       <p v-if="treeRank.length === 0" class="bizhome-empty">暂无数据</p>
       <div v-else class="bizhome-tree">
         <div v-for="node in treeRank" :key="node.categoryId" class="bizhome-tree-node" :data-testid="'bizhome-tree-cat-' + node.categoryId">
@@ -170,6 +214,87 @@ async function commitStallName(): Promise<void> {
   overflow-y: auto;
 }
 
+/* ===== 问候头（渐变背景，左问候+日期，右利润主指标） ===== */
+.bizhome-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-color, #3b82f6) 10%, transparent), transparent),
+    var(--bg-card, var(--color-bg-card));
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.greeting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.greeting-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary, var(--color-text));
+}
+
+.greeting-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.greeting-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.hero-label {
+  font-size: 12px;
+  color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.hero-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--success-color, var(--color-success));
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-value.negative {
+  color: var(--error-color, var(--color-error));
+}
+
+.hero-sub {
+  font-size: 12px;
+  color: var(--text-muted, var(--color-text-muted));
+}
+
+/* ===== 统计卡悬浮反馈 ===== */
+.stat-card,
+.bizhome-card {
+  transition: box-shadow var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+}
+
+.stat-card:hover,
+.bizhome-card:hover {
+  border-color: var(--accent-color, var(--color-primary));
+  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
 .bizhome-stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -188,9 +313,17 @@ async function commitStallName(): Promise<void> {
 }
 
 .stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.stat-label :deep(svg) {
+  flex-shrink: 0;
+  color: var(--accent-color, var(--color-primary));
 }
 
 .stat-value {
@@ -226,9 +359,17 @@ async function commitStallName(): Promise<void> {
 }
 
 .bizhome-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary, var(--color-text-secondary));
+}
+
+.bizhome-card-title :deep(svg) {
+  flex-shrink: 0;
+  color: var(--accent-color, var(--color-primary));
 }
 
 .biz-input {
@@ -427,6 +568,29 @@ async function commitStallName(): Promise<void> {
   box-shadow: none;
 }
 
+:root.dark .bizhome-greeting {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-color, #3b82f6) 14%, transparent), transparent),
+    var(--bg-secondary, #1f2937);
+}
+
+:root.dark .greeting-title {
+  color: var(--text-primary, #f9fafb);
+}
+
+:root.dark .hero-value {
+  color: #34d399;
+}
+
+:root.dark .hero-value.negative {
+  color: #f87171;
+}
+
+:root.dark .stat-card:hover,
+:root.dark .bizhome-card:hover {
+  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.4));
+}
+
 :root.dark .bizhome-low-item {
   background-color: var(--bg-card, #1f2937);
   border-color: var(--border-color, #374151);
@@ -452,6 +616,22 @@ async function commitStallName(): Promise<void> {
   }
 
   .bizhome-row {
+    grid-template-columns: 1fr;
+  }
+
+  .bizhome-greeting {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .greeting-hero {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .bizhome-stats {
     grid-template-columns: 1fr;
   }
 }

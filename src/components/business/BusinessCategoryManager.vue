@@ -3,6 +3,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { useToast } from '@/composables/useToast'
+import Icon from '@/components/Icon.vue'
 
 const props = defineProps<{ kind: 'product' | 'expense' }>()
 const emit = defineEmits<{ close: [] }>()
@@ -121,7 +122,11 @@ function handleAdd(): void {
                 @change="onToggleVisible(cat.id)"
               />
             </label>
-            <span class="bizcat-icon">{{ isProduct ? '🏷️' : isBuiltInOf(cat.id) ? '🔒' : '💸' }}</span>
+            <span class="bizcat-icon">
+              <Icon v-if="isProduct" name="tag" :size="14" />
+              <Icon v-else-if="isBuiltInOf(cat.id)" name="lock" :size="14" />
+              <Icon v-else name="expenses" :size="14" />
+            </span>
             <input
               type="text"
               class="bizcat-name"

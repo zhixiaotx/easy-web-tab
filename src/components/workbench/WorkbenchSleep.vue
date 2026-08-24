@@ -6,6 +6,7 @@ import { localToday } from '@/composables/todoCore'
 import PanelPager from './PanelPager.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchHealthStore()
 
@@ -210,7 +211,7 @@ onUnmounted(() => {
     <!-- 顶部目标卡（复用 stat-card 结构） -->
     <div class="stat-card">
       <div class="stat-header">
-        <span class="stat-icon">😴</span>
+        <Icon name="sleep" :size="16" class="stat-icon" />
         <span class="stat-label">睡眠目标</span>
         <button v-if="targetView" class="nav-btn" data-testid="sl-edit-target" @click="openTargetDialog">
           调整目标

@@ -194,7 +194,7 @@ const syncLabel = computed((): string => {
     case 'pushing': return '推送中…'
     case 'conflict': return '处理冲突'
     case 'error': return '同步失败'
-    default: return '☁️ 云同步'
+    default: return '云同步'
   }
 })
 const syncTip = computed((): string => {
@@ -229,8 +229,8 @@ async function handleSyncNowClick(): Promise<void> {
           data-testid="wb-sync-now"
           :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
           @click="handleSyncNowClick"
-        >{{ syncLabel }}</button>
-        <button class="wb-btn" title="设置" data-testid="wb-settings" @click="showSettingsDialog = true">⚙️ 设置</button>
+        ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
+        <button class="wb-btn" title="设置" data-testid="wb-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
       </div>
     </header>
 

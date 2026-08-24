@@ -6,6 +6,7 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcBroughtOutTotals, calcInventory, calcInventorySources, calcPurchaseTotals, formatYuanOf, lowStockProducts, sortProducts } from '@/composables/businessCore'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
+import Icon from '@/components/Icon.vue'
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -81,7 +82,7 @@ function closeTraceModal(): void {
     <!-- 阈值设置 + 预警清单 -->
     <div class="bizinv-alert" data-testid="bizinv-alert">
       <div class="bizinv-alert-head">
-        <span class="bizinv-alert-title">⚠️ 低库存预警</span>
+        <span class="bizinv-alert-title"><Icon name="alert" :size="15" /> 低库存预警</span>
         <label class="bizinv-threshold">
           阈值
           <input

@@ -199,6 +199,7 @@ export interface AppSettingsData {
   workbenchMenuVisibility?: Record<string, boolean> // 工作台菜单开关（false = 隐藏菜单项/面板/主页对应统计；缺失 = 显示）
   workbenchCity?: string // 天气卡城市（trim 后非空；空串/undefined/null = 未配置）
   workbenchSidebarCollapsed?: boolean // 工作台侧栏折叠态（非法/缺失 = 未配置即展开）
+  businessSidebarCollapsed?: boolean // 销售记账工作台侧栏折叠态（非法/缺失 = 未配置即展开）
   navFiltersExpanded?: boolean // 导航管理页分类/标签栏展开态（默认 false = 收起）
   desktopNotifyEnabled?: boolean // 定时提醒桌面通知总开关（默认 false = 关闭）
   reminderEmailEnabled?: boolean // 定时提醒邮件总开关（默认 false = 关闭）

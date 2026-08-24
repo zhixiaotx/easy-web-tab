@@ -226,6 +226,10 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.workbenchSidebarCollapsed === 'boolean') {
     out.workbenchSidebarCollapsed = data.workbenchSidebarCollapsed
   }
+  // 销售记账侧栏折叠态：仅采纳布尔；非法/缺失回退默认（未配置即展开）
+  if (typeof data.businessSidebarCollapsed === 'boolean') {
+    out.businessSidebarCollapsed = data.businessSidebarCollapsed
+  }
   // 提醒设置：6 字段白名单解析（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
   out.desktopNotifyEnabled = typeof data.desktopNotifyEnabled === 'boolean' ? data.desktopNotifyEnabled : false
   out.reminderEmailEnabled = typeof data.reminderEmailEnabled === 'boolean' ? data.reminderEmailEnabled : false
@@ -262,6 +266,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 工作台城市（天气卡显示城市）与侧栏折叠态：默认未配置（undefined = 无城市 / 不折叠）
   const workbenchCity = ref<string | undefined>(undefined)
   const workbenchSidebarCollapsed = ref<boolean | undefined>(undefined)
+  const businessSidebarCollapsed = ref<boolean | undefined>(undefined)
 
   // 导航管理页分类/标签栏展开态：默认收起（false）
   const navFiltersExpanded = ref<boolean>(false)
@@ -302,6 +307,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchMenuVisibility: toRaw(workbenchMenuVisibility.value),
       workbenchCity: toRaw(workbenchCity.value),
       workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value),
+      businessSidebarCollapsed: toRaw(businessSidebarCollapsed.value),
       navFiltersExpanded: navFiltersExpanded.value,
       workbenchPageName: workbenchPageName.value,
       workbenchPageVisible: workbenchPageVisible.value,
@@ -414,6 +420,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       } else {
         workbenchSidebarCollapsed.value = undefined
       }
+      if (typeof effective.businessSidebarCollapsed === 'boolean') {
+        businessSidebarCollapsed.value = effective.businessSidebarCollapsed
+      } else {
+        businessSidebarCollapsed.value = undefined
+      }
       // 提醒设置：6 字段白名单应用（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
       desktopNotifyEnabled.value = effective.desktopNotifyEnabled === true
       reminderEmailEnabled.value = effective.reminderEmailEnabled === true
@@ -472,6 +483,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 销售记账侧栏折叠态：纯布尔（undefined 仅由非法/缺失回退产生，不主动写入）
+  function setBusinessSidebarCollapsed(v: boolean) {
+    businessSidebarCollapsed.value = v
+    persist()
+  }
+
   // ========================================
   // 恢复默认：还原状态 → 移除全部弹窗 CSS 变量（不 set 默认值）→ 清除存储（IDB + localStorage 快照）
   // ========================================
@@ -484,6 +501,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchMenuVisibility.value = {}
     workbenchCity.value = undefined
     workbenchSidebarCollapsed.value = undefined
+    businessSidebarCollapsed.value = undefined
     navFiltersExpanded.value = false
     workbenchPageName.value = ''
     workbenchPageVisible.value = true
@@ -697,6 +715,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setBgOpacity,
     setWorkbenchCity,
     setWorkbenchSidebarCollapsed,
+    businessSidebarCollapsed,
+    setBusinessSidebarCollapsed,
     setWorkbenchMenuVisibility,
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,

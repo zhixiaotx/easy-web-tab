@@ -4,6 +4,7 @@ import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } from '@/composables/healthCore'
 import type { WeightChartPoint } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchHealthStore()
 
@@ -251,7 +252,7 @@ onUnmounted(() => {
       <!-- 最近体重 + BMI 卡 -->
       <div class="stat-card" data-testid="wt-bmi-card">
         <div class="stat-header">
-          <span class="stat-icon">⚖️</span>
+          <Icon name="weight" :size="16" class="stat-icon" />
           <span class="stat-label">最近体重 · BMI</span>
         </div>
         <div class="wt-bmi-row">
@@ -271,7 +272,7 @@ onUnmounted(() => {
     <!-- 减肥建议卡（仅 overweight/obese 且身高已设置） -->
     <div v-if="adviceTarget !== null" class="stat-card wt-advice" data-testid="wt-advice">
       <div class="stat-header">
-        <span class="stat-icon">🎯</span>
+        <Icon name="target" :size="16" class="stat-icon" />
         <span class="stat-label">减肥建议</span>
       </div>
       <div class="wt-advice-row">
@@ -285,7 +286,7 @@ onUnmounted(() => {
     <!-- 体重趋势折线图（内联 SVG，零依赖） -->
     <div class="stat-card wt-chart-card" data-testid="wt-chart-card">
       <div class="stat-header">
-        <span class="stat-icon">📈</span>
+        <Icon name="profit" :size="16" class="stat-icon" />
         <span class="stat-label">体重趋势</span>
       </div>
       <svg

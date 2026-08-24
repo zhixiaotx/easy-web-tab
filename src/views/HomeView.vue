@@ -64,7 +64,7 @@ const syncLabel = computed((): string => {
     case 'pushing': return '推送中…'
     case 'conflict': return '处理冲突'
     case 'error': return '同步失败'
-    default: return '☁️ 云同步'
+    default: return '云同步'
   }
 })
 const syncTip = computed((): string => {

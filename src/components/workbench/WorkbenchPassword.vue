@@ -7,6 +7,7 @@ import { usePanelPaging } from '@/composables/usePanelPaging'
 import { getIconUrl } from '@/composables/useIconCache'
 import type { PasswordEntry } from '@/types'
 import PanelPager from './PanelPager.vue'
+import Icon from '@/components/Icon.vue'
 
 const passwordsStore = usePasswordsStore()
 const sitesStore = useSitesStore()
@@ -338,7 +339,7 @@ onUnmounted(() => {
           >✕</button>
         </div>
         <button class="pwd-btn-lock" data-testid="pwd-lock-btn" title="锁定" @click="handleLock">
-          🔒 锁定
+          <Icon name="lock" :size="16" />锁定
         </button>
         <button class="pwd-btn-primary pwd-btn-add" data-testid="pwd-add-btn" @click="startAdd">
           + 新增密码
@@ -393,7 +394,7 @@ onUnmounted(() => {
               title="复制用户名"
               :data-testid="`pwd-copy-username-${entry.id}`"
               @click="copyToClipboard(entry.username, '用户名')"
-            >📋</button>
+            ><Icon name="copy" :size="16" /></button>
             <button
               class="pwd-icon-btn"
               title="复制密码"

@@ -7,6 +7,7 @@ import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import PanelPager from './PanelPager.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchHealthStore()
 
@@ -222,7 +223,7 @@ onUnmounted(() => {
     <!-- 顶部目标卡（复用 stat-card 结构） -->
     <div class="stat-card">
       <div class="stat-header">
-        <span class="stat-icon">🏃</span>
+        <Icon name="exercise" :size="16" class="stat-icon" />
         <span class="stat-label">运动目标</span>
         <span class="stat-pill" data-testid="ex-year-run">跑步 {{ yearTotals['跑步'] ?? 0 }} 公里</span>
         <span class="stat-pill" data-testid="ex-year-ride">骑行 {{ yearTotals['骑行'] ?? 0 }} 公里</span>

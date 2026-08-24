@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import Icon from '@/components/Icon.vue'
 import {
   calcDepositTotal,
   calcMonthlyStats,
@@ -349,42 +350,42 @@ onUnmounted(() => {
     <div class="ld-stats">
       <div class="stat-card" data-testid="ld-stat-income">
         <div class="stat-header">
-          <span class="stat-icon">💰</span>
+          <span class="stat-icon"><Icon name="revenue" :size="18" /></span>
           <span class="stat-label">收入</span>
         </div>
         <div class="stat-value is-income">{{ masked(formatYuan(monthStats.income)) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-expense">
         <div class="stat-header">
-          <span class="stat-icon">📉</span>
+          <span class="stat-icon"><Icon name="expenses" :size="18" /></span>
           <span class="stat-label">支出</span>
         </div>
         <div class="stat-value is-expense">{{ masked(formatYuan(monthStats.expense)) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-balance">
         <div class="stat-header">
-          <span class="stat-icon">⚖️</span>
+          <span class="stat-icon"><Icon name="scale" :size="18" /></span>
           <span class="stat-label">结余</span>
         </div>
         <div class="stat-value" :class="{ 'is-negative': monthStats.balance < 0 }">{{ masked(balanceText) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-deposit">
         <div class="stat-header">
-          <span class="stat-icon">🏦</span>
+          <span class="stat-icon"><Icon name="bank" :size="18" /></span>
           <span class="stat-label">存款</span>
         </div>
         <div class="stat-value" :class="{ 'is-negative': depositTotal < 0 }">{{ masked(depositText) }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-count">
         <div class="stat-header">
-          <span class="stat-icon">🧾</span>
+          <span class="stat-icon"><Icon name="ledger" :size="18" /></span>
           <span class="stat-label">消费笔数</span>
         </div>
         <div class="stat-value">{{ monthStats.expenseCount }}</div>
       </div>
       <div class="stat-card" data-testid="ld-stat-ratio">
         <div class="stat-header">
-          <span class="stat-icon">📊</span>
+          <span class="stat-icon"><Icon name="stats" :size="18" /></span>
           <span class="stat-label">支出比</span>
         </div>
         <div class="stat-value">{{ masked(ratioText) }}</div>
@@ -401,7 +402,7 @@ onUnmounted(() => {
         :aria-expanded="chartsExpanded"
         @click="chartsExpanded = !chartsExpanded"
       >
-        <span>📈 图表</span>
+        <span><Icon name="profit" :size="15" /> 图表</span>
         <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
       </button>
       <div v-show="chartsExpanded" class="ld-charts-row">

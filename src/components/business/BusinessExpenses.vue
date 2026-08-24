@@ -8,6 +8,7 @@ import type { BusinessExpense } from '@/types'
 import BusinessCategoryManager from './BusinessCategoryManager.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchBusinessStore()
 
@@ -136,11 +137,11 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 
 <template>
   <div class="bizexp">
-    <!-- 顶部 bar：统计 + ⚙️ 分类管理 + 新增 -->
+    <!-- 顶部 bar：统计 + 分类管理 + 新增 -->
     <div class="bizexp-bar">
       <div class="bizexp-bar-left">
         <span class="bizexp-count">共 {{ dayGroups.length }} 天（{{ store.expenses.length }} 笔支出）</span>
-        <button class="bizexp-cat-btn" data-testid="bizexp-cat-manager" @click="showCatManager = true">⚙️ 支出分类管理</button>
+        <button class="bizexp-cat-btn" data-testid="bizexp-cat-manager" @click="showCatManager = true"><Icon name="cog" :size="15" /> 支出分类管理</button>
       </div>
       <button class="bizexp-add" data-testid="bizexp-add" @click="startAdd">＋ 新增支出记录</button>
     </div>

@@ -12,6 +12,7 @@ import BusinessExpenses from '@/components/business/BusinessExpenses.vue'
 import BusinessInventory from '@/components/business/BusinessInventory.vue'
 import BusinessStats from '@/components/business/BusinessStats.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
+import Icon from '@/components/Icon.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 
@@ -19,17 +20,24 @@ const router = useRouter()
 const store = useWorkbenchBusinessStore()
 const settingsStore = useAppSettingsStore()
 
-// 左树 7 项（固定顺序，emoji 图标常量渲染，不接工作台菜单开关系统）
+// 左树 7 项（固定顺序，SVG 图标经 Icon 组件渲染，不接工作台菜单开关系统）
 const SECTIONS = [
-  { key: 'home', icon: '🏠', label: '首页' },
-  { key: 'products', icon: '📦', label: '商品' },
-  { key: 'purchases', icon: '🛒', label: '进货' },
-  { key: 'daily', icon: '📋', label: '收摊' },
-  { key: 'expenses', icon: '💰', label: '支出' },
-  { key: 'inventory', icon: '📈', label: '库存' },
-  { key: 'stats', icon: '📊', label: '统计' }
+  { key: 'home', icon: 'home', label: '首页' },
+  { key: 'products', icon: 'products', label: '商品' },
+  { key: 'purchases', icon: 'purchases', label: '进货' },
+  { key: 'daily', icon: 'daily', label: '收摊' },
+  { key: 'expenses', icon: 'expenses', label: '支出' },
+  { key: 'inventory', icon: 'inventory', label: '库存' },
+  { key: 'stats', icon: 'stats', label: '统计' }
 ] as const
 type SectionKey = (typeof SECTIONS)[number]['key']
+
+// 侧栏折叠态：undefined（未设置）视为展开；持久化经 settingsStore（IDB store 'settings'）
+const sidebarCollapsed = computed(() => settingsStore.businessSidebarCollapsed ?? false)
+
+function toggleSidebar(): void {
+  settingsStore.setBusinessSidebarCollapsed(!sidebarCollapsed.value)
+}
 
 const activeSection = ref<SectionKey>('home')
 
@@ -72,7 +80,7 @@ const syncLabel = computed((): string => {
     case 'pushing': return '推送中…'
     case 'conflict': return '处理冲突'
     case 'error': return '同步失败'
-    default: return '☁️ 云同步'
+    default: return '云同步'
   }
 })
 const syncTip = computed((): string => {
@@ -98,7 +106,7 @@ onMounted(() => {
     <header class="bs-header">
       <div class="bs-header-left">
         <button class="bs-btn" @click="router.push('/')">← 管理页</button>
-        <h1>📊 {{ settingsStore.businessPageDisplayName }}</h1>
+        <h1>{{ settingsStore.businessPageDisplayName }}</h1>
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">
@@ -110,14 +118,25 @@ onMounted(() => {
           data-testid="bs-sync-now"
           :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
           @click="handleSyncNowClick"
-        >{{ syncLabel }}</button>
-        <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true">⚙️ 设置</button>
+        ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
+        <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
       </div>
     </header>
 
     <!-- 主体：左树 + 右内容区 -->
     <div class="bs-body">
-      <nav class="bs-menu">
+      <nav class="bs-menu" :class="{ collapsed: sidebarCollapsed }">
+        <button
+          class="bs-sidebar-toggle"
+          data-testid="bs-sidebar-toggle"
+          :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+          @click="toggleSidebar"
+        >
+          <span class="bs-menu-icon">
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+          </span>
+          <span class="bs-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
+        </button>
         <button
           v-for="item in SECTIONS"
           :key="item.key"
@@ -127,7 +146,7 @@ onMounted(() => {
           :data-testid="`bs-menu-${item.key}`"
           @click="activeSection = item.key"
         >
-          <span class="bs-menu-icon">{{ item.icon }}</span>
+          <span class="bs-menu-icon"><Icon :name="item.icon" /></span>
           <span class="bs-menu-label">{{ item.label }}</span>
         </button>
       </nav>
@@ -230,7 +249,7 @@ onMounted(() => {
 }
 
 .bs-menu {
-  width: 160px;
+  width: 200px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -238,6 +257,47 @@ onMounted(() => {
   padding: 12px 8px;
   background-color: var(--color-bg-card, #ffffff);
   border-right: 1px solid var(--color-border, #e2e8f0);
+  transition: width 0.2s ease;
+}
+
+/* 侧栏折叠：56px 仅图标（label 隐藏、图标居中），展开宽度 200px 平滑过渡 */
+.bs-menu.collapsed {
+  width: 56px;
+}
+
+.bs-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bs-sidebar-toggle:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+}
+
+.bs-menu.collapsed .bs-sidebar-toggle {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.bs-menu.collapsed .bs-menu-label {
+  display: none;
+}
+
+.bs-menu.collapsed .bs-menu-item {
+  justify-content: center;
+  padding: 10px 0;
 }
 
 .bs-menu-item {
@@ -322,6 +382,15 @@ onMounted(() => {
   border-right-color: var(--border-color, #374151);
 }
 
+:root.dark .bs-sidebar-toggle {
+  color: var(--text-secondary, #d1d5db);
+}
+
+:root.dark .bs-sidebar-toggle:hover {
+  background-color: var(--hover-bg, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
 :root.dark .bs-menu-item {
   color: var(--text-secondary, #d1d5db);
 }
@@ -372,6 +441,24 @@ onMounted(() => {
     overflow-x: auto;
     border-right: none;
     border-bottom: 1px solid var(--color-border, #e2e8f0);
+  }
+
+  /* 移动端横排布局：忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
+  .bs-menu.collapsed {
+    width: 100%;
+  }
+
+  .bs-menu.collapsed .bs-menu-label {
+    display: inline;
+  }
+
+  .bs-menu.collapsed .bs-menu-item {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .bs-sidebar-toggle {
+    display: none;
   }
 
   .bs-menu-item {

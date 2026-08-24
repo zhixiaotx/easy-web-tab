@@ -8,6 +8,7 @@ import { calcMarkupRate, calcProductSummary, findProductCategory, formatYuanOf, 
 import { useToast } from '@/composables/useToast'
 import type { BusinessProduct } from '@/types'
 import BusinessCategoryManager from './BusinessCategoryManager.vue'
+import Icon from '@/components/Icon.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 
@@ -179,7 +180,7 @@ function drawerMarkupRate(): number | null {
           :data-testid="`bizprod-cat-${cat.id}`"
           @click="activeCat = cat.id"
         >{{ cat.name }}</button>
-        <button class="bizprod-tab bizprod-cat-btn" data-testid="bizprod-cat-manager" @click="showCatManager = true">⚙️</button>
+        <button class="bizprod-tab bizprod-cat-btn" data-testid="bizprod-cat-manager" @click="showCatManager = true"><Icon name="cog" :size="15" /></button>
       </div>
       <button class="bizprod-add" data-testid="bizprod-add" @click="startAdd">＋ 新增商品</button>
     </div>
@@ -322,7 +323,7 @@ function drawerMarkupRate(): number | null {
 
             <!-- 经营数据 -->
             <div class="bizprod-drawer-section">
-              <div class="bizprod-drawer-section-title">📊 经营数据</div>
+              <div class="bizprod-drawer-section-title"><Icon name="stats" :size="15" /> 经营数据</div>
               <div class="bizprod-drawer-stats">
                 <div class="bizprod-drawer-stat">
                   <span class="bizprod-drawer-stat-label">总进货</span>
@@ -361,7 +362,7 @@ function drawerMarkupRate(): number | null {
 
             <!-- 进货记录（最近 5 笔） -->
             <div class="bizprod-drawer-section">
-              <div class="bizprod-drawer-section-title">🛒 进货记录（最近 5 笔）</div>
+              <div class="bizprod-drawer-section-title"><Icon name="purchases" :size="15" /> 进货记录（最近 5 笔）</div>
               <p v-if="drawerSummary.recentPurchases.length === 0" class="bizprod-drawer-empty">暂无进货记录</p>
               <div v-else class="bizprod-drawer-records">
                 <div
@@ -379,7 +380,7 @@ function drawerMarkupRate(): number | null {
 
             <!-- 收摊记录（最近 5 笔） -->
             <div class="bizprod-drawer-section">
-              <div class="bizprod-drawer-section-title">📋 收摊记录（最近 5 笔）</div>
+              <div class="bizprod-drawer-section-title"><Icon name="daily" :size="15" /> 收摊记录（最近 5 笔）</div>
               <p v-if="drawerSummary.recentDailyRecords.length === 0" class="bizprod-drawer-empty">暂无收摊记录</p>
               <div v-else class="bizprod-drawer-records">
                 <div

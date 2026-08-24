@@ -300,7 +300,8 @@ async function handleQuickNote(): Promise<void> {
                   <button class="nav-btn" data-testid="home-nav-passwords" @click.stop="emit('navigate', 'passwords')">前往 →</button>
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-passwords">
-                  {{ isUnlocked ? `${passwordCount} 条` : '🔒 解锁后可见' }}
+                  <template v-if="isUnlocked">{{ passwordCount }} 条</template>
+                  <template v-else><Icon name="lock" :size="14" /> 解锁后可见</template>
                 </div>
                 <div class="stat-sub">{{ isUnlocked ? '已解锁' : '未解锁' }}</div>
               </div>

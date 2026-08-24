@@ -4,6 +4,7 @@ import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { formatRemaining, sessionPhase } from '@/composables/pomodoroCore'
 import type { PomodoroPhase } from '@/composables/pomodoroCore'
 import { localToday } from '@/composables/todoCore'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchPomodoroStore()
 
@@ -178,7 +179,7 @@ onUnmounted(() => {
     <!-- 设置卡：工作/休息分钟数（persist 到 store） -->
     <div class="stat-card">
       <div class="stat-header">
-        <span class="stat-icon">⚙️</span>
+        <Icon name="cog" :size="16" class="stat-icon" />
         <span class="stat-label">时长设置</span>
       </div>
       <div class="pm-settings-row">

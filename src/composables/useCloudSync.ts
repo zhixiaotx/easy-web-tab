@@ -852,10 +852,11 @@ export function init(): void {
   document.addEventListener('visibilitychange', () => {
     if (status.value !== 'idle' && status.value !== 'error') return
     if (document.visibilityState === 'visible') {
+      // 页面重新可见 → 拉取远程更新（技能改文件/其他设备推送都会被检测到）
       void pullNow()
-    } else if (document.visibilityState === 'hidden' && isDirty()) {
-      void pushNow()
     }
+    // hidden 时不自动推送（避免盲推覆盖技能修改的远程文件）
+    // 推送统一由定时轮询 + 手动「立即同步」触发，都会先 pullNow 检测冲突
   })
 
   window.addEventListener('beforeunload', () => {
@@ -878,6 +879,7 @@ export function useCloudSync() {
     resolveConflict,
     testConnection,
     markDirty,
-    isDirty
+    isDirty,
+    startInterval
   }
 }

@@ -1559,6 +1559,20 @@ onUnmounted(() => {
             >立即同步</button>
             <span data-testid="sync-last" class="wb-menu-hint" style="margin-left: auto;">上次同步：{{ lastSyncText }}</span>
           </div>
+          <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
+            <span class="remind-label">自动同步间隔（分钟，0=关闭）</span>
+            <input
+              type="number"
+              class="wb-menu-name-input"
+              style="width: 80px;"
+              min="0"
+              placeholder="0"
+              data-testid="sync-interval"
+              :value="store.cloudSyncInterval"
+              @input="store.setCloudSyncInterval(Number(($event.target as HTMLInputElement).value)); cloudSync.startInterval()"
+            />
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">设为 0 则不自动同步，需手动点击「立即同步」</span>
+          </div>
         </div>
 
         <div class="settings-grid" v-if="activeTab === 'nav' || activeTab === 'wb'">

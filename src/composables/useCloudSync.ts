@@ -197,21 +197,24 @@ function businessSignature(data: WorkbenchData): string {
 }
 
 /**
- * 检测本地与远程是否有模块级差异（逐 store 比较 stableStringify 长度）。
- * 无差异 → 内容哈希不同仅因 prefs/时间戳/归一化等设备级噪音，可自动合并不弹框。
+ * 计算本地与远程各模块的数据差异总量（Σ|local_len - remote_len|）。
+ * 差异总量 < DIFF_THRESHOLD → 视为微小差异，静默合并不弹框。
  */
-function hasModuleDifferences(local: WorkbenchData, remote: WorkbenchData): boolean {
+const MODULE_DIFF_THRESHOLD = 500
+
+function moduleDiffSize(local: WorkbenchData, remote: WorkbenchData): number {
   const keys: Array<keyof WorkbenchData> = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'business', 'settings', 'pomodoro', 'habits']
+  let total = 0
   for (const k of keys) {
     const lv = local[k]
     const rv = remote[k]
     try {
       const l = lv !== undefined ? stableStringify(lv).length : 0
       const r = rv !== undefined ? stableStringify(rv).length : 0
-      if (l !== r) return true
+      total += Math.abs(l - r)
     } catch { /* ignore */ }
   }
-  return false
+  return total
 }
 
 async function sha1Hash(text: string): Promise<string> {
@@ -775,10 +778,11 @@ async function pullNow(): Promise<void> {
     // 注意：remoteTs <= localTs 的场景现在也不能盲推，因为"外部手动改文件
     // 但 pushedAt 没动 + Last-Modified 没变化 / 代理丢头"时 hash 已经判定内容不同。
     if (dirty && remoteTs > localTs) {
-      // 双方都有新变更（时间戳维度）→ 检测模块级差异
+      // 双方都有新变更（时间戳维度）→ 计算模块级差异量
       const local = localExport
-      if (!hasModuleDifferences(local, remote)) {
-        // 无模块差异（仅 prefs/时间戳/归一化噪音）→ 静默合并，不弹框
+      const diffSize = moduleDiffSize(local, remote)
+      if (diffSize < MODULE_DIFF_THRESHOLD) {
+        // 微小差异（归一化/时间戳/设备级噪音）→ 静默合并，不弹框
         const merged = mergeData(local, remote)
         await applyRemote(merged, true)
         await pushNow(true)
@@ -790,16 +794,17 @@ async function pullNow(): Promise<void> {
       return
     }
     if (dirty && remoteTs <= localTs) {
-      // 本地 dirty 但 remoteTs 看起来没更新 —— 检测模块级差异
+      // 本地 dirty 但 remoteTs 看起来没更新 —— 计算模块级差异量
       const local = localExport
-      if (!hasModuleDifferences(local, remote)) {
-        // 无模块差异 → 静默合并，不弹框
+      const diffSize = moduleDiffSize(local, remote)
+      if (diffSize < MODULE_DIFF_THRESHOLD) {
+        // 微小差异 → 静默合并，不弹框
         const merged = mergeData(local, remote)
         await applyRemote(merged, true)
         await pushNow(true)
         return
       }
-      // 有模块差异 + remoteTs 没更新 → 可能外部手动改文件，弹框让用户选择
+      // 差异较大 + remoteTs 没更新 → 可能外部手动改文件，弹框让用户选择
       conflictData.value = { local, remote }
       status.value = 'conflict'
       useToast().warning('云同步检测到内容不一致（本地有未同步变更），请选择解决方式')

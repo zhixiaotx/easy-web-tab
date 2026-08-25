@@ -66,6 +66,45 @@ function handleLock(): void {
   cancelForm()
 }
 
+// ===== P0-3：空闲自动锁定 =====
+// 解锁后启动计时，任一用户活动（鼠标/键盘/触摸/滚动）重置计时；
+// 超时（默认 5 分钟）且无操作则自动锁定，与加密身份体系配套提升安全性。
+const IDLE_LOCK_MS = 5 * 60 * 1000
+let idleTimer = 0
+let lastActivityTs = 0
+const IDLE_ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'] as const
+
+function scheduleIdleLock(): void {
+  window.clearTimeout(idleTimer)
+  idleTimer = window.setTimeout(() => {
+    if (passwordsStore.isUnlocked) handleLock()
+  }, IDLE_LOCK_MS)
+}
+
+function onIdleActivity(): void {
+  if (!passwordsStore.isUnlocked) return
+  const now = Date.now()
+  // 节流：连续活动每 >1s 才重置一次，避免 mousemove 高频抖动反复重建定时器
+  if (now - lastActivityTs > 1000) {
+    lastActivityTs = now
+    scheduleIdleLock()
+  }
+}
+
+function startIdleWatch(): void {
+  lastActivityTs = Date.now()
+  scheduleIdleLock()
+  IDLE_ACTIVITY_EVENTS.forEach((e) =>
+    window.addEventListener(e, onIdleActivity, { passive: true })
+  )
+}
+
+function stopIdleWatch(): void {
+  window.clearTimeout(idleTimer)
+  idleTimer = 0
+  IDLE_ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onIdleActivity))
+}
+
 // ===== 搜索（按网站名称）=====
 const searchQuery = ref('')
 const filteredPasswords = computed<PasswordEntry[]>(() => {
@@ -255,7 +294,18 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  stopIdleWatch()
 })
+
+// P0-3：解锁态变化时启停空闲锁定监听（immediate 处理挂载时已是解锁态的情况）
+watch(
+  () => passwordsStore.isUnlocked,
+  (unlocked) => {
+    if (unlocked) startIdleWatch()
+    else stopIdleWatch()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>

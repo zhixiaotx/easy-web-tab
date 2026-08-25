@@ -127,6 +127,18 @@ const DIALOG_IDS: DialogId[] = [
 // 导航设置分组（弹窗尺寸设置 Tab 1）——notes 不属于导航组
 export const NAV_DIALOG_IDS: DialogId[] = ['site', 'engine', 'background', 'category', 'backup', 'icon']
 
+// 销售记账工作台合法模块键（用于 businessActiveSection 校验与持久化；缺失/非法回退首页）
+export const BUSINESS_SECTION_KEYS = [
+  'home',
+  'products',
+  'purchases',
+  'daily',
+  'expenses',
+  'inventory',
+  'stats'
+] as const
+const BUSINESS_SECTION_SET = new Set<string>(BUSINESS_SECTION_KEYS)
+
 // 工作台设置分组（弹窗尺寸设置 Tab 2）
 export const WB_DIALOG_IDS: DialogId[] = [
   'notes',
@@ -230,6 +242,10 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.businessSidebarCollapsed === 'boolean') {
     out.businessSidebarCollapsed = data.businessSidebarCollapsed
   }
+  // 销售记账当前模块：仅采纳合法 section 键；非法/缺失回退默认（首页）
+  if (typeof data.businessActiveSection === 'string' && BUSINESS_SECTION_SET.has(data.businessActiveSection)) {
+    out.businessActiveSection = data.businessActiveSection
+  }
   // 提醒设置：6 字段白名单解析（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
   out.desktopNotifyEnabled = typeof data.desktopNotifyEnabled === 'boolean' ? data.desktopNotifyEnabled : false
   out.reminderEmailEnabled = typeof data.reminderEmailEnabled === 'boolean' ? data.reminderEmailEnabled : false
@@ -267,6 +283,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const workbenchCity = ref<string | undefined>(undefined)
   const workbenchSidebarCollapsed = ref<boolean | undefined>(undefined)
   const businessSidebarCollapsed = ref<boolean | undefined>(undefined)
+  const businessActiveSection = ref<string | undefined>(undefined)
 
   // 导航管理页分类/标签栏展开态：默认收起（false）
   const navFiltersExpanded = ref<boolean>(false)
@@ -308,6 +325,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchCity: toRaw(workbenchCity.value),
       workbenchSidebarCollapsed: toRaw(workbenchSidebarCollapsed.value),
       businessSidebarCollapsed: toRaw(businessSidebarCollapsed.value),
+      businessActiveSection: toRaw(businessActiveSection.value),
       navFiltersExpanded: navFiltersExpanded.value,
       workbenchPageName: workbenchPageName.value,
       workbenchPageVisible: workbenchPageVisible.value,
@@ -425,6 +443,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       } else {
         businessSidebarCollapsed.value = undefined
       }
+      // 销售记账当前模块：仅采纳合法 section 键；非法/缺失回退默认（首页）
+      if (typeof effective.businessActiveSection === 'string' && BUSINESS_SECTION_SET.has(effective.businessActiveSection)) {
+        businessActiveSection.value = effective.businessActiveSection
+      } else {
+        businessActiveSection.value = undefined
+      }
       // 提醒设置：6 字段白名单应用（布尔仅采纳 true/false，字符串仅采纳 string 原样透传不 trim，非法/缺失回退默认）
       desktopNotifyEnabled.value = effective.desktopNotifyEnabled === true
       reminderEmailEnabled.value = effective.reminderEmailEnabled === true
@@ -489,6 +513,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     persist()
   }
 
+  // 销售记账当前模块：仅合法 section 键写入（undefined = 回退首页，不主动写入）
+  function setBusinessActiveSection(v: string | undefined) {
+    businessActiveSection.value = v && BUSINESS_SECTION_SET.has(v) ? v : undefined
+    persist()
+  }
+
   // ========================================
   // 恢复默认：还原状态 → 移除全部弹窗 CSS 变量（不 set 默认值）→ 清除存储（IDB + localStorage 快照）
   // ========================================
@@ -502,6 +532,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchCity.value = undefined
     workbenchSidebarCollapsed.value = undefined
     businessSidebarCollapsed.value = undefined
+    businessActiveSection.value = undefined
     navFiltersExpanded.value = false
     workbenchPageName.value = ''
     workbenchPageVisible.value = true
@@ -690,6 +721,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchMenuAllItems,
     workbenchCity,
     workbenchSidebarCollapsed,
+    businessActiveSection,
     navFiltersExpanded,
     workbenchPageName,
     workbenchPageVisible,
@@ -717,6 +749,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setWorkbenchSidebarCollapsed,
     businessSidebarCollapsed,
     setBusinessSidebarCollapsed,
+    setBusinessActiveSection,
     setWorkbenchMenuVisibility,
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,

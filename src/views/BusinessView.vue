@@ -39,15 +39,21 @@ function toggleSidebar(): void {
   settingsStore.setBusinessSidebarCollapsed(!sidebarCollapsed.value)
 }
 
-const activeSection = ref<SectionKey>('home')
+const activeSection = ref<SectionKey>((settingsStore.businessActiveSection as SectionKey) || 'home')
 
 // P1-3：跨模块联动过滤状态
 const productFilter = ref<string | undefined>(undefined)
 const purchaseFilter = ref<string | undefined>(undefined)
 
+function selectSection(key: SectionKey): void {
+  activeSection.value = key
+  // P0-2：持久化当前模块，刷新后保持所在页
+  settingsStore.setBusinessActiveSection(key)
+}
+
 function navigateTo(section: string, filter?: string): void {
   if ((SECTIONS as readonly { key: string }[]).some(s => s.key === section)) {
-    activeSection.value = section as SectionKey
+    selectSection(section as SectionKey)
     // 设置过滤状态
     if (section === 'purchases') {
       purchaseFilter.value = filter
@@ -144,7 +150,7 @@ onMounted(() => {
           :class="{ active: activeSection === item.key }"
           :title="item.label"
           :data-testid="`bs-menu-${item.key}`"
-          @click="activeSection = item.key"
+          @click="selectSection(item.key)"
         >
           <span class="bs-menu-icon"><Icon :name="item.icon" /></span>
           <span class="bs-menu-label">{{ item.label }}</span>

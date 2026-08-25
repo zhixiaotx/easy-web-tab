@@ -211,6 +211,7 @@ export interface AppSettingsData {
   workbenchPageVisible?: boolean       // 工作台页面可见性开关（默认 true）
   businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
   businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
+  businessActiveSection?: string       // 销售记账工作台当前模块（home/products/purchases/daily/expenses/inventory/stats；缺失 = 首页）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）

@@ -843,6 +843,14 @@ export async function syncNow(): Promise<void> {
   }
 }
 
+// ========== 拉取栅栏：visibilitychange visible 时 pullNow 的 Promise ==========
+// 其他模块（如倒计时提醒）可 await waitForPull() 确保先拉取最新数据再 tick
+let pendingPull: Promise<void> | null = null
+
+export function waitForPull(): Promise<void> {
+  return pendingPull ?? Promise.resolve()
+}
+
 // ========== 触发器：visibilitychange + beforeunload + 轮询 ==========
 
 let initialized = false
@@ -893,7 +901,8 @@ export function init(): void {
     if (status.value !== 'idle' && status.value !== 'error') return
     if (document.visibilityState === 'visible') {
       // 页面重新可见 → 拉取远程更新（技能改文件/其他设备推送都会被检测到）
-      void pullNow()
+      // 设置栅栏 Promise 供其他模块（倒计时提醒）await 后再 tick
+      pendingPull = pullNow().finally(() => { pendingPull = null })
     }
     // hidden 时不自动推送（避免盲推覆盖技能修改的远程文件）
     // 推送统一由定时轮询 + 手动「立即同步」触发，都会先 pullNow 检测冲突

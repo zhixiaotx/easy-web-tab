@@ -84,25 +84,28 @@ const formContent = ref('')
 const formCalories = ref('0')
 const formNote = ref('')
 
-// ===== 记录列表展开/折叠（默认收起；折叠仅隐藏列表，计数/今日达标不受影响）=====
-const listExpanded = ref(false)
+// ===== 记录列表弹框（5 列 × 3 行 = 15 卡/页）=====
+const showListDialog = ref(false)
 
-// ===== 自适应分页（Wave-2 T10）：≥769px 分页；折叠时列表未挂载（listEl null）→ 分页惰性（R8）=====
 const listEl = ref<HTMLElement | null>(null)
-// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
 const paging = reactive(
   usePanelPaging({
     items: () => sortedRecords.value,
-    rowHeight: 537, // row-heights.json: diet = 537（6 列卡片实测 MAX 534.03 + 2px，R4）
-    maxRows: 1, // 6 列卡片网格契约：每页最多 1 行（6 张卡），行数钳制走 clampMaxRows
+    rowHeight: 180,
+    maxRows: 3,
+    gap: 10,
     containerRef: listEl,
-    gridRef: listEl // 同元素：测高 + 实测 gridTemplateColumns 列数（M-1：独立 if 非 else-if）
+    gridRef: listEl
   })
 )
 
-function toggleList(): void {
-  listExpanded.value = !listExpanded.value
-  if (listExpanded.value) paging.goto(1) // 展开回第 1 页（T10）
+function openListDialog(): void {
+  showListDialog.value = true
+  paging.goto(1)
+}
+
+function closeListDialog(): void {
+  showListDialog.value = false
 }
 
 // date 必填 + content 非空 ≤200 字 + calories ≥ 0，否则保存按钮 disabled
@@ -171,6 +174,9 @@ function handleKeydown(event: KeyboardEvent): void {
   if (showRecordDialog.value) {
     event.preventDefault()
     cancelRecordForm()
+  } else if (showListDialog.value) {
+    event.preventDefault()
+    closeListDialog()
   } else if (showTargetDialog.value) {
     event.preventDefault()
     closeTargetDialog()
@@ -225,9 +231,9 @@ onUnmounted(() => {
         v-if="store.records.diet.length > 0"
         class="btn-toggle-list"
         data-testid="dt-toggle-list"
-        @click="toggleList"
+        @click="openListDialog"
       >
-        {{ listExpanded ? '收起记录' : '展开记录' }}（{{ store.records.diet.length }}）
+        展开记录（{{ store.records.diet.length }}）
       </button>
       <button class="btn-add" data-testid="dt-add" @click="startAddRecord">＋ 新增记录</button>
     </div>
@@ -242,28 +248,32 @@ onUnmounted(() => {
       ＋ 新增第一条饮食记录
     </div>
 
-    <!-- 记录列表 -->
-    <template v-else-if="listExpanded">
-      <div ref="listEl" class="dt-list" :class="{ 'dt-list-scroll': !paging.fitsOnePage }">
-        <TransitionGroup name="grid">
-        <div v-for="rec in paging.pageItems" :key="rec.id" class="dt-item" data-testid="dt-item">
-          <div class="dt-item-head">
-            <span class="dt-date">{{ rec.date }}</span>
-            <span class="dt-meal-badge" :class="MEAL_BADGE_CLASS[rec.mealType]">{{ rec.mealType }}</span>
+    <!-- 记录列表弹框（5 列 × 3 行 = 15 卡/页） -->
+    <Transition name="dialog">
+      <div v-if="showListDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeListDialog">
+        <div class="dialog list-dialog" data-testid="dt-list-dialog">
+          <div class="dialog-header">
+            <h3>饮食记录（{{ store.records.diet.length }}）</h3>
+            <button class="close-btn" @click="closeListDialog">✕</button>
           </div>
-          <div class="dt-meta">{{ rec.content }} · {{ rec.calories }} 千卡</div>
-          <div v-if="rec.note" class="dt-note">{{ rec.note }}</div>
-          <div class="dt-actions">
-            <button class="btn-edit" :data-testid="`dt-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
-            <button class="btn-delete" :data-testid="`dt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">
-              删除
-            </button>
+          <div ref="listEl" class="dt-list" :class="{ 'dt-list-scroll': !paging.fitsOnePage }">
+            <div v-for="rec in paging.pageItems" :key="rec.id" class="dt-item" data-testid="dt-item">
+              <div class="dt-item-head">
+                <span class="dt-date">{{ rec.date }}</span>
+                <span class="dt-meal-badge" :class="MEAL_BADGE_CLASS[rec.mealType]">{{ rec.mealType }}</span>
+              </div>
+              <div class="dt-meta">{{ rec.content }} · {{ rec.calories }} 千卡</div>
+              <div v-if="rec.note" class="dt-note">{{ rec.note }}</div>
+              <div class="dt-actions">
+                <button class="btn-edit" :data-testid="`dt-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
+                <button class="btn-delete" :data-testid="`dt-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">删除</button>
+              </div>
+            </div>
           </div>
+          <PanelPager v-if="paging.totalPages > 1" :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
         </div>
-        </TransitionGroup>
       </div>
-      <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
-    </template>
+    </Transition>
 
     <!-- 目标弹框 -->
     <Transition name="dialog">
@@ -522,11 +532,12 @@ onUnmounted(() => {
   background-color: var(--accent-hover, var(--color-primary-hover));
 }
 
-/* ===== 记录列表（6 列卡片网格：桌面 6 卡/行 × maxRows 1 = 6 卡/页）===== */
+/* ===== 记录列表（弹框内 5 列卡片网格：5 卡/行 × maxRows 3 = 15 卡/页）===== */
 .dt-list {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+  align-content: start;
 }
 
 .dt-item {
@@ -963,35 +974,45 @@ onUnmounted(() => {
   }
 }
 
-/* ===== 移动端 ≤768px：分页惰性（全量渲染、无切片、无 pager），网格自适应列数 ===== */
+/* ===== 记录列表弹框（宽弹框，5 列 × 3 行）— 用 .dialog.list-dialog 提高特异性覆盖 .dialog 基础类 ===== */
+.list-dialog-overlay {
+  z-index: 310;
+}
+
+.dialog.list-dialog {
+  max-width: 1000px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog.list-dialog .dt-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ===== 移动端 ≤768px：网格自适应列数 ===== */
 @media (max-width: 768px) {
   .dt-list {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
 
-/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T10，R1/R2/R7/R8）===== */
-/* 容器 hop：.wb-health（WorkbenchHealth tabs 容器）块级 → flex 列，
-   子面板根才能 stretch（T3 只钉到 .wb-content > *，容器文件禁改 → 从子面板侧补齐） */
+/* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */
 @media (min-width: 769px) {
   :global(.wb-health) {
     display: flex;
     flex-direction: column;
   }
 
-  /* 面板根钉满 tab 内容区（R1 flex-stretch） */
   .wb-diet {
     flex: 1;
     min-height: 0;
   }
 
-  /* 列表区可收缩占满剩余高度（PanelPager 下方） */
-  .dt-list {
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 列表区滚动兜底：仅 !fitsOnePage 时由模板类绑定启用（R7） */
   .dt-list-scroll {
     overflow-y: auto;
   }

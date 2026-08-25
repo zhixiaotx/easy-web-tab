@@ -50,12 +50,13 @@ function resetSearch(): void {
 // 列表渲染用筛选后的数据；排序/手动移动基于 filteredItems 的位置
 const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, appliedFilters.value))
 
-// ===== 自适应分页（R3/R4/R7：gridRef 实时读 auto-fill 列数；rowHeight 158 = row-heights.json MAX 155.38 + 2px）=====
+// ===== 自适应分页：5 列 × maxRows 2 = 每页 10 个，超出翻页 =====
 const gridEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => filteredItems.value,
   rowHeight: 150,
   maxRows: 2,
+  gap: 10,
   containerRef: gridEl,
   gridRef: gridEl
 })
@@ -66,6 +67,14 @@ const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = pa
 function categoryBadgeClass(category: string | null | undefined): string {
   const c = category?.trim() || 'work'
   return (COUNTDOWN_CATEGORIES as readonly string[]).includes(c) ? `cat-${c}` : 'cat-default'
+}
+
+// 当天已提醒标识：lastRemindedAt 日期部分 === 今天 → 显示「已提醒」
+function isRemindedToday(lastRemindedAt?: string): boolean {
+  if (!lastRemindedAt) return false
+  const d = new Date()
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return lastRemindedAt.slice(0, 10) === today
 }
 
 // ===== 表单状态机（新增/编辑共用，弹框承载）=====
@@ -388,6 +397,7 @@ onUnmounted(() => {
           <div class="cd-title">
             <span class="cd-name">{{ item.name }}</span>
             <span v-if="repeatLabel(item.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(item.repeat) }}</span>
+            <span v-if="isRemindedToday(item.lastRemindedAt)" class="reminded-badge" data-testid="cd-reminded-badge">已提醒</span>
           </div>
           <span class="cat-badge" :class="categoryBadgeClass(item.category)">{{ categoryLabel(item.category) }}</span>
         </div>
@@ -786,6 +796,22 @@ onUnmounted(() => {
   color: var(--accent-color, var(--color-primary));
   border: 1px solid var(--accent-color, var(--color-primary));
   opacity: 0.85;
+}
+
+.reminded-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 999px);
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+:root.dark .reminded-badge {
+  color: #4ade80;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.18);
 }
 
 /* 分类徽章：工作=蓝 / 生活=绿 / 学习=紫 */

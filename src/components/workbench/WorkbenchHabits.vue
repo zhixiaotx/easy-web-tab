@@ -544,8 +544,10 @@ onMounted(() => {
   font-weight: 600;
   color: var(--text-primary, var(--color-text));
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-all;
 }
 
 .hb-card-badges {

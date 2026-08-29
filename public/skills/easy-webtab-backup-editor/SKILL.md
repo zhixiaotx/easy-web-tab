@@ -80,7 +80,7 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
   "url": "https://www.taobao.com",
   "category": "other",       // 分类 id，必须存在于 user-categories
   "tags": ["购物"],           // 字符串数组
-  "description": "",
+  "description": "",          // 根据网站 url 访问，并总结网站内容 
   "icon": "",                // 留空走 Google Favicon
   "sort": 99,                // 数字，越大越靠后
   "createdAt": "2026-08-23T12:00:00.000Z",

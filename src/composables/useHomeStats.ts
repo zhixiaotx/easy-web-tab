@@ -10,6 +10,7 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
+import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useAppSettingsStore } from '@/stores/settings'
 import { calcBmi, calcDailyAttainment, calcExerciseAttainment } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
@@ -56,6 +57,7 @@ export function useHomeStats() {
   const passwordsStore = usePasswordsStore()
   const healthStore = useWorkbenchHealthStore()
   const ledgerStore = useWorkbenchLedgerStore()
+  const habitsStore = useWorkbenchHabitsStore()
   const settingsStore = useAppSettingsStore()
 
   // ===== 菜单开关视图（缺失键恒 true；false = 功能已关闭）=====
@@ -132,6 +134,24 @@ export function useHomeStats() {
     }
   })
 
+  // ===== 习惯统计（本周）=====
+  // 本周达标 = 该习惯本周打卡次数 >= 频率目标；weekCheckins = 全部习惯本周打卡次数之和
+  const habitStats = computed(() => {
+    const today = localToday()
+    let metCount = 0
+    let weekCheckins = 0
+    for (const h of habitsStore.habits) {
+      const at = habitsStore.weeklyAttainmentOf(h.id, h.frequency, today)
+      weekCheckins += at.completed
+      if (at.completed >= at.target) metCount += 1
+    }
+    return {
+      total: habitsStore.habits.length,
+      metCount,
+      weekCheckins
+    }
+  })
+
   // ===== 概览可见统计卡（纯占位隐藏：无数据的卡不渲染；菜单开关关闭的功能不渲染）=====
   const visibleStatCards = computed<string[]>(() => {
     const keys: string[] = []
@@ -146,6 +166,7 @@ export function useHomeStats() {
     if (on.health && healthStore.plans.sleep) keys.push('sleep')
     if (on.health && height !== undefined && height > 0 && healthStore.records.weight.length > 0) keys.push('weight')
     if (on.ledger && ledgerStore.entries.length > 0) keys.push('ledger')
+    if (on.habits && habitsStore.habits.length > 0) keys.push('habits')
     return keys
   })
 
@@ -183,6 +204,7 @@ export function useHomeStats() {
     sleepStats,
     weightStats,
     ledgerStats,
+    habitStats,
     visibleStatCards,
     upcomingCountdowns,
     pendingTodos,

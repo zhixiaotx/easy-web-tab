@@ -30,6 +30,7 @@ const {
   sleepStats,
   weightStats,
   ledgerStats,
+  habitStats,
   visibleStatCards,
   upcomingCountdowns,
   pendingTodos,
@@ -354,6 +355,16 @@ async function handleQuickNote(): Promise<void> {
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
+              </div>
+
+              <div class="bento-card bento-stat" data-testid="home-stats-habits" v-if="visibleStatCards.includes('habits')" @click="emit('navigate', 'habits')">
+                <div class="stat-header">
+                  <span class="stat-icon"><Icon name="habits" :size="16" /></span>
+                  <span class="stat-label">习惯打卡</span>
+                  <button class="nav-btn" data-testid="home-nav-habits" @click.stop="emit('navigate', 'habits')">前往 →</button>
+                </div>
+                <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
+                <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>
               </div>
             </div>
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>

@@ -6,6 +6,7 @@ import {
   normalizeHabitRecord,
   normalizeHabitsData,
   streakDays,
+  streakOf,
   weekCompletions,
   weeklyAttainment
 } from '../src/composables/habitCore.ts'
@@ -212,6 +213,44 @@ test('T11 streakDays gap breaks + today counts + dedupe', () => {
   // 其它习惯记录不影响
   a.equal(streakDays([mkRecord({ habitId: 'hb_2', date: TODAY })], 'hb_1', TODAY), 0)
   a.equal(streakDays([], 'hb_1', TODAY), 0)
+})
+
+// T14 — streakOf 每日习惯（frequency>=7）：与 streakDays 一致，单位『天』
+test('T14 streakOf daily equals streakDays (unit 天)', () => {
+  const records = [
+    mkRecord({ habitId: 'hb_1', date: '2026-08-05' }),
+    mkRecord({ habitId: 'hb_1', date: '2026-08-04' }),
+    mkRecord({ habitId: 'hb_1', date: '2026-08-03' }),
+    mkRecord({ habitId: 'hb_1', date: '2026-08-02' }),
+    mkRecord({ habitId: 'hb_1', date: '2026-08-01' })
+  ]
+  a.deepEqual(streakOf(records, 'hb_1', 7, TODAY), { count: 5, unit: '天' })
+  // 今天 08-06 未打卡，从昨天起算仍是 5（与 streakDays 一致）
+  a.equal(streakOf(records, 'hb_1', 7, TODAY).count, streakDays(records, 'hb_1', TODAY))
+  a.deepEqual(streakOf(records, 'hb_1', 99, TODAY), { count: 5, unit: '天' }) // 频率越界钳到 7 走每日逻辑
+})
+
+// T15 — streakOf 每周习惯（frequency<7）：连续「周达标」周数，单位『周』
+test('T15 streakOf weekly counts consecutive met weeks (unit 周)', () => {
+  const mk = (date: string) => mkRecord({ habitId: 'hb_1', date })
+  // 本周（周一 08-03~周日 08-09，TODAY=08-06）：3 次达标
+  const thisWeek = [mk('2026-08-03'), mk('2026-08-04'), mk('2026-08-05')]
+  // 上周（周一 07-27~周日 08-02）：3 次达标
+  const lastWeek = [mk('2026-07-27'), mk('2026-07-28'), mk('2026-07-29')]
+
+  // 场景A：本周+上周达标，上上周（07-20~26）仅 1 次未达标 → 连击中断于 2 周
+  const beforeWeekIncomplete = [mk('2026-07-20')]
+  const recordsA = [...thisWeek, ...lastWeek, ...beforeWeekIncomplete]
+  a.deepEqual(streakOf(recordsA, 'hb_1', 3, TODAY), { count: 2, unit: '周' })
+
+  // 场景B：本周仅 1 次未达标 → 不中断连击，从上周起算；上周+上上周均达标 → 连续 2 周
+  const thisWeekIncomplete = [mk('2026-08-03')]
+  const beforeWeekMet = [mk('2026-07-20'), mk('2026-07-21'), mk('2026-07-22')]
+  const recordsB = [...thisWeekIncomplete, ...lastWeek, ...beforeWeekMet]
+  a.deepEqual(streakOf(recordsB, 'hb_1', 3, TODAY), { count: 2, unit: '周' })
+
+  // 空记录 → 0 周
+  a.deepEqual(streakOf([], 'hb_1', 3, TODAY), { count: 0, unit: '周' })
 })
 
 // T12 — weeklyAttainment：completed/target/percent 正确（3/5=0.6），完成超目标不封顶，非法频率回退 1

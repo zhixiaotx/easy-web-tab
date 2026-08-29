@@ -45,7 +45,7 @@ const viewHabits = computed(() =>
     .map(({ h }) => ({
       habit: h,
       checked: isChecked(h.id),
-      streak: store.streakDaysOf(h.id, today),
+      streak: store.streakOf(h.id, h.frequency, today),
       week: store.weeklyAttainmentOf(h.id, h.frequency, today)
     }))
 )
@@ -62,13 +62,10 @@ const paging = usePanelPaging({
 // usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供列表变化回页 1）
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
-// ===== 新增/编辑表单状态机（编辑复用同一表单，提交/取消后回新增态）=====
+// ===== 新增表单（仅用于新增习惯；编辑改为卡片内联，见 startInlineEdit）=====
 const formName = ref('')
 const formFrequency = ref<HabitFrequency>(7)
 const formColor = ref(DEFAULT_HABIT_COLOR)
-const editingId = ref<string | null>(null)
-
-const isEditing = computed(() => editingId.value !== null)
 
 // 频率选项与 habitCore HabitFrequency（每周目标次数 1-7）对齐：「每天」即 7
 const FREQUENCY_OPTIONS: { value: HabitFrequency; label: string }[] = [
@@ -90,44 +87,49 @@ function habitErrorToast(result: { ok: boolean; reason?: string }): void {
   toast.error(HABIT_ERROR_MESSAGES[result.reason ?? ''] ?? '操作失败')
 }
 
-async function handleAddOrSave(): Promise<void> {
+// 新增习惯：提交后清空表单回到新增态
+async function handleAdd(): Promise<void> {
   const name = formName.value.trim()
   if (!name) return
-  if (editingId.value !== null) {
-    const result = await store.updateHabit(editingId.value, {
-      name,
-      frequency: formFrequency.value,
-      color: formColor.value
-    })
-    if (result.ok) {
-      resetForm()
-      goto(1)
-    }
-    habitErrorToast(result)
-    return
-  }
   const result = await store.addHabit(name, formFrequency.value, formColor.value)
   if (result.ok) {
-    resetForm()
+    formName.value = ''
+    formFrequency.value = 7
+    formColor.value = DEFAULT_HABIT_COLOR
     goto(1)
   }
   habitErrorToast(result)
 }
 
-function startEdit(id: string): void {
+// ===== 卡片内联编辑（点击卡片「编辑」就地修改，无需跳转左侧表单）=====
+const inlineEditId = ref<string | null>(null)
+const inlineName = ref('')
+const inlineFrequency = ref<HabitFrequency>(7)
+const inlineColor = ref(DEFAULT_HABIT_COLOR)
+
+function startInlineEdit(id: string): void {
   const h = store.habits.find(x => x.id === id)
   if (!h) return
-  editingId.value = h.id
-  formName.value = h.name
-  formFrequency.value = h.frequency
-  formColor.value = h.color ?? DEFAULT_HABIT_COLOR
+  inlineEditId.value = h.id
+  inlineName.value = h.name
+  inlineFrequency.value = h.frequency
+  inlineColor.value = h.color ?? DEFAULT_HABIT_COLOR
 }
 
-function resetForm(): void {
-  editingId.value = null
-  formName.value = ''
-  formFrequency.value = 7
-  formColor.value = DEFAULT_HABIT_COLOR
+function cancelInlineEdit(): void {
+  inlineEditId.value = null
+}
+
+async function saveInlineEdit(id: string): Promise<void> {
+  const name = inlineName.value.trim()
+  if (!name) return
+  const result = await store.updateHabit(id, {
+    name,
+    frequency: inlineFrequency.value,
+    color: inlineColor.value
+  })
+  if (result.ok) inlineEditId.value = null
+  habitErrorToast(result)
 }
 
 async function handleDelete(id: string): Promise<void> {
@@ -135,7 +137,7 @@ async function handleDelete(id: string): Promise<void> {
   if (!confirm(`确定要删除习惯「${h?.name ?? ''}」吗？删除后打卡记录一并清除。`)) return
   const result = await store.deleteHabit(id)
   if (result.ok) {
-    if (editingId.value === id) resetForm()
+    if (inlineEditId.value === id) inlineEditId.value = null
     goto(1)
   }
   habitErrorToast(result)
@@ -183,18 +185,9 @@ onMounted(() => {
       <div class="stat-card">
         <div class="stat-header">
           <Icon name="habits" :size="18" class="stat-icon" />
-          <span class="stat-label">{{ isEditing ? '编辑习惯' : '新增习惯' }}</span>
-          <button
-            v-if="isEditing"
-            type="button"
-            class="btn-secondary hb-cancel-btn"
-            data-testid="hb-form-cancel"
-            @click="resetForm"
-          >
-            取消编辑
-          </button>
+          <span class="stat-label">新增习惯</span>
         </div>
-        <form class="hb-form" @submit.prevent="handleAddOrSave">
+        <form class="hb-form" @submit.prevent="handleAdd">
           <div class="field">
             <label class="field-label">名称 *</label>
             <input
@@ -231,7 +224,7 @@ onMounted(() => {
             </div>
           </div>
           <button type="submit" class="btn-primary" :disabled="!formName.trim()" data-testid="hb-add-btn">
-            {{ isEditing ? '保存' : '添加' }}
+            添加
           </button>
         </form>
       </div>
@@ -256,39 +249,82 @@ onMounted(() => {
           <span class="hb-card-bar"></span>
           <Icon name="habits" :size="20" class="hb-card-icon" />
           <div class="hb-card-main">
-            <div class="hb-card-name">{{ v.habit.name }}</div>
-            <div class="hb-card-badges">
-              <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
-                <Icon name="trending-up" :size="13" class="hb-badge-ico" /> 连续 {{ v.streak }} 天
-              </span>
-              <span class="hb-badge hb-badge-week" :data-testid="`hb-week-${v.habit.id}`">
-                本周 {{ v.week.completed }}/{{ v.week.target }}
-              </span>
-            </div>
-            <div class="hb-week-bar" :title="`本周 ${v.week.completed}/${v.week.target}`">
-              <div
-                class="hb-week-fill"
-                :style="{
-                  width: Math.min(100, Math.round(v.week.percent * 100)) + '%',
-                  background: v.habit.color ?? DEFAULT_HABIT_COLOR
-                }"
-              ></div>
-            </div>
+            <template v-if="inlineEditId === v.habit.id">
+              <input
+                v-model="inlineName"
+                type="text"
+                class="form-input hb-inline-input"
+                placeholder="习惯名称"
+                maxlength="30"
+                :data-testid="`hb-inline-name-${v.habit.id}`"
+              />
+              <select v-model="inlineFrequency" class="form-input hb-inline-input" :data-testid="`hb-inline-freq-${v.habit.id}`">
+                <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+              <div class="hb-color-picker" :data-testid="`hb-inline-color-${v.habit.id}`">
+                <button
+                  v-for="color in TODO_COLOR_PRESETS"
+                  :key="color"
+                  type="button"
+                  class="hb-color-option"
+                  :class="{ active: inlineColor.toLowerCase() === color }"
+                  :style="{ '--hb-swatch': color }"
+                  :title="color"
+                  @click="inlineColor = color"
+                ></button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="hb-card-name">{{ v.habit.name }}</div>
+              <div class="hb-card-badges">
+                <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
+                  <Icon name="trending-up" :size="13" class="hb-badge-ico" /> 连续 {{ v.streak.count }} {{ v.streak.unit }}
+                </span>
+                <span class="hb-badge hb-badge-week" :data-testid="`hb-week-${v.habit.id}`">
+                  本周 {{ v.week.completed }}/{{ v.week.target }}
+                </span>
+              </div>
+              <div class="hb-week-bar" :title="`本周 ${v.week.completed}/${v.week.target}`">
+                <div
+                  class="hb-week-fill"
+                  :style="{
+                    width: Math.min(100, Math.round(v.week.percent * 100)) + '%',
+                    background: v.habit.color ?? DEFAULT_HABIT_COLOR
+                  }"
+                ></div>
+              </div>
+            </template>
           </div>
           <div class="hb-card-actions">
-            <button
-              class="hb-check-btn"
-              :class="{ 'is-checked': v.checked }"
-              :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-              :data-testid="`hb-check-${v.habit.id}`"
-              :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
-              @click="handleCheck(v.habit.id)"
-            >
-              <Icon name="check" :size="16" />
-              <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
-            </button>
-            <button class="btn-edit" :data-testid="`hb-edit-${v.habit.id}`" @click="startEdit(v.habit.id)">编辑</button>
-            <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
+            <template v-if="inlineEditId === v.habit.id">
+              <button
+                class="btn-primary hb-inline-save"
+                :data-testid="`hb-inline-save-${v.habit.id}`"
+                @click="saveInlineEdit(v.habit.id)"
+              >
+                保存
+              </button>
+              <button class="btn-secondary hb-inline-cancel" :data-testid="`hb-inline-cancel-${v.habit.id}`" @click="cancelInlineEdit">
+                取消
+              </button>
+            </template>
+            <template v-else>
+              <button
+                class="hb-check-btn"
+                :class="{ 'is-checked': v.checked }"
+                :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
+                :data-testid="`hb-check-${v.habit.id}`"
+                :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
+                @click="handleCheck(v.habit.id)"
+              >
+                <Icon name="check" :size="16" />
+                <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
+              </button>
+              <button class="btn-edit" :data-testid="`hb-edit-${v.habit.id}`" @click="startInlineEdit(v.habit.id)">编辑</button>
+              <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
+            </template>
           </div>
         </div>
         </TransitionGroup>
@@ -648,6 +684,22 @@ onMounted(() => {
   height: 100%;
   border-radius: 999px;
   transition: width var(--transition-fast, 0.15s ease);
+}
+
+/* 卡片内联编辑：输入控件撑满卡片主区宽度 */
+.hb-inline-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hb-inline-save {
+  padding: 4px 14px;
+  font-size: 12px;
+}
+
+.hb-inline-cancel {
+  padding: 4px 14px;
+  font-size: 12px;
 }
 
 .btn-edit,

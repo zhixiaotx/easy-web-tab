@@ -183,6 +183,53 @@ export function streakDays(records: HabitRecord[], habitId: string, today: strin
   return streak
 }
 
+/** 连续达成结果：count=连击数；unit=单位（'天'=每日习惯，'周'=每周习惯）。 */
+export interface StreakResult {
+  count: number
+  unit: '天' | '周'
+}
+
+/** 某周是否达标（completed >= target）；以该周任一日期锚定。 */
+function weekMet(records: HabitRecord[], habitId: string, frequency: HabitFrequency, anchor: string): boolean {
+  const att = weeklyAttainment(records, habitId, frequency, anchor)
+  return att.completed >= att.target
+}
+
+/**
+ * 连续「周达标」周数：以 today 所在周为锚向过去数连续达标周。
+ * 本周尚未达标不中断连击（从上周起算）；中途任一周未达标即停止。
+ */
+function weekStreak(records: HabitRecord[], habitId: string, frequency: HabitFrequency, today: string): number {
+  let cursor = weekKeyOf(today)
+  if (!weekMet(records, habitId, frequency, today)) {
+    cursor = addDays(cursor, -7)
+  }
+  let streak = 0
+  while (weekMet(records, habitId, frequency, cursor)) {
+    streak++
+    cursor = addDays(cursor, -7)
+  }
+  return streak
+}
+
+/**
+ * 连续达成周期（按频率语义对齐展示）：
+ * - 每日习惯（frequency>=7）：连续打卡天数（沿用 streakDays：今天未打卡不中断连击）。
+ * - 每周习惯（frequency<7）：连续「周达标」周数（本周未达标不中断连击，从上周起算）。
+ */
+export function streakOf(
+  records: HabitRecord[],
+  habitId: string,
+  frequency: HabitFrequency,
+  today: string
+): StreakResult {
+  const freq = normalizeFrequency(frequency)
+  if (freq >= 7) {
+    return { count: streakDays(records, habitId, today), unit: '天' }
+  }
+  return { count: weekStreak(records, habitId, frequency, today), unit: '周' }
+}
+
 /** 周达成率：completed=本周实际打卡天数（去重），target=频率目标次数，percent 不截断。 */
 export function weeklyAttainment(
   records: HabitRecord[],

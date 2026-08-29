@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
-import type { Habit, HabitFrequency, HabitRecord, HabitsData, WeeklyAttainment } from '@/composables/habitCore'
+import type { Habit, HabitFrequency, HabitRecord, HabitsData, StreakResult, WeeklyAttainment } from '@/composables/habitCore'
 import {
   HABIT_ID_PREFIX,
   HABIT_RECORD_ID_PREFIX,
   emptyHabitsData,
   normalizeHabitsData,
-  streakDays,
+  streakOf as streakOfCore,
   weekCompletions,
   weeklyAttainment
 } from '@/composables/habitCore'
@@ -123,9 +123,9 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
     return weekCompletions(records.value, habitId, date)
   }
 
-  /** 连续打卡天数（以 today 为锚，今天未打卡不中断连击）。 */
-  function streakDaysOf(habitId: string, today: string): number {
-    return streakDays(records.value, habitId, today)
+  /** 连续达成（按频率语义：每日=连续天，每周=连续达标周）。 */
+  function streakOf(habitId: string, frequency: HabitFrequency, today: string): StreakResult {
+    return streakOfCore(records.value, habitId, frequency, today)
   }
 
   /** 周达成率（completed=本周打卡天数，target=频率目标，percent 不截断）。 */
@@ -143,7 +143,7 @@ export const useWorkbenchHabitsStore = defineStore('workbenchHabits', () => {
     deleteHabit,
     toggleCheckIn,
     weekCompletionsOf,
-    streakDaysOf,
+    streakOf,
     weeklyAttainmentOf
   }
 })

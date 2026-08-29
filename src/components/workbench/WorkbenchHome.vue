@@ -8,6 +8,7 @@ import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useToast } from '@/composables/useToast'
 import { useHomeStats, PRIORITY_META, statusClass } from '@/composables/useHomeStats'
+import { useHomeLayout } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import HomeLayoutCard from '@/components/workbench/HomeLayoutCard.vue'
 import WeatherCard from '@/components/workbench/WeatherCard.vue'
@@ -43,6 +44,7 @@ const {
 
 // ===== 主页卡片布局（鼠标拖拽排序，参考网站管理卡片 SiteCard）=====
 // 顺序逻辑在 useHomeLayout 单例中；卡片直接可拖拽，无需编辑模式开关。
+const layout = useHomeLayout()
 
 // 导航：点击卡片跳转对应面板（卡片同时可拖拽排序，点击与拖拽互不冲突）
 function navTo(section: string, tab?: string): void {
@@ -198,7 +200,12 @@ async function handleQuickNote(): Promise<void> {
         <div class="home-carousel-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
           <!-- 第 1 屏：行动台（快捷添加待办/便签 + 即将到期提醒 + 天气 + 日历锚点） -->
           <div class="home-slide" data-testid="home-slide-action">
-            <div v-if="menuOn.todos || menuOn.notes || menuOn.countdowns" class="home-slide-grid">
+            <div
+              v-if="menuOn.todos || menuOn.notes || menuOn.countdowns"
+              class="home-slide-grid"
+              @dragover="layout.handleContainerDragOver('action', $event)"
+              @drop="layout.handleContainerDrop('action')"
+            >
               <HomeLayoutCard v-if="menuOn.todos" card-id="quick-add-todo" :default-w="1">
                 <section class="bento-card bento-quick-add">
                   <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
@@ -261,7 +268,13 @@ async function handleQuickNote(): Promise<void> {
 
           <!-- 第 2 屏：数据概览（统计卡；卡按 visibleStatCards 隐藏纯占位，全空时显示空态） -->
           <div class="home-slide" data-testid="home-slide-overview">
-            <div v-if="visibleStatCards.length > 0" class="home-slide-grid home-slide-grid-stats" data-testid="home-overview">
+            <div
+              v-if="visibleStatCards.length > 0"
+              class="home-slide-grid home-slide-grid-stats"
+              data-testid="home-overview"
+              @dragover="layout.handleContainerDragOver('overview', $event)"
+              @drop="layout.handleContainerDrop('overview')"
+            >
               <HomeLayoutCard v-if="visibleStatCards.includes('todos')" card-id="todos" :default-w="1">
                 <div class="bento-card bento-stat" data-testid="home-stats-todos" @click="navTo('todos')">
                   <div class="stat-header">
@@ -430,7 +443,12 @@ async function handleQuickNote(): Promise<void> {
 
           <!-- 第 3 屏：工具（未完成待办 + 日历锚点） -->
           <div class="home-slide" data-testid="home-slide-tools">
-            <div class="home-slide-tools-grid" data-testid="home-tools-grid">
+            <div
+              class="home-slide-tools-grid"
+              data-testid="home-tools-grid"
+              @dragover="layout.handleContainerDragOver('tools', $event)"
+              @drop="layout.handleContainerDrop('tools')"
+            >
               <!-- 未完成待办 -->
               <HomeLayoutCard v-if="menuOn.todos" card-id="pending-todos" :default-w="1">
                 <section class="bento-card bento-panel">

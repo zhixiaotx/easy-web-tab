@@ -68,6 +68,15 @@ function orderedIds(container: ContainerId): string[] {
   })
 }
 
+/** 某卡片在所属容器内的有效排序值：自定义 o 优先，否则取容器内默认序号（保证所有卡 order 基线一致）。 */
+function effectiveOrder(id: string): number {
+  const c = CONTAINER_OF[id]
+  const def = c ? LAYOUT_CONTAINERS[c] : null
+  const lay = local.value[id] ?? {}
+  if (typeof lay.o === 'number' && Number.isFinite(lay.o)) return lay.o
+  return def ? def.ids.indexOf(id) : 0
+}
+
 /** 计算某卡片在网格中的 style（列跨度 / 最小高度 / 排序）。defaultW = 无自定义宽度时的默认列数。 */
 function cardStyle(id: string, defaultW: number): Record<string, string> {
   const lay = getLayout(id)
@@ -75,7 +84,8 @@ function cardStyle(id: string, defaultW: number): Record<string, string> {
   const w = lay.w ?? defaultW
   if (w > 1) style.gridColumn = `span ${w}`
   if (lay.h !== undefined) style.minHeight = `${lay.h}px`
-  if (lay.o !== undefined) style.order = String(lay.o)
+  // 始终输出 order（默认序号兜底）：避免未自定义卡 order:0 被挤到末尾，导致换位后错位
+  style.order = String(effectiveOrder(id))
   return style
 }
 
@@ -92,6 +102,7 @@ function reorderCard(fromId: string, toId: string): void {
   store!.setHomeCardLayout(fromId, { o: oTo })
   store!.setHomeCardLayout(toId, { o: oFrom })
   local.value = { ...store!.homeCardLayout }
+  scheduleCloudPush()
 }
 
 // ===== 原生拖拽事件（对齐网站管理卡片 HomeView 的 swapSort 行为）=====
@@ -123,6 +134,58 @@ function handleDragEnd(): void {
   dragOverId.value = null
 }
 
+// ===== 网格容器级兜底：松手在卡片空隙时取光标最近卡片作为目标，保证每次拖拽都落库 =====
+function handleContainerDragOver(_container: ContainerId, event: DragEvent): void {
+  event.preventDefault()
+  if (!dragSourceId.value) return
+  const el = event.currentTarget as HTMLElement | null
+  if (!el) return
+  const cards = Array.from(el.querySelectorAll<HTMLElement>('[data-card-id]'))
+  if (!cards.length) return
+  const x = event.clientX
+  const y = event.clientY
+  let nearest: string | null = null
+  let best = Infinity
+  for (const c of cards) {
+    const r = c.getBoundingClientRect()
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    const d = Math.hypot(x - cx, y - cy)
+    if (d < best) {
+      best = d
+      nearest = c.getAttribute('data-card-id')
+    }
+  }
+  if (nearest && nearest !== dragSourceId.value) {
+    dragOverId.value = nearest
+  }
+}
+
+function handleContainerDrop(container: ContainerId): void {
+  const src = dragSourceId.value
+  const tgt = dragOverId.value
+  if (src && tgt && src !== tgt && CONTAINER_OF[tgt] === container) {
+    reorderCard(src, tgt)
+  }
+  dragSourceId.value = null
+  dragOverId.value = null
+}
+
+// ===== 调整后立即云同步：开启云同步时，拖完防抖（600ms）静默推送 =====
+let pushTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleCloudPush(): void {
+  if (!store) return
+  if (!store.cloudSyncEnabled) return
+  if (pushTimer) clearTimeout(pushTimer)
+  pushTimer = setTimeout(() => {
+    pushTimer = null
+    // 动态导入避免与 useCloudSync 形成静态依赖环；silent=true 不弹 toast
+    import('@/composables/useCloudSync')
+      .then((m) => m.useCloudSync().syncNow(true))
+      .catch(() => {})
+  }, 600)
+}
+
 export function useHomeLayout() {
   ensure()
   return {
@@ -133,12 +196,15 @@ export function useHomeLayout() {
     CONTAINER_OF,
     getLayout,
     orderedIds,
+    effectiveOrder,
     cardStyle,
     reorderCard,
     handleDragStart,
     handleDragOver,
     handleDragLeave,
     handleDrop,
-    handleDragEnd
+    handleDragEnd,
+    handleContainerDragOver,
+    handleContainerDrop
   }
 }

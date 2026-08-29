@@ -27,7 +27,7 @@ const {
     @dragstart="handleDragStart(cardId)"
     @dragover="handleDragOver(cardId, $event)"
     @dragleave="handleDragLeave"
-    @drop="handleDrop(cardId)"
+    @drop.stop="handleDrop(cardId)"
     @dragend="handleDragEnd"
   >
     <slot />

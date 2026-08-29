@@ -1168,6 +1168,34 @@
   color: var(--color-text-secondary, #d1d5db);
 }
 
+/* 帮助弹窗：技能说明暗色模式 */
+:root.dark .sub-title {
+  color: var(--color-text, #f9fafb);
+}
+
+:root.dark .sub-desc {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+:root.dark .skill-prompt {
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .skill-prompt-label {
+  color: #60a5fa;
+}
+
+:root.dark .skill-note {
+  background-color: rgba(96, 165, 250, 0.08);
+  border-color: #1e40af;
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+:root.dark .skill-note :deep(svg) {
+  color: #60a5fa;
+}
+
 /* 示例数据下载暗色模式 */
 :root.dark .download-card {
   background: linear-gradient(135deg, #1e3a5f 0%, #1a2e1a 100%);

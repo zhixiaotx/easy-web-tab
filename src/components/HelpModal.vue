@@ -280,7 +280,29 @@ const syncNotes = [
   '后台自动同步静默执行，不会弹提示打扰；同步按钮变红代表失败，点一下即可看到具体错误。',
   '密码库采用「云端覆盖本地」策略：拉取时以云端为准，避免本地旧密文覆盖新数据。',
   '密码增删改后会立即主动推送，无需等待定时轮询。',
-  '两端主密码不一致时，面板会锁定并要求输入来源设备的主密码解锁。'
+  '两端主密码不一致时，面板会锁定并要求输入来源设备的主密码解锁。',
+  '所有数据都会写成 backup.json 并随云同步落地；配置好云同步后，可直接用智能体（技能）以自然语言新增网站与工作台内容，无需手动导出导入。'
+]
+
+// ===== 用智能体（技能）新增 / 修改数据 =====
+const skillName = 'easy-webtab-backup-editor'
+
+// 提示词示例：直接对智能体说出即可触发技能
+const skillPrompts = [
+  { scenario: '新增网站', text: '帮我在导航里加一个网站：淘宝，链接 https://www.taobao.com，标签 购物' },
+  { scenario: '记一笔消费', text: '记一笔消费：今天早餐 16.5 元，备注两杯豆浆一个馅饼' },
+  { scenario: '新增商品', text: '新增商品 烤冷面，进货价 3 元，售价 8 元' },
+  { scenario: '记收摊记录', text: '记今天收摊：烤冷面带出 30 份、剩余 5 份、损耗 1 份' },
+  { scenario: '加一条待办', text: '加一条待办：周五前写完周报，优先级高' },
+  { scenario: '写便签', text: '写个便签：购物清单，内容 牛奶、面包、鸡蛋' }
+]
+
+// 技能安装步骤
+const skillInstall = [
+  { step: '1', text: '打开 WorkBuddy「专家 / 技能」中心，搜索并进入 easy-webtab-backup-editor 技能页。' },
+  { step: '2', text: '点击「安装」，技能会写入用户级目录 ~/.workbuddy/skills/，无需手动配置路径即可生效。' },
+  { step: '3', text: '安装后，直接用自然语言对智能体说出新增需求（如“加一个网站 / 记一笔消费”），智能体自动触发该技能。' },
+  { step: '4', text: '技能把数据写入云端备份文件 backup.json，随云同步在任意设备自动生效；修改或删除请在管理界面操作。' }
 ]
 </script>
 
@@ -487,6 +509,35 @@ const syncNotes = [
           <ul class="storage-list">
             <li v-for="(note, i) in syncNotes" :key="i">{{ note }}</li>
           </ul>
+        </section>
+
+        <!-- 用智能体（技能）新增与修改数据 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="cog" /> 用智能体（技能）管理数据</h3>
+          <p class="panel-intro">
+            你的所有数据都会写成 <code>backup.json</code> 并随云同步落地到坚果云等 WebDAV 服务。
+            配置好云同步后，无需手动导出导入——直接向 WorkBuddy 智能体说出需求，它会调用
+            <code>{{ skillName }}</code> 技能，把网站与工作台内容写入云端备份文件，并在任意设备自动生效。
+          </p>
+
+          <h4 class="sub-title">提示词示例</h4>
+          <p class="sub-desc">以下说法都会触发技能，直接对智能体说即可（替换为你自己的内容）：</p>
+          <div class="skill-prompts">
+            <div v-for="p in skillPrompts" :key="p.scenario" class="skill-prompt">
+              <span class="skill-prompt-label">{{ p.scenario }}</span>
+              <pre class="code-block">{{ p.text }}</pre>
+            </div>
+          </div>
+
+          <p class="skill-note"><Icon name="info" :size="13" /> 技能当前支持「新增 / 记录」网站与工作台内容；修改或删除已有条目请在对应管理界面操作。</p>
+
+          <h4 class="sub-title">技能安装</h4>
+          <ol class="flow-list">
+            <li v-for="s in skillInstall" :key="s.step">
+              <span class="flow-step">{{ s.step }}</span>
+              <span class="flow-text">{{ s.text }}</span>
+            </li>
+          </ol>
         </section>
         </template>
       </div>
@@ -1071,5 +1122,75 @@ const syncNotes = [
   .btn-download {
     justify-content: center;
   }
+}
+
+/* 技能说明 */
+.sub-title {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sub-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.skill-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skill-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+}
+
+.skill-prompt-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.code-block {
+  margin: 0;
+  padding: 8px 10px;
+  background-color: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.skill-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0 0 0;
+  padding: 10px 12px;
+  background-color: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.skill-note :deep(svg) {
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: #3b82f6;
 }
 </style>

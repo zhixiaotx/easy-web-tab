@@ -14,6 +14,7 @@ import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useAppSettingsStore } from '@/stores/settings'
 import { calcBmi, calcDailyAttainment, calcExerciseAttainment } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
+import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
 
 // ===== 优先级 =====
@@ -152,6 +153,24 @@ export function useHomeStats() {
     }
   })
 
+  // ===== 每个习惯的本周进度明细（主页习惯卡悬停展开用）=====
+  const habitDetails = computed(() => {
+    const today = localToday()
+    return habitsStore.habits.map(h => {
+      const at = habitsStore.weeklyAttainmentOf(h.id, h.frequency, today)
+      const percent = at.target > 0 ? Math.min(100, Math.round((at.completed / at.target) * 100)) : 0
+      return {
+        id: h.id,
+        name: h.name,
+        color: h.color ?? DEFAULT_HABIT_COLOR,
+        completed: at.completed,
+        target: at.target,
+        percent,
+        met: at.completed >= at.target
+      }
+    })
+  })
+
   // ===== 概览可见统计卡（纯占位隐藏：无数据的卡不渲染；菜单开关关闭的功能不渲染）=====
   const visibleStatCards = computed<string[]>(() => {
     const keys: string[] = []
@@ -205,6 +224,7 @@ export function useHomeStats() {
     weightStats,
     ledgerStats,
     habitStats,
+    habitDetails,
     visibleStatCards,
     upcomingCountdowns,
     pendingTodos,

@@ -31,6 +31,7 @@ const {
   weightStats,
   ledgerStats,
   habitStats,
+  habitDetails,
   visibleStatCards,
   upcomingCountdowns,
   pendingTodos,
@@ -357,7 +358,7 @@ async function handleQuickNote(): Promise<void> {
                 <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
               </div>
 
-              <div class="bento-card bento-stat" data-testid="home-stats-habits" v-if="visibleStatCards.includes('habits')" @click="emit('navigate', 'habits')">
+              <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" v-if="visibleStatCards.includes('habits')" @click="emit('navigate', 'habits')">
                 <div class="stat-header">
                   <span class="stat-icon"><Icon name="habits" :size="16" /></span>
                   <span class="stat-label">习惯打卡</span>
@@ -365,6 +366,30 @@ async function handleQuickNote(): Promise<void> {
                 </div>
                 <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
                 <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>
+
+                <!-- 悬停展开：每个习惯的本周进度 -->
+                <div class="habit-detail" data-testid="home-habit-detail">
+                  <div
+                    v-for="h in habitDetails"
+                    :key="h.id"
+                    class="habit-detail-row"
+                    :data-testid="`home-habit-row-${h.id}`"
+                  >
+                    <div class="habit-detail-top">
+                      <span class="habit-detail-name">{{ h.name }}</span>
+                      <span class="habit-detail-count" :class="{ met: h.met }">
+                        {{ h.completed }}/{{ h.target }}
+                        <Icon v-if="h.met" name="check" :size="12" class="habit-detail-check" />
+                      </span>
+                    </div>
+                    <div class="habit-detail-bar">
+                      <div
+                        class="habit-detail-fill"
+                        :style="{ width: h.percent + '%', background: h.color }"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
@@ -698,6 +723,99 @@ async function handleQuickNote(): Promise<void> {
   text-overflow: ellipsis;
 }
 
+/* ===== 习惯卡悬停展开（逐条本周进度浮层）===== */
+.bento-stat-habits {
+  position: relative;
+}
+
+.habit-detail {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-primary, var(--color-primary));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 6px 18px rgba(0, 0, 0, 0.18));
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease), visibility 0s linear 0.15s;
+  max-height: 260px;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.bento-stat-habits:hover .habit-detail,
+.bento-stat-habits:focus-within .habit-detail {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease), visibility 0s;
+  pointer-events: auto;
+}
+
+.habit-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.habit-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.habit-detail-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text, var(--color-text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.habit-detail-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.habit-detail-count.met {
+  color: var(--color-success, var(--color-success));
+  font-weight: 600;
+}
+
+.habit-detail-check {
+  color: var(--color-success, var(--color-success));
+}
+
+.habit-detail-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-border, var(--color-border));
+  overflow: hidden;
+}
+
+.habit-detail-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--transition-fast, 0.15s ease);
+}
+
 /* ===== 待办完成率进度环（微可视化，数值来自 store）===== */
 .stat-body {
   display: flex;
@@ -982,6 +1100,19 @@ async function handleQuickNote(): Promise<void> {
 
 :root.dark .home-empty {
   background-color: var(--color-bg-card, #1f2937);
+}
+
+:root.dark .habit-detail {
+  background-color: var(--color-bg-card, #1f2937);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+:root.dark .habit-detail-name {
+  color: var(--color-text, #f9fafb);
+}
+
+:root.dark .habit-detail-bar {
+  background-color: #374151;
 }
 
 :root.dark .home-carousel-arrow {

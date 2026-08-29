@@ -87,9 +87,9 @@ watch(
   display: flex;
   align-items: center;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-top: 2px solid var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-top: 2px solid var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -107,7 +107,7 @@ watch(
 
 .wx-placeholder-text {
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .wx-setup-btn {
@@ -142,7 +142,7 @@ watch(
 
 .wx-divider {
   height: 1px;
-  background: var(--border-color, var(--color-border));
+  background: var(--color-border, var(--color-border));
   opacity: 0.6;
 }
 
@@ -152,13 +152,13 @@ watch(
   gap: 12px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .wx-city {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .wx-emoji {
@@ -169,18 +169,18 @@ watch(
 .wx-temp {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .wx-feels {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .wx-desc {
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-weight: 500;
 }
 
@@ -190,29 +190,29 @@ watch(
 
 .wx-loading {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .weather-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .wx-placeholder-text,
 :root.dark .wx-row-2,
 :root.dark .wx-loading {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .wx-city,
 :root.dark .wx-temp,
 :root.dark .wx-desc {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .wx-feels {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .wx-divider {

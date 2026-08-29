@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, onMounted } from 'vue'
 import {
   getBackups,
@@ -116,8 +117,8 @@ const toggleAutoBackup = () => {
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>📦 数据备份管理</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <h2><Icon name="package" /> 数据备份管理</h2>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div class="modal-body">
@@ -130,7 +131,7 @@ const toggleAutoBackup = () => {
               :class="{ active: metadata.autoBackupEnabled }"
               @click="toggleAutoBackup"
             >
-              {{ metadata.autoBackupEnabled ? '✅ 已开启' : '❌ 已关闭' }}
+              <Icon :name="metadata.autoBackupEnabled ? 'check' : 'close'" /> {{ metadata.autoBackupEnabled ? '已开启' : '已关闭' }}
             </button>
           </div>
           <div class="status-item">
@@ -146,23 +147,23 @@ const toggleAutoBackup = () => {
         <!-- 操作按钮 -->
         <div class="action-buttons">
           <button class="action-btn primary" @click="handleExport">
-            📥 导出备份文件
+            <Icon name="download" /> 导出备份文件
           </button>
           <button class="action-btn" @click="loadBackups">
-            🔄 刷新
+            <Icon name="refresh" /> 刷新
           </button>
           <button
             class="action-btn danger"
             @click="handleClearAll"
             :disabled="backups.length === 0"
           >
-            🗑️ 清空备份
+            <Icon name="trash" /> 清空备份
           </button>
         </div>
 
         <!-- 备份列表 -->
         <div class="backup-list">
-          <h3>📋 备份历史</h3>
+          <h3><Icon name="clipboard" /> 备份历史</h3>
           <div v-if="backups.length === 0" class="empty">
             暂无备份记录。修改数据后将自动创建备份。
           </div>
@@ -188,7 +189,7 @@ const toggleAutoBackup = () => {
 
         <!-- 说明 -->
         <div class="help-text">
-          <p>💡 <strong>说明：</strong></p>
+          <p><Icon name="lightbulb" /> <strong>说明：</strong></p>
           <ul>
             <li>自动备份：在数据变化后 5 秒自动创建备份（最多保留 10 个）</li>
             <li>手动导出：下载 .md 格式备份文件，可保存到网盘</li>

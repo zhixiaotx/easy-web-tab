@@ -228,15 +228,15 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .stat-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .stat-header {
@@ -256,7 +256,7 @@ onUnmounted(() => {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -282,13 +282,13 @@ onUnmounted(() => {
 
 .pm-ring-track {
   fill: none;
-  stroke: var(--bg-secondary, var(--color-bg-hover));
+  stroke: var(--color-bg-card, var(--color-bg-hover));
   stroke-width: 12;
 }
 
 .pm-ring-fg {
   fill: none;
-  stroke: var(--accent-color, var(--color-primary));
+  stroke: var(--color-primary, var(--color-primary));
   stroke-width: 12;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.4s linear, stroke 0.3s ease;
@@ -317,13 +317,13 @@ onUnmounted(() => {
 .pm-phase {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .pm-time {
   font-size: 40px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
@@ -337,7 +337,7 @@ onUnmounted(() => {
 
 .btn-primary {
   padding: 10px 20px;
-  background-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -348,29 +348,29 @@ onUnmounted(() => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--accent-hover, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-primary:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .btn-secondary {
   padding: 10px 20px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-secondary:disabled {
@@ -381,7 +381,7 @@ onUnmounted(() => {
 .pm-today {
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -400,7 +400,7 @@ onUnmounted(() => {
 
 .field-label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .field-short {
@@ -409,28 +409,28 @@ onUnmounted(() => {
 
 .form-input {
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .stat-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .pm-ring-track {
-  stroke: var(--input-bg, #374151);
+  stroke: var(--color-bg-input, #374151);
 }
 
 :root.dark .pm-ring-fg {
@@ -446,26 +446,26 @@ onUnmounted(() => {
 }
 
 :root.dark .pm-time {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .btn-secondary {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .btn-primary:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .form-input,
 :root.dark select.form-input,
 :root.dark input.form-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {

@@ -209,7 +209,7 @@ watch(query, () => {
           placeholder="搜索待办、便签、倒计时、记账、密码、网址…（↑↓ 选择 / Enter 跳转 / Esc 关闭）"
           spellcheck="false"
         />
-        <button class="sp-close-btn" data-testid="sp-close" title="关闭 (Esc)" @click="emit('close')">✕</button>
+        <button class="sp-close-btn" data-testid="sp-close" title="关闭 (Esc)" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div v-if="query.trim() === ''" class="sp-hint">输入关键词，跨工作台全局搜索</div>
@@ -373,38 +373,38 @@ watch(query, () => {
 }
 
 :root.dark .sp-panel {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
 
 :root.dark .sp-search {
-  border-bottom-color: var(--border-color, #374151);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .sp-search-icon,
 :root.dark .sp-input::placeholder {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .sp-input {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .sp-close-btn:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .sp-hint,
 :root.dark .sp-empty,
 :root.dark .sp-group,
 :root.dark .sp-result-sub {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .sp-result:hover {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
 }
 
 :root.dark .sp-result.active {
@@ -412,6 +412,6 @@ watch(query, () => {
 }
 
 :root.dark .sp-result-title {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 </style>

@@ -239,7 +239,7 @@ function drawerMarkupRate(): number | null {
       <div class="biz-dialog" data-testid="bizprod-dialog">
         <div class="biz-dialog-header">
           <h3>{{ editingId ? '编辑商品' : '新增商品' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false">✕</button>
+          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
         <form class="biz-dialog-body" @submit.prevent="handleSave">
           <div class="biz-field">
@@ -291,7 +291,7 @@ function drawerMarkupRate(): number | null {
         <div class="bizprod-drawer" data-testid="bizprod-drawer">
           <div class="bizprod-drawer-header">
             <h3>商品详情</h3>
-            <button class="bizprod-drawer-close" @click="closeDrawer">✕</button>
+            <button class="bizprod-drawer-close" @click="closeDrawer"><Icon name="close" /></button>
           </div>
           <div class="bizprod-drawer-body" v-if="drawerSummary.product">
             <!-- 基础信息 -->
@@ -445,21 +445,21 @@ function drawerMarkupRate(): number | null {
   padding: 7px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizprod-tab:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizprod-tab.active {
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
@@ -472,7 +472,7 @@ function drawerMarkupRate(): number | null {
   font-size: 14px;
   cursor: pointer;
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   white-space: nowrap;
@@ -486,9 +486,9 @@ function drawerMarkupRate(): number | null {
   padding: 40px 20px;
   text-align: center;
   font-size: 14px;
-  color: var(--text-muted, var(--color-text-muted));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  color: var(--color-text-muted, var(--color-text-muted));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -504,15 +504,15 @@ function drawerMarkupRate(): number | null {
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .bizprod-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizprod-card.inactive {
@@ -530,7 +530,7 @@ function drawerMarkupRate(): number | null {
   min-width: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -541,9 +541,9 @@ function drawerMarkupRate(): number | null {
   font-size: 12px;
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 .bizprod-prices {
@@ -555,11 +555,11 @@ function drawerMarkupRate(): number | null {
 .bizprod-price {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizprod-price.sell {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
   font-weight: 600;
 }
 
@@ -575,7 +575,7 @@ function drawerMarkupRate(): number | null {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
 }
 
@@ -588,31 +588,31 @@ function drawerMarkupRate(): number | null {
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizprod-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizprod-btn.del:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 .bizprod-btn.save {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizprod-btn.save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
@@ -629,7 +629,7 @@ function drawerMarkupRate(): number | null {
 }
 
 .biz-dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: 460px;
@@ -643,24 +643,24 @@ function drawerMarkupRate(): number | null {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   position: sticky;
   top: 0;
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
 }
 
 .biz-dialog-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-dialog-close {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
 
@@ -679,7 +679,7 @@ function drawerMarkupRate(): number | null {
 
 .biz-field > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .biz-form-row {
@@ -702,48 +702,48 @@ function drawerMarkupRate(): number | null {
 .biz-input {
   box-sizing: border-box;
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 :root.dark .bizprod-card,
 :root.dark .biz-dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizprod-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bizprod-tab,
 :root.dark .bizprod-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .bizprod-tab.active {
-  background-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
   color: #fff;
 }
 
 :root.dark .biz-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .biz-dialog-header {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 @media (max-width: 640px) {
@@ -754,8 +754,8 @@ function drawerMarkupRate(): number | null {
 
 /* P1-3：高亮商品 */
 .bizprod-card.highlighted {
-  border-color: var(--accent-color, var(--color-primary));
-  box-shadow: 0 0 0 2px var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  box-shadow: 0 0 0 2px var(--color-primary, var(--color-primary));
 }
 
 .bizprod-name {
@@ -763,7 +763,7 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-name:hover {
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   text-decoration: underline;
 }
 
@@ -781,7 +781,7 @@ function drawerMarkupRate(): number | null {
   width: 100%;
   max-width: 420px;
   height: 100%;
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   display: flex;
   flex-direction: column;
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
@@ -798,7 +798,7 @@ function drawerMarkupRate(): number | null {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   flex-shrink: 0;
 }
 
@@ -806,14 +806,14 @@ function drawerMarkupRate(): number | null {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizprod-drawer-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
 
@@ -835,9 +835,9 @@ function drawerMarkupRate(): number | null {
 .bizprod-drawer-section-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .bizprod-drawer-info-row {
@@ -849,33 +849,33 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-drawer-label {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   flex-shrink: 0;
 }
 
 .bizprod-drawer-value {
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 .bizprod-drawer-markup.rate-high {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
   font-size: 12px;
 }
 
 .bizprod-drawer-markup.rate-low {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-size: 12px;
 }
 
 .bizprod-drawer-value.status-active {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .bizprod-drawer-value.status-inactive {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizprod-drawer-stats {
@@ -889,30 +889,30 @@ function drawerMarkupRate(): number | null {
   flex-direction: column;
   gap: 2px;
   padding: 8px 10px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 6px);
 }
 
 .bizprod-drawer-stat-label {
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizprod-drawer-stat-value {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .bizprod-drawer-stat-value.negative {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 .bizprod-drawer-empty {
   margin: 0;
   font-size: 13px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizprod-drawer-records {
@@ -927,8 +927,8 @@ function drawerMarkupRate(): number | null {
   gap: 8px;
   padding: 6px 10px;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
   transition: background 0.15s ease;
@@ -936,13 +936,13 @@ function drawerMarkupRate(): number | null {
 }
 
 .bizprod-drawer-record:hover {
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
 }
 
 .bizprod-drawer-record-date {
   flex-shrink: 0;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizprod-drawer-record-detail {
@@ -955,18 +955,18 @@ function drawerMarkupRate(): number | null {
 .bizprod-drawer-record-total {
   flex-shrink: 0;
   font-weight: 700;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
 }
 
 :root.dark .bizprod-drawer {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .bizprod-drawer-stat {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .bizprod-drawer-record {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 </style>

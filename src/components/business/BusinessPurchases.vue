@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from '../Icon.vue'
 // 进货记录：分类 tabs（全部+可见分类）+ 行式列表（分类徽标）+ 新增/编辑弹框
 // P0-2：进货卡片增加售价与加价率对照
 // P1-3：跨模块联动跳转
@@ -198,7 +199,7 @@ async function handleDelete(id: string): Promise<void> {
       <div class="biz-dialog" data-testid="bizpur-dialog">
         <div class="biz-dialog-header">
           <h3>{{ editingId ? '编辑进货' : '新增进货' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false">✕</button>
+          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
         <form class="biz-dialog-body" @submit.prevent="handleSave">
           <div class="biz-field">
@@ -291,27 +292,27 @@ async function handleDelete(id: string): Promise<void> {
   padding: 7px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizpur-tab:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizpur-tab.active {
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
 .bizpur-count {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizpur-add {
@@ -319,7 +320,7 @@ async function handleDelete(id: string): Promise<void> {
   font-size: 14px;
   cursor: pointer;
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   white-space: nowrap;
@@ -333,9 +334,9 @@ async function handleDelete(id: string): Promise<void> {
   padding: 40px 20px;
   text-align: center;
   font-size: 14px;
-  color: var(--text-muted, var(--color-text-muted));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  color: var(--color-text-muted, var(--color-text-muted));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -351,15 +352,15 @@ async function handleDelete(id: string): Promise<void> {
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .bizpur-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizpur-card-head {
@@ -373,20 +374,20 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   gap: 10px;
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .bizpur-date {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .bizpur-product {
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -399,9 +400,9 @@ async function handleDelete(id: string): Promise<void> {
   padding: 2px 10px;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--accent-color, var(--color-primary));
-  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-color, var(--color-primary)) 30%, transparent);
+  color: var(--color-primary, var(--color-primary));
+  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, var(--color-primary)) 30%, transparent);
   border-radius: var(--radius-full, 999px);
   white-space: nowrap;
   overflow: hidden;
@@ -412,14 +413,14 @@ async function handleDelete(id: string): Promise<void> {
 .bizpur-num,
 .bizpur-note {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .bizpur-total {
   font-size: 14px;
   font-weight: 700;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -430,27 +431,27 @@ async function handleDelete(id: string): Promise<void> {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   padding: 4px 0;
-  border-top: 1px dashed var(--border-color, var(--color-border));
+  border-top: 1px dashed var(--color-border, var(--color-border));
 }
 
 .bizpur-markup-price {
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizpur-markup-rate.rate-high {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
   font-weight: 600;
 }
 
 .bizpur-markup-rate.rate-low {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-weight: 600;
 }
 
 /* P0-2：编辑弹框售价参考 */
 .bizpur-form-price-ref {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
 
@@ -460,7 +461,7 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .bizpur-product:hover {
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
 }
 
 .bizpur-actions {
@@ -472,38 +473,38 @@ async function handleDelete(id: string): Promise<void> {
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizpur-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizpur-btn.del:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 .bizpur-btn.save {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizpur-btn.save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .bizpur-total-preview {
   font-size: 16px;
   font-weight: 700;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -520,7 +521,7 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .biz-dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: 480px;
@@ -534,21 +535,21 @@ async function handleDelete(id: string): Promise<void> {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .biz-dialog-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-dialog-close {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
 
@@ -567,7 +568,7 @@ async function handleDelete(id: string): Promise<void> {
 
 .biz-field > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .biz-form-row {
@@ -590,62 +591,62 @@ async function handleDelete(id: string): Promise<void> {
 .biz-input {
   box-sizing: border-box;
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 :root.dark .bizpur-list,
 :root.dark .biz-dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizpur-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizpur-tab {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .bizpur-tab.active {
-  background-color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
 :root.dark .bizpur-cat {
-  color: var(--accent-color, var(--color-primary));
-  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 16%, transparent);
-  border-color: color-mix(in srgb, var(--accent-color, var(--color-primary)) 35%, transparent);
+  color: var(--color-primary, var(--color-primary));
+  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 16%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary, var(--color-primary)) 35%, transparent);
 }
 
 :root.dark .bizpur-date,
 :root.dark .bizpur-product {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bizpur-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .biz-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {

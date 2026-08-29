@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref } from 'vue'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
@@ -60,7 +61,7 @@ const handleClick = () => {
         />
       </div>
       <div v-if="site.isValid === false" class="invalid-badge" title="链接已失效">
-        ⚠️
+        <Icon name="alert" />
       </div>
       <div v-if="isHovered && !props.readonly" class="card-actions">
         <button v-if="site.isValid === false" class="action-btn unmark" @click.stop="emit('unmark', site.url)" title="取消失效标记">

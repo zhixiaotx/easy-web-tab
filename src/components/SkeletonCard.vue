@@ -49,7 +49,7 @@ defineProps<{
 }
 
 :root.dark .skeleton-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .skeleton-icon,

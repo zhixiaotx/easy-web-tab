@@ -152,7 +152,7 @@ function closeTraceModal(): void {
         <div class="bizinv-trace-modal" data-testid="bizinv-trace-modal">
           <div class="bizinv-trace-head">
             <span class="bizinv-trace-title">溯源记录 · {{ traceModalProduct?.name ?? '未知商品' }}</span>
-            <button class="bizinv-trace-close" @click="closeTraceModal">✕</button>
+            <button class="bizinv-trace-close" @click="closeTraceModal"><Icon name="close" /></button>
           </div>
           <div class="bizinv-trace-body">
             <p v-if="traceModalSources.length === 0" class="bizinv-trace-empty">暂无溯源记录</p>
@@ -209,8 +209,8 @@ function closeTraceModal(): void {
   flex-direction: column;
   gap: 10px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -225,7 +225,7 @@ function closeTraceModal(): void {
 .bizinv-alert-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizinv-threshold {
@@ -233,7 +233,7 @@ function closeTraceModal(): void {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizinv-th-input {
@@ -244,7 +244,7 @@ function closeTraceModal(): void {
 .bizinv-empty {
   margin: 0;
   font-size: 13px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizinv-low-grid {
@@ -258,15 +258,15 @@ function closeTraceModal(): void {
   flex-direction: column;
   gap: 4px;
   padding: 10px 14px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid color-mix(in srgb, var(--error-color, #ef4444) 40%, transparent);
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 40%, transparent);
   border-radius: var(--radius-md, 8px);
 }
 
 .bizinv-low-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -275,7 +275,7 @@ function closeTraceModal(): void {
 .bizinv-low-stock {
   font-size: 16px;
   font-weight: 700;
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-variant-numeric: tabular-nums;
 }
 
@@ -291,15 +291,15 @@ function closeTraceModal(): void {
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .bizinv-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 卡片左右布局：左侧商品名/单位/进货合计，右侧带出/库存 */
@@ -329,7 +329,7 @@ function closeTraceModal(): void {
 .bizinv-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -337,12 +337,12 @@ function closeTraceModal(): void {
 
 .bizinv-unit {
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizinv-num {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -365,17 +365,17 @@ function closeTraceModal(): void {
   padding: 2px 10px;
   font-size: 11px;
   cursor: pointer;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: none;
-  border: 1px solid var(--border-color, var(--color-border));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 4px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizinv-trace-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
-  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 8%, transparent);
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 8%, transparent);
 }
 
 /* 溯源弹框遮罩 */
@@ -398,8 +398,8 @@ function closeTraceModal(): void {
   max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
@@ -409,13 +409,13 @@ function closeTraceModal(): void {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .bizinv-trace-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizinv-trace-close {
@@ -423,7 +423,7 @@ function closeTraceModal(): void {
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   background: none;
   border: none;
   border-radius: var(--radius-sm, 4px);
@@ -431,8 +431,8 @@ function closeTraceModal(): void {
 }
 
 .bizinv-trace-close:hover {
-  color: var(--text-primary, var(--color-text));
-  background: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--color-text, var(--color-text));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .bizinv-trace-body {
@@ -449,7 +449,7 @@ function closeTraceModal(): void {
   padding: 20px 0;
   text-align: center;
   font-size: 13px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizinv-source-row {
@@ -458,7 +458,7 @@ function closeTraceModal(): void {
   gap: 8px;
   padding: 6px 8px;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
@@ -466,7 +466,7 @@ function closeTraceModal(): void {
 }
 
 .bizinv-source-row:hover {
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .bizinv-source-type {
@@ -478,19 +478,19 @@ function closeTraceModal(): void {
 }
 
 .bizinv-source-type.purchase {
-  color: var(--accent-color, var(--color-primary));
-  background: color-mix(in srgb, var(--accent-color, var(--color-primary)) 12%, transparent);
+  color: var(--color-primary, var(--color-primary));
+  background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 12%, transparent);
 }
 
 .bizinv-source-type.daily {
-  color: var(--success-color, var(--color-success));
-  background: color-mix(in srgb, var(--success-color, var(--color-success)) 12%, transparent);
+  color: var(--color-success, var(--color-success));
+  background: color-mix(in srgb, var(--color-success, var(--color-success)) 12%, transparent);
 }
 
 .bizinv-source-date {
   flex-shrink: 0;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizinv-source-detail {
@@ -503,30 +503,30 @@ function closeTraceModal(): void {
 .biz-input {
   box-sizing: border-box;
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 :root.dark .bizinv-alert,
 :root.dark .bizinv-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizinv-low-card {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .bizinv-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bizinv-low-stock {
@@ -548,18 +548,18 @@ function closeTraceModal(): void {
 
 /* 暗色模式：溯源弹框 */
 :root.dark .bizinv-trace-modal {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 :root.dark .bizinv-source-row:hover {
-  background: var(--bg-card, #1f2937);
+  background: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .biz-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {

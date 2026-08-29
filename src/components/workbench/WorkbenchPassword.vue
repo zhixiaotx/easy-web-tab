@@ -386,7 +386,7 @@ watch(
             title="清除搜索"
             data-testid="pwd-search-clear"
             @click="searchQuery = ''"
-          >✕</button>
+          ><Icon name="close" /></button>
         </div>
         <button class="pwd-btn-lock" data-testid="pwd-lock-btn" title="锁定" @click="handleLock">
           <Icon name="lock" :size="16" />锁定
@@ -425,44 +425,47 @@ watch(
             >↗</a>
           </div>
           <div class="pwd-details">
-            <span class="pwd-username" :title="entry.username">👤 {{ entry.username }}</span>
+            <span class="pwd-username" :title="entry.username">{{ entry.username }}</span>
             <span class="pwd-masked" :title="isPasswordVisible(entry.id) ? entry.password : ''">
-              🔑 {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
+              {{ isPasswordVisible(entry.id) ? entry.password : '••••••••' }}
             </span>
           </div>
           <div class="pwd-actions">
             <button
               class="pwd-icon-btn"
               :title="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
+              :aria-label="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
               :data-testid="`pwd-toggle-${entry.id}`"
               @click="togglePasswordVisibility(entry.id)"
             >
-              {{ isPasswordVisible(entry.id) ? '🙈' : '👁️' }}
+              <Icon :name="isPasswordVisible(entry.id) ? 'eye-off' : 'eye'" :size="16" />
             </button>
             <button
               class="pwd-icon-btn"
               title="复制用户名"
+              aria-label="复制用户名"
               :data-testid="`pwd-copy-username-${entry.id}`"
               @click="copyToClipboard(entry.username, '用户名')"
             ><Icon name="copy" :size="16" /></button>
             <button
               class="pwd-icon-btn"
               title="复制密码"
+              aria-label="复制密码"
               :data-testid="`pwd-copy-password-${entry.id}`"
               @click="copyToClipboard(entry.password, '密码')"
-            >🔐</button>
+            ><Icon name="copy" :size="16" /></button>
             <button
               class="pwd-icon-btn"
               title="编辑"
               :data-testid="`pwd-edit-${entry.id}`"
               @click="startEdit(entry)"
-            >✏️</button>
+            ><Icon name="pencil" /></button>
             <button
               class="pwd-icon-btn pwd-delete"
               title="删除"
               :data-testid="`pwd-delete-${entry.id}`"
               @click="handleDelete(entry.id)"
-            >🗑️</button>
+            ><Icon name="trash" /></button>
           </div>
         </div>
         </TransitionGroup>
@@ -490,7 +493,7 @@ watch(
               title="关闭"
               data-testid="pwd-modal-close"
               @click="cancelForm"
-            >✕</button>
+            ><Icon name="close" /></button>
           </div>
           <form class="pwd-modal-body" @submit.prevent="handleSave">
             <div class="form-group">
@@ -550,8 +553,8 @@ watch(
                   class="form-input"
                   data-testid="pwd-form-password"
                 />
-                <button type="button" class="pwd-eye-btn" title="显示/隐藏" @click="showFormPassword = !showFormPassword">
-                  {{ showFormPassword ? '🙈' : '👁️' }}
+                <button type="button" class="pwd-eye-btn" title="显示/隐藏" aria-label="显示或隐藏密码" @click="showFormPassword = !showFormPassword">
+                  <Icon :name="showFormPassword ? 'eye-off' : 'eye'" :size="16" />
                 </button>
               </div>
             </div>
@@ -597,8 +600,8 @@ watch(
 .pwd-auth-card {
   width: 100%;
   max-width: 360px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   padding: 24px;
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
@@ -607,13 +610,13 @@ watch(
 .pwd-auth-card h3 {
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin: 0 0 6px 0;
 }
 
 .pwd-auth-hint {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   margin: 0 0 18px 0;
 }
 
@@ -626,7 +629,7 @@ watch(
 }
 
 .pwd-auth-error {
-  color: var(--error-color, #ef4444);
+  color: var(--color-error, #ef4444);
   font-size: 13px;
   margin: 0 0 12px 0;
 }
@@ -635,24 +638,24 @@ watch(
 .form-input {
   width: 100%;
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 主按钮 ===== */
 .pwd-btn-primary {
   padding: 10px 18px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -663,11 +666,11 @@ watch(
 }
 
 .pwd-btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .pwd-btn-primary:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
@@ -698,14 +701,14 @@ watch(
   border: none;
   cursor: pointer;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   padding: 2px 4px;
   border-radius: var(--radius-sm, 6px);
 }
 
 .pwd-search-clear:hover {
-  color: var(--text-primary, var(--color-text));
-  background: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--color-text, var(--color-text));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .pwd-btn-add {
@@ -716,17 +719,17 @@ watch(
   padding: 9px 14px;
   font-size: 13px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .pwd-btn-lock:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 列表（卡片网格）===== */
@@ -768,15 +771,15 @@ watch(
   gap: 5px;
   min-width: 0;
   padding: 8px 10px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .pwd-item:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .pwd-card-head {
@@ -792,7 +795,7 @@ watch(
   border-radius: 3px;
   object-fit: contain;
   flex-shrink: 0;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .pwd-site-name {
@@ -800,7 +803,7 @@ watch(
   min-width: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -812,7 +815,7 @@ watch(
   gap: 2px;
   min-width: 0;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .pwd-username,
@@ -831,7 +834,7 @@ watch(
   gap: 2px;
   margin-top: auto;
   padding-top: 4px;
-  border-top: 1px solid var(--border-color, var(--color-border));
+  border-top: 1px solid var(--color-border, var(--color-border));
 }
 
 .pwd-icon-btn {
@@ -853,21 +856,21 @@ watch(
 
 .pwd-icon-btn:hover {
   opacity: 1;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .pwd-icon-btn.pwd-delete:hover {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 /* ===== 空态 ===== */
 .pwd-empty {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -888,8 +891,8 @@ watch(
   max-width: var(--dlg-w-wb-password, 520px);
   max-height: var(--dlg-h-wb-password, 90vh);
   overflow-y: auto;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 12px);
   box-shadow: var(--shadow-card, 0 8px 30px rgba(0, 0, 0, 0.15));
 }
@@ -899,29 +902,29 @@ watch(
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .pwd-modal-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .pwd-modal-close {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   padding: 4px 8px;
   border-radius: var(--radius-sm, 6px);
 }
 
 .pwd-modal-close:hover {
-  color: var(--text-primary, var(--color-text));
-  background: var(--bg-secondary, var(--color-bg-hover));
+  color: var(--color-text, var(--color-text));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .pwd-modal-body {
@@ -936,7 +939,7 @@ watch(
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   margin-bottom: 6px;
 }
 
@@ -950,8 +953,8 @@ watch(
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   max-height: 200px;
   overflow-y: auto;
@@ -962,7 +965,7 @@ watch(
 .pwd-site-option {
   padding: 10px 12px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -973,18 +976,18 @@ watch(
 }
 
 .pwd-site-option:hover {
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
 }
 
 .pwd-site-option-name {
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-weight: 500;
 }
 
 .pwd-site-option-url {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1017,6 +1020,24 @@ watch(
   opacity: 1;
 }
 
+/* ===== P3-14 移动端触控目标：图标按钮点击区放大 ===== */
+@media (max-width: 768px) {
+  /* 行内操作图标按钮（复制/显示密码/删除）≥40px */
+  .pwd-icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px 8px;
+    opacity: 0.85;
+  }
+
+  /* 密码输入框内嵌的眼睛按钮受输入高度限制，给 32px（仍明显大于默认） */
+  .pwd-eye-btn {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px;
+  }
+}
+
 .pwd-form-actions {
   display: flex;
   justify-content: flex-end;
@@ -1026,29 +1047,29 @@ watch(
 
 .pwd-btn-cancel {
   padding: 9px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .pwd-btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
+  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .pwd-auth-card,
 :root.dark .pwd-item,
 :root.dark .pwd-empty {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .pwd-modal {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .pwd-item {
@@ -1057,65 +1078,65 @@ watch(
 
 :root.dark .pwd-auth-card h3,
 :root.dark .pwd-modal-header h3 {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .pwd-auth-hint {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .pwd-auth-card .form-input,
 :root.dark .pwd-modal-body .form-input,
 :root.dark .pwd-search {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .pwd-btn-lock,
 :root.dark .pwd-btn-cancel {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .pwd-icon-btn:hover,
 :root.dark .pwd-modal-close:hover {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
 }
 
 :root.dark .pwd-site-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .pwd-details {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .pwd-site-dropdown {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .pwd-site-option {
-  border-bottom-color: var(--border-color, #374151);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .pwd-site-option:hover {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
 }
 
 :root.dark .pwd-site-option-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .pwd-site-option-url {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 /* 禁用态主按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 :root.dark .pwd-btn-primary:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 </style>

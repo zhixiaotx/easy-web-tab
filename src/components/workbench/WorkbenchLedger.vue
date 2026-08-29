@@ -121,7 +121,7 @@ const donutSegments = computed<DonutSegment[]>(() => {
       total: item.total,
       percent: item.percent,
       color:
-        idx === 0 ? 'var(--accent-color, var(--color-primary))' : LEDGER_CATEGORY_COLORS[idx % LEDGER_CATEGORY_COLORS.length],
+        idx === 0 ? 'var(--color-primary, var(--color-primary))' : LEDGER_CATEGORY_COLORS[idx % LEDGER_CATEGORY_COLORS.length],
       dashLen,
       dashOffset: -acc,
       linecap: byCategory.length <= 3 ? 'round' : 'butt'
@@ -339,7 +339,8 @@ onUnmounted(() => {
       <button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</button>
       <div class="ld-month-actions">
         <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
-          {{ store.showAmount ? '🙈 隐藏金额' : '👁️ 显示金额' }}
+          <Icon :name="store.showAmount ? 'eye-off' : 'eye'" :size="15" />
+          {{ store.showAmount ? '隐藏金额' : '显示金额' }}
         </button>
         <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
         <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增记录</button>
@@ -544,7 +545,7 @@ onUnmounted(() => {
       <div class="dialog" data-testid="ld-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <button class="close-btn" @click="cancelForm">✕</button>
+          <button class="close-btn" @click="cancelForm"><Icon name="close" /></button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSave">
           <div class="form-row-fields">
@@ -606,7 +607,7 @@ onUnmounted(() => {
         <div class="dialog ld-records-dialog" data-testid="ld-records-dialog">
           <div class="dialog-header">
             <h3>本月记录（{{ monthEntries.length }} 条）</h3>
-            <button class="close-btn" @click="closeRecordsModal">✕</button>
+            <button class="close-btn" @click="closeRecordsModal"><Icon name="close" /></button>
           </div>
           <div ref="listEl" class="ld-records-body" :class="{ 'ld-records-scroll': !paging.fitsOnePage }">
             <TransitionGroup name="grid">
@@ -648,7 +649,7 @@ onUnmounted(() => {
       <div class="dialog" data-testid="ld-cat-dialog">
         <div class="dialog-header">
           <h3>管理分组</h3>
-          <button class="close-btn" @click="closeCatManager">✕</button>
+          <button class="close-btn" @click="closeCatManager"><Icon name="close" /></button>
         </div>
         <div class="dialog-body">
           <div class="ld-cat-list">
@@ -729,8 +730,8 @@ onUnmounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   padding: 12px 14px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -739,29 +740,29 @@ onUnmounted(() => {
   padding: 8px 14px;
   font-size: 13px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-primary, var(--color-primary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .month-btn:hover {
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
 .today-btn {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .today-btn:hover {
-  background: var(--accent-hover, var(--color-primary-hover));
-  border-color: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
+  border-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .month-input {
@@ -781,15 +782,15 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .stat-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .stat-header {
@@ -809,7 +810,7 @@ onUnmounted(() => {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -818,21 +819,21 @@ onUnmounted(() => {
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .stat-value.is-income {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .stat-value.is-expense {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 .stat-value.is-negative {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 /* ===== 支出分类占比条 ===== */
@@ -841,8 +842,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -850,7 +851,7 @@ onUnmounted(() => {
 .ld-ratio-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .ld-ratio-head {
@@ -862,12 +863,12 @@ onUnmounted(() => {
 
 .ld-ratio-name {
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .ld-ratio-val {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -877,8 +878,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -887,7 +888,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .ld-trend-svg {
@@ -897,18 +898,18 @@ onUnmounted(() => {
 }
 
 .ld-trend-gridline {
-  stroke: var(--border-color, #e2e8f0);
+  stroke: var(--color-border, #e2e8f0);
   stroke-dasharray: 4 4;
 }
 
 .ld-trend-axis-label {
-  fill: var(--text-muted, #94a3b8);
+  fill: var(--color-text-muted, #94a3b8);
   font-variant-numeric: tabular-nums;
 }
 
 /* 收入柱 = 应用主色；支出柱 = LEDGER_CATEGORY_COLORS[1] */
 .ld-trend-bar.is-income {
-  fill: var(--accent-color, var(--color-primary));
+  fill: var(--color-primary, var(--color-primary));
 }
 
 .ld-trend-bar.is-expense {
@@ -918,7 +919,7 @@ onUnmounted(() => {
 .ld-trend-empty {
   padding: 36px 16px;
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
 }
 
@@ -945,7 +946,7 @@ onUnmounted(() => {
 
 .ld-donut-track {
   fill: none;
-  stroke: var(--bg-secondary, var(--color-bg-hover));
+  stroke: var(--color-bg-card, var(--color-bg-hover));
   stroke-width: 16;
 }
 
@@ -955,7 +956,7 @@ onUnmounted(() => {
 }
 
 .ld-donut-seg.is-accent {
-  stroke: var(--accent-color, var(--color-primary));
+  stroke: var(--color-primary, var(--color-primary));
 }
 
 .ld-donut-center {
@@ -966,7 +967,7 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
@@ -993,7 +994,7 @@ onUnmounted(() => {
 }
 
 .ld-donut-dot.is-accent {
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 图表区折叠开关 ===== */
@@ -1012,17 +1013,17 @@ onUnmounted(() => {
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .ld-charts-toggle:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .ld-charts-chevron {
@@ -1051,7 +1052,7 @@ onUnmounted(() => {
 
 .btn-add {
   padding: 10px 16px;
-  background-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -1062,39 +1063,39 @@ onUnmounted(() => {
 }
 
 .btn-add:hover:not(:disabled) {
-  background-color: var(--accent-hover, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-add:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .btn-manage {
   padding: 10px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-manage:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 空月态 ===== */
 .empty-state {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -1105,13 +1106,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
 }
 
 .empty-invite:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .ld-empty-title {
@@ -1126,8 +1127,8 @@ onUnmounted(() => {
 /* ===== 记录列表（表格行式：日期 | 分组 | 金额 | 备注 | 操作）===== */
 .ld-list {
   overflow-x: auto;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -1138,7 +1139,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   transition: background-color var(--transition-fast, 0.15s ease);
 }
 
@@ -1147,13 +1148,13 @@ onUnmounted(() => {
 }
 
 .ld-item:hover {
-  background-color: var(--hover-bg, var(--color-bg-hover));
+  background-color: var(--color-bg-hover, var(--color-bg-hover));
 }
 
 .ld-date {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1164,9 +1165,9 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 .ld-cat-badge.is-income {
@@ -1178,7 +1179,7 @@ onUnmounted(() => {
 .ld-note {
   min-width: 0;
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1187,14 +1188,14 @@ onUnmounted(() => {
 .ld-amount {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
 }
 
 .ld-amount.is-income {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .ld-actions {
@@ -1210,22 +1211,22 @@ onUnmounted(() => {
 .btn-delete {
   padding: 4px 10px;
   font-size: 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-edit:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-delete:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 /* ===== 弹框（复用 WorkbenchTodo 体系）===== */
@@ -1241,7 +1242,7 @@ onUnmounted(() => {
 }
 
 .dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: var(--dlg-w-wb-ledger, 480px);
@@ -1286,34 +1287,34 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-left: 4px solid var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-left: 4px solid var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
 }
 
 .ld-record-card.is-income {
-  border-left-color: var(--success-color, var(--color-success));
+  border-left-color: var(--color-success, var(--color-success));
 }
 
 .ld-record-card:hover {
-  border-color: color-mix(in srgb, var(--accent-color, #3b82f6) 45%, var(--border-color, #e2e8f0));
+  border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 45%, var(--color-border, #e2e8f0));
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
 }
 
 .ld-record-date {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .ld-record-note {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1327,12 +1328,12 @@ onUnmounted(() => {
 .ld-record-amount {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .ld-record-amount.is-income {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .dialog-header {
@@ -1340,17 +1341,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   position: sticky;
   top: 0;
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
 }
 
 .dialog-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin: 0;
 }
 
@@ -1358,7 +1359,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm, 6px);
@@ -1366,7 +1367,7 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .dialog-body {
@@ -1384,7 +1385,7 @@ onUnmounted(() => {
 
 .form-group > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .form-row-fields {
@@ -1401,7 +1402,7 @@ onUnmounted(() => {
 
 .field-label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .field-date {
@@ -1415,18 +1416,18 @@ onUnmounted(() => {
 
 .form-input {
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .desc-input {
@@ -1441,7 +1442,7 @@ onUnmounted(() => {
 
 .btn-save {
   padding: 9px 18px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -1452,28 +1453,28 @@ onUnmounted(() => {
 }
 
 .btn-save:hover:not(:disabled) {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .btn-cancel {
   padding: 9px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
+  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 /* ===== 分组管理 ===== */
@@ -1489,8 +1490,8 @@ onUnmounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   padding: 8px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
 }
 
@@ -1499,7 +1500,7 @@ onUnmounted(() => {
   min-width: 80px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .ld-cat-type-badge {
@@ -1508,9 +1509,9 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 .ld-cat-type-badge.is-income {
@@ -1522,8 +1523,8 @@ onUnmounted(() => {
 .ld-builtin-tag {
   flex-shrink: 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-muted, var(--color-text-muted));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
   padding: 2px 10px;
 }
@@ -1540,7 +1541,7 @@ onUnmounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   padding: 12px;
-  border: 1px dashed var(--border-color, var(--color-border));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
 }
 
@@ -1551,49 +1552,49 @@ onUnmounted(() => {
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .ld-month-bar {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .stat-card,
 :root.dark .ld-ratio-block,
 :root.dark .ld-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .ld-list {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .ld-item:hover {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
 }
 
 :root.dark .empty-state {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .dialog-header {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .ld-date {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .ld-note,
 :root.dark .ld-ratio-val {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .ld-amount {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .ld-amount.is-income {
@@ -1629,15 +1630,15 @@ onUnmounted(() => {
 }
 
 :root.dark .ld-donut-track {
-  stroke: var(--input-bg, #374151);
+  stroke: var(--color-bg-input, #374151);
 }
 
 :root.dark .ld-cat-row {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .ld-cat-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .btn-manage,
@@ -1646,40 +1647,40 @@ onUnmounted(() => {
 :root.dark .btn-delete,
 :root.dark .month-btn,
 :root.dark .ld-charts-toggle {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .month-btn:hover {
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
 :root.dark .today-btn {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 :root.dark .btn-save:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .btn-add:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .form-input,
 :root.dark select.form-input,
 :root.dark input.form-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 1100px) {

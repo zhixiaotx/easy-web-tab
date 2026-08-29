@@ -15,6 +15,7 @@ import IconManager from '../components/IconManager.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import Icon from '../components/Icon.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
 import { useThemeStore } from '../stores/theme'
@@ -261,29 +262,29 @@ const handlePageChange = () => {
 </script>
 
 <template>
-  <!-- 右上角工具栏 -->
-  <div class="top-right-toolbar">
-    <ThemeToggle />
-    <button
-      v-if="cloudEnabled"
-      class="btn-help wb-sync-btn"
-      :class="syncStatusClass"
-      :title="syncTip"
-      data-testid="home-sync-now"
-      :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
-      @click="handleSyncNowClick"
-    >{{ syncLabel }}</button>
-    <button class="btn-help" @click="showSettingsDialog = true" title="设置">⚙️</button>
-    <button class="btn-help" @click="openHelp" title="帮助">❓</button>
-    <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
-      前台
-    </button>
-  </div>
-
-  <!-- 左上角工具栏 -->
-  <div class="top-left-toolbar">
-    <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName">🧰 {{ settingsStore.workbenchPageDisplayName }}</button>
-    <button v-if="settingsStore.businessPageVisible !== false" class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" :title="settingsStore.businessPageDisplayName">💰 {{ settingsStore.businessPageDisplayName }}</button>
+  <!-- 顶部统一 App Bar：左=工作台/销售台入口，右=主题/同步/设置/帮助/前台 -->
+  <div class="app-bar">
+    <div class="app-bar-left">
+      <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
+      <button v-if="settingsStore.businessPageVisible !== false" class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" :title="settingsStore.businessPageDisplayName"><Icon name="store" /> <span class="nav-entry-label">{{ settingsStore.businessPageDisplayName }}</span></button>
+    </div>
+    <div class="app-bar-right">
+      <ThemeToggle />
+      <button
+        v-if="cloudEnabled"
+        class="btn-help wb-sync-btn"
+        :class="syncStatusClass"
+        :title="syncTip"
+        data-testid="home-sync-now"
+        :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
+        @click="handleSyncNowClick"
+      >{{ syncLabel }}</button>
+      <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置"><Icon name="cog" /></button>
+      <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助"><Icon name="help" /></button>
+      <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
+        前台
+      </button>
+    </div>
   </div>
 
   <div class="container">
@@ -336,7 +337,7 @@ const handlePageChange = () => {
     <Pagination class="bottom-pagination" @pageChange="handlePageChange" />
 
     <div v-if="store.filteredSites.length === 0" class="empty-state">
-      <p v-if="store.showOnlyInvalid">没有检测到无效链接 ✓</p>
+      <p v-if="store.showOnlyInvalid">没有检测到无效链接 <Icon name="check" /></p>
       <p v-else>没有找到匹配的网站</p>
     </div>
 
@@ -373,67 +374,93 @@ const handlePageChange = () => {
 </template>
 
 <style scoped>
-/* 右上角工具栏 */
-.top-right-toolbar {
+/* 顶部统一 App Bar */
+.app-bar {
   position: fixed;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  gap: 8px;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background-color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  box-shadow: 0 1px 2px var(--color-shadow, rgba(0, 0, 0, 0.08));
 }
 
-/* 左上角工具栏 */
-.top-left-toolbar {
-  position: fixed;
-  top: 16px;
-  left: 16px;
+.app-bar-left,
+.app-bar-right {
   display: flex;
+  align-items: center;
   gap: 8px;
-  z-index: 100;
+  min-width: 0;
+}
+
+/* ThemeToggle 自带白卡样式，在 App Bar 内统一为 ghost，与其余按钮视觉一致 */
+.app-bar-right :deep(.theme-toggle) {
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.app-bar-right :deep(.theme-toggle:hover) {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #e2e8f0);
+}
+
+.nav-entry-label {
+  white-space: nowrap;
 }
 
 .btn-front {
   padding: 8px 14px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .btn-front:hover {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #e2e8f0);
 }
 
 .btn-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 12px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  background-color: transparent;
+  color: var(--color-text-secondary, #64748b);
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .btn-help:hover {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-  border-color: #3b82f6;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #e2e8f0);
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
-  padding-top: 70px; /* 为右上角工具栏留出空间 */
+  padding-top: 84px; /* 为顶部统一 App Bar 留出空间 */
   padding-bottom: 120px; /* 为底部固定分页留出空间 */
 }
 
@@ -529,44 +556,64 @@ const handlePageChange = () => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
+:root.dark .app-bar {
+  background-color: rgba(31, 41, 55, 0.82);
+  border-bottom-color: var(--color-border, #374151);
+}
+
 :root.dark .btn-front {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .btn-front:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #374151);
 }
 
-/* 左上角设置按钮（暗色，与全局 .btn-help 暗色一致） */
-:root.dark .top-left-toolbar .btn-help {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+/* 左上角入口按钮（暗色，与全局 .btn-help 暗色一致） */
+:root.dark .app-bar .btn-help {
+  color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .top-left-toolbar .btn-help:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+:root.dark .app-bar .btn-help:hover {
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .app-bar-right :deep(.theme-toggle) {
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+:root.dark .app-bar-right :deep(.theme-toggle:hover) {
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 768px) {
-  .top-right-toolbar {
-    top: 8px;
-    right: 8px;
+  .app-bar {
+    padding: 8px 10px;
+    gap: 8px;
   }
 
-  .top-left-toolbar {
-    top: 8px;
-    left: 8px;
+  .app-bar-left,
+  .app-bar-right {
+    gap: 4px;
+  }
+
+  .nav-entry-label {
+    display: none; /* 窄屏仅保留图标，避免与右侧按钮互相挤压 */
+  }
+
+  .btn-help,
+  .btn-front {
+    padding: 8px 10px;
   }
 
   .container {
-    padding-top: 60px;
+    padding-top: 72px;
   }
 }
 

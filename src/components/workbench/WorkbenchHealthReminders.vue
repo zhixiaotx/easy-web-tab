@@ -76,9 +76,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
-  border-top: 2px solid var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-top: 2px solid var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -87,7 +87,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .hr-list {
@@ -104,8 +104,8 @@ onMounted(async () => {
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   font-size: 13px;
 }
@@ -113,7 +113,7 @@ onMounted(async () => {
 .hr-name {
   min-width: 0;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -128,32 +128,32 @@ onMounted(async () => {
 
 .hr-time {
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .hr-repeat {
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .health-reminders {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .hr-title,
 :root.dark .hr-repeat {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .hr-name,
 :root.dark .hr-time {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .hr-item {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 </style>

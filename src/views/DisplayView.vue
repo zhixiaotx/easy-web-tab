@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from '../components/Icon.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSitesStore } from '../stores/sites'
@@ -51,8 +52,8 @@ const handlePageChange = () => {
   <!-- 右上角工具栏 -->
   <div class="top-right-toolbar">
     <ThemeToggle />
-    <button class="btn-countdown" @click="showCountdownModal = true" title="倒计时">⏳</button>
-    <button class="btn-help" @click="openHelp" title="帮助">❓</button>
+    <button class="btn-countdown" @click="showCountdownModal = true" title="倒计时"><Icon name="timer-sand" /></button>
+    <button class="btn-help" @click="openHelp" title="帮助"><Icon name="help" /></button>
     <button class="btn-admin" @click="toggleAdmin" title="切换到管理后台 (Ctrl+B)">
       管理
     </button>
@@ -198,24 +199,24 @@ const handlePageChange = () => {
 
 /* 暗色模式 */
 :root.dark .bottom-pagination {
-  background-color: var(--bg-secondary, rgba(31, 41, 55, 0.95));
+  background-color: var(--color-bg-card, rgba(31, 41, 55, 0.95));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 :root.dark .btn-admin,
 :root.dark .btn-help,
 :root.dark .btn-countdown {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .btn-admin:hover,
 :root.dark .btn-help:hover,
 :root.dark .btn-countdown:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 @media (max-width: 768px) {

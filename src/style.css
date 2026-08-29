@@ -21,11 +21,13 @@
   --color-bg-card: #ffffff;
   --color-bg-hover: #f1f5f9;
   --color-bg-active: #e2e8f0;
+  --color-bg-input: #f1f5f9;
+  --color-shadow: rgba(0, 0, 0, 0.08);
 
   /* 文字色 */
   --color-text: #1e293b;
   --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
+  --color-text-muted: #64748b;
 
   /* 边框色 */
   --color-border: #e2e8f0;
@@ -64,6 +66,15 @@
   --font-size-base: 14px;
   --font-size-lg: 16px;
   --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 32px;
+
+  /* 字重 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   /* 过渡 */
   --transition-fast: 0.15s ease;
@@ -138,6 +149,19 @@ body {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/* ============================================
+   图标尺寸 Token（配合 <Icon> 组件的 class 透传）
+   CSS 尺寸覆盖 svg 的 width/height 属性，统一图标视觉尺寸
+   ============================================ */
+.icon-xs { width: 14px; height: 14px; }
+.icon-sm { width: 16px; height: 16px; }
+.icon-md { width: 18px; height: 18px; }
+.icon-lg { width: 20px; height: 20px; }
+.icon-xl { width: 24px; height: 24px; }
+
+/* 等宽数字（记账 / 统计金额对齐） */
+.tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 
 /* 选中样式 */
 ::selection {

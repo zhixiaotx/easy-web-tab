@@ -481,15 +481,15 @@ async function handleQuickNote(): Promise<void> {
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .bento-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 统计卡瘦身：padding 覆盖（12px 14px），不改共享 .bento-card 的 16px */
@@ -510,8 +510,8 @@ async function handleQuickNote(): Promise<void> {
   justify-content: space-between;
   gap: 16px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent-color, #3b82f6) 8%, transparent), transparent),
-    var(--bg-card, var(--color-bg-card));
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent), transparent),
+    var(--color-bg-card, var(--color-bg-card));
 }
 
 .greeting-info {
@@ -525,13 +525,13 @@ async function handleQuickNote(): Promise<void> {
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .greeting-sub {
   margin: 0;
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .greeting-clock {
@@ -546,13 +546,13 @@ async function handleQuickNote(): Promise<void> {
   font-size: 34px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .greeting-date {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* ===== 快捷添加待办 ===== */
@@ -566,7 +566,7 @@ async function handleQuickNote(): Promise<void> {
   gap: 6px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .quick-add-row {
@@ -579,20 +579,20 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   padding: 8px 12px;
   font-size: 14px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 8px);
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   outline: none;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .quick-add-input:focus {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .quick-add-input::placeholder {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .quick-add-btn {
@@ -601,8 +601,8 @@ async function handleQuickNote(): Promise<void> {
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--radius-sm, 8px);
-  background: var(--accent-color, var(--color-primary));
-  border: 1px solid var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border: 1px solid var(--color-primary, var(--color-primary));
   color: #fff;
   cursor: pointer;
   transition: filter var(--transition-fast, 0.15s ease);
@@ -641,7 +641,7 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -652,17 +652,17 @@ async function handleQuickNote(): Promise<void> {
   padding: 3px 8px;
   font-size: 12px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-primary, var(--color-primary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .nav-btn:hover {
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
@@ -670,7 +670,7 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   white-space: nowrap;
@@ -681,7 +681,7 @@ async function handleQuickNote(): Promise<void> {
 .stat-sub {
   min-width: 0;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -709,12 +709,12 @@ async function handleQuickNote(): Promise<void> {
 }
 
 .ring-track {
-  stroke: var(--border-color, var(--color-border));
+  stroke: var(--color-border, var(--color-border));
   stroke-width: 3;
 }
 
 .ring-bar {
-  stroke: var(--accent-color, var(--color-primary));
+  stroke: var(--color-primary, var(--color-primary));
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dasharray var(--transition-fast, 0.3s ease);
@@ -728,7 +728,7 @@ async function handleQuickNote(): Promise<void> {
   justify-content: center;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -748,7 +748,7 @@ async function handleQuickNote(): Promise<void> {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -775,14 +775,14 @@ async function handleQuickNote(): Promise<void> {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 8px);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .home-list-item:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .home-list-title {
@@ -790,7 +790,7 @@ async function handleQuickNote(): Promise<void> {
   min-width: 0;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -833,35 +833,35 @@ async function handleQuickNote(): Promise<void> {
 
 /* ===== 倒计时剩余状态色 ===== */
 .cd-normal {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .cd-urgent {
-  color: var(--warning-color, var(--color-warning));
+  color: var(--color-warning, var(--color-warning));
 }
 
 .cd-critical {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 /* ===== 截止日期 ===== */
 .due {
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .due.overdue {
-  color: var(--error-color, #ef4444);
+  color: var(--color-error, #ef4444);
   font-weight: 600;
 }
 
 /* ===== 空态 ===== */
 .home-empty {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 13px;
   padding: 24px 12px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -879,9 +879,9 @@ async function handleQuickNote(): Promise<void> {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 1px solid var(--border-color, var(--color-border));
-  background: var(--bg-card, var(--color-bg-card));
-  color: var(--text-secondary, var(--color-text-secondary));
+  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -890,8 +890,8 @@ async function handleQuickNote(): Promise<void> {
 
 .home-carousel-arrow:hover {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .home-carousel-dots {
@@ -906,7 +906,7 @@ async function handleQuickNote(): Promise<void> {
   padding: 0;
   border-radius: 50%;
   border: none;
-  background: var(--border-color, var(--color-border));
+  background: var(--color-border, var(--color-border));
   cursor: pointer;
   transition: all var(--transition-fast, 0.2s ease);
 }
@@ -914,26 +914,26 @@ async function handleQuickNote(): Promise<void> {
 .home-carousel-dot.active {
   width: 22px;
   border-radius: 999px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .bento-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bento-greeting {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent-color, #3b82f6) 12%, transparent), transparent),
-    var(--bg-secondary, #1f2937);
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent), transparent),
+    var(--color-bg-card, #1f2937);
 }
 
 :root.dark .greeting-title,
 :root.dark .stat-value,
 :root.dark .panel-header h3,
 :root.dark .home-list-title {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .greeting-time {
@@ -944,43 +944,43 @@ async function handleQuickNote(): Promise<void> {
 :root.dark .stat-label,
 :root.dark .stat-sub,
 :root.dark .ring-text {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .home-list-item {
-  background-color: var(--bg-card, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .quick-add-input {
-  background-color: var(--bg-card, #1f2937);
-  border-color: var(--border-color, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .nav-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .nav-btn:hover {
-  background-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
   color: #fff;
 }
 
 :root.dark .home-empty {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .home-carousel-arrow {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .home-carousel-dot {
-  background-color: var(--border-color, #4b5563);
+  background-color: var(--color-border, #4b5563);
 }
 
 :root.dark .prio-high {

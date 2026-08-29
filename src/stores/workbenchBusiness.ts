@@ -36,6 +36,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   const dailyRecords = ref<BusinessDailyRecord[]>([])
   const expenses = ref<BusinessExpense[]>([])
   const settings = ref<BusinessData['settings']>({ stallName: '', lowStockThreshold: 20 })
+  // 首屏数据加载态：loadBusiness 完成（成功或失败）后置 true，驱动首页骨架屏
+  const loaded = ref(false)
 
   async function loadBusiness(): Promise<void> {
     try {
@@ -51,6 +53,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     } catch (e) {
       // 加载失败降级为空态（保持种子默认），不向上抛
       console.error('[workbenchBusiness] loadBusiness', e)
+    } finally {
+      loaded.value = true
     }
   }
 
@@ -361,6 +365,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     dailyRecords,
     expenses,
     settings,
+    loaded,
     loadBusiness,
     saveBusiness,
     importData,

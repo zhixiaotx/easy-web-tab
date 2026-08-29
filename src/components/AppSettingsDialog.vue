@@ -852,8 +852,8 @@ onUnmounted(() => {
     <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
-        <h2>⚙️ 设置</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <h2><Icon name="cog" /> 设置</h2>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div class="manager-body">
@@ -988,8 +988,8 @@ onUnmounted(() => {
         <div v-if="activeTab === 'nav'" class="wb-menu-config">
           <h3 class="wb-menu-title">站点管理</h3>
           <div class="site-actions-grid" data-testid="stg-site-actions">
-            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport">📥 导入</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-export" @click="sitesStore.exportToMarkdown()">📤 导出</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport"><Icon name="download" /> 导入</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-export" @click="sitesStore.exportToMarkdown()"><Icon name="upload" /> 导出</button>
             <button type="button" class="site-action-btn" data-testid="stg-act-add" @click="openSiteManagerViaQuery('add')">＋ 添加网址</button>
             <button
               type="button"
@@ -998,14 +998,14 @@ onUnmounted(() => {
               :disabled="sitesStore.isCheckingLinks"
               @click="sitesStore.checkDeadLinks()"
             >
-              <span v-if="sitesStore.isCheckingLinks">⏳ 检测中 ({{ sitesStore.linkCheckProgress?.current }}/{{ sitesStore.linkCheckProgress?.total }})</span>
-              <span v-else>🔗 检测断链<span v-if="sitesStore.invalidCount > 0" class="site-invalid-count">({{ sitesStore.invalidCount }})</span></span>
+              <span v-if="sitesStore.isCheckingLinks"><Icon name="timer-sand" /> 检测中 ({{ sitesStore.linkCheckProgress?.current }}/{{ sitesStore.linkCheckProgress?.total }})</span>
+              <span v-else><Icon name="link" /> 检测断链<span v-if="sitesStore.invalidCount > 0" class="site-invalid-count">({{ sitesStore.invalidCount }})</span></span>
             </button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-engines" @click="openSiteManagerViaQuery('engines')">🔍 引擎管理</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-background" @click="openSiteManagerViaQuery('background')">🖼️ 背景</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-category" @click="openSiteManagerViaQuery('category')">⚙️ 分类管理</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-backup" @click="openSiteManagerViaQuery('backup')">📦 备份</button>
-            <button type="button" class="site-action-btn" data-testid="stg-act-icons" @click="openSiteManagerViaQuery('icons')">🎨 图标管理</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-engines" @click="openSiteManagerViaQuery('engines')"><Icon name="search" /> 引擎管理</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-background" @click="openSiteManagerViaQuery('background')"><Icon name="image" /> 背景</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-category" @click="openSiteManagerViaQuery('category')"><Icon name="cog" /> 分类管理</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-backup" @click="openSiteManagerViaQuery('backup')"><Icon name="package" /> 备份</button>
+            <button type="button" class="site-action-btn" data-testid="stg-act-icons" @click="openSiteManagerViaQuery('icons')"><Icon name="palette" /> 图标管理</button>
           </div>
           <input
             ref="siteImportInput"
@@ -1287,8 +1287,8 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">整包导出工作台所有数据（待办/便签/日记/倒计时/密码/健康/记账/销售记账/工作台设置）为 JSON 文件；导入时当前数据将被覆盖</p>
           <div class="remind-actions">
-            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-export" @click="handleWbExport">📤 导出工作台备份</button>
-            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-import" @click="handleWbImportClick">📥 导入工作台备份</button>
+            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-export" @click="handleWbExport"><Icon name="upload" /> 导出工作台备份</button>
+            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-import" @click="handleWbImportClick"><Icon name="download" /> 导入工作台备份</button>
           </div>
         </div>
 
@@ -1467,8 +1467,8 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">独立导出销售记账七字段（商品/进货/收摊/支出/分类/设置）为 JSON 文件；导入时当前销售记账数据将被覆盖</p>
           <div class="remind-actions">
-            <button type="button" class="wb-menu-btn" data-testid="bizsettings-export" @click="handleBizExport">📤 导出销售备份</button>
-            <button type="button" class="wb-menu-btn" data-testid="bizsettings-import" @click="handleBizImportClick">📥 导入销售备份</button>
+            <button type="button" class="wb-menu-btn" data-testid="bizsettings-export" @click="handleBizExport"><Icon name="upload" /> 导出销售备份</button>
+            <button type="button" class="wb-menu-btn" data-testid="bizsettings-import" @click="handleBizImportClick"><Icon name="download" /> 导入销售备份</button>
           </div>
         </div>
 
@@ -1502,7 +1502,7 @@ onUnmounted(() => {
               <li>预览环境：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run serve / node server.cjs / pm2 start pm2.config.cjs</code>（内置 Node HTTP 服务）</li>
               <li>预览构建包：<code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">npm run preview</code>（Vite preview 已附加代理）</li>
             </ul>
-            ❗ 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
+            <Icon name="alert" /> 若将 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">dist/</code> 部署到其他纯静态托管（Nginx、GitHub Pages 等）但未挂载代理，会出现「Failed to fetch / CORS」报错。需自行在同域部署 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">/api/webdav-proxy</code>，或改成使用本项目的 <code style="background: rgba(0,0,0,.12); padding: 1px 5px; border-radius: 3px;">node server.cjs</code> 启动。
           </div>
 
           <div v-if="store.cloudSyncEnabled" class="remind-fields">
@@ -1652,7 +1652,7 @@ onUnmounted(() => {
 }
 
 .manager {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 1296px;
@@ -1667,14 +1667,14 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   flex-shrink: 0;
 }
 
 .manager-header h2 {
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin: 0;
 }
 
@@ -1682,7 +1682,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm);
@@ -1690,7 +1690,7 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .manager-body {
@@ -1701,7 +1701,7 @@ onUnmounted(() => {
 
 .hint {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   margin: 0 0 16px 0;
 }
 
@@ -1714,35 +1714,35 @@ onUnmounted(() => {
 
 .tab-btn {
   padding: 8px 16px;
-  border: 1px solid var(--border-color, var(--color-border));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
-  background-color: var(--bg-card, var(--color-bg-card));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background-color: var(--color-bg-card, var(--color-bg-card));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-size: 13px;
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .tab-btn:hover {
-  background-color: var(--bg-secondary, var(--color-bg-hover));
-  color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-primary, var(--color-primary));
 }
 
 .tab-btn.active {
   background-color: var(--color-primary-light, #eff6ff);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-weight: 600;
 }
 
 :root.dark .tab-btn {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .tab-btn:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .tab-btn.active {
@@ -1754,7 +1754,7 @@ onUnmounted(() => {
 .settings-grid {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-color, var(--color-border));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -1769,19 +1769,19 @@ onUnmounted(() => {
 }
 
 .grid-header {
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .settings-row {
-  border-top: 1px solid var(--border-color, var(--color-border));
+  border-top: 1px solid var(--color-border, var(--color-border));
 }
 
 .row-label {
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1796,33 +1796,33 @@ onUnmounted(() => {
 .num-input {
   width: 90px;
   padding: 6px 8px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm);
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .num-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .unit {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   white-space: nowrap;
 }
 
 /* 重置类按钮共用样式 */
 .row-reset,
 .btn-reset-all {
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
 }
 
@@ -1841,8 +1841,8 @@ onUnmounted(() => {
 
 .row-reset:hover,
 .btn-reset-all:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 底部操作栏 */
@@ -1852,13 +1852,13 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid var(--border-color, var(--color-border));
+  border-top: 1px solid var(--color-border, var(--color-border));
   flex-shrink: 0;
 }
 
 .footer-hint {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .footer-actions {
@@ -1868,17 +1868,17 @@ onUnmounted(() => {
 
 .btn-cancel {
   padding: 10px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
+  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 /* 工作台菜单/城市配置区块（独立于 .settings-grid，不复用其列定义——R6） */
@@ -1886,8 +1886,8 @@ onUnmounted(() => {
 .wb-city-config {
   margin-bottom: 20px;
   padding: 14px;
-  background-color: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
 }
 
@@ -1902,13 +1902,13 @@ onUnmounted(() => {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .wb-menu-hint {
   margin: 6px 0 12px;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .wb-menu-list {
@@ -1937,16 +1937,16 @@ onUnmounted(() => {
   box-sizing: border-box;
   padding: 6px 8px;
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text, var(--color-text));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .wb-menu-name-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .wb-menu-actions {
@@ -1960,16 +1960,16 @@ onUnmounted(() => {
   font-size: 12px;
   white-space: nowrap;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .wb-menu-btn:hover:not(:disabled) {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .wb-menu-btn:disabled {
@@ -1983,8 +1983,8 @@ onUnmounted(() => {
   width: 40px;
   height: 22px;
   border-radius: 999px;
-  border: 1px solid var(--border-color, var(--color-border));
-  background-color: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  background-color: var(--color-bg-card, var(--color-bg-hover));
   cursor: pointer;
   padding: 0;
   position: relative;
@@ -1998,13 +1998,13 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: var(--text-muted, var(--color-text-muted));
+  background-color: var(--color-text-muted, var(--color-text-muted));
   transition: transform var(--transition-fast, 0.15s ease), background-color var(--transition-fast, 0.15s ease);
 }
 
 .switch-btn.on {
-  background-color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .switch-btn.on .switch-thumb {
@@ -2023,13 +2023,13 @@ onUnmounted(() => {
 }
 
 :root.dark .switch-btn {
-  background-color: var(--input-bg, #374151);
-  border-color: var(--border-color, #4b5563);
+  background-color: var(--color-bg-input, #374151);
+  border-color: var(--color-border, #4b5563);
 }
 
 :root.dark .switch-btn.on {
-  background-color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 /* 数据时光机区块（复用 .wb-menu-config 容器，仅补充快照专属样式） */
@@ -2047,7 +2047,7 @@ onUnmounted(() => {
 
 .wb-snapshot-time {
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -2064,7 +2064,7 @@ onUnmounted(() => {
 .wb-cat-sub-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin-bottom: 8px;
 }
 
@@ -2083,9 +2083,9 @@ onUnmounted(() => {
   padding: 4px 10px;
   font-size: 13px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
 }
 
@@ -2093,14 +2093,14 @@ onUnmounted(() => {
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: var(--accent-color, var(--color-primary));
+  accent-color: var(--color-primary, var(--color-primary));
 }
 
 .wb-snapshot-source {
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .wb-snapshot-restore {
@@ -2110,43 +2110,43 @@ onUnmounted(() => {
 .wb-snapshot-empty {
   padding: 12px 0;
   font-size: 13px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* 暗色模式：沿用文件现有 :root.dark 变量覆盖惯例，确保区块文字可读 */
 :root.dark .wb-menu-config,
 :root.dark .wb-city-config {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .wb-menu-title {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .wb-menu-hint {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .wb-menu-name-input {
-  color: var(--text-primary, #f9fafb);
-  background-color: var(--input-bg, #111827);
-  border-color: var(--border-color, #374151);
+  color: var(--color-text, #f9fafb);
+  background-color: var(--color-bg-input, #111827);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .wb-menu-btn {
-  color: var(--text-secondary, #d1d5db);
-  background-color: var(--bg-card, #1f2937);
-  border-color: var(--border-color, #374151);
+  color: var(--color-text-secondary, #d1d5db);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .wb-snapshot-time {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .wb-snapshot-source,
 :root.dark .wb-snapshot-empty {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 /* 提醒设置区块：邮件配置字段行（输入框复用 .wb-menu-name-input，仅补标签列与操作区） */
@@ -2166,7 +2166,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 92px;
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .remind-actions {
@@ -2174,7 +2174,7 @@ onUnmounted(() => {
 }
 
 :root.dark .remind-label {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 @media (max-width: 640px) {
@@ -2241,14 +2241,14 @@ onUnmounted(() => {
 
 /* 站点管理暗色模式 */
 :root.dark .site-action-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .site-action-btn:hover:not(:disabled) {
-  background-color: var(--hover-bg, #374151);
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 </style>

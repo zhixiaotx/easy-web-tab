@@ -15,6 +15,7 @@ import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import Icon from '@/components/Icon.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
+import { useWorkbenchShortcuts } from '@/composables/useWorkbenchShortcuts'
 
 const router = useRouter()
 const store = useWorkbenchBusinessStore()
@@ -64,6 +65,17 @@ function navigateTo(section: string, filter?: string): void {
 }
 
 const showSettingsDialog = ref(false)
+
+// 快捷键：复用工作台通用快捷键（g 切换个人/销售工作台、[ ] 模块间循环；销售台无全局搜索，spotlight 恒 false）
+const spotlightOpen = ref(false)
+useWorkbenchShortcuts({
+  spotlightOpen,
+  getMenuKeys: () => SECTIONS.map((s) => s.key),
+  getCurrentSection: () => activeSection.value,
+  onNavigate: (key) => selectSection(key as SectionKey),
+  isSectionEnabled: () => true,
+  router
+})
 
 // ===== 右上角云同步按钮（与工作台复用同一套开关：cloudSyncEnabled 时在设置按钮左边显示） =====
 const cloudSync = useCloudSync()
@@ -126,6 +138,14 @@ onMounted(() => {
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
+        <button
+          v-if="settingsStore.workbenchPageVisible !== false"
+          class="bs-btn"
+          title="切换到个人工作台"
+          :aria-label="settingsStore.workbenchPageDisplayName"
+          data-testid="bs-workbench-link"
+          @click="router.push('/workbench')"
+        ><Icon name="toolbox" :size="15" /> {{ settingsStore.workbenchPageDisplayName }}</button>
       </div>
     </header>
 
@@ -136,6 +156,7 @@ onMounted(() => {
           class="bs-sidebar-toggle"
           data-testid="bs-sidebar-toggle"
           :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+          :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           @click="toggleSidebar"
         >
           <span class="bs-menu-icon">
@@ -149,6 +170,7 @@ onMounted(() => {
           class="bs-menu-item"
           :class="{ active: activeSection === item.key }"
           :title="item.label"
+          :aria-label="item.label"
           :data-testid="`bs-menu-${item.key}`"
           @click="selectSection(item.key)"
         >
@@ -206,17 +228,17 @@ onMounted(() => {
 }
 
 .bs-header-left h1 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-size-2xl, 20px);
+  font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text, #1e293b);
   white-space: nowrap;
 }
 
 .bs-stall-name {
   font-size: 13px;
-  color: var(--text-secondary, #64748b);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, #64748b);
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: 999px;
   padding: 2px 10px;
   white-space: nowrap;
@@ -355,55 +377,57 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg, #f8fafc);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* 暗色模式覆盖（模式参考 WorkbenchView） */
 :root.dark .bs-shell {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 :root.dark .bs-header {
-  background-color: var(--bg-secondary, #1f2937);
-  border-bottom-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .bs-header-left h1 {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bs-btn {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .bs-btn:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .bs-menu {
-  background-color: var(--bg-secondary, #1f2937);
-  border-right-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-right-color: var(--color-border, #374151);
 }
 
 :root.dark .bs-sidebar-toggle {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .bs-sidebar-toggle:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bs-menu-item {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .bs-menu-item:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bs-menu-item.active {
@@ -412,13 +436,13 @@ onMounted(() => {
 }
 
 :root.dark .bs-content {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 :root.dark .bs-stall-name {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 /* 移动端：左树横排、页面滚动恢复（复刻 WorkbenchView 断点） */
@@ -469,6 +493,21 @@ onMounted(() => {
 
   .bs-menu-item {
     white-space: nowrap;
+  }
+
+  /* P3-14 移动端触控目标 ≥40px（侧栏菜单项 / 头部按钮） */
+  .bs-menu-item {
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  .bs-btn {
+    min-height: 40px;
+  }
+
+  /* P3-13 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧 */
+  .bs-content {
+    padding: 12px;
   }
 }
 

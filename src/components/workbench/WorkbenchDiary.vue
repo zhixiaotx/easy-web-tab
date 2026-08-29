@@ -217,8 +217,8 @@ async function handleDelete(): Promise<void> {
   gap: 10px 12px;
   flex-wrap: wrap;
   padding: 12px 14px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -242,22 +242,22 @@ async function handleDelete(): Promise<void> {
   box-sizing: border-box;
   font-family: inherit;
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text, var(--color-text));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 保存（实心主色，仿 .nt-btn-query） */
 .dj-btn-primary {
   padding: 9px 16px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -268,18 +268,18 @@ async function handleDelete(): Promise<void> {
 }
 
 .dj-btn-primary:hover {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 /* 今日 / 预览切换（次级描边，仿 .nt-btn-reset） */
 .dj-btn-secondary,
 .dj-btn-toggle {
   padding: 9px 14px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
@@ -287,13 +287,13 @@ async function handleDelete(): Promise<void> {
 
 .dj-btn-secondary:hover,
 .dj-btn-toggle:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .dj-btn-toggle.active {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 删除（危险描边，仿 .btn-delete） */
@@ -302,21 +302,21 @@ async function handleDelete(): Promise<void> {
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
-  color: var(--error-color, var(--color-error));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-error, var(--color-error));
   border-radius: var(--radius-md, 8px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .dj-btn-danger:hover {
-  background: var(--error-color, var(--color-error));
+  background: var(--color-error, var(--color-error));
   color: #fff;
 }
 
 .dj-char-count {
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
 }
 
@@ -335,9 +335,9 @@ async function handleDelete(): Promise<void> {
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
-  color: var(--text-primary, var(--color-text));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text, var(--color-text));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -360,7 +360,7 @@ async function handleDelete(): Promise<void> {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 /* 卡片网格：auto-fill minmax(240px, 1fr) + gap 12px（用户指定） */
@@ -376,8 +376,8 @@ async function handleDelete(): Promise<void> {
   gap: 8px;
   padding: 14px;
   min-height: 190px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 12px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   cursor: pointer;
@@ -386,7 +386,7 @@ async function handleDelete(): Promise<void> {
 
 .dj-card:hover {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .dj-card-head {
@@ -399,7 +399,7 @@ async function handleDelete(): Promise<void> {
 .dj-card-date {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -413,7 +413,7 @@ async function handleDelete(): Promise<void> {
   padding: 1px 8px;
   border-radius: var(--radius-full, 999px);
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
 }
 
 /* 卡片预览：line-clamp 6 行 */
@@ -439,17 +439,17 @@ async function handleDelete(): Promise<void> {
 
 .dj-card-words {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* ===== 空态 ===== */
 .dj-empty {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -465,18 +465,18 @@ async function handleDelete(): Promise<void> {
 
 .page-btn {
   padding: 8px 14px;
-  border: 1px solid var(--border-color, var(--color-border));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  background-color: var(--bg-card, var(--color-bg-card));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background-color: var(--color-bg-card, var(--color-bg-card));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-size: 14px;
   cursor: pointer;
   transition: all var(--transition-fast, 0.2s);
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: var(--accent-color, var(--color-primary));
-  color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
 }
 
 .page-btn:disabled {
@@ -485,7 +485,7 @@ async function handleDelete(): Promise<void> {
 }
 
 .dj-page-info {
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-size: 14px;
   padding: 8px 12px;
 }
@@ -532,7 +532,7 @@ async function handleDelete(): Promise<void> {
 
 .dj-preview :deep(a),
 .dj-card-preview :deep(a) {
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   text-decoration: underline;
   word-break: break-all;
 }

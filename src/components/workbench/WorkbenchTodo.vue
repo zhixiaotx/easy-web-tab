@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from '../Icon.vue'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { filterTodos, dueInfo } from '@/composables/todoCore'
@@ -369,7 +370,7 @@ onUnmounted(() => {
       <div class="dialog" data-testid="td-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑待办' : '新增待办' }}</h3>
-          <button class="close-btn" @click="cancelForm">✕</button>
+          <button class="close-btn" @click="cancelForm"><Icon name="close" /></button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSave">
           <div class="form-group">
@@ -467,8 +468,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -477,7 +478,7 @@ onUnmounted(() => {
 .td-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .td-field-grow { flex: 1; min-width: 140px; }
 .td-field-grow :is(.td-field-desc, .td-field-title) { width: 100%; }
-.td-field-label { font-size: 13px; color: var(--text-secondary, var(--color-text-secondary)); }
+.td-field-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .td-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .search-select {
@@ -487,7 +488,7 @@ onUnmounted(() => {
 
 .search-btn {
   padding: 9px 16px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -498,24 +499,24 @@ onUnmounted(() => {
 }
 
 .search-btn:hover {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .search-reset-btn {
   padding: 9px 14px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .search-reset-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 操作栏 ===== */
@@ -529,12 +530,12 @@ onUnmounted(() => {
 
 .toolbar-count {
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .btn-add {
   padding: 10px 16px;
-  background-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -545,7 +546,7 @@ onUnmounted(() => {
 }
 
 .btn-add:hover {
-  background-color: var(--accent-hover, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .td-headbar-actions {
@@ -567,23 +568,23 @@ onUnmounted(() => {
   padding: 5px 14px;
   font-size: 13px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .td-cat-tab:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .td-cat-tab.active {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 卡片墙 ===== */
@@ -602,9 +603,9 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--td-color) 8%, transparent), transparent 55%);
-  border: 1px solid var(--border-color, var(--color-border));
+  border: 1px solid var(--color-border, var(--color-border));
   border-left: 4px solid var(--td-color);
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
@@ -616,7 +617,7 @@ onUnmounted(() => {
 .td-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
-  border-color: color-mix(in srgb, var(--td-color) 45%, var(--border-color, #e2e8f0));
+  border-color: color-mix(in srgb, var(--td-color) 45%, var(--color-border, #e2e8f0));
 }
 
 .td-card-head {
@@ -631,7 +632,7 @@ onUnmounted(() => {
   min-width: 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -639,7 +640,7 @@ onUnmounted(() => {
 
 .td-title.is-done {
   text-decoration: line-through;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* 优先级徽章 */
@@ -685,26 +686,26 @@ onUnmounted(() => {
 }
 
 .td-normal {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .td-today {
-  color: var(--warning-color, var(--color-warning));
+  color: var(--color-warning, var(--color-warning));
 }
 
 .td-overdue {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 .td-done {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   font-weight: 600;
 }
 
 .td-desc {
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -719,9 +720,9 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 /* Meta：截止日期 / 逾期 */
@@ -734,18 +735,18 @@ onUnmounted(() => {
 
 .td-date {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .td-date.overdue {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-weight: 600;
 }
 
 .overdue-tag {
   color: #fff;
-  background: var(--error-color, #ef4444);
+  background: var(--color-error, #ef4444);
   font-size: 12px;
   font-weight: 600;
   padding: 1px 8px;
@@ -769,39 +770,39 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: var(--accent-color, var(--color-primary));
+  accent-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-edit,
 .btn-delete {
   padding: 2px 8px;
   font-size: 11px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-edit:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-delete:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 /* ===== 空态 ===== */
 .empty-state {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -810,13 +811,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
 }
 
 .empty-invite:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .filter-empty {
@@ -839,7 +840,7 @@ onUnmounted(() => {
 }
 
 .dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: var(--dlg-w-wb-todo, 480px);
@@ -853,17 +854,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   position: sticky;
   top: 0;
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
 }
 
 .dialog-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin: 0;
 }
 
@@ -871,7 +872,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm, 6px);
@@ -879,7 +880,7 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .dialog-body {
@@ -897,7 +898,7 @@ onUnmounted(() => {
 
 .form-group > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .form-row-fields {
@@ -914,7 +915,7 @@ onUnmounted(() => {
 
 .field-label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .field-prio {
@@ -927,18 +928,18 @@ onUnmounted(() => {
 
 .form-input {
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .desc-input {
@@ -969,7 +970,7 @@ onUnmounted(() => {
 }
 
 .color-option.active {
-  box-shadow: 0 0 0 2px var(--bg-card, #ffffff), 0 0 0 4px var(--swatch);
+  box-shadow: 0 0 0 2px var(--color-bg-card, #ffffff), 0 0 0 4px var(--swatch);
 }
 
 .color-custom {
@@ -982,7 +983,7 @@ onUnmounted(() => {
   width: 36px;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--border-color, var(--color-border));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   background: none;
   cursor: pointer;
@@ -990,24 +991,24 @@ onUnmounted(() => {
 
 .color-custom-value {
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .color-reset {
   padding: 5px 10px;
   font-size: 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .color-reset:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .form-actions {
@@ -1018,7 +1019,7 @@ onUnmounted(() => {
 
 .btn-save {
   padding: 9px 18px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -1029,102 +1030,102 @@ onUnmounted(() => {
 }
 
 .btn-save:hover:not(:disabled) {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .btn-cancel {
   padding: 9px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
+  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 /* 禁用态（添加按钮）：亮灰底 + 白字在暗色下对比度不足，暗色覆盖见下 */
 .btn-add:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .td-search {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .td-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .empty-state {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .dialog-header {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .td-title {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .td-title.is-done {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .td-desc {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .td-date {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 /* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 :root.dark .btn-save:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .form-input,
 :root.dark select.form-input,
 :root.dark input.form-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .color-reset {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .search-reset-btn,
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .prio-high {
@@ -1162,21 +1163,21 @@ onUnmounted(() => {
 }
 
 :root.dark .td-cat-tab {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .td-cat-tab:hover {
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 /* 显式覆盖，避免 :root.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
 :root.dark .td-cat-tab.active {
   color: #fff;
-  background: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .td-cat-badge {
@@ -1186,8 +1187,8 @@ onUnmounted(() => {
 }
 
 :root.dark .btn-add:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 @media (max-width: 640px) {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 const emit = defineEmits<{
   close: []
 }>()
@@ -46,72 +47,72 @@ const shortcuts = [
 
 const features = [
   {
-    icon: '🔗',
+    icon: 'link',
     title: '网址管理',
     desc: '添加、编辑、删除网址。支持自动获取网站标题、描述和图标。'
   },
   {
-    icon: '📂',
+    icon: 'folder',
     title: '分类管理',
     desc: '内置视频音乐分类，可自定义添加新分类。历史分类自动迁移，不会丢失数据。'
   },
   {
-    icon: '🔖',
+    icon: 'bookmark',
     title: '标签筛选',
     desc: '每个网址可打多个标签，标签根据当前分类动态显示，方便精准筛选。'
   },
   {
-    icon: '🔗',
+    icon: 'link',
     title: '断链检测',
-    desc: '点击「检测断链」自动检测所有网址可用性，无效链接显示警告标记⚠️，鼠标悬停可手动取消失效标记。'
+    desc: '点击「检测断链」自动检测所有网址可用性，无效链接显示警告标记，鼠标悬停可手动取消失效标记。'
   },
   {
-    icon: '🔍',
+    icon: 'search',
     title: '全文搜索',
     desc: '支持按名称、描述、标签搜索，输入即显示结果。'
   },
   {
-    icon: '🔄',
+    icon: 'refresh',
     title: '拖拽排序',
     desc: '拖拽网址卡片交换位置，自动保存排序结果。'
   },
   {
-    icon: '📥',
+    icon: 'download',
     title: '导入/导出',
     desc: '导出为 Markdown 文件备份，支持按分类/搜索引擎/网址排序导出，上传 .md 文件批量导入，自动按 URL 去重。'
   },
   {
-    icon: '💾',
+    icon: 'save',
     title: '数据备份',
     desc: '自动保存最近10个版本的历史数据，支持一键恢复到任意历史版本。'
   },
   {
-    icon: '🌙',
+    icon: 'weather-night',
     title: '暗色模式',
     desc: '点击右上角月亮图标切换深色主题，适合夜间使用。图片背景模式下自动隐藏。'
   },
   {
-    icon: '🖼️',
+    icon: 'image',
     title: '背景图片',
     desc: '支持上传本地图片作为背景，图片背景模式下自动隐藏主题切换按钮。'
   },
   {
-    icon: '📈',
+    icon: 'trending-up',
     title: '点击频率排序',
     desc: '网址按点击频率自动排序，常用网址置顶，方便快速访问。'
   },
   {
-    icon: '🏷️',
+    icon: 'tag',
     title: '图标本地化',
     desc: '网站图标自动缓存到本地，无网络时也能正常显示，同时提供预设图标可选。'
   },
   {
-    icon: '🔎',
+    icon: 'search',
     title: '搜索引擎管理',
     desc: '添加/删除自定义搜索引擎，支持设置默认搜索，可在搜索栏快速切换。提供恢复默认按钮。'
   },
   {
-    icon: '🔒',
+    icon: 'lock',
     title: '密码管理',
     desc: 'AES-CBC 加密存储账号密码（位于「工作台」面板），支持主密码保护、一键复制、按网站名称搜索，新增加密存储时自动关联书签网站信息。'
   }
@@ -122,7 +123,7 @@ const features = [
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="help-modal">
       <div class="modal-header">
-        <h2>💡 使用帮助</h2>
+        <h2><Icon name="lightbulb" /> 使用帮助</h2>
         <button class="close-btn" @click="emit('close')" title="关闭">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -136,7 +137,7 @@ const features = [
         <section class="help-section download-section">
           <div class="download-card">
             <div class="download-info">
-              <span class="download-icon">📦</span>
+              <span class="download-icon"><Icon name="package" /></span>
               <div>
                 <h4>下载示例数据</h4>
                 <p>下载预置的网址导航示例文件 <code>site.md</code> 与图标数据 <code>icons.json</code>，包含常用网站分类、链接和预设图标。网址文件下载后在管理后台点击「导入」上传，即可快速初始化导航页。</p>
@@ -165,14 +166,14 @@ const features = [
 
         <!-- 功能介绍 -->
         <section class="help-section">
-          <h3 class="section-title">🎯 功能介绍</h3>
+          <h3 class="section-title"><Icon name="target" /> 功能介绍</h3>
           <div class="features-grid">
             <div
               v-for="feature in features"
               :key="feature.title"
               class="feature-item"
             >
-              <span class="feature-icon">{{ feature.icon }}</span>
+              <span class="feature-icon"><Icon :name="feature.icon" /></span>
               <div class="feature-content">
                 <h4>{{ feature.title }}</h4>
                 <p>{{ feature.desc }}</p>
@@ -183,7 +184,7 @@ const features = [
 
         <!-- 快捷键 -->
         <section class="help-section">
-          <h3 class="section-title">⌨️ 键盘快捷键</h3>
+          <h3 class="section-title"><Icon name="keyboard" /> 键盘快捷键</h3>
           <div class="shortcuts-list">
             <div
               v-for="shortcut in shortcuts"
@@ -198,7 +199,7 @@ const features = [
 
         <!-- 页面模式 -->
         <section class="help-section">
-          <h3 class="section-title">📄 页面模式</h3>
+          <h3 class="section-title"><Icon name="document" /> 页面模式</h3>
           <div class="mode-info">
             <div class="mode-item">
               <span class="mode-badge mode-admin">管理后台</span>
@@ -213,7 +214,7 @@ const features = [
 
         <!-- 数据存储 -->
         <section class="help-section">
-          <h3 class="section-title">💾 数据存储</h3>
+          <h3 class="section-title"><Icon name="save" /> 数据存储</h3>
           <ul class="storage-list">
             <li><strong>内置数据</strong>：构建进包，不可动态修改</li>
             <li><strong>用户数据</strong>：存储于浏览器 <code>localStorage</code>，包括网址、分类、搜索引擎</li>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { computed } from 'vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { WorkbenchData } from '@/types'
@@ -61,7 +62,7 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
     <div class="conflict-overlay" role="dialog" aria-modal="true" aria-labelledby="conflict-title">
       <div class="conflict-dialog">
         <header class="conflict-head">
-          <h2 id="conflict-title" class="conflict-title">⚠️ 云同步冲突</h2>
+          <h2 id="conflict-title" class="conflict-title"><Icon name="alert" /> 云同步冲突</h2>
         </header>
 
         <div class="conflict-body">
@@ -106,7 +107,7 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
             <p class="diff-hint" style="color: #16a34a;">建议选择「合并双方数据」，按模块取并集保留双方新增项。</p>
           </div>
 
-          <p class="merge-hint">🔀 合并：按模块逐条按 ID 去重，保留双方新增项；同条目取较新版本。密码库与本地设置保留当前设备。</p>
+          <p class="merge-hint"><Icon name="merge" /> 合并：按模块逐条按 ID 去重，保留双方新增项；同条目取较新版本。密码库与本地设置保留当前设备。</p>
         </div>
 
         <footer class="conflict-foot">
@@ -114,22 +115,22 @@ const diffSummary = computed<{ name: string; local: number; remote: number }[]>(
             type="button"
             class="conflict-btn conflict-btn-danger"
             @click="cloudSync.resolveConflict('remote')"
-          >☁️ 云端覆盖本地</button>
+          ><Icon name="cloud" /> 云端覆盖本地</button>
           <button
             type="button"
             class="conflict-btn conflict-btn-primary"
             @click="cloudSync.resolveConflict('local')"
-          >💻 本地覆盖云端</button>
+          ><Icon name="monitor" /> 本地覆盖云端</button>
           <button
             type="button"
             class="conflict-btn conflict-btn-merge"
             @click="cloudSync.resolveConflict('merge')"
-          >🔀 合并双方数据</button>
+          ><Icon name="merge" /> 合并双方数据</button>
           <button
             type="button"
             class="conflict-btn conflict-btn-ghost"
             @click="cloudSync.resolveConflict('cancel')"
-          >✖️ 取消</button>
+          ><Icon name="close" /> 取消</button>
         </footer>
       </div>
     </div>

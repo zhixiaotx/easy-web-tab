@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, computed } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import type { SearchEngine } from '../stores/searchEngines'
@@ -120,7 +121,7 @@ function truncateUrl(url: string, maxLength = 40) {
     <div class="manager">
       <div class="manager-header">
         <h2>搜索引擎管理</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div class="manager-body">
@@ -169,7 +170,7 @@ function truncateUrl(url: string, maxLength = 40) {
             :class="{ 'is-default': engine.isDefault }"
           >
             <div class="sort-controls">
-              <span class="lock-icon">🔒</span>
+              <span class="lock-icon"><Icon name="lock" /></span>
             </div>
             
             <!-- 编辑模式 -->
@@ -180,8 +181,8 @@ function truncateUrl(url: string, maxLength = 40) {
                 class="edit-input url built-in-url"
                 placeholder="URL"
               />
-              <button class="btn-icon" @click="saveBuiltInUrl">✓</button>
-              <button class="btn-icon" @click="cancelEditBuiltIn">✕</button>
+              <button class="btn-icon" @click="saveBuiltInUrl"><Icon name="check" /></button>
+              <button class="btn-icon" @click="cancelEditBuiltIn"><Icon name="close" /></button>
             </template>
             
             <!-- 显示模式 -->
@@ -196,7 +197,7 @@ function truncateUrl(url: string, maxLength = 40) {
                 class="btn-icon" 
                 @click="startEditBuiltIn(engine)" 
                 title="编辑URL"
-              >✏️</button>
+              ><Icon name="pencil" /></button>
             </template>
           </div>
         </div>
@@ -224,8 +225,8 @@ function truncateUrl(url: string, maxLength = 40) {
                 class="edit-input url"
                 placeholder="URL"
               />
-              <button class="btn-icon" @click="saveEdit">✓</button>
-              <button class="btn-icon" @click="cancelEdit">✕</button>
+              <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
+              <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
             </template>
             <template v-else>
               <div class="sort-controls">
@@ -247,8 +248,8 @@ function truncateUrl(url: string, maxLength = 40) {
                 <span v-if="engine.isDefault" class="default-tag">默认</span>
               </span>
               <span class="engine-url" :title="engine.url">{{ truncateUrl(engine.url) }}</span>
-              <button class="btn-icon" @click="startEdit(engine)">✏️</button>
-              <button class="btn-icon delete" @click="handleDelete(engine.id)">🗑️</button>
+              <button class="btn-icon" @click="startEdit(engine)"><Icon name="pencil" /></button>
+              <button class="btn-icon delete" @click="handleDelete(engine.id)"><Icon name="trash" /></button>
             </template>
           </div>
         </div>

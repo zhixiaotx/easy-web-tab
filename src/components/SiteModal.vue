@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, watch, computed } from 'vue'
 import type { Site } from '../types'
 import { useUrlMetadata } from '../composables/useUrlMetadata'
@@ -236,7 +237,7 @@ const handleFetchMetadata = async () => {
   if (!duplicate) {
     errors.value.url = ''
   } else {
-    errors.value.url = `⚠️ 该网址已存在（${duplicate.name}），继续获取将覆盖现有条目`
+    errors.value.url = `该网址已存在（${duplicate.name}），继续获取将覆盖现有条目`
   }
 
   // 优先尝试匹配预置图标（不调用外部 API）
@@ -358,7 +359,7 @@ const handleSubmit = () => {
       <div class="modal">
       <div class="modal-header">
         <h2>{{ isEditing ? '编辑网站' : '添加网站' }}</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <form class="modal-body" @submit.prevent="handleSubmit">

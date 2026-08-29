@@ -808,8 +808,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -838,7 +838,7 @@ onUnmounted(() => {
 
 .nt-field-label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .nt-search-actions {
@@ -859,23 +859,23 @@ onUnmounted(() => {
   padding: 5px 14px;
   font-size: 13px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .nt-cat-tab:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .nt-cat-tab.active {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 类型下拉：复用 form-input 基础外观，固定合理宽度 */
@@ -887,7 +887,7 @@ onUnmounted(() => {
 /* 查询（实心主色） */
 .nt-btn-query {
   padding: 9px 16px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -898,25 +898,25 @@ onUnmounted(() => {
 }
 
 .nt-btn-query:hover {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 /* 重置（次级描边） */
 .nt-btn-reset {
   padding: 9px 14px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .nt-btn-reset:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 操作栏（无卡片：新增/分类管理 + 计数，与 WorkbenchTodo .td-headbar 同构）===== */
@@ -937,12 +937,12 @@ onUnmounted(() => {
 
 .nt-toolbar-count {
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .nt-btn-add {
   padding: 10px 16px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -953,7 +953,7 @@ onUnmounted(() => {
 }
 
 .nt-btn-add:hover {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 /* ===== 网格卡片 ===== */
@@ -1057,9 +1057,9 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 .note-color-tag {
@@ -1188,10 +1188,10 @@ onUnmounted(() => {
 .timeline-more-btn {
   margin: 2px 0 6px;
   padding: 6px 12px;
-  border: 1px dashed var(--border-color, var(--color-border));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  background: color-mix(in srgb, var(--accent-color, #3b82f6) 8%, transparent);
-  color: var(--accent-color, var(--color-primary));
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+  color: var(--color-primary, var(--color-primary));
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1199,7 +1199,7 @@ onUnmounted(() => {
 }
 
 .timeline-more-btn:hover {
-  background: color-mix(in srgb, var(--accent-color, #3b82f6) 16%, transparent);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 16%, transparent);
 }
 
 .timeline-item {
@@ -1217,7 +1217,7 @@ onUnmounted(() => {
   top: 20px;
   bottom: -6px;
   width: 2px;
-  background: var(--border-color, var(--color-border));
+  background: var(--color-border, var(--color-border));
 }
 
 .timeline-item:last-child::before {
@@ -1230,8 +1230,8 @@ onUnmounted(() => {
   height: 16px;
   margin-top: 3px;
   border-radius: 50%;
-  background: var(--accent-color, var(--color-primary));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #3b82f6) 25%, transparent);
+  background: var(--color-primary, var(--color-primary));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #3b82f6) 25%, transparent);
   z-index: 1;
 }
 
@@ -1243,7 +1243,7 @@ onUnmounted(() => {
 .timeline-item-time {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1299,7 +1299,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   margin-top: 8px;
   padding-top: 10px;
-  border-top: 1px dashed var(--border-color, var(--color-border));
+  border-top: 1px dashed var(--color-border, var(--color-border));
 }
 
 .timeline-dt-input {
@@ -1320,11 +1320,11 @@ onUnmounted(() => {
 /* ===== 空态 ===== */
 .empty-state {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -1353,8 +1353,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 10px;
   padding: 18px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 14px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
@@ -1384,8 +1384,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 14px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
@@ -1394,7 +1394,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .form-input {
@@ -1402,16 +1402,16 @@ onUnmounted(() => {
   box-sizing: border-box;
   font-family: inherit;
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text, var(--color-text));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .note-content-input {
@@ -1431,7 +1431,7 @@ onUnmounted(() => {
   min-width: 44px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .note-type-radios {
@@ -1446,9 +1446,9 @@ onUnmounted(() => {
   padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
@@ -1458,14 +1458,14 @@ onUnmounted(() => {
 }
 
 .type-radio-option:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .type-radio-option.active {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .note-cat-select {
@@ -1487,7 +1487,7 @@ onUnmounted(() => {
   padding: 5px 10px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   border: 2px solid transparent;
   border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
@@ -1498,12 +1498,12 @@ onUnmounted(() => {
 }
 
 .color-option:hover {
-  border-color: var(--border-light, var(--color-border));
+  border-color: var(--color-border-hover, var(--color-border));
 }
 
 .color-option.active {
-  border-color: var(--accent-color, var(--color-primary));
-  color: var(--text-primary, var(--color-text));
+  border-color: var(--color-primary, var(--color-primary));
+  color: var(--color-text, var(--color-text));
 }
 
 .color-swatch {
@@ -1558,18 +1558,18 @@ onUnmounted(() => {
   color: #fff;
   white-space: nowrap;
   cursor: pointer;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   transition: background-color var(--transition-fast, 0.15s ease);
 }
 
 .btn-save:hover:not(:disabled) {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
@@ -1578,15 +1578,15 @@ onUnmounted(() => {
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
+  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 .btn-delete {
@@ -1594,15 +1594,15 @@ onUnmounted(() => {
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
-  color: var(--error-color, var(--color-error));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-error, var(--color-error));
   border-radius: var(--radius-md, 8px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-delete:hover {
-  background: var(--error-color, var(--color-error));
+  background: var(--color-error, var(--color-error));
   color: #fff;
 }
 
@@ -1666,66 +1666,66 @@ onUnmounted(() => {
 }
 
 :root.dark .note-form {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .timeline-expand-panel {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .empty-state {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 /* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 :root.dark .btn-save:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .btn-add:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .nt-search {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .nt-search .form-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .nt-cat-tab {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .nt-cat-tab:hover {
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 /* 显式覆盖，避免 :root.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
 :root.dark .nt-cat-tab.active {
   color: #fff;
-  background: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .nt-btn-reset {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .nt-btn-reset:hover {
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .note-cat-badge {
@@ -1735,34 +1735,34 @@ onUnmounted(() => {
 }
 
 :root.dark .type-radio-option {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .type-radio-option:hover {
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .type-radio-option.active {
   color: #fff;
-  background: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .note-cat-select {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .timeline-item-time {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .timeline-item::before {
-  background: var(--border-color, #374151);
+  background: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {
@@ -1845,7 +1845,7 @@ onUnmounted(() => {
 
 .note-content :deep(a),
 .timeline-item-content :deep(a) {
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   text-decoration: underline;
   word-break: break-all;
 }

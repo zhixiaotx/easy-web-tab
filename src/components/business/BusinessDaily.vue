@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from '../Icon.vue'
 // 收摊记录：日记录卡片（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
 // P0-1：结构化商品明细行展示（折叠/展开、损耗高亮、已删除标记）
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
@@ -213,7 +214,7 @@ async function handleDelete(id: string): Promise<void> {
       <div class="biz-dialog bizday-dialog" data-testid="bizday-dialog">
         <div class="biz-dialog-header">
           <h3>收摊记录</h3>
-          <button class="biz-dialog-close" @click="showDialog = false">✕</button>
+          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
         <form class="biz-dialog-body" @submit.prevent="handleSave">
           <div class="biz-field">
@@ -333,7 +334,7 @@ async function handleDelete(id: string): Promise<void> {
 
 .bizday-count {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizday-add {
@@ -341,7 +342,7 @@ async function handleDelete(id: string): Promise<void> {
   font-size: 14px;
   cursor: pointer;
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   white-space: nowrap;
@@ -355,9 +356,9 @@ async function handleDelete(id: string): Promise<void> {
   padding: 40px 20px;
   text-align: center;
   font-size: 14px;
-  color: var(--text-muted, var(--color-text-muted));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  color: var(--color-text-muted, var(--color-text-muted));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -373,8 +374,8 @@ async function handleDelete(id: string): Promise<void> {
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
@@ -385,7 +386,7 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .bizday-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizday-head {
@@ -398,14 +399,14 @@ async function handleDelete(id: string): Promise<void> {
 .bizday-date {
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .bizday-revenue {
   font-size: 18px;
   font-weight: 700;
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
   font-variant-numeric: tabular-nums;
 }
 
@@ -422,9 +423,9 @@ async function handleDelete(id: string): Promise<void> {
   grid-template-columns: minmax(60px, 1.1fr) minmax(32px, 0.55fr) minmax(32px, 0.55fr) minmax(44px, 0.65fr) minmax(56px, 0.85fr);
   gap: 3px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   padding: 0 2px 4px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .bizday-detail-th {
@@ -443,7 +444,7 @@ async function handleDelete(id: string): Promise<void> {
   gap: 3px;
   padding: 3px 2px;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   align-items: center;
 }
@@ -466,23 +467,23 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .bizday-detail-row:not(.deleted) .bizday-detail-td.name:hover {
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   text-decoration: underline;
 }
 
 .bizday-detail-td.loss-red {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-weight: 700;
 }
 
 .bizday-detail-td.sold-bold {
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizday-detail-td.sub-bold {
   font-weight: 700;
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 /* P0-3：编辑弹框行库存上下文 */
@@ -506,7 +507,7 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   gap: 8px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   flex-wrap: wrap;
 }
 
@@ -518,24 +519,24 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   gap: 12px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   padding: 4px 4px 0;
   flex-wrap: wrap;
 }
 
 .bizday-row-expected.stock-warn {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 .bizday-stock-warn {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-weight: 700;
   margin-left: 4px;
 }
 
 .bizday-row-subtotal {
   font-variant-numeric: tabular-nums;
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
   font-weight: 600;
 }
 
@@ -543,7 +544,7 @@ async function handleDelete(id: string): Promise<void> {
   display: flex;
   gap: 14px;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizday-stat {
@@ -555,7 +556,7 @@ async function handleDelete(id: string): Promise<void> {
 .bizday-stat strong {
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
@@ -570,31 +571,31 @@ async function handleDelete(id: string): Promise<void> {
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizday-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizday-btn.del:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 .bizday-btn.save {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizday-btn.save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
@@ -602,9 +603,9 @@ async function handleDelete(id: string): Promise<void> {
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: none;
-  border: 1px dashed var(--accent-color, var(--color-primary));
+  border: 1px dashed var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 8px);
 }
 
@@ -619,7 +620,7 @@ async function handleDelete(id: string): Promise<void> {
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
 }
 
@@ -639,7 +640,7 @@ async function handleDelete(id: string): Promise<void> {
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizday-num .biz-input {
@@ -653,14 +654,14 @@ async function handleDelete(id: string): Promise<void> {
   flex-wrap: wrap;
   gap: 6px 14px;
   padding: 10px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizday-revenue-preview strong {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
   font-size: 18px;
 }
 
@@ -673,7 +674,7 @@ async function handleDelete(id: string): Promise<void> {
 
 .bizday-preview-sep strong {
   font-size: 16px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 /* 弹框 */
@@ -689,7 +690,7 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 .biz-dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: 560px;
@@ -703,21 +704,21 @@ async function handleDelete(id: string): Promise<void> {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .biz-dialog-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-dialog-close {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
 
@@ -736,7 +737,7 @@ async function handleDelete(id: string): Promise<void> {
 
 .biz-field > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .biz-form-actions {
@@ -748,26 +749,26 @@ async function handleDelete(id: string): Promise<void> {
 .biz-input {
   box-sizing: border-box;
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 :root.dark .bizday-card,
 :root.dark .biz-dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizday-date {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bizday-revenue {
@@ -775,19 +776,19 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 :root.dark .bizday-row {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .bizday-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .biz-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 1200px) {

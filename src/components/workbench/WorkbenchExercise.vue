@@ -281,7 +281,7 @@ onUnmounted(() => {
         <div class="dialog list-dialog" data-testid="ex-list-dialog">
           <div class="dialog-header">
             <h3>运动记录（{{ store.records.exercise.length }}）</h3>
-            <button class="close-btn" @click="closeListDialog">✕</button>
+            <button class="close-btn" @click="closeListDialog"><Icon name="close" /></button>
           </div>
           <div ref="listEl" class="ex-list" :class="{ 'ex-list-scroll': !paging.fitsOnePage }">
             <div v-for="rec in paging.pageItems" :key="rec.id" class="ex-item" data-testid="ex-item">
@@ -310,7 +310,7 @@ onUnmounted(() => {
         <div class="dialog" data-testid="ex-dialog">
           <div class="dialog-header">
             <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
-            <button class="close-btn" @click="closeTargetDialog">✕</button>
+            <button class="close-btn" @click="closeTargetDialog"><Icon name="close" /></button>
           </div>
           <form class="dialog-body" @submit.prevent="handleSaveTarget">
             <div class="form-group">
@@ -358,7 +358,7 @@ onUnmounted(() => {
         <div class="dialog" data-testid="ex-dialog">
           <div class="dialog-header">
             <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-            <button class="close-btn" @click="cancelRecordForm">✕</button>
+            <button class="close-btn" @click="cancelRecordForm"><Icon name="close" /></button>
           </div>
           <form class="dialog-body" @submit.prevent="handleSaveRecord">
             <div class="form-row-fields">
@@ -456,15 +456,15 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .stat-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .stat-header {
@@ -484,7 +484,7 @@ onUnmounted(() => {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -495,17 +495,17 @@ onUnmounted(() => {
   padding: 4px 10px;
   font-size: 12px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-primary, var(--color-primary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .nav-btn:hover {
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
@@ -514,44 +514,44 @@ onUnmounted(() => {
   padding: 4px 10px;
   font-size: 12px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
-  color: var(--text-muted, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-muted, var(--color-text-secondary));
   white-space: nowrap;
 }
 
 .stat-value {
   font-size: 26px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 
 .stat-sub {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-/* 达标行 + 进度条（--accent-color） */
+/* 达标行 + 进度条（--color-primary） */
 .ex-attainment {
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .ex-progress {
   height: 8px;
   border-radius: var(--radius-full, 999px);
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   overflow: hidden;
 }
 
 .ex-progress-fill {
   height: 100%;
   border-radius: var(--radius-full, 999px);
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   transition: width var(--transition-fast, 0.15s ease);
 }
 
@@ -566,24 +566,24 @@ onUnmounted(() => {
 
 .btn-toggle-list {
   padding: 10px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-toggle-list:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-add {
   padding: 10px 16px;
-  background-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -594,7 +594,7 @@ onUnmounted(() => {
 }
 
 .btn-add:hover {
-  background-color: var(--accent-hover, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 /* ===== 记录列表（弹框内 5 列卡片网格：5 卡/行 × maxRows 3 = 15 卡/页）===== */
@@ -610,14 +610,14 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px 12px;
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
   background-image: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--accent-color, #3b82f6) 7%, transparent),
+    color-mix(in srgb, var(--color-primary, #3b82f6) 7%, transparent),
     transparent 55%
   );
-  border: 1px solid var(--border-color, var(--color-border));
-  border-left: 4px solid var(--accent-color, var(--color-primary));
+  border: 1px solid var(--color-border, var(--color-border));
+  border-left: 4px solid var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -633,7 +633,7 @@ onUnmounted(() => {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
@@ -643,20 +643,20 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
 
 .ex-meta {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
 }
 
 .ex-note {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -676,50 +676,50 @@ onUnmounted(() => {
 .btn-delete {
   padding: 4px 10px;
   font-size: 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-edit:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-delete:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 .btn-clear {
   padding: 9px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-clear:hover {
-  background: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  background: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
   color: #fff;
 }
 
 /* ===== 空态 ===== */
 .empty-state {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -728,13 +728,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
 }
 
 .empty-invite:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 弹框（复用 WorkbenchTodo 体系）===== */
@@ -750,7 +750,7 @@ onUnmounted(() => {
 }
 
 .dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: 480px;
@@ -764,17 +764,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   position: sticky;
   top: 0;
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
 }
 
 .dialog-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin: 0;
 }
 
@@ -782,7 +782,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm, 6px);
@@ -790,7 +790,7 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .dialog-body {
@@ -808,7 +808,7 @@ onUnmounted(() => {
 
 .form-group > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .form-row-fields {
@@ -825,7 +825,7 @@ onUnmounted(() => {
 
 .field-label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .field-date {
@@ -850,18 +850,18 @@ onUnmounted(() => {
 
 .form-input {
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .desc-input {
@@ -881,7 +881,7 @@ onUnmounted(() => {
 
 .btn-save {
   padding: 9px 18px;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
@@ -892,60 +892,60 @@ onUnmounted(() => {
 }
 
 .btn-save:hover:not(:disabled) {
-  background: var(--accent-hover, var(--color-primary-hover));
+  background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .btn-cancel {
   padding: 9px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-cancel:hover {
-  background: var(--hover-bg, var(--color-bg-active));
+  background: var(--color-bg-hover, var(--color-bg-active));
 }
 
 /* ===== 暗色模式覆盖 ===== */
 :root.dark .stat-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .ex-item {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .empty-state {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .dialog-header {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .ex-date {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .ex-meta,
 :root.dark .ex-note {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .ex-type-badge {
@@ -955,35 +955,35 @@ onUnmounted(() => {
 }
 
 :root.dark .ex-progress {
-  background-color: var(--input-bg, #374151);
+  background-color: var(--color-bg-input, #374151);
 }
 
 :root.dark .btn-clear {
-  background-color: var(--bg-card, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
 :root.dark .btn-save:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .form-input,
 :root.dark select.form-input,
 :root.dark input.form-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .btn-toggle-list,
 :root.dark .btn-cancel,
 :root.dark .btn-edit,
 :root.dark .btn-delete {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {

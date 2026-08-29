@@ -165,7 +165,7 @@ html.dark.app-has-background.image .wb-shell .anchor-card {
   width: 100%;
   height: 120px;
   border-radius: 8px;
-  border: 2px solid var(--border-color, #e2e8f0);
+  border: 2px solid var(--color-border, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -174,7 +174,7 @@ html.dark.app-has-background.image .wb-shell .anchor-card {
 }
 
 .background-preview.none {
-  background: var(--bg-primary, #f8fafc);
+  background: var(--color-bg, #f8fafc);
 }
 
 .background-preview.solid {
@@ -196,19 +196,19 @@ html.dark.app-has-background.image .wb-shell .anchor-card {
   width: 80px;
   height: 60px;
   border-radius: 8px;
-  border: 2px solid var(--border-color, #e2e8f0);
+  border: 2px solid var(--color-border, #e2e8f0);
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
 }
 
 .background-option:hover {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   transform: scale(1.05);
 }
 
 .background-option.active {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
@@ -233,7 +233,7 @@ html.dark.app-has-background.image .wb-shell .anchor-card {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--error-color, #ef4444);
+  background: var(--color-error, #ef4444);
   color: white;
   border: none;
   cursor: pointer;
@@ -251,23 +251,23 @@ html.dark.app-has-background.image .wb-shell .anchor-card {
 
 /* 暗色模式下的背景管理弹窗 */
 :root.dark .background-manager {
-  background: var(--bg-secondary, #1f2937);
+  background: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .background-option {
-  border-color: var(--border-color, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .background-preview {
-  border-color: var(--border-color, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 /* 暗色模式下的内容透明度设置区块 */
 :root.dark .opacity-section {
-  background: var(--bg-primary, #111827);
-  border-color: var(--border-color, #374151);
+  background: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .opacity-hint {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }

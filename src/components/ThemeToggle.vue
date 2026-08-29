@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
 
@@ -8,7 +9,7 @@ const shouldShow = computed(() => themeStore.backgroundType !== 'image')
 
 <template>
   <button v-if="shouldShow" class="theme-toggle" @click="themeStore.toggleTheme" title="切换主题">
-    {{ themeStore.theme === 'light' ? '🌙' : '☀️' }}
+    <Icon :name="themeStore.theme === 'light' ? 'weather-night' : 'weather-sunny'" />
   </button>
 </template>
 

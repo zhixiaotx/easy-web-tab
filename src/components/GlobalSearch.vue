@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useSearchEnginesStore } from '../stores/searchEngines'
 import { useSitesStore } from '../stores/sites'
@@ -250,7 +251,7 @@ function openSite(url: string) {
             >
               <!-- 网站图标 -->
               <img v-if="site.icon" :src="site.icon" class="site-icon" />
-              <span v-else class="site-icon-placeholder">🔗</span>
+              <span v-else class="site-icon-placeholder"><Icon name="link" /></span>
               <!-- 网站名称 + 分类 -->
               <div class="site-info">
                 <span class="history-text">{{ site.name }}</span>
@@ -283,7 +284,7 @@ function openSite(url: string) {
         </div>
       </div>
       <button class="search-btn" @click="handleSearch">
-        🔍
+        <Icon name="search" />
       </button>
     </div>
   </div>
@@ -500,64 +501,64 @@ function openSite(url: string) {
 
 /* 暗色模式 */
 :root.dark .global-search {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .engine-select {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-primary, #f9fafb);
-  border-right-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text, #f9fafb);
+  border-right-color: var(--color-border, #374151);
 }
 
 :root.dark .search-input {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .search-input::placeholder {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .history-dropdown {
-  background: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .history-header {
-  border-bottom-color: var(--border-color, #374151);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .history-title {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .clear-history {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .clear-history:hover {
-  background: var(--hover-bg, #374151);
+  background: var(--color-bg-hover, #374151);
   color: #ef4444;
 }
 
 :root.dark .history-item:hover {
-  background: var(--hover-bg, #374151);
+  background: var(--color-bg-hover, #374151);
 }
 
 :root.dark .history-text {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .local-search-item:hover {
-  background: var(--hover-bg, #374151);
+  background: var(--color-bg-hover, #374151);
 }
 
 :root.dark .site-icon,
 :root.dark .site-icon-placeholder {
-  background: var(--hover-bg, #374151);
+  background: var(--color-bg-hover, #374151);
 }
 
 :root.dark .site-category {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 @media (max-width: 768px) {

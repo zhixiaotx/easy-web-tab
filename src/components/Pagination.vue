@@ -213,18 +213,18 @@ const handleSizeChange = (event: Event) => {
 }
 
 :global(.dark) .page-btn {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
-  color: var(--text-secondary, #d1d5db);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :global(.dark) .page-size-select {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
-  color: var(--text-secondary, #d1d5db);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :global(.dark) .page-info {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 </style>

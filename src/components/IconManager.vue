@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIconsStore, type MergedIcon, type CustomIcon, type IconExportData } from '@/stores/icons'
 import { PRESET_ICONS, type PresetIcon } from '@/composables/presetIcons'
@@ -180,8 +181,8 @@ function getIconId(icon: MergedIcon): string {
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
-        <h2>🎨 图标管理</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <h2><Icon name="palette" /> 图标管理</h2>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div class="manager-body">
@@ -195,10 +196,10 @@ function getIconId(icon: MergedIcon): string {
             @change="handleImport"
           />
           <button class="btn-secondary" @click="importInput?.click()">
-            📥 导入
+            <Icon name="download" /> 导入
           </button>
           <button class="btn-secondary" @click="handleExport">
-            📤 导出
+            <Icon name="upload" /> 导出
           </button>
           <span class="import-export-hint">
             自定义图标: {{ store.customIcons.length }} 个
@@ -217,7 +218,7 @@ function getIconId(icon: MergedIcon): string {
               @change="handleUpload"
             />
             <button class="btn-add" @click="fileInput?.click()">
-              📁 选择文件
+              <Icon name="folder" /> 选择文件
             </button>
             <span class="upload-hint">支持 PNG/SVG/GIF，最大 500KB</span>
           </div>
@@ -229,7 +230,7 @@ function getIconId(icon: MergedIcon): string {
             v-model="searchQuery"
             type="text"
             class="search-input"
-            placeholder="🔍 搜索图标名称..."
+            placeholder="搜索图标名称..."
           />
         </div>
 
@@ -269,8 +270,8 @@ function getIconId(icon: MergedIcon): string {
                 <span class="icon-manager-category">{{ icon.category }}</span>
               </div>
               <div class="icon-manager-actions">
-                <button class="btn-icon" @click="saveEdit">✓</button>
-                <button class="btn-icon" @click="cancelEdit">✕</button>
+                <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
+                <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
               </div>
             </template>
 
@@ -287,8 +288,8 @@ function getIconId(icon: MergedIcon): string {
                 </span>
               </div>
               <div v-if="isCustom(icon)" class="icon-manager-actions">
-                <button class="btn-icon" @click="startEdit(icon)" title="编辑">✏️</button>
-                <button class="btn-icon delete" @click="handleDelete(getIconId(icon))" title="删除">🗑️</button>
+                <button class="btn-icon" @click="startEdit(icon)" title="编辑"><Icon name="pencil" /></button>
+                <button class="btn-icon delete" @click="handleDelete(getIconId(icon))" title="删除"><Icon name="trash" /></button>
               </div>
             </template>
           </div>

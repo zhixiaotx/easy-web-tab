@@ -316,15 +316,15 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .stat-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .stat-header {
@@ -344,7 +344,7 @@ onMounted(() => {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -362,7 +362,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 2px;
   padding: 10px 14px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
   min-width: 96px;
 }
@@ -370,13 +370,13 @@ onMounted(() => {
 .hb-summary-value {
   font-size: 20px;
   font-weight: 700;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .hb-summary-label {
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* ===== 新增/编辑表单 ===== */
@@ -399,23 +399,23 @@ onMounted(() => {
 
 .field-label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .form-input {
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   box-sizing: border-box;
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .hb-color-picker {
@@ -441,14 +441,14 @@ onMounted(() => {
 }
 
 .hb-color-option.active {
-  border-color: var(--text-primary, var(--color-text));
+  border-color: var(--color-text, var(--color-text));
   transform: scale(1.1);
 }
 
 .btn-primary {
   align-self: flex-start;
   padding: 10px 24px;
-  background-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -459,29 +459,29 @@ onMounted(() => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--accent-hover, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .btn-primary:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
 .btn-secondary {
   padding: 10px 20px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   white-space: nowrap;
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 习惯卡片网格（右栏，多列并排） ===== */
@@ -498,20 +498,20 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
 }
 
 .hb-card:hover {
-  border-color: var(--hb-color, var(--accent-color, var(--color-primary)));
+  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
 }
 
 .hb-card.is-checked .hb-card-name {
   text-decoration: line-through;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* 左侧颜色条（习惯主色，随卡片 hover 强调） */
@@ -522,7 +522,7 @@ onMounted(() => {
   bottom: 0;
   width: 4px;
   border-radius: var(--radius-md, 10px) 0 0 var(--radius-md, 10px);
-  background-color: var(--hb-color, var(--accent-color, var(--color-primary)));
+  background-color: var(--hb-color, var(--color-primary, var(--color-primary)));
 }
 
 .hb-card-icon {
@@ -542,7 +542,7 @@ onMounted(() => {
 .hb-card-name {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -567,13 +567,13 @@ onMounted(() => {
 }
 
 .hb-badge-streak {
-  background: var(--bg-secondary, var(--color-bg-hover));
-  color: var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-primary, var(--color-primary));
 }
 
 .hb-badge-week {
-  background: var(--bg-secondary, var(--color-bg-hover));
-  color: var(--text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .hb-card-actions {
@@ -592,89 +592,89 @@ onMounted(() => {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: var(--hb-color, var(--accent-color, var(--color-primary)));
+  accent-color: var(--hb-color, var(--color-primary, var(--color-primary)));
 }
 
 .btn-edit,
 .btn-delete {
   padding: 4px 10px;
   font-size: 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .btn-edit:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .btn-delete:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 /* ===== 空态 ===== */
 .empty-state {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
 /* ===== 暗色模式覆盖（模式参考 WorkbenchPomodoro）===== */
 :root.dark .stat-card,
 :root.dark .hb-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .hb-summary-item {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .hb-badge-streak,
 :root.dark .hb-badge-week {
-  background-color: var(--input-bg, #374151);
+  background-color: var(--color-bg-input, #374151);
 }
 
 :root.dark .hb-card.is-checked .hb-card-name {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .hb-color-option.active {
-  border-color: var(--text-primary, #f9fafb);
+  border-color: var(--color-text, #f9fafb);
 }
 
 :root.dark .btn-primary:disabled {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .btn-secondary,
 :root.dark .btn-edit,
 :root.dark .btn-delete {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .form-input,
 :root.dark select.form-input,
 :root.dark input.form-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .empty-state {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 @media (max-width: 640px) {

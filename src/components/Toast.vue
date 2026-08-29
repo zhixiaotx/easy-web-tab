@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { onUnmounted } from 'vue'
 import type { ToastType } from '../composables/useToast'
 
@@ -11,10 +12,10 @@ const emit = defineEmits<{
 }>()
 
 const icons: Record<ToastType, string> = {
-  success: '✓',
-  error: '✕',
-  warning: '⚠',
-  info: 'ℹ'
+  success: 'check',
+  error: 'close',
+  warning: 'alert',
+  info: 'info'
 }
 
 const colors: Record<ToastType, string> = {
@@ -45,7 +46,7 @@ onUnmounted(() => {
           @click="removeToast(toast.id)"
         >
           <span class="toast-icon" :style="{ color: colors[toast.type] }">
-            {{ icons[toast.type] }}
+            <Icon :name="icons[toast.type]" />
           </span>
           <span class="toast-message">{{ toast.message }}</span>
           <button class="toast-close" @click.stop="removeToast(toast.id)">×</button>
@@ -144,18 +145,18 @@ onUnmounted(() => {
 
 /* Dark mode */
 :root.dark .toast {
-  background: var(--bg-secondary, #1f2937);
+  background: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .toast-message {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .toast-close {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .toast-close:hover {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 </style>

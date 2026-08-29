@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore, type BackgroundType, type CustomBackground } from '../stores/theme'
 
@@ -232,7 +233,7 @@ function clearBackground() {
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="background-manager">
       <div class="modal-header">
-        <h2>🎨 背景管理</h2>
+        <h2><Icon name="palette" /> 背景管理</h2>
         <button class="close-btn" @click="emit('close')" title="关闭">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -258,28 +259,28 @@ function clearBackground() {
               :class="{ active: selectedType === 'none' }"
               @click="selectType('none')"
             >
-              🚫 无
+              <Icon name="cancel" /> 无
             </button>
             <button 
               class="type-btn" 
               :class="{ active: selectedType === 'solid' }"
               @click="selectType('solid')"
             >
-              🎨 纯色
+              <Icon name="palette" /> 纯色
             </button>
             <button 
               class="type-btn" 
               :class="{ active: selectedType === 'gradient' }"
               @click="selectType('gradient')"
             >
-              🌈 渐变
+              <Icon name="gradient" /> 渐变
             </button>
             <button 
               class="type-btn" 
               :class="{ active: selectedType === 'image' }"
               @click="selectType('image')"
             >
-              🖼️ 图片
+              <Icon name="image" /> 图片
             </button>
           </div>
         </div>
@@ -311,7 +312,7 @@ function clearBackground() {
           <!-- 自定义渐变创建器 -->
           <div class="custom-gradient-section">
             <button v-if="!showGradientCreator" class="add-gradient-btn" @click="showGradientCreator = true">
-              ✏️ 修改渐变
+              <Icon name="pencil" /> 修改渐变
             </button>
             
             <div v-else class="gradient-creator">
@@ -353,7 +354,7 @@ function clearBackground() {
               @change="handleUpload"
             />
             <button class="upload-btn" @click="fileInput?.click()">
-              📁 上传本地图片
+              <Icon name="folder" /> 上传本地图片
             </button>
             <span class="upload-hint">支持 JPG/PNG/GIF/WebP，最大 5MB</span>
           </div>

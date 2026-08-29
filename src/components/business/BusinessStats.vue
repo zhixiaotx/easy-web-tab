@@ -169,7 +169,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
         <div v-if="expenseBreakdown.length === 0" class="bizstats-empty">暂无支出数据</div>
         <div v-else class="bizstats-pie-wrap">
           <svg :viewBox="`0 0 ${DONUT_CX * 2} ${DONUT_CY * 2}`" class="bizstats-donut">
-            <circle :cx="DONUT_CX" :cy="DONUT_CY" :r="DONUT_R" fill="none" :stroke="'var(--bg-secondary, var(--color-bg-hover))'" :stroke-width="16" />
+            <circle :cx="DONUT_CX" :cy="DONUT_CY" :r="DONUT_R" fill="none" :stroke="'var(--color-bg-card, var(--color-bg-hover))'" :stroke-width="16" />
             <circle
               v-for="(seg, i) in expenseBreakdown"
               :key="seg.categoryId"
@@ -183,8 +183,8 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
               :stroke-dashoffset="-((expenseBreakdown.slice(0, i).reduce((s, c) => s + c.percent, 0)) / 100) * DONUT_CIRC"
               transform="rotate(-90, 80, 80)"
             />
-            <text :x="DONUT_CX" :y="DONUT_CY - 4" text-anchor="middle" font-size="11" fill="var(--text-muted)">总支出</text>
-            <text :x="DONUT_CX" :y="DONUT_CY + 14" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text-primary)">{{ compactAmount(expenseBreakdown.reduce((s, c) => s + c.amount, 0)) }}</text>
+            <text :x="DONUT_CX" :y="DONUT_CY - 4" text-anchor="middle" font-size="11" fill="var(--color-text-muted)">总支出</text>
+            <text :x="DONUT_CX" :y="DONUT_CY + 14" text-anchor="middle" font-size="14" font-weight="700" fill="var(--color-text)">{{ compactAmount(expenseBreakdown.reduce((s, c) => s + c.amount, 0)) }}</text>
           </svg>
           <div class="bizstats-pie-legend">
             <div v-for="(seg, i) in expenseBreakdown" :key="seg.categoryId" class="bizstats-pie-legend-item">
@@ -203,7 +203,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
         <div v-if="categoryBreakdown.length === 0" class="bizstats-empty">暂无数据</div>
         <div v-else class="bizstats-pie-wrap">
           <svg :viewBox="`0 0 ${DONUT_CX * 2} ${DONUT_CY * 2}`" class="bizstats-donut">
-            <circle :cx="DONUT_CX" :cy="DONUT_CY" :r="DONUT_R" fill="none" :stroke="'var(--bg-secondary, var(--color-bg-hover))'" :stroke-width="16" />
+            <circle :cx="DONUT_CX" :cy="DONUT_CY" :r="DONUT_R" fill="none" :stroke="'var(--color-bg-card, var(--color-bg-hover))'" :stroke-width="16" />
             <circle
               v-for="seg in donutSegments"
               :key="seg.categoryId"
@@ -217,8 +217,8 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
               :stroke-dashoffset="seg.dashOffset"
               transform="rotate(-90, 80, 80)"
             />
-            <text :x="DONUT_CX" :y="DONUT_CY - 4" text-anchor="middle" font-size="11" fill="var(--text-muted)">总营业额</text>
-            <text :x="DONUT_CX" :y="DONUT_CY + 14" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text-primary)">{{ compactAmount(categoryBreakdown.reduce((s, c) => s + c.revenue, 0)) }}</text>
+            <text :x="DONUT_CX" :y="DONUT_CY - 4" text-anchor="middle" font-size="11" fill="var(--color-text-muted)">总营业额</text>
+            <text :x="DONUT_CX" :y="DONUT_CY + 14" text-anchor="middle" font-size="14" font-weight="700" fill="var(--color-text)">{{ compactAmount(categoryBreakdown.reduce((s, c) => s + c.revenue, 0)) }}</text>
           </svg>
           <div class="bizstats-pie-legend">
             <div v-for="seg in donutSegments" :key="seg.categoryId" class="bizstats-pie-legend-item">
@@ -260,8 +260,8 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
@@ -270,7 +270,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizstats-head {
@@ -301,17 +301,17 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   padding: 4px 12px;
   font-size: 12px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizstats-btn.active {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizstats-svg-wrap {
@@ -327,22 +327,22 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 }
 
 .bizstats-gridline {
-  stroke: var(--border-color, #e2e8f0);
+  stroke: var(--color-border, #e2e8f0);
   stroke-dasharray: 4 4;
 }
 
 .bizstats-zero {
-  stroke: var(--text-muted, #94a3b8);
+  stroke: var(--color-text-muted, #94a3b8);
   stroke-width: 1;
 }
 
 .bizstats-axis {
-  fill: var(--text-muted, #94a3b8);
+  fill: var(--color-text-muted, #94a3b8);
   font-variant-numeric: tabular-nums;
 }
 
 .bizstats-bar.revenue {
-  fill: var(--accent-color, var(--color-primary));
+  fill: var(--color-primary, var(--color-primary));
 }
 
 .bizstats-bar.cost {
@@ -350,7 +350,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 }
 
 .bizstats-bar.profit {
-  fill: var(--success-color, var(--color-success));
+  fill: var(--color-success, var(--color-success));
 }
 
 .bizstats-bar.loss {
@@ -358,7 +358,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 }
 
 .bizstats-bar-label {
-  fill: var(--text-muted, #94a3b8);
+  fill: var(--color-text-muted, #94a3b8);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
@@ -367,7 +367,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizstats-legend-item {
@@ -384,7 +384,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 }
 
 .dot.revenue {
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
 }
 
 .dot.cost {
@@ -392,7 +392,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 }
 
 .dot.profit {
-  background: var(--success-color, var(--color-success));
+  background: var(--color-success, var(--color-success));
 }
 
 .dot.loss {
@@ -453,7 +453,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizstats-pie-legend-item .dot {
@@ -472,12 +472,12 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 
 .bizstats-pie-legend-val {
   font-weight: 600;
-  color: var(--text-primary, var(--color-text-primary));
+  color: var(--color-text, var(--color-text-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .bizstats-pie-legend-rev {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-variant-numeric: tabular-nums;
 }
 
@@ -486,18 +486,18 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   padding: 20px 0;
   text-align: center;
   font-size: 13px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 :root.dark .bizstats-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizstats-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .bizstats-bar.cost {

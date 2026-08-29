@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import type { CountdownItem } from '@/stores/countdowns'
@@ -66,8 +67,8 @@ async function toggleEmailReminder(item: CountdownItem) {
   <div class="manager-overlay" @click.self="emit('close')">
     <div class="manager">
       <div class="manager-header">
-        <h2>⏳ 倒计时</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <h2><Icon name="timer-sand" /> 倒计时</h2>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div class="manager-body">
@@ -97,7 +98,7 @@ async function toggleEmailReminder(item: CountdownItem) {
                 :checked="item.emailReminder === true"
                 @change="toggleEmailReminder(item)"
               />
-              <span>📧 邮件提醒</span>
+              <span><Icon name="email" /> 邮件提醒</span>
             </label>
           </div>
         </div>
@@ -119,7 +120,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .manager {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 480px;
@@ -133,17 +134,17 @@ async function toggleEmailReminder(item: CountdownItem) {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   position: sticky;
   top: 0;
-  background: var(--bg-card, var(--color-bg-card));
+  background: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .manager-header h2 {
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   margin: 0;
 }
 
@@ -151,7 +152,7 @@ async function toggleEmailReminder(item: CountdownItem) {
   background: none;
   border: none;
   font-size: 18px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm);
@@ -159,7 +160,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 }
 
 .close-btn:hover {
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .manager-body {
@@ -179,14 +180,14 @@ async function toggleEmailReminder(item: CountdownItem) {
   align-items: stretch;
   gap: 8px;
   padding: 14px 16px;
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 
 .countdown-item:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 卡片顶部行式头部：名称/徽标/时间/剩余（保持原有横向布局） */
@@ -203,16 +204,16 @@ async function toggleEmailReminder(item: CountdownItem) {
   align-items: center;
   gap: 6px;
   padding-top: 8px;
-  border-top: 1px dashed var(--border-color, var(--color-border));
+  border-top: 1px dashed var(--color-border, var(--color-border));
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
   user-select: none;
   transition: color var(--transition-fast, 0.15s ease);
 }
 
 .countdown-email-toggle:hover {
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
 }
 
 .email-toggle-input {
@@ -235,7 +236,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 .countdown-name {
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -246,9 +247,9 @@ async function toggleEmailReminder(item: CountdownItem) {
   font-size: 12px;
   padding: 1px 8px;
   border-radius: var(--radius-full);
-  background: var(--bg-secondary, var(--color-bg-hover));
-  color: var(--accent-color, var(--color-primary));
-  border: 1px solid var(--accent-color, var(--color-primary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-primary, var(--color-primary));
+  border: 1px solid var(--color-primary, var(--color-primary));
   opacity: 0.85;
 }
 
@@ -348,7 +349,7 @@ async function toggleEmailReminder(item: CountdownItem) {
 
 .countdown-time {
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .countdown-remaining {
@@ -360,28 +361,28 @@ async function toggleEmailReminder(item: CountdownItem) {
 
 /* 剩余时间状态色 */
 .status-normal {
-  color: var(--success-color, var(--color-success));
+  color: var(--color-success, var(--color-success));
 }
 
 .status-urgent {
-  color: var(--warning-color, var(--color-warning));
+  color: var(--color-warning, var(--color-warning));
 }
 
 .status-critical {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 .status-expired {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* 空状态 */
 .empty-state {
   text-align: center;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   font-size: 14px;
   padding: 40px 20px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md);
 }
 

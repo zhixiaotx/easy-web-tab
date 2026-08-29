@@ -103,7 +103,7 @@ function handleAdd(): void {
     <div class="bizcat-dialog" :data-testid="`bizcat-dialog-${kind}`">
       <div class="bizcat-header">
         <h3>{{ isProduct ? '商品分类管理' : '支出分类管理' }}</h3>
-        <button class="bizcat-close" @click="emit('close')">✕</button>
+        <button class="bizcat-close" @click="emit('close')"><Icon name="close" /></button>
       </div>
       <div class="bizcat-body">
         <p class="bizcat-hint">勾选控制标签页显示；{{ isProduct ? '内置分类可删除（删除后该分类商品归未分类）' : '内置分类不可删除，可改名与排序' }}</p>
@@ -188,7 +188,7 @@ function handleAdd(): void {
 }
 
 .bizcat-dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: 460px;
@@ -203,7 +203,7 @@ function handleAdd(): void {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
   flex-shrink: 0;
 }
 
@@ -211,14 +211,14 @@ function handleAdd(): void {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .bizcat-close {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
 
@@ -233,7 +233,7 @@ function handleAdd(): void {
 .bizcat-hint {
   margin: 0;
   font-size: 12px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .bizcat-list {
@@ -265,15 +265,15 @@ function handleAdd(): void {
   box-sizing: border-box;
   padding: 6px 8px;
   font-size: 13px;
-  color: var(--text-primary, var(--color-text));
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text, var(--color-text));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
 }
 
 .bizcat-name:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizcat-actions {
@@ -287,21 +287,21 @@ function handleAdd(): void {
   font-size: 12px;
   white-space: nowrap;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizcat-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizcat-del:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 .bizcat-add {
@@ -309,33 +309,33 @@ function handleAdd(): void {
   align-items: center;
   gap: 8px;
   padding-top: 4px;
-  border-top: 1px dashed var(--border-color, var(--color-border));
+  border-top: 1px dashed var(--color-border, var(--color-border));
 }
 
 .bizcat-add-btn {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 暗色模式 */
 :root.dark .bizcat-dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .bizcat-name {
-  color: var(--text-primary, #f9fafb);
-  background-color: var(--input-bg, #374151);
-  border-color: var(--border-color, #374151);
+  color: var(--color-text, #f9fafb);
+  background-color: var(--color-bg-input, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .bizcat-btn {
-  color: var(--text-secondary, #d1d5db);
-  background-color: var(--bg-card, #1f2937);
-  border-color: var(--border-color, #374151);
+  color: var(--color-text-secondary, #d1d5db);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .bizcat-hint {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 </style>

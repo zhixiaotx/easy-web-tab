@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCategoriesStore } from '../stores/categories'
 import { useSitesStore } from '../stores/sites'
@@ -106,7 +107,7 @@ const sortedCustomCategories = computed(() =>
     <div class="manager">
       <div class="manager-header">
         <h2>分类管理</h2>
-        <button class="close-btn" @click="emit('close')">✕</button>
+        <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
       <div class="manager-body">
@@ -158,7 +159,7 @@ const sortedCustomCategories = computed(() =>
               :key="cat.id"
               class="category-item built-in"
             >
-              <span class="sort-hint">🔒</span>
+              <span class="sort-hint"><Icon name="lock" /></span>
               <span class="category-icon">{{ cat.icon }}</span>
               <span class="category-name">{{ cat.name }}</span>
               <span class="site-count">({{ getSiteCount(cat.id) }})</span>
@@ -187,8 +188,8 @@ const sortedCustomCategories = computed(() =>
                   @keyup.enter="saveEdit"
                   @keyup.escape="cancelEdit"
                 />
-                <button class="btn-icon" @click="saveEdit">✓</button>
-                <button class="btn-icon" @click="cancelEdit">✕</button>
+                <button class="btn-icon" @click="saveEdit"><Icon name="check" /></button>
+                <button class="btn-icon" @click="cancelEdit"><Icon name="close" /></button>
               </template>
               <template v-if="editingId === cat.id">
                 <div class="edit-icon-suggestions">
@@ -221,8 +222,8 @@ const sortedCustomCategories = computed(() =>
                 <span class="category-icon">{{ cat.icon }}</span>
                 <span class="category-name">{{ cat.name }}</span>
                 <span class="site-count">({{ getSiteCount(cat.id) }})</span>
-                <button class="btn-icon" @click="startEdit(cat)">✏️</button>
-                <button class="btn-icon delete" @click="handleDelete(cat.id)">🗑️</button>
+                <button class="btn-icon" @click="startEdit(cat)"><Icon name="pencil" /></button>
+                <button class="btn-icon delete" @click="handleDelete(cat.id)"><Icon name="trash" /></button>
               </template>
             </div>
           </div>

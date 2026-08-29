@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { computed } from 'vue'
 import { useSitesStore } from '../stores/sites'
 
@@ -16,7 +17,7 @@ const handleClear = () => {
 
 <template>
   <div class="search-bar">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon"><Icon name="search" /></span>
     <input
       v-model="inputValue"
       type="text"
@@ -28,7 +29,7 @@ const handleClear = () => {
       class="clear-btn"
       @click="handleClear"
     >
-      ✕
+      <Icon name="close" />
     </button>
   </div>
 </template>

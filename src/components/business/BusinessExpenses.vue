@@ -195,7 +195,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       <div class="biz-dialog bizexp-dialog" data-testid="bizexp-dialog">
         <div class="biz-dialog-header">
           <h3>{{ editingDateOrig ? '编辑支出记录' : '新增支出记录' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false">✕</button>
+          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
         <form class="biz-dialog-body" @submit.prevent="handleSave">
           <div class="biz-field">
@@ -292,23 +292,23 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 
 .bizexp-count {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizexp-cat-btn {
   padding: 7px 12px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizexp-cat-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizexp-add {
@@ -316,7 +316,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   font-size: 14px;
   cursor: pointer;
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: var(--radius-md, 8px);
   white-space: nowrap;
@@ -330,9 +330,9 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   padding: 40px 20px;
   text-align: center;
   font-size: 14px;
-  color: var(--text-muted, var(--color-text-muted));
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px dashed var(--border-color, var(--color-border));
+  color: var(--color-text-muted, var(--color-text-muted));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
 }
 
@@ -348,8 +348,8 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
   transition: border-color var(--transition-fast, 0.15s ease);
@@ -358,7 +358,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 .bizexp-card:hover {
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizexp-head {
@@ -371,14 +371,14 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .bizexp-date {
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
 
 .bizexp-total {
   font-size: 18px;
   font-weight: 700;
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-variant-numeric: tabular-nums;
 }
 
@@ -394,9 +394,9 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   font-size: 11px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   padding: 0 4px 4px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .bizexp-detail-th {
@@ -410,7 +410,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   gap: 6px;
   padding: 3px 4px;
   font-size: 12px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   align-items: center;
 }
@@ -422,7 +422,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 .bizexp-detail-td.muted {
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 /* 分类徽标 + 金额色，直接嵌在明细行 */
@@ -430,16 +430,16 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   font-size: 12px;
   padding: 2px 8px;
   border-radius: var(--radius-full, 999px);
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
   white-space: nowrap;
   justify-self: start;
 }
 
 .bizexp-amt {
   font-weight: 700;
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
 }
 
 .bizexp-actions {
@@ -452,31 +452,31 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: var(--text-secondary, var(--color-text-secondary));
-  background: var(--bg-secondary, var(--color-bg-hover));
-  border: 1px solid var(--border-color, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-sm, 6px);
   transition: all var(--transition-fast, 0.15s ease);
 }
 
 .bizexp-btn:hover {
-  color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizexp-btn.del:hover {
-  color: var(--error-color, var(--color-error));
-  border-color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
 }
 
 .bizexp-btn.save {
   color: #fff;
-  background: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .bizexp-btn.save:disabled {
-  background: var(--text-muted, var(--color-text-muted));
+  background: var(--color-text-muted, var(--color-text-muted));
   cursor: not-allowed;
 }
 
@@ -492,7 +492,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   grid-template-columns: 1.1fr 0.9fr 1.4fr auto;
   gap: 8px;
   padding: 8px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
   align-items: center;
 }
@@ -505,22 +505,22 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   background: none;
-  border: 1px dashed var(--accent-color, var(--color-primary));
+  border: 1px dashed var(--color-primary, var(--color-primary));
   border-radius: var(--radius-md, 8px);
 }
 
 .bizexp-preview {
   padding: 10px 12px;
-  background: var(--bg-secondary, var(--color-bg-hover));
+  background: var(--color-bg-card, var(--color-bg-hover));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizexp-preview strong {
-  color: var(--error-color, var(--color-error));
+  color: var(--color-error, var(--color-error));
   font-size: 18px;
   font-weight: 700;
 }
@@ -538,7 +538,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 .biz-dialog {
-  background-color: var(--bg-card, var(--color-bg-card));
+  background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg, 12px);
   width: 100%;
   max-width: 560px;
@@ -552,21 +552,21 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color, var(--color-border));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
 }
 
 .biz-dialog-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-dialog-close {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--text-muted, var(--color-text-muted));
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
 }
 
@@ -585,7 +585,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 
 .biz-field > label {
   font-size: 13px;
-  color: var(--text-secondary, var(--color-text-secondary));
+  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .biz-form-actions {
@@ -597,26 +597,26 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .biz-input {
   box-sizing: border-box;
   padding: 9px 12px;
-  background-color: var(--input-bg, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background-color: var(--color-bg-input, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   font-size: 14px;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .biz-input:focus {
   outline: none;
-  border-color: var(--accent-color, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 :root.dark .bizexp-card,
 :root.dark .biz-dialog {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
 :root.dark .bizexp-date {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .bizexp-total,
@@ -625,20 +625,20 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 }
 
 :root.dark .bizexp-row {
-  background-color: var(--bg-card, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .bizexp-btn,
 :root.dark .bizexp-cat-btn {
-  background-color: var(--bg-card, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .biz-input {
-  background-color: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {

@@ -146,11 +146,14 @@ function handleSpotlightSelect(action: SpotlightAction) {
 }
 
 // 工作台快捷键：Alt+K 打开全局搜索（输入框内跳过）、Ctrl+Alt+1..9 跳转菜单（按设置 store 当前顺序）、
-// Esc 关闭全局搜索（幂等）
+// Esc 关闭全局搜索（幂等）；g 切换个人/销售工作台，[ / ] 在模块间循环切换
 useWorkbenchShortcuts({
   spotlightOpen,
   getMenuKeys: () => menuItems.value.map((item) => item.key),
-  onNavigate: (key) => navigateTo(key as SectionKey)
+  getCurrentSection: () => activeSection.value,
+  onNavigate: (key) => navigateTo(key as SectionKey),
+  isSectionEnabled: (key) => settingsStore.isWorkbenchMenuEnabled(key),
+  router
 })
 
 function pad2(n: number): string {
@@ -231,6 +234,14 @@ async function handleSyncNowClick(): Promise<void> {
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="wb-btn" title="设置" data-testid="wb-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
+        <button
+          v-if="settingsStore.businessPageVisible !== false"
+          class="wb-btn"
+          title="切换到销售记账工作台"
+          :aria-label="settingsStore.businessPageDisplayName"
+          data-testid="wb-business-link"
+          @click="router.push('/business')"
+        ><Icon name="store" :size="15" /> {{ settingsStore.businessPageDisplayName }}</button>
       </div>
     </header>
 
@@ -241,6 +252,7 @@ async function handleSyncNowClick(): Promise<void> {
           class="wb-sidebar-toggle"
           data-testid="wb-sidebar-toggle"
           :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+          :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
           @click="toggleSidebar"
         >
           <span class="wb-menu-icon">
@@ -254,6 +266,7 @@ async function handleSyncNowClick(): Promise<void> {
           class="wb-menu-item"
           :class="{ active: activeSection === item.key }"
           :title="item.label"
+          :aria-label="item.label"
           :data-testid="`wb-menu-${item.key}`"
           @click="navigateTo(item.key)"
         >
@@ -321,8 +334,8 @@ async function handleSyncNowClick(): Promise<void> {
 }
 
 .wb-header-left h1 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-size-2xl, 20px);
+  font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text, #1e293b);
   white-space: nowrap;
 }
@@ -460,55 +473,57 @@ async function handleSyncNowClick(): Promise<void> {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg, #f8fafc);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* 暗色模式覆盖（模式参考 DisplayView.vue:199-215 与 dark.css:4-44） */
 :root.dark .wb-shell {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 :root.dark .wb-header {
-  background-color: var(--bg-secondary, #1f2937);
-  border-bottom-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .wb-header-left h1 {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .wb-btn {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .wb-btn:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .wb-menu {
-  background-color: var(--bg-secondary, #1f2937);
-  border-right-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-right-color: var(--color-border, #374151);
 }
 
 :root.dark .wb-sidebar-toggle {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .wb-sidebar-toggle:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .wb-menu-item {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .wb-menu-item:hover {
-  background-color: var(--hover-bg, #374151);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .wb-menu-item.active {
@@ -517,13 +532,13 @@ async function handleSyncNowClick(): Promise<void> {
 }
 
 :root.dark .wb-content {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 /* 移动端菜单底边框沿用亮色 token，暗色下需覆盖 */
 @media (max-width: 768px) {
   :root.dark .wb-menu {
-    border-bottom-color: var(--border-color, #374151);
+    border-bottom-color: var(--color-border, #374151);
   }
 }
 
@@ -579,6 +594,21 @@ async function handleSyncNowClick(): Promise<void> {
   .wb-menu-item {
     white-space: nowrap;
     scroll-snap-align: start;
+  }
+
+  /* P3-14 移动端触控目标 ≥40px（侧栏菜单项 / 头部按钮） */
+  .wb-menu-item {
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  .wb-btn {
+    min-height: 40px;
+  }
+
+  /* P3-13 窄屏间距压缩：内容区内边距收窄 */
+  .wb-content {
+    padding: 12px;
   }
 }
 

@@ -2,22 +2,21 @@
 
 /* 基础变量覆盖 - 增强对比度 */
 :root.dark {
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --bg-card: #1f2937;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
-  --border-color: #374151;
-  --border-light: #4b5563;
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --shadow-color: rgba(0, 0, 0, 0.4);
-  --hover-bg: #374151;
-  --input-bg: #374151;
+  --color-bg: #111827;
+  --color-bg-card: #1f2937;
+  --color-text: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #9ca3af;
+  --color-border: #374151;
+  --color-border-hover: #4b5563;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-bg-hover: #374151;
+  --color-bg-input: #374151;
 
   /* 暗色阴影覆盖 */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -49,8 +48,8 @@
 }
 
 :root.dark body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
 
 /* 全局字体优化 */
@@ -62,143 +61,143 @@
 
 /* 通用组件 */
 :root.dark .container {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 /* 有背景时，container 不需要单独设置背景色（由 background.css 处理） */
 
 :root.dark .header {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 /* 分类标签容器 */
 :root.dark .category-tabs,
 :root.dark .category-container {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 :root.dark .category-tabs .tabs-wrapper,
 :root.dark .category-wrapper {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 /* 按钮 */
 :root.dark .btn-action {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .btn-action:hover {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
-  border-color: var(--accent-color);
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 :root.dark .btn-add {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
 }
 
 :root.dark .btn-add:hover:not(:disabled) {
-  background-color: var(--accent-hover);
+  background-color: var(--color-primary-hover);
 }
 
 :root.dark .btn-submit {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
 }
 
 :root.dark .btn-fetch {
-  background-color: var(--success-color);
+  background-color: var(--color-success);
 }
 
 :root.dark .btn-cancel {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
 }
 
 /* 输入框 - 修复白色问题 */
 :root.dark input,
 :root.dark textarea,
 :root.dark select {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 :root.dark input:focus,
 :root.dark textarea:focus,
 :root.dark select:focus {
-  border-color: var(--accent-color) !important;
-  background-color: var(--input-bg) !important;
+  border-color: var(--color-primary) !important;
+  background-color: var(--color-bg-input) !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 :root.dark input::placeholder,
 :root.dark textarea::placeholder {
-  color: var(--text-muted) !important;
+  color: var(--color-text-muted) !important;
 }
 
 /* 网站卡片 - 修复白色问题 */
 :root.dark .site-card {
-  background-color: var(--bg-card);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-color: var(--color-border);
 }
 
 :root.dark .site-card:hover {
-  border-color: var(--accent-color);
-  box-shadow: 0 8px 24px var(--shadow-color);
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 24px var(--color-shadow);
 }
 
 :root.dark .site-name {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .site-desc {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .favicon {
-  background-color: var(--hover-bg);
+  background-color: var(--color-bg-hover);
 }
 
 :root.dark .action-btn {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .action-btn:hover {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 /* 分类标签 */
 :root.dark .category-tab {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .category-tab:hover,
 :root.dark .category-tab.active {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
   color: white;
-  border-color: var(--accent-color);
+  border-color: var(--color-primary);
 }
 
 :root.dark .category-count {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 /* 标签筛选 */
 :root.dark .tag {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .tag:hover,
 :root.dark .tag.active {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
   color: white;
-  border-color: var(--accent-color);
+  border-color: var(--color-primary);
 }
 
 /* 模态框 - 修复白色问题 */
@@ -207,70 +206,70 @@
 }
 
 :root.dark .modal {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 :root.dark .modal-header {
-  background-color: var(--bg-secondary);
-  border-bottom-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-bottom-color: var(--color-border);
 }
 
 :root.dark .modal-header h2 {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .modal-body {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 :root.dark .modal-footer {
-  background-color: var(--bg-secondary);
-  border-top-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-top-color: var(--color-border);
 }
 
 :root.dark .form-group label {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .form-group input,
 :root.dark .form-group textarea,
 :root.dark .form-group select {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 /* 搜索引擎选择器 */
 :root.dark .engine-select {
-  background-color: var(--input-bg);
-  border-color: var(--border-color);
-  color: var(--text-primary);
+  background-color: var(--color-bg-input);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
 
 :root.dark .search-input {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  background-color: var(--color-bg-card);
+  color: var(--color-text);
 }
 
 :root.dark .global-search {
-  background-color: var(--bg-secondary);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  background-color: var(--color-bg-card);
+  box-shadow: 0 4px 12px var(--color-shadow);
 }
 
 /* 分页 */
 :root.dark .pagination-btn {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .pagination-btn:hover:not(:disabled) {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
   color: white;
 }
 
 :root.dark .pagination-btn.active {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
   color: white;
 }
 
@@ -280,69 +279,69 @@
 
 /* 主题切换按钮 */
 :root.dark .theme-toggle {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .theme-toggle:hover {
-  background-color: var(--hover-bg);
-  color: var(--warning-color);
+  background-color: var(--color-bg-hover);
+  color: var(--color-warning);
 }
 
 /* 空状态 */
 :root.dark .empty-state {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .empty-state p {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* 设置按钮 */
 :root.dark .settings-btn {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .settings-btn:hover {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
 }
 
 /* 分类管理 */
 :root.dark .category-item {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 :root.dark .category-name {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 /* 工具提示 */
 :root.dark .form-hint {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .error-msg {
-  color: var(--error-color);
+  color: var(--color-error);
 }
 
 /* 搜索建议 */
 :root.dark .tag-suggestions {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-color: var(--color-border);
 }
 
 :root.dark .tag-suggestion {
-  background-color: var(--bg-primary);
-  color: var(--text-secondary);
+  background-color: var(--color-bg);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .tag-suggestion:hover {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
   color: white;
 }
 
@@ -353,21 +352,21 @@
 }
 
 :root.dark ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--color-bg);
 }
 
 :root.dark ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: var(--color-border);
   border-radius: 4px;
 }
 
 :root.dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-light);
+  background: var(--color-border-hover);
 }
 
 /* 焦点样式 */
 :root.dark *:focus-visible {
-  outline-color: var(--accent-color);
+  outline-color: var(--color-primary);
 }
 
 /* 图标颜色 */
@@ -377,28 +376,28 @@
 
 /* 管理后台入口按钮 */
 :root.dark .btn-admin {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .btn-admin:hover {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
-  border-color: var(--accent-color);
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* 右上角帮助按钮 */
 :root.dark .btn-help {
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 :root.dark .btn-help:hover {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
-  border-color: var(--accent-color);
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* 分类管理面板 */
@@ -407,59 +406,59 @@
 }
 
 :root.dark .category-manager {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 :root.dark .category-manager-header {
-  background-color: var(--bg-secondary);
-  border-bottom-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-bottom-color: var(--color-border);
 }
 
 :root.dark .category-manager-body {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 /* 标签输入样式 */
 :root.dark .tag-group .tag-input-wrapper input {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 /* URL输入组 */
 :root.dark .url-input-group input {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 /* 分类选择器 */
 :root.dark .category-select {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 /* 编辑输入框 */
 :root.dark .edit-input {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 /* 动作按钮行 */
 :root.dark .actions-row {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 /* 搜索区域 */
 :root.dark .search-section {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 /* 网站网格 */
 :root.dark .sites-grid {
-  background-color: var(--bg-primary);
+  background-color: var(--color-bg);
 }
 
 /* ========================================
@@ -472,66 +471,66 @@
 }
 
 :root.dark .manager {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 :root.dark .manager-header {
-  background-color: var(--bg-secondary);
-  border-bottom-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-bottom-color: var(--color-border);
 }
 
 :root.dark .manager-header h2 {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .manager-body {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 /* 添加表单 */
 :root.dark .add-form {
-  background-color: var(--bg-secondary);
-  border-bottom-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-bottom-color: var(--color-border);
 }
 
 :root.dark .add-form h3 {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 /* 图标按钮 */
 :root.dark .icon-btn {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
-  color: var(--text-secondary);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .icon-btn:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--color-bg-hover);
 }
 
 :root.dark .icon-btn.active {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   color: white;
 }
 
 :root.dark .icon-label {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* 分类列表 */
 :root.dark .category-list h3 {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .section-title {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* 分类项 - 修复白色问题 */
 :root.dark .category-item {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 :root.dark .category-item.built-in {
@@ -541,8 +540,8 @@
 }
 
 :root.dark .category-item.custom {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 :root.dark .category-icon {
@@ -550,83 +549,83 @@
 }
 
 :root.dark .category-name {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .site-count {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .sort-hint {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* 编辑输入框 */
 :root.dark .edit-input {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 :root.dark .edit-icon-suggestions {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 :root.dark .icon-btn-small {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-  color: var(--text-secondary);
+  background-color: var(--color-bg-card);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .icon-btn-small:hover {
-  background-color: var(--hover-bg);
+  background-color: var(--color-bg-hover);
 }
 
 :root.dark .icon-btn-small.active {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   color: white;
 }
 
 /* 动作按钮 */
 :root.dark .btn-icon {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .btn-icon:hover {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .btn-icon.delete:hover {
-  color: var(--error-color);
+  color: var(--color-error);
 }
 
 /* 空状态 */
 :root.dark .empty-custom {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* 关闭按钮 */
 :root.dark .close-btn {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .close-btn:hover {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 /* 添加按钮 */
 :root.dark .btn-add {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
 }
 
 :root.dark .btn-add:hover:not(:disabled) {
-  background-color: var(--accent-hover);
+  background-color: var(--color-primary-hover);
 }
 
 :root.dark .btn-add:disabled {
-  background-color: var(--text-muted);
+  background-color: var(--color-text-muted);
 }
 
 /* ========================================
@@ -635,16 +634,16 @@
 
 /* 引擎区域 */
 :root.dark .engine-section {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-card);
 }
 
 :root.dark .engine-section h3 {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .engine-item {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 :root.dark .engine-item.is-default {
@@ -653,15 +652,15 @@
 }
 
 :root.dark .engine-name {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 :root.dark .engine-url {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .lock-icon {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .default-tag {
@@ -671,30 +670,30 @@
 
 /* 搜索建议 */
 :root.dark .tag-suggestions {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
+  background-color: var(--color-bg-card);
+  border-color: var(--color-border);
 }
 
 :root.dark .tag-suggestion {
-  background-color: var(--bg-primary);
-  color: var(--text-secondary);
+  background-color: var(--color-bg);
+  color: var(--color-text-secondary);
 }
 
 :root.dark .tag-suggestion:hover {
-  background-color: var(--accent-color);
+  background-color: var(--color-primary);
   color: white;
 }
 
 /* 排序控件 */
 :root.dark .btn-sort {
-  background-color: var(--bg-primary);
-  border-color: var(--border-color);
-  color: var(--text-muted);
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
 }
 
 :root.dark .btn-sort:hover:not(:disabled) {
-  background-color: var(--hover-bg);
-  color: var(--accent-color);
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
 }
 
 /* ========================================
@@ -705,23 +704,23 @@
 :root.dark input,
 :root.dark textarea,
 :root.dark select {
-  background-color: var(--input-bg) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+  background-color: var(--color-bg-input) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 /* 输入框聚焦 */
 :root.dark input:focus,
 :root.dark textarea:focus,
 :root.dark select:focus {
-  border-color: var(--accent-color) !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* 占位符 */
 :root.dark input::placeholder,
 :root.dark textarea::placeholder {
-  color: var(--text-muted) !important;
+  color: var(--color-text-muted) !important;
 }
 
 /* ========================================
@@ -767,7 +766,7 @@
    ======================================== */
 
 :root.dark .category-tabs-wrapper {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 /* ========================================
@@ -792,19 +791,19 @@
    ======================================== */
 
 :root.dark .history-icon {
-  stroke: var(--text-muted, #9ca3af);
+  stroke: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .history-text {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .history-item:hover {
-  background: var(--hover-bg, #374151);
+  background: var(--color-bg-hover, #374151);
 }
 
 :root.dark .history-item .history-text {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 /* ========================================
@@ -812,11 +811,11 @@
    ======================================== */
 
 :root.dark ::-webkit-scrollbar-thumb {
-  background: var(--border-color, #374151);
+  background: var(--color-border, #374151);
 }
 
 :root.dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-light, #4b5563);
+  background: var(--color-border-hover, #4b5563);
 }
 
 /* ========================================
@@ -824,21 +823,21 @@
    ======================================== */
 
 :root.dark .btn-icon-action {
-  background: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .btn-icon-action:hover:not(:disabled) {
-  border-color: var(--accent-color, #3b82f6);
-  color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
   background: #1e3a5f;
 }
 
 :root.dark .btn-icon-clear {
   background: transparent;
   border-color: transparent;
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .btn-icon-clear:hover {
@@ -848,61 +847,61 @@
 
 :root.dark .btn-suggestion {
   background: #1e3a5f;
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   color: #60a5fa;
 }
 
 :root.dark .btn-suggestion:hover {
-  background: var(--accent-color, #3b82f6);
+  background: var(--color-primary, #3b82f6);
   color: white;
 }
 
 :root.dark .icon-picker-panel {
-  background: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .icon-category-tab {
-  background: var(--input-bg, #374151);
-  color: var(--text-primary, #f9fafb);
-  border-color: var(--border-color, #374151);
+  background: var(--color-bg-input, #374151);
+  color: var(--color-text, #f9fafb);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .icon-search-input,
 :root.dark .icon-url-input {
-  background: var(--input-bg, #374151);
-  border-color: var(--border-color, #374151);
-  color: var(--text-primary, #f9fafb);
+  background: var(--color-bg-input, #374151);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .icon-search-input:focus,
 :root.dark .icon-url-input:focus {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .icon-grid-item {
-  background: var(--bg-primary, #111827);
+  background: var(--color-bg, #111827);
   border-color: transparent;
 }
 
 :root.dark .icon-grid-item:hover {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   background: #1e3a5f;
 }
 
 :root.dark .icon-grid-item.active {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   background: #1e3a5f;
 }
 
 :root.dark .icon-preview {
-  background: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .icon-preview-empty {
-  background: var(--bg-secondary, #1f2937);
-  color: var(--text-muted, #9ca3af);
+  background: var(--color-bg-card, #1f2937);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 /* ========================================
@@ -940,24 +939,24 @@
 }
 
 :root.dark .btn-checking {
-  background-color: var(--bg-secondary) !important;
-  color: var(--text-secondary) !important;
-  border-color: var(--border-color) !important;
+  background-color: var(--color-bg-card) !important;
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border) !important;
   cursor: not-allowed;
 }
 
 /* 空状态暗色 */
 :root.dark .empty-state {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 :root.dark .empty-state p {
-  color: var(--text-muted);
+  color: var(--color-text-muted);
 }
 
 /* 拖拽排序 */
 :root.dark .site-card.is-drag-over {
-  border-color: var(--accent-color);
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
@@ -974,25 +973,25 @@
 }
 
 :root.dark .page-size-select {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
-  color: var(--text-secondary, #d1d5db);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary, #d1d5db);
   cursor: pointer;
 }
 
 :root.dark .page-size-select:hover {
-  border-color: var(--accent-color, #3b82f6);
-  color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .page-size-select:focus {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 :root.dark .page-size-select option {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-primary, #f9fafb);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text, #f9fafb);
 }
 
 /* ========================================
@@ -1000,97 +999,97 @@
    ======================================== */
 
 :root.dark .help-modal {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .modal-header {
-  border-bottom-color: var(--border-color, #374151);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .modal-header h2 {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .close-btn {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .close-btn:hover {
-  color: var(--text-primary, #f9fafb);
-  background-color: var(--hover-bg, #374151);
+  color: var(--color-text, #f9fafb);
+  background-color: var(--color-bg-hover, #374151);
 }
 
 :root.dark .modal-body {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .section-title {
   color: #60a5fa;
-  border-bottom-color: var(--border-color, #374151);
+  border-bottom-color: var(--color-border, #374151);
 }
 
 :root.dark .feature-item {
-  background-color: var(--bg-primary, #111827);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .feature-content h4 {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .feature-content p {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .shortcut-item {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 :root.dark .shortcut-key {
-  background-color: var(--hover-bg, #374151);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .shortcut-action {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .mode-item {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 :root.dark .mode-item p {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .mode-item code {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
 
 :root.dark .storage-list li {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .storage-list strong {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .storage-list code {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
 
 :root.dark .modal-footer {
-  border-top-color: var(--border-color, #374151);
+  border-top-color: var(--color-border, #374151);
 }
 
 :root.dark .btn-primary {
-  background-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
 }
 
 :root.dark .btn-primary:hover {
-  background-color: var(--accent-hover, #2563eb);
+  background-color: var(--color-primary-hover, #2563eb);
 }
 
 /* 示例数据下载暗色模式 */
@@ -1100,15 +1099,15 @@
 }
 
 :root.dark .download-info h4 {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .download-info p {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .download-info code {
-  background-color: var(--hover-bg, #374151);
+  background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
 
@@ -1117,29 +1116,29 @@
    ======================================== */
 
 :root.dark .tooltip-content {
-  background-color: var(--bg-secondary, #1f2937);
-  border: 1px solid var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border: 1px solid var(--color-border, #374151);
 }
 
 :root.dark .tooltip-arrow {
-  border-top-color: var(--bg-secondary, #1f2937);
+  border-top-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .tooltip-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .tooltip-desc {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .action-btn {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .favicon {
-  background-color: var(--bg-primary, #111827);
+  background-color: var(--color-bg, #111827);
 }
 
 /* ========================================
@@ -1151,8 +1150,8 @@
 }
 
 :root.dark .icon-manager-item {
-  background-color: var(--bg-primary, #111827);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .icon-manager-item.built-in {
@@ -1162,34 +1161,34 @@
 }
 
 :root.dark .icon-manager-item.custom {
-  background-color: var(--bg-secondary, #1f2937);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .icon-manager-item:hover {
-  border-color: var(--accent-color, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 :root.dark .icon-manager-preview {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .icon-manager-label {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .icon-manager-category {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-muted, #9ca3af);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .icon-manager-size {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .icon-manager-actions {
-  color: var(--text-secondary, #d1d5db);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 :root.dark .add-form-row {
@@ -1197,7 +1196,7 @@
 }
 
 :root.dark .upload-hint {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 
 :root.dark .filter-bar {
@@ -1205,21 +1204,21 @@
 }
 
 :root.dark .btn-secondary {
-  background-color: var(--bg-secondary, #1f2937);
-  color: var(--text-secondary, #d1d5db);
-  border-color: var(--border-color, #374151);
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
 }
 
 :root.dark .btn-secondary:hover {
-  background-color: var(--hover-bg, #374151);
-  border-color: var(--border-light, #4b5563);
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border-hover, #4b5563);
 }
 
 :root.dark .import-export-bar {
-  border-top-color: var(--border-color, #374151);
+  border-top-color: var(--color-border, #374151);
 }
 
 :root.dark .import-export-hint {
-  color: var(--text-muted, #9ca3af);
+  color: var(--color-text-muted, #9ca3af);
 }
 

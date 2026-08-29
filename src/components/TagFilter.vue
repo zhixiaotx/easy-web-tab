@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { useSitesStore } from '../stores/sites'
 
 const store = useSitesStore()
@@ -24,7 +25,7 @@ const store = useSitesStore()
         :class="{ active: store.showOnlyInvalid }"
         @click="store.showOnlyInvalid = !store.showOnlyInvalid"
       >
-        ⚠️ 只看无效 ({{ store.invalidCount }})
+        <Icon name="alert" /> 只看无效 ({{ store.invalidCount }})
       </button>
       <button
         v-if="store.selectedTags.length > 0 || store.showOnlyInvalid"

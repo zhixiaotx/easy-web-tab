@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Icon from './Icon.vue'
 import { useCountdownReminder } from '@/composables/useCountdownReminder'
 import type { CountdownReminderItem } from '@/composables/useCountdownReminder'
 import { useCountdownsStore } from '@/stores/countdowns'
@@ -25,13 +26,13 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   <Transition name="dialog">
   <div v-if="state.open && state.items.length > 0" class="reminder-overlay">
     <div class="reminder-card">
-      <h2 class="reminder-title">⏰ 定时提醒</h2>
+      <h2 class="reminder-title"><Icon name="timer" /> 定时提醒</h2>
       <ul class="reminder-list">
         <li v-for="item in state.items" :key="item.id" class="reminder-item">
           <span class="reminder-name">{{ item.name }}</span>
-          <span class="reminder-label"><template v-if="/^\d{2}-\d{2} \d{2}:\d{2}$/.test(item.label)">⏰ </template>{{ item.label }}</span>
+          <span class="reminder-label"><template v-if="/^\d{2}-\d{2} \d{2}:\d{2}$/.test(item.label)"><Icon name="timer" /> </template>{{ item.label }}</span>
           <label class="reminder-email-toggle" :data-testid="`cd-email-toggle-${item.id}`" title="邮件提醒">
-            <span class="reminder-email-icon">📧</span>
+            <span class="reminder-email-icon"><Icon name="email" /></span>
             <input
               type="checkbox"
               class="cd-email-switch"
@@ -68,8 +69,8 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  background: var(--bg-card, var(--color-bg-card));
-  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 14px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
@@ -78,7 +79,7 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
 }
 
 .reminder-list {
@@ -108,20 +109,20 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary, var(--color-text));
+  color: var(--color-text, var(--color-text));
   font-weight: 500;
 }
 
 .reminder-label {
   flex-shrink: 0;
-  color: var(--accent-color, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
   font-variant-numeric: tabular-nums;
 }
 
 .reminder-close {
   align-self: flex-end;
   padding: 8px 20px;
-  background-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: #ffffff;
   border: none;
   border-radius: var(--radius-md, 8px);
@@ -140,19 +141,19 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 }
 
 :root.dark .reminder-card {
-  background-color: var(--bg-secondary, #1f2937);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .reminder-title {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .reminder-item {
-  background-color: var(--input-bg, #374151);
+  background-color: var(--color-bg-input, #374151);
 }
 
 :root.dark .reminder-name {
-  color: var(--text-primary, #f9fafb);
+  color: var(--color-text, #f9fafb);
 }
 
 :root.dark .reminder-label {
@@ -179,8 +180,8 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   width: 32px;
   height: 18px;
   border-radius: 9px;
-  border: 1px solid var(--border-color, var(--color-border));
-  background-color: var(--bg-secondary, var(--color-bg-hover));
+  border: 1px solid var(--color-border, var(--color-border));
+  background-color: var(--color-bg-card, var(--color-bg-hover));
   cursor: pointer;
   padding: 0;
   position: relative;
@@ -198,13 +199,13 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: var(--text-muted, var(--color-text-muted));
+  background-color: var(--color-text-muted, var(--color-text-muted));
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
 .cd-email-switch:checked {
-  background-color: var(--accent-color, var(--color-primary));
-  border-color: var(--accent-color, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 .cd-email-switch:checked::after {
@@ -213,12 +214,12 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 }
 
 :root.dark .cd-email-switch {
-  background-color: var(--input-bg, #374151);
-  border-color: var(--border-color, #4b5563);
+  background-color: var(--color-bg-input, #374151);
+  border-color: var(--color-border, #4b5563);
 }
 
 :root.dark .cd-email-switch:checked {
-  background-color: var(--accent-color, #3b82f6);
-  border-color: var(--accent-color, #3b82f6);
+  background-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
 }
 </style>

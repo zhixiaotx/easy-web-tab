@@ -413,7 +413,7 @@ onUnmounted(() => {
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
-    <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">
+    <div v-if="showRecordDialog" class="dialog-overlay record-dialog-overlay" @click.self="cancelRecordForm">
       <div class="dialog" data-testid="wt-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
@@ -799,6 +799,11 @@ onUnmounted(() => {
   justify-content: center;
   z-index: 300;
   padding: 20px;
+}
+
+/* 编辑/新增记录弹框需压在体重记录弹框（z-index:300，关闭时有过渡重叠）之上，否则从记录中编辑时看不见 */
+.record-dialog-overlay {
+  z-index: 320;
 }
 
 .dialog {

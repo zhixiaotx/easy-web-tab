@@ -354,7 +354,7 @@ onUnmounted(() => {
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
-      <div v-if="showRecordDialog" class="dialog-overlay" @click.self="cancelRecordForm">
+      <div v-if="showRecordDialog" class="dialog-overlay record-dialog-overlay" @click.self="cancelRecordForm">
         <div class="dialog" data-testid="ex-dialog">
           <div class="dialog-header">
             <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
@@ -1002,6 +1002,11 @@ onUnmounted(() => {
 /* ===== 记录列表弹框（宽弹框，5 列 × 3 行）— 用 .dialog.list-dialog 提高特异性覆盖 .dialog 基础类 ===== */
 .list-dialog-overlay {
   z-index: 310;
+}
+
+/* 编辑/新增记录弹框需压在记录列表弹框（z-index:310）之上，否则从列表中编辑时看不见 */
+.record-dialog-overlay {
+  z-index: 320;
 }
 
 .dialog.list-dialog {

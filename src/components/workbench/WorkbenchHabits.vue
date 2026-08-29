@@ -8,6 +8,7 @@ import type { HabitFrequency } from '@/composables/habitCore'
 import { TODO_COLOR_PRESETS } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from './PanelPager.vue'
+import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchHabitsStore()
 const toast = useToast()
@@ -35,13 +36,18 @@ function isChecked(habitId: string): boolean {
 }
 
 // 卡片视图数据：连续天数/周达成率一律走 store 薄委托（streakDaysOf/weeklyAttainmentOf → habitCore）
+// 展示排序：未打卡置顶（「今天要处理」一眼可见），已打卡沉底；同状态内保持录入顺序稳定。
+// 仅依赖 records/today 的响应式派生，打卡后由 <TransitionGroup> 平滑滑动到新位置，不突兀跳变。
 const viewHabits = computed(() =>
-  store.habits.map(h => ({
-    habit: h,
-    checked: isChecked(h.id),
-    streak: store.streakDaysOf(h.id, today),
-    week: store.weeklyAttainmentOf(h.id, h.frequency, today)
-  }))
+  store.habits
+    .map((h, i) => ({ h, i, checked: isChecked(h.id) }))
+    .sort((a, b) => (a.checked === b.checked ? a.i - b.i : a.checked ? 1 : -1))
+    .map(({ h }) => ({
+      habit: h,
+      checked: isChecked(h.id),
+      streak: store.streakDaysOf(h.id, today),
+      week: store.weeklyAttainmentOf(h.id, h.frequency, today)
+    }))
 )
 
 // ===== 自适应分页（R4/R7：rowHeight 82 = row-heights.json MAX 79.58 + 2px；
@@ -154,7 +160,7 @@ onMounted(() => {
       <!-- 本周统计卡：习惯总数 / 今日已打卡 / 本周打卡达成 -->
       <div class="stat-card">
         <div class="stat-header">
-          <span class="stat-icon">🔥</span>
+          <Icon name="trending-up" :size="18" class="stat-icon" />
           <span class="stat-label">本周统计</span>
         </div>
         <div class="hb-summary-row">
@@ -176,7 +182,7 @@ onMounted(() => {
       <!-- 新增/编辑习惯表单 -->
       <div class="stat-card">
         <div class="stat-header">
-          <span class="stat-icon">📌</span>
+          <Icon name="habits" :size="18" class="stat-icon" />
           <span class="stat-label">{{ isEditing ? '编辑习惯' : '新增习惯' }}</span>
           <button
             v-if="isEditing"
@@ -248,28 +254,39 @@ onMounted(() => {
           :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
         >
           <span class="hb-card-bar"></span>
-          <span class="hb-card-icon">📌</span>
+          <Icon name="habits" :size="20" class="hb-card-icon" />
           <div class="hb-card-main">
             <div class="hb-card-name">{{ v.habit.name }}</div>
             <div class="hb-card-badges">
               <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
-                🔥 连续 {{ v.streak }} 天
+                <Icon name="trending-up" :size="13" class="hb-badge-ico" /> 连续 {{ v.streak }} 天
               </span>
               <span class="hb-badge hb-badge-week" :data-testid="`hb-week-${v.habit.id}`">
                 本周 {{ v.week.completed }}/{{ v.week.target }}
               </span>
             </div>
+            <div class="hb-week-bar" :title="`本周 ${v.week.completed}/${v.week.target}`">
+              <div
+                class="hb-week-fill"
+                :style="{
+                  width: Math.min(100, Math.round(v.week.percent * 100)) + '%',
+                  background: v.habit.color ?? DEFAULT_HABIT_COLOR
+                }"
+              ></div>
+            </div>
           </div>
           <div class="hb-card-actions">
-            <label class="hb-check-label" :title="v.checked ? '取消今日打卡' : '今日打卡'">
-              <input
-                type="checkbox"
-                class="hb-check-input"
-                :checked="v.checked"
-                :data-testid="`hb-check-${v.habit.id}`"
-                @change="handleCheck(v.habit.id)"
-              />
-            </label>
+            <button
+              class="hb-check-btn"
+              :class="{ 'is-checked': v.checked }"
+              :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
+              :data-testid="`hb-check-${v.habit.id}`"
+              :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
+              @click="handleCheck(v.habit.id)"
+            >
+              <Icon name="check" :size="16" />
+              <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
+            </button>
             <button class="btn-edit" :data-testid="`hb-edit-${v.habit.id}`" @click="startEdit(v.habit.id)">编辑</button>
             <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
           </div>
@@ -583,16 +600,54 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.hb-check-label {
+/* 打卡主角按钮：清晰的「打卡/已打卡」CTA，触控区 ≥44px，习惯主色，勾选后填充 */
+.hb-check-btn {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 78px;
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius-md, 8px);
+  border: 1.5px solid var(--hb-color, var(--color-primary, var(--color-primary)));
+  background: transparent;
+  color: var(--hb-color, var(--color-primary, var(--color-primary)));
   cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
 }
 
-.hb-check-input {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+.hb-check-btn:hover {
+  background: color-mix(in srgb, var(--hb-color, var(--color-primary)) 12%, transparent);
+}
+
+.hb-check-btn.is-checked {
+  background: var(--hb-color, var(--color-primary, var(--color-primary)));
+  color: #fff;
+  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+}
+
+.hb-badge-ico {
+  flex-shrink: 0;
+}
+
+/* 本周进度条：目标完成度一眼可见（颜色随习惯主色） */
+.hb-week-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-bg-input, var(--color-bg-hover));
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.hb-week-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--transition-fast, 0.15s ease);
 }
 
 .btn-edit,
@@ -642,6 +697,10 @@ onMounted(() => {
 :root.dark .hb-badge-streak,
 :root.dark .hb-badge-week {
   background-color: var(--color-bg-input, #374151);
+}
+
+:root.dark .hb-week-bar {
+  background-color: #374151;
 }
 
 :root.dark .hb-card.is-checked .hb-card-name {

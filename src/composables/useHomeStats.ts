@@ -12,7 +12,7 @@ import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useAppSettingsStore } from '@/stores/settings'
-import { calcBmi, calcDailyAttainment, calcExerciseAttainment } from '@/composables/healthCore'
+import { calcBmi, calcDailyAttainment, calcExerciseAttainment, weekKeyOf } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
 import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
 import type { CountdownItem, HealthPlanMetric, TodoPriority, WorkbenchTodo } from '@/types'
@@ -45,6 +45,17 @@ function localToday(): string {
 function isOverdue(todo: WorkbenchTodo): boolean {
   return !!todo.dueDate && !todo.completed && todo.dueDate < localToday()
 }
+
+/** 日期 +delta 天（'YYYY-MM-DD'）。先 setDate 再取日期组件，防 DST 偏移（同 habitCore addDays）。 */
+export function shiftDate(dateStr: string, delta: number): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + delta)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** 周历表头星期标签（周一 → 周日）。 */
+export const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日']
 
 // ===== 倒计时剩余状态色 =====
 export function statusClass(status: CountdownItem['remaining']['status']): string {
@@ -171,6 +182,49 @@ export function useHomeStats() {
     })
   })
 
+  // ===== 习惯周历（按周统计：周一~周日 7 列 × 每个习惯一行）=====
+  // anchor = 该周任意一天（内部经 weekKeyOf 归到周一起点）；返回表头 + 每习惯每行 7 格打卡态
+  function habitWeekOf(anchor: string) {
+    const today = localToday()
+    const monday = weekKeyOf(anchor)
+    const days = WEEKDAY_LABELS.map((label, i) => {
+      const date = shiftDate(monday, i)
+      return {
+        date,
+        label,
+        dayNum: date.slice(8, 10).replace(/^0/, ''),
+        isToday: date === today,
+        isFuture: date > today
+      }
+    })
+    const rows = habitsStore.habits.map(h => {
+      const done = new Set(habitsStore.weekCompletionsOf(h.id, anchor))
+      const target = h.frequency
+      return {
+        id: h.id,
+        name: h.name,
+        color: h.color ?? DEFAULT_HABIT_COLOR,
+        target,
+        completed: done.size,
+        percent: target > 0 ? Math.min(100, Math.round((done.size / target) * 100)) : 0,
+        met: done.size >= target,
+        cells: days.map(d => ({ date: d.date, done: done.has(d.date) }))
+      }
+    })
+    const start = days[0]
+    const end = days[6]
+    return {
+      monday,
+      days,
+      rows,
+      total: rows.length,
+      metCount: rows.filter(r => r.met).length,
+      weekCheckins: rows.reduce((sum, r) => sum + r.completed, 0),
+      rangeText: `${start.date.slice(5, 7).replace(/^0/, '')}/${start.dayNum} - ${end.date.slice(5, 7).replace(/^0/, '')}/${end.dayNum}`,
+      isCurrentWeek: monday === weekKeyOf(today)
+    }
+  }
+
   // ===== 概览可见统计卡（纯占位隐藏：无数据的卡不渲染；菜单开关关闭的功能不渲染）=====
   const visibleStatCards = computed<string[]>(() => {
     const keys: string[] = []
@@ -225,6 +279,7 @@ export function useHomeStats() {
     ledgerStats,
     habitStats,
     habitDetails,
+    habitWeekOf,
     visibleStatCards,
     upcomingCountdowns,
     pendingTodos,

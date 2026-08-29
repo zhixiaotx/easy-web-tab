@@ -189,6 +189,13 @@ export interface DiaryData {
   entries: WorkbenchDiary[]
 }
 
+// 工作台主页单张卡片的自定义布局（三项均可选：缺失 = 用组件默认）
+export interface HomeCardLayout {
+  w?: number // 列跨度（1 = 占 1 列；上限由所属网格列数决定）
+  h?: number // 最小高度（px；内容更高时自动撑开）
+  o?: number // 同容器内排序值（越小越靠前；默认按内置初始顺序）
+}
+
 // 工作台应用设置（备份 v4 新增）：弹窗尺寸 + 按钮/背景透明度 + 工作台菜单顺序/名称/开关 + 工作台城市/侧栏折叠态 + 导航筛选栏展开态
 export interface AppSettingsData {
   dialogSizes: Record<string, { width: number; height: number }>
@@ -217,6 +224,7 @@ export interface AppSettingsData {
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
   cloudSyncPassword?: string           // WebDAV 应用密码（空串 = 未配置，存 IDB 非 localStorage）
   cloudSyncInterval?: number           // 后台定时同步间隔（0 = 仅触发式，>0 = 分钟数）
+  homeCardLayout?: Record<string, HomeCardLayout> // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

@@ -12,7 +12,7 @@ import {
   resolveMenuItems
 } from '@/composables/workbenchMenuCore'
 import type { WorkbenchMenuItem, WorkbenchMenuVisibility } from '@/composables/workbenchMenuCore'
-import type { AppSettingsData } from '@/types'
+import type { AppSettingsData, HomeCardLayout } from '@/types'
 
 // ========================================
 // 类型
@@ -156,6 +156,10 @@ export const WB_DIALOG_IDS: DialogId[] = [
 const clampWidth = (n: number) => Math.min(1600, Math.max(400, n))
 const clampHeight = (n: number) => Math.min(100, Math.max(30, n))
 const clampOpacity = (n: number) => Math.min(1, Math.max(0.1, n))
+// 主页卡片布局 clamp：列跨度 1-5（各屏列数上限由组件再收窄）、最小高度 60-1200px、排序值整数 -9999~9999
+const clampCardW = (n: number) => Math.min(5, Math.max(1, Math.round(n)))
+const clampCardH = (n: number) => Math.min(1200, Math.max(60, Math.round(n)))
+const clampCardO = (n: number) => Math.min(9999, Math.max(-9999, Math.round(n)))
 
 // 深拷贝默认尺寸
 const cloneDefaults = (): Record<DialogId, DialogSizeSetting> => {
@@ -164,6 +168,26 @@ const cloneDefaults = (): Record<DialogId, DialogSizeSetting> => {
     sizes[id] = { ...DIALOG_DEFAULTS[id] }
   }
   return sizes
+}
+
+/**
+ * 主页卡片布局归一（幂等）：仅采纳数值合法字段（w/h/o 各自 clamp）；
+ * 非法/缺失字段丢弃，全空条目剔除，非对象入参 → {}（全部回退组件内置默认布局）。
+ */
+function normalizeHomeCardLayout(raw: unknown): Record<string, HomeCardLayout> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, HomeCardLayout> = {}
+  for (const [cardId, item] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof cardId !== 'string' || cardId === '') continue
+    if (!item || typeof item !== 'object') continue
+    const src = item as Record<string, unknown>
+    const entry: HomeCardLayout = {}
+    if (typeof src.w === 'number' && Number.isFinite(src.w)) entry.w = clampCardW(src.w)
+    if (typeof src.h === 'number' && Number.isFinite(src.h)) entry.h = clampCardH(src.h)
+    if (typeof src.o === 'number' && Number.isFinite(src.o)) entry.o = clampCardO(src.o)
+    if (entry.w !== undefined || entry.h !== undefined || entry.o !== undefined) out[cardId] = entry
+  }
+  return out
 }
 
 // 解析原始设置记录 → 校验 + clamp 后的完整 AppSettingsData（缺失/非法字段回退默认值）
@@ -263,6 +287,7 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   } else {
     out.cloudSyncInterval = 0
   }
+  out.homeCardLayout = normalizeHomeCardLayout(data.homeCardLayout)
   return out
 }
 
@@ -301,6 +326,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const reminderEmailServiceId = ref<string>('')
   const reminderEmailTemplateId = ref<string>('')
   const reminderEmailPublicKey = ref<string>('')
+
+  // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）：默认空 = 全部用组件内置默认布局
+  const homeCardLayout = ref<Record<string, HomeCardLayout>>({})
 
   // 云同步配置（5 字段）：默认关闭/空串
   const cloudSyncEnabled = ref<boolean>(false)
@@ -341,7 +369,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       cloudSyncUrl: cloudSyncUrl.value,
       cloudSyncUsername: cloudSyncUsername.value,
       cloudSyncPassword: cloudSyncPassword.value,
-      cloudSyncInterval: cloudSyncInterval.value
+      cloudSyncInterval: cloudSyncInterval.value,
+      homeCardLayout: toRaw(homeCardLayout.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
@@ -466,6 +495,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       } else {
         cloudSyncInterval.value = 0
       }
+      // 主页卡片布局：整包归一（IDB 直读路径不经过 parseSettingsData，此处必须自行 clamp）
+      homeCardLayout.value = normalizeHomeCardLayout(effective.homeCardLayout)
       // 归一化结果写回 IDB（fire-and-forget）：保证导出/导入往返幂等，镜像迁移分支的 idbPut
       persist()
     }
@@ -533,6 +564,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchSidebarCollapsed.value = undefined
     businessSidebarCollapsed.value = undefined
     businessActiveSection.value = undefined
+    homeCardLayout.value = {}
     navFiltersExpanded.value = false
     workbenchPageName.value = ''
     workbenchPageVisible.value = true
@@ -606,6 +638,30 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   function setNavFiltersExpanded(v: boolean) {
     navFiltersExpanded.value = v
+    persist()
+  }
+
+  // ========================================
+  // 工作台主页卡片布局（宽高/位置）：单卡 patch 合并（undefined = 删除该字段回组件默认）→ 持久化
+  // ========================================
+  function setHomeCardLayout(cardId: string, patch: HomeCardLayout) {
+    const next: HomeCardLayout = { ...(homeCardLayout.value[cardId] ?? {}) }
+    if (patch.w === undefined) delete next.w
+    else next.w = clampCardW(patch.w)
+    if (patch.h === undefined) delete next.h
+    else next.h = clampCardH(patch.h)
+    if (patch.o === undefined) delete next.o
+    else next.o = clampCardO(patch.o)
+    const all = { ...homeCardLayout.value }
+    if (Object.keys(next).length === 0) delete all[cardId] // 全空 = 无自定义，移除条目
+    else all[cardId] = next
+    homeCardLayout.value = all
+    persist()
+  }
+
+  // 整页重置：清空全部自定义布局，回退组件内置默认（宽高与顺序）
+  function resetHomeCardLayout() {
+    homeCardLayout.value = {}
     persist()
   }
 
@@ -740,6 +796,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncUsername,
     cloudSyncPassword,
     cloudSyncInterval,
+    homeCardLayout,
     initSettings,
     applySettings,
     setDialogSize,
@@ -768,6 +825,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setCloudSyncUsername,
     setCloudSyncPassword,
     setCloudSyncInterval,
+    setHomeCardLayout,
+    resetHomeCardLayout,
     resetDefaults,
     moveWorkbenchMenuItem,
     renameWorkbenchMenuItem,

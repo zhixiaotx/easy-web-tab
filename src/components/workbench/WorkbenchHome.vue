@@ -6,9 +6,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
+import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
-import { useHomeStats, PRIORITY_META, statusClass } from '@/composables/useHomeStats'
+import { useHomeStats, PRIORITY_META, statusClass, shiftDate } from '@/composables/useHomeStats'
+import { useHomeLayout } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
+import HomeLayoutCard from '@/components/workbench/HomeLayoutCard.vue'
 import WeatherCard from '@/components/workbench/WeatherCard.vue'
 import CalendarAnchorCard from '@/components/workbench/CalendarAnchorCard.vue'
 
@@ -32,13 +35,43 @@ const {
   ledgerStats,
   habitStats,
   habitDetails,
+  habitWeekOf,
   visibleStatCards,
   upcomingCountdowns,
   pendingTodos,
   isOverdue,
   isUnlocked,
-  passwordCount
+  passwordCount,
+  localToday
 } = useHomeStats()
+
+// ===== 主页卡片布局（宽高/位置可编辑）=====
+const layout = useHomeLayout()
+const editMode = layout.editMode
+const hasCustom = layout.hasCustom
+function setEditMode(v: boolean): void { editMode.value = v }
+function doResetAll(): void { layout.resetAll() }
+
+// ===== 习惯 store（周历补打卡/取消）=====
+const habitsStore = useWorkbenchHabitsStore()
+
+// ===== 习惯周历（按周统计：周一~周日 × 每个习惯一行）=====
+const today = localToday()
+const weekAnchor = ref(today)
+const weekView = computed(() => habitWeekOf(weekAnchor.value))
+function changeWeek(delta: number): void {
+  weekAnchor.value = shiftDate(weekAnchor.value, delta * 7)
+}
+function toggleHabit(habitId: string, date: string): void {
+  if (date > today) return // 未来日期不可打卡
+  habitsStore.toggleCheckIn(habitId, date)
+}
+
+// 导航（编辑模式下抑制，避免误触跳转）
+function navTo(section: string, tab?: string): void {
+  if (editMode.value) return
+  emit('navigate', section, tab)
+}
 
 // ===== 问候 + 时间（按 now 时段问候：早上好/下午好/晚上好）=====
 const now = ref(new Date())
@@ -171,6 +204,13 @@ async function handleQuickNote(): Promise<void> {
         <div class="greeting-time">{{ timeText }}</div>
         <div class="greeting-date">{{ dateText }}</div>
       </div>
+      <div class="greeting-actions">
+        <button v-if="!editMode" type="button" class="layout-toggle" data-testid="home-edit-layout" @click="setEditMode(true)">编辑布局</button>
+        <template v-else>
+          <button type="button" class="layout-toggle" data-testid="home-reset-layout" :disabled="!hasCustom" @click="doResetAll()">重置布局</button>
+          <button type="button" class="layout-toggle primary" data-testid="home-edit-done" @click="setEditMode(false)">完成</button>
+        </template>
+      </div>
     </section>
 
     <!-- 轮播区：行动台 / 数据概览 / 工具 三屏自动轮播（hover 暂停，箭头/圆点/触摸滑动手势切换） -->
@@ -190,57 +230,61 @@ async function handleQuickNote(): Promise<void> {
           <!-- 第 1 屏：行动台（快捷添加待办/便签 + 即将到期提醒 + 天气 + 日历锚点） -->
           <div class="home-slide" data-testid="home-slide-action">
             <div v-if="menuOn.todos || menuOn.notes || menuOn.countdowns" class="home-slide-grid">
-              <!-- 快捷添加待办（第一列） -->
-              <section v-if="menuOn.todos" class="bento-card bento-quick-add">
-                <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
-                <div class="quick-add-row">
-                  <input
-                    v-model="quickTodoTitle"
-                    class="quick-add-input"
-                    data-testid="home-quick-add-input"
-                    type="text"
-                    maxlength="100"
-                    placeholder="输入待办标题，回车即可添加…"
-                    @keyup.enter="handleQuickAdd"
-                  />
-                  <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">添加</button>
-                </div>
-              </section>
+              <HomeLayoutCard v-if="menuOn.todos" card-id="quick-add-todo" :default-w="1">
+                <section class="bento-card bento-quick-add">
+                  <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
+                  <div class="quick-add-row">
+                    <input
+                      v-model="quickTodoTitle"
+                      class="quick-add-input"
+                      data-testid="home-quick-add-input"
+                      type="text"
+                      maxlength="100"
+                      placeholder="输入待办标题，回车即可添加…"
+                      @keyup.enter="handleQuickAdd"
+                    />
+                    <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">添加</button>
+                  </div>
+                </section>
+              </HomeLayoutCard>
 
-              <!-- 快捷添加便签（第一列） -->
-              <section v-if="menuOn.notes" class="bento-card bento-quick-add">
-                <div class="quick-add-label"><Icon name="notes" :size="16" />快速添加便签</div>
-                <div class="quick-add-row">
-                  <input
-                    v-model="quickNoteTitle"
-                    class="quick-add-input"
-                    data-testid="home-quick-note-input"
-                    type="text"
-                    maxlength="100"
-                    placeholder="输入便签标题，回车即可添加…"
-                    @keyup.enter="handleQuickNote"
-                  />
-                  <button type="button" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote">添加</button>
-                </div>
-              </section>
+              <HomeLayoutCard v-if="menuOn.notes" card-id="quick-add-note" :default-w="1">
+                <section class="bento-card bento-quick-add">
+                  <div class="quick-add-label"><Icon name="notes" :size="16" />快速添加便签</div>
+                  <div class="quick-add-row">
+                    <input
+                      v-model="quickNoteTitle"
+                      class="quick-add-input"
+                      data-testid="home-quick-note-input"
+                      type="text"
+                      maxlength="100"
+                      placeholder="输入便签标题，回车即可添加…"
+                      @keyup.enter="handleQuickNote"
+                    />
+                    <button type="button" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote">添加</button>
+                  </div>
+                </section>
+              </HomeLayoutCard>
 
-              <!-- 即将到期定时提醒 -->
-              <section v-if="menuOn.countdowns" class="bento-card bento-panel">
-                <div class="panel-header">
-                  <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
-                  <button class="nav-btn" data-testid="home-nav-countdowns" @click="emit('navigate', 'countdowns')">前往 →</button>
-                </div>
-                <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
-                  <li v-for="item in upcomingCountdowns" :key="item.id" class="home-list-item">
-                    <span class="home-list-title">{{ item.name }}</span>
-                    <span class="home-list-meta" :class="statusClass(item.remaining.status)">{{ item.remaining.label }}</span>
-                  </li>
-                </ul>
-                <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的定时提醒</div>
-              </section>
+              <HomeLayoutCard v-if="menuOn.countdowns" card-id="upcoming" :default-w="1">
+                <section class="bento-card bento-panel">
+                  <div class="panel-header">
+                    <h3><span class="panel-icon"><Icon name="countdowns" /></span>即将到期定时提醒</h3>
+                    <button class="nav-btn" data-testid="home-nav-countdowns" @click="navTo('countdowns')">前往 →</button>
+                  </div>
+                  <ul v-if="upcomingCountdowns.length > 0" class="home-list" data-testid="home-upcoming-list">
+                    <li v-for="item in upcomingCountdowns" :key="item.id" class="home-list-item">
+                      <span class="home-list-title">{{ item.name }}</span>
+                      <span class="home-list-meta" :class="statusClass(item.remaining.status)">{{ item.remaining.label }}</span>
+                    </li>
+                  </ul>
+                  <div v-else class="home-empty" data-testid="home-upcoming-empty">暂无即将到期的定时提醒</div>
+                </section>
+              </HomeLayoutCard>
 
-              <!-- 天气卡（第一页嵌入，未配置城市显示占位+去设置） -->
-              <WeatherCard class="bento-weather" />
+              <HomeLayoutCard card-id="weather" :default-w="1">
+                <WeatherCard class="bento-weather" />
+              </HomeLayoutCard>
 
             </div>
             <div v-else class="home-empty" data-testid="home-action-empty">快捷添加与定时提醒功能已关闭，可在工作台菜单设置中开启</div>
@@ -249,148 +293,210 @@ async function handleQuickNote(): Promise<void> {
           <!-- 第 2 屏：数据概览（统计卡；卡按 visibleStatCards 隐藏纯占位，全空时显示空态） -->
           <div class="home-slide" data-testid="home-slide-overview">
             <div v-if="visibleStatCards.length > 0" class="home-slide-grid home-slide-grid-stats" data-testid="home-overview">
-              <div class="bento-card bento-stat" data-testid="home-stats-todos" v-if="visibleStatCards.includes('todos')" @click="emit('navigate', 'todos')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="todos" :size="16" /></span>
-                  <span class="stat-label">待办任务</span>
-                  <button class="nav-btn" data-testid="home-nav-todos" @click.stop="emit('navigate', 'todos')">前往 →</button>
-                </div>
-                <div class="stat-body">
-                  <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
-                  <div class="ring-wrap" :title="`已完成 ${todoCompletionRate}%`">
-                    <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
-                      <circle class="ring-track" cx="18" cy="18" r="15.9155" fill="none" />
-                      <circle
-                        class="ring-bar"
-                        cx="18"
-                        cy="18"
-                        r="15.9155"
-                        fill="none"
-                        :stroke-dasharray="`${todoCompletionRate} 100`"
-                      />
-                    </svg>
-                    <span class="ring-text">{{ todoCompletionRate }}%</span>
+              <HomeLayoutCard v-if="visibleStatCards.includes('todos')" card-id="todos" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-todos" @click="navTo('todos')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="todos" :size="16" /></span>
+                    <span class="stat-label">待办任务</span>
+                    <button class="nav-btn" data-testid="home-nav-todos" @click.stop="navTo('todos')">前往 →</button>
                   </div>
-                </div>
-                <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-notes" v-if="visibleStatCards.includes('notes')" @click="emit('navigate', 'notes')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="notes" :size="16" /></span>
-                  <span class="stat-label">便签</span>
-                  <button class="nav-btn" data-testid="home-nav-notes" @click.stop="emit('navigate', 'notes')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-notes">{{ noteStats.total }}</div>
-                <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-countdowns" v-if="visibleStatCards.includes('countdowns')" @click="emit('navigate', 'countdowns')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="countdowns" :size="16" /></span>
-                  <span class="stat-label">定时提醒</span>
-                  <button class="nav-btn" data-testid="home-nav-countdowns" @click.stop="emit('navigate', 'countdowns')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
-                <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-passwords" v-if="visibleStatCards.includes('passwords')" @click="emit('navigate', 'passwords')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="passwords" :size="16" /></span>
-                  <span class="stat-label">密码</span>
-                  <button class="nav-btn" data-testid="home-nav-passwords" @click.stop="emit('navigate', 'passwords')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-passwords">
-                  <template v-if="isUnlocked">{{ passwordCount }} 条</template>
-                  <template v-else><Icon name="lock" :size="14" /> 解锁后可见</template>
-                </div>
-                <div class="stat-sub">{{ isUnlocked ? '已解锁' : '未解锁' }}</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-exercise" v-if="visibleStatCards.includes('exercise')" @click="emit('navigate', 'health', 'exercise')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="exercise" :size="16" /></span>
-                  <span class="stat-label">运动</span>
-                  <button class="nav-btn" data-testid="home-nav-exercise" @click.stop="emit('navigate', 'health', 'exercise')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
-                <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-diet" v-if="visibleStatCards.includes('diet')" @click="emit('navigate', 'health', 'diet')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="diet" :size="16" /></span>
-                  <span class="stat-label">饮食</span>
-                  <button class="nav-btn" data-testid="home-nav-diet" @click.stop="emit('navigate', 'health', 'diet')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
-                <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-sleep" v-if="visibleStatCards.includes('sleep')" @click="emit('navigate', 'health', 'sleep')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="sleep" :size="16" /></span>
-                  <span class="stat-label">睡眠</span>
-                  <button class="nav-btn" data-testid="home-nav-sleep" @click.stop="emit('navigate', 'health', 'sleep')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
-                <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-weight" v-if="visibleStatCards.includes('weight')" @click="emit('navigate', 'health', 'weight')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="weight" :size="16" /></span>
-                  <span class="stat-label">体重</span>
-                  <button class="nav-btn" data-testid="home-nav-weight" @click.stop="emit('navigate', 'health', 'weight')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
-                <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
-              </div>
-
-              <div class="bento-card bento-stat" data-testid="home-stats-ledger" v-if="visibleStatCards.includes('ledger')" @click="emit('navigate', 'ledger')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="ledger" :size="16" /></span>
-                  <span class="stat-label">记账</span>
-                  <button class="nav-btn" data-testid="home-nav-ledger" @click.stop="emit('navigate', 'ledger')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
-                <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
-              </div>
-
-              <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" v-if="visibleStatCards.includes('habits')" @click="emit('navigate', 'habits')">
-                <div class="stat-header">
-                  <span class="stat-icon"><Icon name="habits" :size="16" /></span>
-                  <span class="stat-label">习惯打卡</span>
-                  <button class="nav-btn" data-testid="home-nav-habits" @click.stop="emit('navigate', 'habits')">前往 →</button>
-                </div>
-                <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
-                <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>
-
-                <!-- 悬停展开：每个习惯的本周进度 -->
-                <div class="habit-detail" data-testid="home-habit-detail">
-                  <div
-                    v-for="h in habitDetails"
-                    :key="h.id"
-                    class="habit-detail-row"
-                    :data-testid="`home-habit-row-${h.id}`"
-                  >
-                    <div class="habit-detail-top">
-                      <span class="habit-detail-name">{{ h.name }}</span>
-                      <span class="habit-detail-count" :class="{ met: h.met }">
-                        {{ h.completed }}/{{ h.target }}
-                        <Icon v-if="h.met" name="check" :size="12" class="habit-detail-check" />
-                      </span>
-                    </div>
-                    <div class="habit-detail-bar">
-                      <div
-                        class="habit-detail-fill"
-                        :style="{ width: h.percent + '%', background: h.color }"
-                      ></div>
+                  <div class="stat-body">
+                    <div class="stat-value" data-testid="home-stats-value-todos">{{ todoStats.total }}</div>
+                    <div class="ring-wrap" :title="`已完成 ${todoCompletionRate}%`">
+                      <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
+                        <circle class="ring-track" cx="18" cy="18" r="15.9155" fill="none" />
+                        <circle
+                          class="ring-bar"
+                          cx="18"
+                          cy="18"
+                          r="15.9155"
+                          fill="none"
+                          :stroke-dasharray="`${todoCompletionRate} 100`"
+                        />
+                      </svg>
+                      <span class="ring-text">{{ todoCompletionRate }}%</span>
                     </div>
                   </div>
+                  <div class="stat-sub">{{ todoStats.active }} 未完成 · {{ todoStats.overdue }} 已逾期</div>
                 </div>
-              </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('notes')" card-id="notes" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-notes" @click="navTo('notes')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="notes" :size="16" /></span>
+                    <span class="stat-label">便签</span>
+                    <button class="nav-btn" data-testid="home-nav-notes" @click.stop="navTo('notes')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-notes">{{ noteStats.total }}</div>
+                  <div class="stat-sub">{{ noteStats.pinned }} 置顶</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('countdowns')" card-id="countdowns" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-countdowns" @click="navTo('countdowns')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="countdowns" :size="16" /></span>
+                    <span class="stat-label">定时提醒</span>
+                    <button class="nav-btn" data-testid="home-nav-countdowns" @click.stop="navTo('countdowns')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-countdowns">{{ countdownStats.total }}</div>
+                  <div class="stat-sub">{{ countdownStats.near30 }} 项 30 天内到期</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('passwords')" card-id="passwords" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-passwords" @click="navTo('passwords')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="passwords" :size="16" /></span>
+                    <span class="stat-label">密码</span>
+                    <button class="nav-btn" data-testid="home-nav-passwords" @click.stop="navTo('passwords')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-passwords">
+                    <template v-if="isUnlocked">{{ passwordCount }} 条</template>
+                    <template v-else><Icon name="lock" :size="14" /> 解锁后可见</template>
+                  </div>
+                  <div class="stat-sub">{{ isUnlocked ? '已解锁' : '未解锁' }}</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('exercise')" card-id="exercise" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-exercise" @click="navTo('health', 'exercise')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="exercise" :size="16" /></span>
+                    <span class="stat-label">运动</span>
+                    <button class="nav-btn" data-testid="home-nav-exercise" @click.stop="navTo('health', 'exercise')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-exercise">{{ exerciseStats.value }}</div>
+                  <div class="stat-sub" data-testid="home-stats-sub-exercise">{{ exerciseStats.sub }}</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('diet')" card-id="diet" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-diet" @click="navTo('health', 'diet')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="diet" :size="16" /></span>
+                    <span class="stat-label">饮食</span>
+                    <button class="nav-btn" data-testid="home-nav-diet" @click.stop="navTo('health', 'diet')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-diet">{{ dietStats.value }}</div>
+                  <div class="stat-sub" data-testid="home-stats-sub-diet">{{ dietStats.sub }}</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('sleep')" card-id="sleep" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-sleep" @click="navTo('health', 'sleep')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="sleep" :size="16" /></span>
+                    <span class="stat-label">睡眠</span>
+                    <button class="nav-btn" data-testid="home-nav-sleep" @click.stop="navTo('health', 'sleep')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-sleep">{{ sleepStats.value }}</div>
+                  <div class="stat-sub" data-testid="home-stats-sub-sleep">{{ sleepStats.sub }}</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('weight')" card-id="weight" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-weight" @click="navTo('health', 'weight')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="weight" :size="16" /></span>
+                    <span class="stat-label">体重</span>
+                    <button class="nav-btn" data-testid="home-nav-weight" @click.stop="navTo('health', 'weight')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-weight">{{ weightStats.value }}</div>
+                  <div class="stat-sub" data-testid="home-stats-sub-weight">{{ weightStats.sub }}</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('ledger')" card-id="ledger" :default-w="1">
+                <div class="bento-card bento-stat" data-testid="home-stats-ledger" @click="navTo('ledger')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="ledger" :size="16" /></span>
+                    <span class="stat-label">记账</span>
+                    <button class="nav-btn" data-testid="home-nav-ledger" @click.stop="navTo('ledger')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-ledger">{{ ledgerStats.value }}</div>
+                  <div class="stat-sub" data-testid="home-stats-sub-ledger">{{ ledgerStats.sub }}</div>
+                </div>
+              </HomeLayoutCard>
+
+              <HomeLayoutCard v-if="visibleStatCards.includes('habits')" card-id="habits" :default-w="1">
+                <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" @click="navTo('habits')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="habits" :size="16" /></span>
+                    <span class="stat-label">习惯打卡</span>
+                    <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habits')">前往 →</button>
+                  </div>
+                  <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
+                  <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>
+
+                  <!-- 悬停展开：每个习惯的本周进度 -->
+                  <div class="habit-detail" data-testid="home-habit-detail">
+                    <div
+                      v-for="h in habitDetails"
+                      :key="h.id"
+                      class="habit-detail-row"
+                      :data-testid="`home-habit-row-${h.id}`"
+                    >
+                      <div class="habit-detail-top">
+                        <span class="habit-detail-name">{{ h.name }}</span>
+                        <span class="habit-detail-count" :class="{ met: h.met }">
+                          {{ h.completed }}/{{ h.target }}
+                          <Icon v-if="h.met" name="check" :size="12" class="habit-detail-check" />
+                        </span>
+                      </div>
+                      <div class="habit-detail-bar">
+                        <div
+                          class="habit-detail-fill"
+                          :style="{ width: h.percent + '%', background: h.color }"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </HomeLayoutCard>
+
+              <!-- 习惯周历：按周统计（周一~周日 × 每个习惯一行），可切换上/本周，格内直接补打卡 -->
+              <HomeLayoutCard v-if="visibleStatCards.includes('habits')" card-id="habits-week" :default-w="5">
+                <section class="bento-card bento-habit-week" data-testid="home-habit-week" @click="navTo('habits')">
+                  <div class="stat-header">
+                    <span class="stat-icon"><Icon name="habits" :size="16" /></span>
+                    <span class="stat-label">习惯打卡 · 周历</span>
+                    <button class="nav-btn" data-testid="home-nav-habits-week" @click.stop="navTo('habits')">前往</button>
+                  </div>
+                  <div class="week-nav">
+                    <button type="button" class="week-nav-btn" data-testid="home-week-prev" @click.stop="changeWeek(-1)">‹ 上周</button>
+                    <span class="week-nav-range">{{ weekView.rangeText }}</span>
+                    <button type="button" class="week-nav-btn" data-testid="home-week-next" :disabled="weekView.isCurrentWeek" @click.stop="changeWeek(1)">下周 ›</button>
+                  </div>
+                  <div v-if="weekView.rows.length" class="week-grid" data-testid="home-week-grid">
+                    <div class="week-corner"></div>
+                    <div
+                      v-for="d in weekView.days"
+                      :key="d.date"
+                      class="week-col-head"
+                      :class="{ today: d.isToday, future: d.isFuture }"
+                    >
+                      <span class="week-col-label">{{ d.label }}</span>
+                      <span class="week-col-day">{{ d.dayNum }}</span>
+                    </div>
+                    <template v-for="row in weekView.rows" :key="row.id">
+                      <div class="week-row-head" :style="{ color: row.color }">{{ row.name }}</div>
+                      <button
+                        v-for="c in row.cells"
+                        :key="c.date"
+                        type="button"
+                        class="week-cell"
+                        :class="{ done: c.done, future: c.date > today }"
+                        :disabled="c.date > today"
+                        :title="`${row.name} ${c.date} ${c.done ? 'done' : 'undone'}`"
+                        @click.stop="toggleHabit(row.id, c.date)"
+                      >{{ c.done ? '✓' : '' }}</button>
+                    </template>
+                  </div>
+                  <div v-else class="home-empty">暂无习惯，去习惯打卡面板添加</div>
+                </section>
+              </HomeLayoutCard>
             </div>
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
           </div>
@@ -399,27 +505,31 @@ async function handleQuickNote(): Promise<void> {
           <div class="home-slide" data-testid="home-slide-tools">
             <div class="home-slide-tools-grid" data-testid="home-tools-grid">
               <!-- 未完成待办 -->
-              <section v-if="menuOn.todos" class="bento-card bento-panel">
-                <div class="panel-header">
-                  <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
-                  <button class="nav-btn" data-testid="home-nav-todos" @click="emit('navigate', 'todos')">前往 →</button>
-                </div>
-                <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
-                  <li v-for="todo in pendingTodos" :key="todo.id" class="home-list-item">
-                    <span class="home-list-title">{{ todo.title }}</span>
-                    <span class="prio-badge" :class="PRIORITY_META[todo.priority].className">
-                      {{ PRIORITY_META[todo.priority].label }}
-                    </span>
-                    <span v-if="todo.dueDate" class="home-list-meta due" :class="{ overdue: isOverdue(todo) }">
-                      {{ todo.dueDate }}
-                    </span>
-                  </li>
-                </ul>
-                <div v-else class="home-empty" data-testid="home-todo-empty">暂无未完成待办</div>
-              </section>
+              <HomeLayoutCard v-if="menuOn.todos" card-id="pending-todos" :default-w="1">
+                <section class="bento-card bento-panel">
+                  <div class="panel-header">
+                    <h3><span class="panel-icon"><Icon name="todos" /></span>未完成待办</h3>
+                    <button class="nav-btn" data-testid="home-nav-todos" @click.stop="navTo('todos')">前往 →</button>
+                  </div>
+                  <ul v-if="pendingTodos.length > 0" class="home-list" data-testid="home-todo-list">
+                    <li v-for="todo in pendingTodos" :key="todo.id" class="home-list-item">
+                      <span class="home-list-title">{{ todo.title }}</span>
+                      <span class="prio-badge" :class="PRIORITY_META[todo.priority].className">
+                        {{ PRIORITY_META[todo.priority].label }}
+                      </span>
+                      <span v-if="todo.dueDate" class="home-list-meta due" :class="{ overdue: isOverdue(todo) }">
+                        {{ todo.dueDate }}
+                      </span>
+                    </li>
+                  </ul>
+                  <div v-else class="home-empty" data-testid="home-todo-empty">暂无未完成待办</div>
+                </section>
+              </HomeLayoutCard>
 
               <!-- 日历锚点卡（发薪/纪念日倒计时） -->
-              <CalendarAnchorCard class="bento-anchor" />
+              <HomeLayoutCard card-id="calendar-anchor" :default-w="1">
+                <CalendarAnchorCard class="bento-anchor" />
+              </HomeLayoutCard>
             </div>
             <!-- 所有工具卡片均隐藏时的兜底空态 -->
             <div
@@ -1181,4 +1291,214 @@ async function handleQuickNote(): Promise<void> {
     align-items: flex-start;
   }
 }
+
+/* ===== 编辑布局开关（问候条右侧）===== */
+.greeting-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.layout-toggle {
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-text, var(--color-text));
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.layout-toggle:hover:not(:disabled) {
+  border-color: var(--color-primary, var(--color-primary));
+  color: var(--color-primary, var(--color-primary));
+}
+
+.layout-toggle.primary {
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  color: #fff;
+}
+
+.layout-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ===== 习惯周历（按周统计）===== */
+.bento-habit-week {
+  gap: 10px;
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.week-nav-btn {
+  padding: 4px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--color-border, var(--color-border));
+  background: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-primary, var(--color-primary));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.week-nav-btn:hover:not(:disabled) {
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  color: #fff;
+}
+
+.week-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.week-nav-range {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) repeat(7, 1fr);
+  gap: 4px;
+  align-items: stretch;
+}
+
+.week-corner {
+  /* 左上角留空 */
+}
+
+.week-col-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  border-bottom: 1px solid var(--color-border, var(--color-border));
+}
+
+.week-col-head .week-col-label {
+  font-weight: 600;
+}
+
+.week-col-head .week-col-day {
+  font-size: 11px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-variant-numeric: tabular-nums;
+}
+
+.week-col-head.today {
+  color: var(--color-primary, var(--color-primary));
+}
+
+.week-col-head.today .week-col-day {
+  color: var(--color-primary, var(--color-primary));
+}
+
+.week-col-head.future {
+  opacity: 0.5;
+}
+
+.week-row-head {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  padding-right: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-cell {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid var(--color-border, var(--color-border));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-bg-card, var(--color-bg-hover));
+  color: var(--color-text, var(--color-text));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.week-cell:hover:not(:disabled) {
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+.week-cell.done {
+  background: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+  color: #fff;
+  font-weight: 700;
+}
+
+.week-cell.future {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ===== 暗色模式覆盖（新增块）===== */
+:root.dark .greeting-actions .layout-toggle {
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .greeting-actions .layout-toggle:hover:not(:disabled) {
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+:root.dark .greeting-actions .layout-toggle.primary {
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+
+:root.dark .week-nav-btn {
+  background-color: var(--color-bg-card, #1f2937);
+  color: #60a5fa;
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .week-nav-range {
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+:root.dark .week-col-head {
+  border-bottom-color: #374151;
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+:root.dark .week-col-head .week-col-day {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+:root.dark .week-row-head {
+  color: var(--color-text, #f9fafb);
+}
+
+:root.dark .week-cell {
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: #374151;
+  color: var(--color-text, #f9fafb);
+}
 </style>
+

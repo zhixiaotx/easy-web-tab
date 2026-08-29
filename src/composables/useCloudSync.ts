@@ -399,12 +399,12 @@ async function applyRemote(remote: WorkbenchData, silent = false): Promise<void>
   // 同设备推后拉、或远端密码身份未变时 → 不提示"已锁定"，避免频繁打扰
   const identityChanged = result.adoptedPasswordIdentity
     && (remote.passwordsSalt !== localSaltBefore || remote.passwordVerification !== localVerificationBefore)
-  if (!silent) {
-    if (identityChanged) {
-      useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
-    } else {
-      useToast().success('云同步完成')
-    }
+  if (identityChanged) {
+    // 例外：密码身份变更会锁定面板，必须告知原因，否则用户看到锁屏却不知为何。
+    // 此提示不受 silent 约束（它不是"同步成功"的例行播报，而是状态变更的解释）。
+    useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
+  } else if (!silent) {
+    useToast().success('云同步完成')
   }
   status.value = 'idle'
   await reloadAllStores()
@@ -740,7 +740,15 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
   useToast().info('已取消同步冲突')
 }
 
-async function pullNow(): Promise<void> {
+/**
+ * 拉取云端并落地本地。
+ *
+ * silent=true 用于**后台自动同步**（定时轮询 / 页面重新可见）：全程不弹 toast。
+ * 失败也不会被吞掉——status 置为 'error'、errorMessage 落值、同步按钮会变红并显示
+ * 「同步失败」，用户点「立即同步」即可看到具体错误提示。
+ * 后台同步若每次都弹成功/失败 toast，用户什么都没点也会被反复打扰。
+ */
+async function pullNow(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
   if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
     return
@@ -754,7 +762,7 @@ async function pullNow(): Promise<void> {
     if (!remote) {
       status.value = 'idle'
       // 远端无备份（首次使用）→ 若本地 dirty 则推送
-      if (isDirty()) await pushNow()
+      if (isDirty()) await pushNow(silent)
       return
     }
     // ===== 修复方案 B：双兜底判定 =====
@@ -833,7 +841,7 @@ async function pullNow(): Promise<void> {
       // 密码在此一并被云端覆盖（mergeData 语义：passwords + salt + verification 单向取云端），
       // 符合"密码同步永远云端覆盖本地"的策略。若两端主密码不同，applyRemote 会采用云端
       // 密码身份并锁定面板，提示用户输入来源设备主密码解锁——这是预期行为，非异常。
-      await applyRemote(remote)
+      await applyRemote(remote, silent)
       return
     }
     // 都无新变更 → noop（理论上已被 contentSame 短路吞掉，留作兜底）
@@ -841,24 +849,34 @@ async function pullNow(): Promise<void> {
   } catch (e) {
     status.value = 'error'
     errorMessage.value = e instanceof Error ? e.message : '拉取失败'
-    useToast().error(`云同步拉取失败：${errorMessage.value}`)
+    if (silent) {
+      console.error('[CloudSync] 后台拉取失败：', errorMessage.value)
+    } else {
+      useToast().error(`云同步拉取失败：${errorMessage.value}`)
+    }
   }
 }
 
-/** 立即同步按钮入口：按状态决定先拉还是先推 */
-export async function syncNow(): Promise<void> {
+/**
+ * 立即同步入口：按状态决定先拉还是先推。
+ *
+ * silent=true 供后台自动同步（定时轮询）使用：不弹任何 toast。
+ * 用户点击「立即同步」的三个入口（HomeView / WorkbenchView / BusinessView）走默认 false，
+ * 保留成功/失败反馈——主动操作需要明确结果。
+ */
+export async function syncNow(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
   if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl) {
-    useToast().error('请先在设置中启用并配置云同步')
+    if (!silent) useToast().error('请先在设置中启用并配置云同步')
     return
   }
   if (isDirty()) {
     // 本地有变更 → 先拉（避免盲推覆盖），拉取流程会在 !dirty 分支触发推送
-    await pullNow()
+    await pullNow(silent)
     // 如果拉取后仍 dirty 且没冲突 → 补推一次
-    if (isDirty() && status.value === 'idle') await pushNow()
+    if (isDirty() && status.value === 'idle') await pushNow(silent)
   } else {
-    await pullNow()
+    await pullNow(silent)
   }
 }
 
@@ -890,7 +908,8 @@ function startInterval(): void {
   const ms = minutes * 60 * 1000
   intervalTimer = setInterval(() => {
     if (status.value === 'idle' || status.value === 'error') {
-      void syncNow()
+      // 后台轮询：静默（不弹 toast），状态通过同步按钮的颜色/文案反馈
+      void syncNow(true)
     }
   }, ms)
 }
@@ -920,8 +939,9 @@ export function init(): void {
     if (status.value !== 'idle' && status.value !== 'error') return
     if (document.visibilityState === 'visible') {
       // 页面重新可见 → 拉取远程更新（技能改文件/其他设备推送都会被检测到）
+      // 静默执行：切回标签页就弹「云同步完成」会严重打扰使用
       // 设置栅栏 Promise 供其他模块（倒计时提醒）await 后再 tick
-      pendingPull = pullNow().finally(() => { pendingPull = null })
+      pendingPull = pullNow(true).finally(() => { pendingPull = null })
     }
     // hidden 时不自动推送（避免盲推覆盖技能修改的远程文件）
     // 推送统一由定时轮询 + 手动「立即同步」触发，都会先 pullNow 检测冲突

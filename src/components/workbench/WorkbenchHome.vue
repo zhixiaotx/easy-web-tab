@@ -9,7 +9,6 @@ import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
 import { useHomeStats, PRIORITY_META, statusClass, shiftDate } from '@/composables/useHomeStats'
-import { useHomeLayout } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import HomeLayoutCard from '@/components/workbench/HomeLayoutCard.vue'
 import WeatherCard from '@/components/workbench/WeatherCard.vue'
@@ -45,12 +44,8 @@ const {
   localToday
 } = useHomeStats()
 
-// ===== 主页卡片布局（宽高/位置可编辑）=====
-const layout = useHomeLayout()
-const editMode = layout.editMode
-const hasCustom = layout.hasCustom
-function setEditMode(v: boolean): void { editMode.value = v }
-function doResetAll(): void { layout.resetAll() }
+// ===== 主页卡片布局（鼠标拖拽排序，参考网站管理卡片 SiteCard）=====
+// 顺序逻辑在 useHomeLayout 单例中；卡片直接可拖拽，无需编辑模式开关。
 
 // ===== 习惯 store（周历补打卡/取消）=====
 const habitsStore = useWorkbenchHabitsStore()
@@ -67,9 +62,8 @@ function toggleHabit(habitId: string, date: string): void {
   habitsStore.toggleCheckIn(habitId, date)
 }
 
-// 导航（编辑模式下抑制，避免误触跳转）
+// 导航：点击卡片跳转对应面板（卡片同时可拖拽排序，点击与拖拽互不冲突）
 function navTo(section: string, tab?: string): void {
-  if (editMode.value) return
   emit('navigate', section, tab)
 }
 
@@ -203,13 +197,6 @@ async function handleQuickNote(): Promise<void> {
       <div class="greeting-clock">
         <div class="greeting-time">{{ timeText }}</div>
         <div class="greeting-date">{{ dateText }}</div>
-      </div>
-      <div class="greeting-actions">
-        <button v-if="!editMode" type="button" class="layout-toggle" data-testid="home-edit-layout" @click="setEditMode(true)">编辑布局</button>
-        <template v-else>
-          <button type="button" class="layout-toggle" data-testid="home-reset-layout" :disabled="!hasCustom" @click="doResetAll()">重置布局</button>
-          <button type="button" class="layout-toggle primary" data-testid="home-edit-done" @click="setEditMode(false)">完成</button>
-        </template>
       </div>
     </section>
 
@@ -1292,43 +1279,6 @@ async function handleQuickNote(): Promise<void> {
   }
 }
 
-/* ===== 编辑布局开关（问候条右侧）===== */
-.greeting-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.layout-toggle {
-  padding: 7px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--radius-full, 999px);
-  border: 1px solid var(--color-border, var(--color-border));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-text, var(--color-text));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.layout-toggle:hover:not(:disabled) {
-  border-color: var(--color-primary, var(--color-primary));
-  color: var(--color-primary, var(--color-primary));
-}
-
-.layout-toggle.primary {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-}
-
-.layout-toggle:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 /* ===== 习惯周历（按周统计）===== */
 .bento-habit-week {
   gap: 10px;
@@ -1456,22 +1406,6 @@ async function handleQuickNote(): Promise<void> {
 }
 
 /* ===== 暗色模式覆盖（新增块）===== */
-:root.dark .greeting-actions .layout-toggle {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-:root.dark .greeting-actions .layout-toggle:hover:not(:disabled) {
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-}
-
-:root.dark .greeting-actions .layout-toggle.primary {
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-}
-
 :root.dark .week-nav-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: #60a5fa;

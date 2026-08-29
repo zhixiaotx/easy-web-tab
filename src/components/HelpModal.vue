@@ -39,6 +39,22 @@ async function downloadIcons() {
   }
 }
 
+async function downloadSkill() {
+  try {
+    const resp = await fetch('/skills/easy-webtab-backup-editor.zip')
+    if (!resp.ok) throw new Error('下载失败')
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'easy-webtab-backup-editor.zip'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert('技能文件下载失败，请稍后重试')
+  }
+}
+
 const shortcuts = [
   { key: 'Ctrl + N', action: '新增网址' },
   { key: 'Ctrl + B', action: '切换前台/后台' },
@@ -519,6 +535,26 @@ const skillInstall = [
             配置好云同步后，无需手动导出导入——直接向 WorkBuddy 智能体说出需求，它会调用
             <code>{{ skillName }}</code> 技能，把网站与工作台内容写入云端备份文件，并在任意设备自动生效。
           </p>
+
+          <div class="download-card">
+            <div class="download-info">
+              <span class="download-icon"><Icon name="package" /></span>
+              <div>
+                <h4>下载技能</h4>
+                <p>技能含 <code>SKILL.md</code> 与 <code>add_entry.py</code>，解压到 <code>~/.workbuddy/skills/</code> 即可使用。</p>
+              </div>
+            </div>
+            <div class="download-actions">
+              <button class="btn-download" @click="downloadSkill">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                下载技能
+              </button>
+            </div>
+          </div>
 
           <h4 class="sub-title">提示词示例</h4>
           <p class="sub-desc">以下说法都会触发技能，直接对智能体说即可（替换为你自己的内容）：</p>

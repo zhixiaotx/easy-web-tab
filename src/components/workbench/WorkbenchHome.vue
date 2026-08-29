@@ -6,9 +6,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
-import { useHomeStats, PRIORITY_META, statusClass, shiftDate } from '@/composables/useHomeStats'
+import { useHomeStats, PRIORITY_META, statusClass } from '@/composables/useHomeStats'
 import Icon from '@/components/Icon.vue'
 import HomeLayoutCard from '@/components/workbench/HomeLayoutCard.vue'
 import WeatherCard from '@/components/workbench/WeatherCard.vue'
@@ -34,33 +33,16 @@ const {
   ledgerStats,
   habitStats,
   habitDetails,
-  habitWeekOf,
   visibleStatCards,
   upcomingCountdowns,
   pendingTodos,
   isOverdue,
   isUnlocked,
-  passwordCount,
-  localToday
+  passwordCount
 } = useHomeStats()
 
 // ===== 主页卡片布局（鼠标拖拽排序，参考网站管理卡片 SiteCard）=====
 // 顺序逻辑在 useHomeLayout 单例中；卡片直接可拖拽，无需编辑模式开关。
-
-// ===== 习惯 store（周历补打卡/取消）=====
-const habitsStore = useWorkbenchHabitsStore()
-
-// ===== 习惯周历（按周统计：周一~周日 × 每个习惯一行）=====
-const today = localToday()
-const weekAnchor = ref(today)
-const weekView = computed(() => habitWeekOf(weekAnchor.value))
-function changeWeek(delta: number): void {
-  weekAnchor.value = shiftDate(weekAnchor.value, delta * 7)
-}
-function toggleHabit(habitId: string, date: string): void {
-  if (date > today) return // 未来日期不可打卡
-  habitsStore.toggleCheckIn(habitId, date)
-}
 
 // 导航：点击卡片跳转对应面板（卡片同时可拖拽排序，点击与拖拽互不冲突）
 function navTo(section: string, tab?: string): void {
@@ -408,11 +390,11 @@ async function handleQuickNote(): Promise<void> {
               </HomeLayoutCard>
 
               <HomeLayoutCard v-if="visibleStatCards.includes('habits')" card-id="habits" :default-w="1">
-                <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" @click="navTo('habits')">
+                <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" @click="navTo('habit-week')">
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="habits" :size="16" /></span>
                     <span class="stat-label">习惯打卡</span>
-                    <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habits')">前往 →</button>
+                    <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habit-week')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>
@@ -441,48 +423,6 @@ async function handleQuickNote(): Promise<void> {
                     </div>
                   </div>
                 </div>
-              </HomeLayoutCard>
-
-              <!-- 习惯周历：按周统计（周一~周日 × 每个习惯一行），可切换上/本周，格内直接补打卡 -->
-              <HomeLayoutCard v-if="visibleStatCards.includes('habits')" card-id="habits-week" :default-w="5">
-                <section class="bento-card bento-habit-week" data-testid="home-habit-week" @click="navTo('habits')">
-                  <div class="stat-header">
-                    <span class="stat-icon"><Icon name="habits" :size="16" /></span>
-                    <span class="stat-label">习惯打卡 · 周历</span>
-                    <button class="nav-btn" data-testid="home-nav-habits-week" @click.stop="navTo('habits')">前往</button>
-                  </div>
-                  <div class="week-nav">
-                    <button type="button" class="week-nav-btn" data-testid="home-week-prev" @click.stop="changeWeek(-1)">‹ 上周</button>
-                    <span class="week-nav-range">{{ weekView.rangeText }}</span>
-                    <button type="button" class="week-nav-btn" data-testid="home-week-next" :disabled="weekView.isCurrentWeek" @click.stop="changeWeek(1)">下周 ›</button>
-                  </div>
-                  <div v-if="weekView.rows.length" class="week-grid" data-testid="home-week-grid">
-                    <div class="week-corner"></div>
-                    <div
-                      v-for="d in weekView.days"
-                      :key="d.date"
-                      class="week-col-head"
-                      :class="{ today: d.isToday, future: d.isFuture }"
-                    >
-                      <span class="week-col-label">{{ d.label }}</span>
-                      <span class="week-col-day">{{ d.dayNum }}</span>
-                    </div>
-                    <template v-for="row in weekView.rows" :key="row.id">
-                      <div class="week-row-head" :style="{ color: row.color }">{{ row.name }}</div>
-                      <button
-                        v-for="c in row.cells"
-                        :key="c.date"
-                        type="button"
-                        class="week-cell"
-                        :class="{ done: c.done, future: c.date > today }"
-                        :disabled="c.date > today"
-                        :title="`${row.name} ${c.date} ${c.done ? 'done' : 'undone'}`"
-                        @click.stop="toggleHabit(row.id, c.date)"
-                      >{{ c.done ? '✓' : '' }}</button>
-                    </template>
-                  </div>
-                  <div v-else class="home-empty">暂无习惯，去习惯打卡面板添加</div>
-                </section>
               </HomeLayoutCard>
             </div>
             <div v-else class="home-empty" data-testid="home-overview-empty">暂无统计数据，去各功能面板添加数据吧</div>
@@ -1279,160 +1219,5 @@ async function handleQuickNote(): Promise<void> {
   }
 }
 
-/* ===== 习惯周历（按周统计）===== */
-.bento-habit-week {
-  gap: 10px;
-}
-
-.week-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.week-nav-btn {
-  padding: 4px 12px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  border: 1px solid var(--color-border, var(--color-border));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-primary, var(--color-primary));
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.week-nav-btn:hover:not(:disabled) {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-}
-
-.week-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.week-nav-range {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-variant-numeric: tabular-nums;
-}
-
-.week-grid {
-  display: grid;
-  grid-template-columns: minmax(64px, auto) repeat(7, 1fr);
-  gap: 4px;
-  align-items: stretch;
-}
-
-.week-corner {
-  /* 左上角留空 */
-}
-
-.week-col-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  padding: 4px 0;
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-}
-
-.week-col-head .week-col-label {
-  font-weight: 600;
-}
-
-.week-col-head .week-col-day {
-  font-size: 11px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-variant-numeric: tabular-nums;
-}
-
-.week-col-head.today {
-  color: var(--color-primary, var(--color-primary));
-}
-
-.week-col-head.today .week-col-day {
-  color: var(--color-primary, var(--color-primary));
-}
-
-.week-col-head.future {
-  opacity: 0.5;
-}
-
-.week-row-head {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 500;
-  padding-right: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.week-cell {
-  min-height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 8px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-text, var(--color-text));
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.week-cell:hover:not(:disabled) {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.week-cell.done {
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-  font-weight: 700;
-}
-
-.week-cell.future {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* ===== 暗色模式覆盖（新增块）===== */
-:root.dark .week-nav-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: #60a5fa;
-  border-color: var(--color-border, #374151);
-}
-
-:root.dark .week-nav-range {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-:root.dark .week-col-head {
-  border-bottom-color: #374151;
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-:root.dark .week-col-head .week-col-day {
-  color: var(--color-text-muted, #9ca3af);
-}
-
-:root.dark .week-row-head {
-  color: var(--color-text, #f9fafb);
-}
-
-:root.dark .week-cell {
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: #374151;
-  color: var(--color-text, #f9fafb);
-}
 </style>
 

@@ -19,7 +19,7 @@ export const LAYOUT_CONTAINERS: Record<ContainerId, { ids: string[]; maxCols: nu
   overview: {
     ids: [
       'todos', 'notes', 'countdowns', 'passwords',
-      'exercise', 'diet', 'sleep', 'weight', 'ledger', 'habits', 'habits-week'
+      'exercise', 'diet', 'sleep', 'weight', 'ledger', 'habits'
     ],
     maxCols: 5
   },

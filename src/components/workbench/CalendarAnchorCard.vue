@@ -8,6 +8,7 @@ import { useCountdownsStore } from '@/stores/countdowns'
 import { nextPayday } from '@/composables/ledgerCore'
 import { calcRemaining } from '@/composables/countdownCore'
 import { localToday } from '@/composables/todoCore'
+import Icon from '@/components/Icon.vue'
 
 const ledgerStore = useWorkbenchLedgerStore()
 const countdownsStore = useCountdownsStore()
@@ -66,7 +67,7 @@ const payday = computed(() => nextPayday(ledgerStore.entries, today.value))
 const paydayRow = computed<AnchorRow | null>(() => {
   const date = payday.value
   if (date === null) return null
-  return { key: 'payday', icon: '⏰', name: '发工资', days: daysUntil(date) }
+  return { key: 'payday', icon: 'timer', name: '发工资', days: daysUntil(date) }
 })
 
 // category='life' 的生日/纪念日：calcRemaining 复用（一次性已过期 → isExpired 跳过），
@@ -78,7 +79,7 @@ const countdownRows = computed<AnchorRow[]>(() =>
     .filter(x => !x.remaining.isExpired)
     .sort((a, b) => a.remaining.days - b.remaining.days)
     .slice(0, payday.value === null ? 3 : 2)
-    .map(x => ({ key: `countdown-${x.c.id}`, icon: '🎂', name: x.c.name, days: x.remaining.days }))
+    .map(x => ({ key: `countdown-${x.c.id}`, icon: 'cake', name: x.c.name, days: x.remaining.days }))
 )
 
 const anchors = computed<AnchorRow[]>(() => {
@@ -92,11 +93,11 @@ const anchors = computed<AnchorRow[]>(() => {
 <template>
   <section class="anchor-card" data-testid="ac-card">
     <div class="anchor-header">
-      <h3><span class="anchor-title-icon">📅</span>日历锚点</h3>
+      <h3><span class="anchor-title-icon"><Icon name="calendar" /></span>日历锚点</h3>
     </div>
     <ul v-if="anchors.length > 0" class="anchor-list">
       <li v-for="a in anchors" :key="a.key" class="anchor-row" :data-testid="`ac-anchor-${a.key}`">
-        <span class="anchor-icon">{{ a.icon }}</span>
+        <span class="anchor-icon"><Icon :name="a.icon" /></span>
         <span class="anchor-text">
           距{{ a.name }}<template v-if="a.days > 0">还有 {{ a.days }} 天</template><template v-else>就是今天</template>
         </span>

@@ -1092,6 +1092,82 @@
   background-color: var(--color-primary-hover, #2563eb);
 }
 
+/* ===== 帮助弹窗：标签页暗色模式 ===== */
+:root.dark .help-tabs {
+  border-bottom-color: var(--color-border, #374151);
+}
+
+:root.dark .help-tab {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+:root.dark .help-tab:hover,
+:root.dark .help-tab.active {
+  color: #60a5fa;
+}
+
+:root.dark .help-tab.active {
+  border-bottom-color: #60a5fa;
+}
+
+/* ===== 帮助弹窗：模块说明暗色模式 ===== */
+:root.dark .panel-intro {
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+:root.dark .panel-intro code {
+  background-color: var(--color-bg-hover, #374151);
+  color: #60a5fa;
+}
+
+:root.dark .panel-item {
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .panel-head h4 {
+  color: var(--color-text, #f9fafb);
+}
+
+:root.dark .panel-desc {
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+:root.dark .panel-tips {
+  color: var(--color-text-muted, #9ca3af);
+  border-top-color: var(--color-border, #374151);
+}
+
+/* ===== 帮助弹窗：公式 / 流程暗色模式 ===== */
+:root.dark .formula-item {
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .formula-label {
+  color: var(--color-text, #f9fafb);
+}
+
+:root.dark .formula-expr {
+  background-color: #1e3a5f;
+  color: #93c5fd;
+}
+
+:root.dark .formula-note {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+:root.dark .flow-list li {
+  background-color: var(--color-bg, #111827);
+  border-color: var(--color-border, #374151);
+}
+
+:root.dark .flow-text {
+  color: var(--color-text-secondary, #d1d5db);
+}
+
 /* 示例数据下载暗色模式 */
 :root.dark .download-card {
   background: linear-gradient(135deg, #1e3a5f 0%, #1a2e1a 100%);

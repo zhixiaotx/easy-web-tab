@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import Icon from './Icon.vue'
 const emit = defineEmits<{
   close: []
@@ -117,6 +118,170 @@ const features = [
     desc: 'AES-CBC 加密存储账号密码（位于「工作台」面板），支持主密码保护、一键复制、按网站名称搜索，新增加密存储时自动关联书签网站信息。'
   }
 ]
+
+// ===== 标签页 =====
+const TABS = [
+  { key: 'nav', icon: 'link', label: '网址导航' },
+  { key: 'workbench', icon: 'toolbox', label: '个人工作台' },
+  { key: 'business', icon: 'store', label: '销售记账台' },
+  { key: 'data', icon: 'keyboard', label: '快捷键与数据' }
+] as const
+type TabKey = (typeof TABS)[number]['key']
+const activeTab = ref<TabKey>('nav')
+
+// ===== 个人工作台：10 个面板 =====
+interface PanelDoc {
+  icon: string
+  name: string
+  desc: string
+  tips: string
+}
+
+const wbPanels: PanelDoc[] = [
+  {
+    icon: 'home',
+    name: '主页',
+    desc: '工作台总览：待办 / 便签快捷添加，今日数据速览，即将到期的定时提醒。',
+    tips: '内嵌天气卡与日历锚点（发薪日、生日纪念日倒计时）。'
+  },
+  {
+    icon: 'todos',
+    name: '工作待办',
+    desc: '自定义分类管理待办，支持分类筛选、优先级标记与完成状态。',
+    tips: '分类被引用时禁止删除；重命名会自动同步历史条目的分类。'
+  },
+  {
+    icon: 'notes',
+    name: '个人便签',
+    desc: '便签 + 时光轴双形态：普通便签随手记，时光轴按时间线留存重要节点。',
+    tips: '便签分类删除后，其下便签自动归入「未分类」，不会丢失。'
+  },
+  {
+    icon: 'diary',
+    name: '日记本',
+    desc: '每日一篇，按本地日期唯一存储，同一天再次保存即为更新。',
+    tips: '日期键按本地时区计算，不会因 UTC 偏移串到前一天。'
+  },
+  {
+    icon: 'countdowns',
+    name: '定时提醒',
+    desc: '6 种重复规则（一次 / 每天 / 每周 / 每月 / 每年 / 自定义间隔），6 类默认分类可自定义扩展。',
+    tips: '三通道提醒：弹框 + 桌面通知 + 邮件（需单独开启）；每天 9:00 发送当日摘要，摘要永不发邮件。'
+  },
+  {
+    icon: 'pomodoro',
+    name: '番茄钟',
+    desc: '专注计时器，工作与休息交替，帮助保持节奏。',
+    tips: '配合「定时提醒」的倒计时分类，可统一管理专注时段。'
+  },
+  {
+    icon: 'habits',
+    name: '习惯打卡',
+    desc: '建立习惯清单，按天打卡，连续天数与完成率一目了然。',
+    tips: '适合配合每日固定时间的倒计时提醒，形成稳定节奏。'
+  },
+  {
+    icon: 'passwords',
+    name: '密码管理',
+    desc: 'AES-CBC 加密存储账号密码，主密码解锁后才能查看，支持一键复制与按网站名搜索。',
+    tips: '安全策略：5 分钟无操作自动锁定；云同步采用「云端覆盖本地」，增删改后立即推送。'
+  },
+  {
+    icon: 'health',
+    name: '健康管理',
+    desc: '四个子面板：运动、饮食、睡眠、体重，含目标计划与按天记录。',
+    tips: 'BMI 按国标 WS/T 428-2013 分级；面板顶部「定时提醒」区块按倒计时分类 1:1 映射，只读展示。'
+  },
+  {
+    icon: 'ledger',
+    name: '记账',
+    desc: '六指标统计（收入 / 支出 / 结余 / 存款 / 笔数 / 支出比），近 6 个月收支趋势柱图与支出分类环形图。',
+    tips: '支持分组管理与金额一键掩码；图表区可折叠，防止挤压记录列表。'
+  }
+]
+
+// ===== 销售记账台：7 个模块 =====
+const bsModules: PanelDoc[] = [
+  {
+    icon: 'home',
+    name: '首页',
+    desc: '经营总览：营业额与利润总额主指标，成本 / 支出 / 毛利率统计卡。',
+    tips: '含低库存预警清单（默认阈值 20）与分类销售排行树状图，可直接跳转对应模块。'
+  },
+  {
+    icon: 'products',
+    name: '商品',
+    desc: '商品档案：名称、分类、进货价、售价，自动计算加价率，可标记停售。',
+    tips: '商品分类支持自定义、排序与显隐；停售商品不参与低库存预警。'
+  },
+  {
+    icon: 'purchases',
+    name: '进货',
+    desc: '记录每次进货的商品、数量与金额，是库存的唯一增加来源。',
+    tips: '进货价变动会同步影响成本与利润计算，务必如实填写。'
+  },
+  {
+    icon: 'daily',
+    name: '收摊',
+    desc: '每日收摊登记：每件商品带出多少、剩余多少、损耗多少，自动算出当日营业额。',
+    tips: '核心数据入口，营业额与成本全部由这里的三条数量推导。'
+  },
+  {
+    icon: 'expenses',
+    name: '支出',
+    desc: '记录摊位费、交通等经营支出，按分类归集，可查看支出占比与趋势。',
+    tips: '内置 8 个分类不可删除；支出独立统计，不计入商品成本。'
+  },
+  {
+    icon: 'inventory',
+    name: '库存',
+    desc: '实时库存由进货与收摊记录自动推导，无需手工盘点。',
+    tips: '可查看每个商品的库存构成来源（进货、带出、剩余明细）。'
+  },
+  {
+    icon: 'stats',
+    name: '统计',
+    desc: '近 N 天经营趋势（每日一柱）、支出占比、营业占比，支持切换天数。',
+    tips: '趋势图支持分段查看，长按或悬停可看具体数值。'
+  }
+]
+
+// ===== 销售记账核心公式 =====
+const bsFormulas = [
+  { label: '售出数量', expr: '带出 - 剩余 - 损耗' },
+  { label: '当前库存', expr: '累计进货 - 累计售出 - 累计损耗' },
+  { label: '营业额', expr: '累计（售出数量 × 售价）' },
+  { label: '成本 COGS', expr: '累计（售出数量 × 进货价）' },
+  { label: '利润', expr: '营业额 - 成本' },
+  { label: '毛利率', expr: '利润 ÷ 营业额' }
+]
+
+// ===== 销售记账推荐流程 =====
+const bsFlow = [
+  { step: '1', text: '建商品档案：先录入商品与进货价、售价' },
+  { step: '2', text: '记进货：每次进货登记数量，库存随之增加' },
+  { step: '3', text: '每日收摊：填带出、剩余、损耗，当日营业额自动生成' },
+  { step: '4', text: '记支出：登记摊位费等经营支出' },
+  { step: '5', text: '看统计：在统计页查看趋势、占比与排行' }
+]
+
+// ===== 工作台快捷键 =====
+const wbShortcuts = [
+  { key: 'Alt + K', action: '打开全局搜索浮层' },
+  { key: 'Ctrl + Alt + 1~9', action: '跳转左侧菜单第 N 项' },
+  { key: 'g', action: '个人工作台与销售记账台互相切换' },
+  { key: '[ / ]', action: '切换到上一个 / 下一个模块' },
+  { key: 'ESC', action: '关闭搜索浮层' }
+]
+
+// ===== 云同步要点 =====
+const syncNotes = [
+  '基于 WebDAV 协议，坚果云等任意 WebDAV 服务均可，在「设置 - 云同步」中配置。',
+  '后台自动同步静默执行，不会弹提示打扰；同步按钮变红代表失败，点一下即可看到具体错误。',
+  '密码库采用「云端覆盖本地」策略：拉取时以云端为准，避免本地旧密文覆盖新数据。',
+  '密码增删改后会立即主动推送，无需等待定时轮询。',
+  '两端主密码不一致时，面板会锁定并要求输入来源设备的主密码解锁。'
+]
 </script>
 
 <template>
@@ -132,7 +297,26 @@ const features = [
         </button>
       </div>
 
+      <!-- 标签页导航 -->
+      <div class="help-tabs" role="tablist">
+        <button
+          v-for="tab in TABS"
+          :key="tab.key"
+          class="help-tab"
+          :class="{ active: activeTab === tab.key }"
+          :aria-selected="activeTab === tab.key"
+          :data-testid="`help-tab-${tab.key}`"
+          role="tab"
+          @click="activeTab = tab.key"
+        >
+          <span class="help-tab-icon"><Icon :name="tab.icon" :size="16" /></span>
+          <span class="help-tab-label">{{ tab.label }}</span>
+        </button>
+      </div>
+
       <div class="modal-body">
+        <!-- ===== 标签 1：网址导航 ===== -->
+        <template v-if="activeTab === 'nav'">
         <!-- 示例数据下载 -->
         <section class="help-section download-section">
           <div class="download-card">
@@ -182,21 +366,6 @@ const features = [
           </div>
         </section>
 
-        <!-- 快捷键 -->
-        <section class="help-section">
-          <h3 class="section-title"><Icon name="keyboard" /> 键盘快捷键</h3>
-          <div class="shortcuts-list">
-            <div
-              v-for="shortcut in shortcuts"
-              :key="shortcut.key"
-              class="shortcut-item"
-            >
-              <kbd class="shortcut-key">{{ shortcut.key }}</kbd>
-              <span class="shortcut-action">{{ shortcut.action }}</span>
-            </div>
-          </div>
-        </section>
-
         <!-- 页面模式 -->
         <section class="help-section">
           <h3 class="section-title"><Icon name="document" /> 页面模式</h3>
@@ -212,6 +381,71 @@ const features = [
           </div>
         </section>
 
+        </template>
+
+        <!-- ===== 标签 2：个人工作台 ===== -->
+        <template v-if="activeTab === 'workbench'">
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="toolbox" /> 个人工作台</h3>
+            <div class="panel-intro">
+              <p>路由 <code>/workbench</code>。10 个面板覆盖日常事务管理，菜单顺序、名称与显隐可在「设置 - 工作台」中调整，不用的面板可以关掉。</p>
+            </div>
+            <div class="panels-grid">
+              <div v-for="p in wbPanels" :key="p.name" class="panel-item">
+                <div class="panel-head">
+                  <span class="panel-icon"><Icon :name="p.icon" :size="18" /></span>
+                  <h4>{{ p.name }}</h4>
+                </div>
+                <p class="panel-desc">{{ p.desc }}</p>
+                <p class="panel-tips"><Icon name="lightbulb" :size="13" /> {{ p.tips }}</p>
+              </div>
+            </div>
+          </section>
+        </template>
+
+        <!-- ===== 标签 3：销售记账台 ===== -->
+        <template v-if="activeTab === 'business'">
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="store" /> 销售记账台</h3>
+            <div class="panel-intro">
+              <p>路由 <code>/business</code>。面向摆摊与小微零售的进销存闭环：只需录入进货、收摊、支出三类动作，库存与利润全部自动推导。</p>
+            </div>
+            <div class="panels-grid">
+              <div v-for="m in bsModules" :key="m.name" class="panel-item">
+                <div class="panel-head">
+                  <span class="panel-icon"><Icon :name="m.icon" :size="18" /></span>
+                  <h4>{{ m.name }}</h4>
+                </div>
+                <p class="panel-desc">{{ m.desc }}</p>
+                <p class="panel-tips"><Icon name="lightbulb" :size="13" /> {{ m.tips }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="trending-up" /> 核心计算公式</h3>
+            <div class="formula-list">
+              <div v-for="f in bsFormulas" :key="f.label" class="formula-item">
+                <span class="formula-label">{{ f.label }}</span>
+                <code class="formula-expr">{{ f.expr }}</code>
+              </div>
+            </div>
+            <p class="formula-note">支出为独立统计项，不计入成本，因此「利润」是毛利口径；算净利请用利润减去支出。</p>
+          </section>
+
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="target" /> 推荐使用流程</h3>
+            <ol class="flow-list">
+              <li v-for="s in bsFlow" :key="s.step">
+                <span class="flow-step">{{ s.step }}</span>
+                <span class="flow-text">{{ s.text }}</span>
+              </li>
+            </ol>
+          </section>
+        </template>
+
+        <!-- ===== 标签 4：快捷键与数据 ===== -->
+        <template v-if="activeTab === 'data'">
         <!-- 数据存储 -->
         <section class="help-section">
           <h3 class="section-title"><Icon name="save" /> 数据存储</h3>
@@ -223,6 +457,38 @@ const features = [
             <li><strong>断链检测结果</strong>：存储于 <code>localStorage</code>，关闭页面后保留</li>
           </ul>
         </section>
+
+        <!-- 网址导航快捷键 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="keyboard" /> 网址导航快捷键</h3>
+          <div class="shortcuts-list">
+            <div v-for="shortcut in shortcuts" :key="shortcut.key" class="shortcut-item">
+              <kbd class="shortcut-key">{{ shortcut.key }}</kbd>
+              <span class="shortcut-action">{{ shortcut.action }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 工作台快捷键 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="keyboard" /> 工作台快捷键</h3>
+          <p class="panel-intro">以下快捷键在个人工作台与销售记账台中均生效。焦点位于输入框时，单键快捷键（g / [ / ]）不会触发，避免打断打字。</p>
+          <div class="shortcuts-list">
+            <div v-for="s in wbShortcuts" :key="s.key" class="shortcut-item">
+              <kbd class="shortcut-key">{{ s.key }}</kbd>
+              <span class="shortcut-action">{{ s.action }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 云同步 -->
+        <section class="help-section">
+          <h3 class="section-title"><Icon name="cloud" /> 云同步</h3>
+          <ul class="storage-list">
+            <li v-for="(note, i) in syncNotes" :key="i">{{ note }}</li>
+          </ul>
+        </section>
+        </template>
       </div>
 
       <div class="modal-footer">
@@ -561,6 +827,212 @@ const features = [
   flex-shrink: 0;
 }
 
+/* 标签页导航 */
+.help-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid #f1f5f9;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.help-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.help-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.help-tab:hover {
+  color: #3b82f6;
+}
+
+.help-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.help-tab-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 模块说明 */
+.panel-intro {
+  margin: 0;
+  padding: 12px 14px;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.panel-intro code {
+  background-color: #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #3b82f6;
+}
+
+.panels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.panel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.panel-head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.panel-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.panel-tips {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.panel-tips :deep(svg) {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* 公式列表 */
+.formula-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.formula-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.formula-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.formula-expr {
+  font-size: 12px;
+  color: #3b82f6;
+  background-color: #eff6ff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.formula-note {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+/* 流程列表 */
+.flow-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flow-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.flow-text {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
 /* 响应式 */
 @media (max-width: 600px) {
   .features-grid {
@@ -569,6 +1041,22 @@ const features = [
 
   .shortcuts-list {
     grid-template-columns: 1fr;
+  }
+
+  .panels-grid,
+  .formula-list {
+    grid-template-columns: 1fr;
+  }
+
+  .formula-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .help-tab {
+    padding: 10px;
+    font-size: 12px;
   }
 
   .help-modal {

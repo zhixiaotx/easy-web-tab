@@ -11,9 +11,20 @@ import {
   getSaltHex
 } from '../composables/useCrypto'
 import { idbGet, idbPut } from '../composables/useIdb'
-import { markDirty } from '@/composables/useCloudSync'
+import { markDirty, useCloudSync } from '@/composables/useCloudSync'
+import { useAppSettingsStore } from '@/stores/settings'
 
 const STORAGE_KEY = 'user-passwords'
+
+/** 写操作结果：落盘与云推送分别报告，便于 UI 给出准确提示 */
+export interface PasswordSaveResult {
+  /** 是否已写入 IndexedDB（false = 未落盘，通常是密码库已锁定） */
+  saved: boolean
+  /** 是否已成功推送云端 */
+  synced: boolean
+  /** 是否已启用并配置云同步（false 时 synced=false 不算故障） */
+  cloudEnabled: boolean
+}
 
 export const usePasswordsStore = defineStore('passwords', () => {
   const passwords = ref<PasswordEntry[]>([])
@@ -59,9 +70,44 @@ export const usePasswordsStore = defineStore('passwords', () => {
     }
   }
 
-  // 保存到 IndexedDB（加密；失败仅 console.error，不崩溃）
-  async function savePasswords(): Promise<void> {
-    if (!currentMasterPassword) return
+  /**
+   * 落盘成功后立即主动推送云端。
+   *
+   * 必要性：全局同步策略是"密码永远云端覆盖本地"，本地改动若不及时推上去，
+   * 下一次拉取就会被云端旧密文整体覆盖，表现为"改了又变回去"。
+   *
+   * 关键：这里只 push、绝不先 pull —— 先拉会先把本次改动覆盖掉，等于白改。
+   * 未启用云同步时直接返回，静默跳过（不算故障）。
+   */
+  async function pushPasswordsToCloud(): Promise<{ synced: boolean; cloudEnabled: boolean }> {
+    const settings = useAppSettingsStore()
+    const cloudEnabled = Boolean(
+      settings.cloudSyncEnabled &&
+      settings.cloudSyncUrl &&
+      settings.cloudSyncUsername &&
+      settings.cloudSyncPassword
+    )
+    if (!cloudEnabled) return { synced: false, cloudEnabled: false }
+    try {
+      const { pushNow } = useCloudSync()
+      // silent=true：提示交由调用方按操作语义给出，避免出现两条重复的 toast
+      const synced = await pushNow(true)
+      return { synced, cloudEnabled: true }
+    } catch (e) {
+      console.warn('[Passwords] cloud push failed', e)
+      return { synced: false, cloudEnabled: true }
+    }
+  }
+
+  // 保存到 IndexedDB（加密）+ 立即主动推送云端。
+  // saved=false 最常见原因是密码库已锁定（currentMasterPassword 为空）——
+  // 此时必须让调用方感知并提示用户重新解锁，否则会出现"界面显示已改、实际未落盘、
+  // 也未 markDirty，云同步自然推不上去"的静默失败。
+  async function savePasswords(): Promise<PasswordSaveResult> {
+    if (!currentMasterPassword) {
+      console.warn('[Passwords] save skipped: vault is locked (no master password)')
+      return { saved: false, synced: false, cloudEnabled: false }
+    }
     const json = JSON.stringify(passwords.value)
     const encrypted = await encrypt(json, currentMasterPassword)
     try {
@@ -69,7 +115,10 @@ export const usePasswordsStore = defineStore('passwords', () => {
       markDirty()
     } catch (e) {
       console.error('[Passwords] save failed', e)
+      return { saved: false, synced: false, cloudEnabled: false }
     }
+    const { synced, cloudEnabled } = await pushPasswordsToCloud()
+    return { saved: true, synced, cloudEnabled }
   }
 
   // 设置主密码
@@ -97,8 +146,8 @@ export const usePasswordsStore = defineStore('passwords', () => {
     passwords.value = []
   }
 
-  // 添加密码
-  async function addPassword(entry: Omit<PasswordEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> {
+  // 添加密码（saved=false = 未保存，通常因密码库已锁定）
+  async function addPassword(entry: Omit<PasswordEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<PasswordSaveResult> {
     const now = new Date().toISOString()
     passwords.value.push({
       ...entry,
@@ -106,26 +155,25 @@ export const usePasswordsStore = defineStore('passwords', () => {
       createdAt: now,
       updatedAt: now
     })
-    await savePasswords()
+    return await savePasswords()
   }
 
-  // 更新密码
-  async function updatePassword(id: string, updates: Partial<Omit<PasswordEntry, 'id' | 'createdAt'>>): Promise<void> {
+  // 更新密码（saved=false = 未保存：id 不存在，或密码库已锁定）
+  async function updatePassword(id: string, updates: Partial<Omit<PasswordEntry, 'id' | 'createdAt'>>): Promise<PasswordSaveResult> {
     const index = passwords.value.findIndex(p => p.id === id)
-    if (index !== -1) {
-      passwords.value[index] = {
-        ...passwords.value[index],
-        ...updates,
-        updatedAt: new Date().toISOString()
-      }
-      await savePasswords()
+    if (index === -1) return { saved: false, synced: false, cloudEnabled: false }
+    passwords.value[index] = {
+      ...passwords.value[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
     }
+    return await savePasswords()
   }
 
-  // 删除密码
-  async function deletePassword(id: string): Promise<void> {
+  // 删除密码（saved=false = 未保存，通常因密码库已锁定）
+  async function deletePassword(id: string): Promise<PasswordSaveResult> {
     passwords.value = passwords.value.filter(p => p.id !== id)
-    await savePasswords()
+    return await savePasswords()
   }
 
   // 搜索密码（按网站名称匹配；旧数据可能缺字段，防御处理避免渲染崩溃）
@@ -158,8 +206,8 @@ export const usePasswordsStore = defineStore('passwords', () => {
   }
 
   // 导入密码（从 sites.md，password 字段为加密数据）
-  async function importPasswords(entries: PasswordEntry[]): Promise<{ imported: number; failed: number }> {
-    if (!currentMasterPassword) return { imported: 0, failed: entries.length }
+  async function importPasswords(entries: PasswordEntry[]): Promise<{ imported: number; failed: number; saved: boolean; synced: boolean; cloudEnabled: boolean }> {
+    if (!currentMasterPassword) return { imported: 0, failed: entries.length, saved: false, synced: false, cloudEnabled: false }
     let imported = 0
     let failed = 0
     for (const entry of entries) {
@@ -188,10 +236,16 @@ export const usePasswordsStore = defineStore('passwords', () => {
         console.warn(`[Passwords] Failed to decrypt entry: ${entry.siteName}`)
       }
     }
+    let saved = false
+    let synced = false
+    let cloudEnabled = false
     if (imported > 0) {
-      await savePasswords()
+      const result = await savePasswords()
+      saved = result.saved
+      synced = result.synced
+      cloudEnabled = result.cloudEnabled
     }
-    return { imported, failed }
+    return { imported, failed, saved, synced, cloudEnabled }
   }
 
   // 迁移旧版密码数据（v1：Web Crypto AES-GCM + 无 -v2 后缀的旧 key）

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { usePasswordsStore } from '@/stores/passwords'
+import type { PasswordSaveResult } from '@/stores/passwords'
 import { useSitesStore } from '@/stores/sites'
 import { useToast } from '@/composables/useToast'
 import { usePanelPaging } from '@/composables/usePanelPaging'
@@ -220,6 +221,17 @@ function cancelForm(): void {
   showSiteDropdown.value = false
 }
 
+/**
+ * 已落盘后的提示：按云推送结果细化文案。
+ * 密码改动会立即主动推送云端，所以"同步成功"必须如实告知；
+ * 推送失败也要讲清楚——否则用户会以为什么都好了，下次拉取被云端覆盖才发现丢了。
+ */
+function toastSaved(verb: string, r: PasswordSaveResult): void {
+  if (r.synced) toast.success(`${verb}成功，已同步到云端`)
+  else if (r.cloudEnabled) toast.warning(`${verb}成功，但云同步失败，请稍后手动同步`)
+  else toast.success(`${verb}成功`)
+}
+
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
   const data = {
@@ -228,20 +240,28 @@ async function handleSave(): Promise<void> {
     username: formUsername.value.trim(),
     password: formPassword.value.trim()
   }
-  if (editingId.value) {
-    await passwordsStore.updatePassword(editingId.value, data)
-    toast.success('密码已更新')
-  } else {
-    await passwordsStore.addPassword(data)
-    toast.success('密码已添加')
+  const isEdit = Boolean(editingId.value)
+  const result = isEdit
+    ? await passwordsStore.updatePassword(editingId.value!, data)
+    : await passwordsStore.addPassword(data)
+  // 保存失败多为密码库已锁定（空闲自动锁定后未重新解锁）：
+  // 必须明确提示并保留表单内容，否则用户以为改成功了、实际未落盘也未同步
+  if (!result.saved) {
+    toast.error('保存失败：密码库已锁定，请重新解锁后重试')
+    return
   }
+  toastSaved(isEdit ? '更新' : '添加', result)
   cancelForm()
 }
 
 async function handleDelete(id: string): Promise<void> {
   if (confirm('确定要删除这个密码条目吗？')) {
-    await passwordsStore.deletePassword(id)
-    toast.success('密码已删除')
+    const result = await passwordsStore.deletePassword(id)
+    if (!result.saved) {
+      toast.error('删除失败：密码库已锁定，请重新解锁后重试')
+      return
+    }
+    toastSaved('删除', result)
   }
 }
 

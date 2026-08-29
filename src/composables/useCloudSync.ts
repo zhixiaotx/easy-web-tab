@@ -217,6 +217,11 @@ function moduleDiffSize(local: WorkbenchData, remote: WorkbenchData): number {
   return total
 }
 
+// 注：密码在 IndexedDB 中是"整库用一个主密码加密"的单个密文串（savePasswords 里
+// encrypt(JSON.stringify(passwords)) 后整体 idbPut），并非逐条加密，密文层面无法条目级合并。
+// 同步策略（用户明确要求）：**密码永远云端覆盖本地** —— 由 mergeData 单向取云端实现，
+// 拉取 / 静默合并 / 冲突解决选择云端这三条路径因此对密码行为一致，无需在此额外判定。
+
 async function sha1Hash(text: string): Promise<string> {
   // SubtleCrypto 仅在 localhost / HTTPS / file:// 可用（浏览器定义）；
   // 生产环境如果部署在内网 HTTP IP，会抛 "SubtleCrypto only available in secure contexts"。
@@ -660,7 +665,8 @@ function mergePrefs(l: Record<string, string> | undefined, r: Record<string, str
 
 /**
  * 顶层合并入口：调用各模块合并函数组装结果，修正元数据字段。
- * 纯函数——不触碰 IDB / localStorage。密码字段与 settings 整体取本地。
+ * 纯函数——不触碰 IDB / localStorage。
+ * 例外（不并集、单向覆盖）：密码 + 密码身份整体取云端；settings 整体取本地。
  */
 function mergeData(local: WorkbenchData, remote: WorkbenchData): WorkbenchData {
   return {
@@ -670,9 +676,16 @@ function mergeData(local: WorkbenchData, remote: WorkbenchData): WorkbenchData {
     notes: mergeNotes(local.notes, remote.notes),
     diary: mergeDiary(local.diary, remote.diary),
     countdowns: mergeCountdowns(local.countdowns, remote.countdowns),
-    passwords: local.passwords, // 整体取本地（不拆分）
-    passwordsSalt: local.passwordsSalt,
-    passwordVerification: local.passwordVerification,
+    // 密码整体取云端（永不拆分、永不并集）：
+    // 1. 密码是"整库用一个主密码加密成的单个密文串"，密文层面无法按条目合并；
+    // 2. 用户明确要求"密码同步永远云端覆盖本地"——任何以本地为准的合并都会让
+    //    另一台设备的更新无声消失，属于数据丢失；
+    // 3. 密文必须与其加密身份（salt/verification）同源，否则换了密文留着旧盐
+    //    → 本地主密码解不开 → 不可恢复。故三者必须一起取云端。
+    // remote 缺省时回退本地，避免旧备份文件（无 passwords 字段）清空本地密码库。
+    passwords: remote.passwords ?? local.passwords,
+    passwordsSalt: remote.passwordsSalt ?? local.passwordsSalt,
+    passwordVerification: remote.passwordVerification ?? local.passwordVerification,
     health: mergeHealth(local.health, remote.health),
     ledger: mergeLedger(local.ledger, remote.ledger),
     settings: mergeSettings(local.settings, remote.settings),
@@ -783,6 +796,7 @@ async function pullNow(): Promise<void> {
       const diffSize = moduleDiffSize(local, remote)
       if (diffSize < MODULE_DIFF_THRESHOLD) {
         // 微小差异（归一化/时间戳/设备级噪音）→ 静默合并，不弹框
+        // 密码在此由 mergeData 单向取云端，无需额外保护
         const merged = mergeData(local, remote)
         await applyRemote(merged, true)
         await pushNow(true)
@@ -799,6 +813,7 @@ async function pullNow(): Promise<void> {
       const diffSize = moduleDiffSize(local, remote)
       if (diffSize < MODULE_DIFF_THRESHOLD) {
         // 微小差异 → 静默合并，不弹框
+        // 密码在此由 mergeData 单向取云端，无需额外保护
         const merged = mergeData(local, remote)
         await applyRemote(merged, true)
         await pushNow(true)
@@ -814,6 +829,10 @@ async function pullNow(): Promise<void> {
       // 本地无变更、内容 hash 不同 → 远端有新变更（不管时间戳维度谁大）→ 直接拉取覆盖本地
       // 这正是"用户在坚果云手动改 backup.json → 回到 Web 端点立即同步"的目标场景：
       //   → 直接 applyRemote（不会盲推覆盖远端了！）
+      //
+      // 密码在此一并被云端覆盖（mergeData 语义：passwords + salt + verification 单向取云端），
+      // 符合"密码同步永远云端覆盖本地"的策略。若两端主密码不同，applyRemote 会采用云端
+      // 密码身份并锁定面板，提示用户输入来源设备主密码解锁——这是预期行为，非异常。
       await applyRemote(remote)
       return
     }

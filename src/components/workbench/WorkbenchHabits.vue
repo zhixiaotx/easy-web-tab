@@ -4,7 +4,7 @@ import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
-import type { HabitFrequency } from '@/composables/habitCore'
+import type { Habit, HabitFrequency } from '@/composables/habitCore'
 import { TODO_COLOR_PRESETS } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from './PanelPager.vue'
@@ -16,26 +16,12 @@ const toast = useToast()
 // 今天 = 本地日期 YYYY-MM-DD（localToday 防 UTC 偏移）；打卡/连击/周统计均以此为锚
 const today = localToday()
 
-// ===== 顶部统计（薄委托 store → habitCore，禁止内联 streak/attainment 公式）=====
-const stats = computed(() => {
-  let weekCompleted = 0
-  let weekTarget = 0
-  let todayChecked = 0
-  for (const h of store.habits) {
-    const week = store.weeklyAttainmentOf(h.id, h.frequency, today)
-    weekCompleted += week.completed
-    weekTarget += week.target
-    if (isChecked(h.id)) todayChecked++
-  }
-  return { total: store.habits.length, weekCompleted, weekTarget, todayChecked }
-})
-
 /** 今日是否已打卡（records 同日记录存在性判断，非公式）。 */
 function isChecked(habitId: string): boolean {
   return store.records.some(r => r.habitId === habitId && r.date === today)
 }
 
-// 卡片视图数据：连续天数/周达成率一律走 store 薄委托（streakDaysOf/weeklyAttainmentOf → habitCore）
+// 卡片视图数据：连续天数/周达成率一律走 store 薄委托（streakOf/weeklyAttainmentOf → habitCore）
 // 展示排序：未打卡置顶（「今天要处理」一眼可见），已打卡沉底；同状态内保持录入顺序稳定。
 // 仅依赖 records/today 的响应式派生，打卡后由 <TransitionGroup> 平滑滑动到新位置，不突兀跳变。
 const viewHabits = computed(() =>
@@ -62,11 +48,6 @@ const paging = usePanelPaging({
 // usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供列表变化回页 1）
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
-// ===== 新增表单（仅用于新增习惯；编辑改为卡片内联，见 startInlineEdit）=====
-const formName = ref('')
-const formFrequency = ref<HabitFrequency>(7)
-const formColor = ref(DEFAULT_HABIT_COLOR)
-
 // 频率选项与 habitCore HabitFrequency（每周目标次数 1-7）对齐：「每天」即 7
 const FREQUENCY_OPTIONS: { value: HabitFrequency; label: string }[] = [
   { value: 7, label: '每天' },
@@ -87,49 +68,99 @@ function habitErrorToast(result: { ok: boolean; reason?: string }): void {
   toast.error(HABIT_ERROR_MESSAGES[result.reason ?? ''] ?? '操作失败')
 }
 
-// 新增习惯：提交后清空表单回到新增态
-async function handleAdd(): Promise<void> {
-  const name = formName.value.trim()
+// ===== 新增/编辑弹框（顶部「新增习惯」按钮与卡片「编辑」共用同一弹框）=====
+const showEditDialog = ref(false)
+const editingId = ref<string | null>(null)
+const dialogName = ref('')
+const dialogFrequency = ref<HabitFrequency>(7)
+const dialogColor = ref(DEFAULT_HABIT_COLOR)
+
+function openAddDialog(): void {
+  editingId.value = null
+  dialogName.value = ''
+  dialogFrequency.value = 7
+  dialogColor.value = DEFAULT_HABIT_COLOR
+  showEditDialog.value = true
+}
+
+function openEditDialog(id: string): void {
+  const h = store.habits.find(x => x.id === id)
+  if (!h) return
+  editingId.value = h.id
+  dialogName.value = h.name
+  dialogFrequency.value = h.frequency
+  dialogColor.value = h.color ?? DEFAULT_HABIT_COLOR
+  showEditDialog.value = true
+}
+
+function closeEditDialog(): void {
+  showEditDialog.value = false
+  editingId.value = null
+}
+
+async function saveEditDialog(): Promise<void> {
+  const name = dialogName.value.trim()
   if (!name) return
-  const result = await store.addHabit(name, formFrequency.value, formColor.value)
+  if (editingId.value !== null) {
+    const result = await store.updateHabit(editingId.value, {
+      name,
+      frequency: dialogFrequency.value,
+      color: dialogColor.value
+    })
+    if (result.ok) closeEditDialog()
+    habitErrorToast(result)
+    return
+  }
+  const result = await store.addHabit(name, dialogFrequency.value, dialogColor.value)
   if (result.ok) {
-    formName.value = ''
-    formFrequency.value = 7
-    formColor.value = DEFAULT_HABIT_COLOR
+    closeEditDialog()
     goto(1)
   }
   habitErrorToast(result)
 }
 
-// ===== 卡片内联编辑（点击卡片「编辑」就地修改，无需跳转左侧表单）=====
-const inlineEditId = ref<string | null>(null)
-const inlineName = ref('')
-const inlineFrequency = ref<HabitFrequency>(7)
-const inlineColor = ref(DEFAULT_HABIT_COLOR)
+// ===== 打开：记录详情弹框 =====
+const showRecords = ref(false)
+const recordsHabit = ref<Habit | null>(null)
 
-function startInlineEdit(id: string): void {
+const recordsStreak = computed(() =>
+  recordsHabit.value
+    ? store.streakOf(recordsHabit.value.id, recordsHabit.value.frequency, today)
+    : { count: 0, unit: '' }
+)
+const recordsWeek = computed(() =>
+  recordsHabit.value
+    ? store.weeklyAttainmentOf(recordsHabit.value.id, recordsHabit.value.frequency, today)
+    : { completed: 0, target: 0 }
+)
+const recordsDates = computed<string[]>(() =>
+  recordsHabit.value
+    ? store.records
+        .filter(r => r.habitId === recordsHabit.value!.id)
+        .map(r => r.date)
+        .sort()
+        .reverse()
+    : []
+)
+
+function openRecords(id: string): void {
   const h = store.habits.find(x => x.id === id)
   if (!h) return
-  inlineEditId.value = h.id
-  inlineName.value = h.name
-  inlineFrequency.value = h.frequency
-  inlineColor.value = h.color ?? DEFAULT_HABIT_COLOR
+  recordsHabit.value = h
+  showRecords.value = true
 }
 
-function cancelInlineEdit(): void {
-  inlineEditId.value = null
+function closeRecords(): void {
+  showRecords.value = false
+  recordsHabit.value = null
 }
 
-async function saveInlineEdit(id: string): Promise<void> {
-  const name = inlineName.value.trim()
-  if (!name) return
-  const result = await store.updateHabit(id, {
-    name,
-    frequency: inlineFrequency.value,
-    color: inlineColor.value
-  })
-  if (result.ok) inlineEditId.value = null
-  habitErrorToast(result)
+// 从记录弹框直接切入编辑弹框（先关记录，再开编辑，避免双层遮罩叠加）
+function editFromRecords(): void {
+  if (!recordsHabit.value) return
+  const id = recordsHabit.value.id
+  closeRecords()
+  openEditDialog(id)
 }
 
 async function handleDelete(id: string): Promise<void> {
@@ -137,7 +168,8 @@ async function handleDelete(id: string): Promise<void> {
   if (!confirm(`确定要删除习惯「${h?.name ?? ''}」吗？删除后打卡记录一并清除。`)) return
   const result = await store.deleteHabit(id)
   if (result.ok) {
-    if (inlineEditId.value === id) inlineEditId.value = null
+    if (editingId.value === id) closeEditDialog()
+    if (recordsHabit.value?.id === id) closeRecords()
     goto(1)
   }
   habitErrorToast(result)
@@ -157,83 +189,17 @@ onMounted(() => {
 
 <template>
   <div class="wb-habits">
-    <!-- 左栏：统计卡 + 新增/编辑表单 -->
-    <div class="hb-side">
-      <!-- 本周统计卡：习惯总数 / 今日已打卡 / 本周打卡达成 -->
-      <div class="stat-card">
-        <div class="stat-header">
-          <Icon name="trending-up" :size="18" class="stat-icon" />
-          <span class="stat-label">本周统计</span>
-        </div>
-        <div class="hb-summary-row">
-          <div class="hb-summary-item" data-testid="hb-total-count">
-            <span class="hb-summary-value">{{ stats.total }}</span>
-            <span class="hb-summary-label">个习惯</span>
-          </div>
-          <div class="hb-summary-item" data-testid="hb-today-count">
-            <span class="hb-summary-value">{{ stats.todayChecked }}/{{ stats.total }}</span>
-            <span class="hb-summary-label">今日已打卡</span>
-          </div>
-          <div class="hb-summary-item" data-testid="hb-week-count">
-            <span class="hb-summary-value">{{ stats.weekCompleted }}/{{ stats.weekTarget }}</span>
-            <span class="hb-summary-label">本周打卡/目标</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 新增/编辑习惯表单 -->
-      <div class="stat-card">
-        <div class="stat-header">
-          <Icon name="habits" :size="18" class="stat-icon" />
-          <span class="stat-label">新增习惯</span>
-        </div>
-        <form class="hb-form" @submit.prevent="handleAdd">
-          <div class="field">
-            <label class="field-label">名称 *</label>
-            <input
-              v-model="formName"
-              type="text"
-              class="form-input"
-              placeholder="例如：每天喝水 8 杯"
-              maxlength="30"
-              data-testid="hb-form-name"
-            />
-          </div>
-          <div class="field">
-            <label class="field-label">频率</label>
-            <select v-model="formFrequency" class="form-input" data-testid="hb-form-frequency">
-              <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="field-label">颜色</label>
-            <div class="hb-color-picker" data-testid="hb-form-color">
-              <button
-                v-for="(color, i) in TODO_COLOR_PRESETS"
-                :key="color"
-                type="button"
-                class="hb-color-option"
-                :class="{ active: formColor.toLowerCase() === color }"
-                :style="{ '--hb-swatch': color }"
-                :data-testid="'hb-color-preset-' + (i + 1)"
-                :title="color"
-                @click="formColor = color"
-              ></button>
-            </div>
-          </div>
-          <button type="submit" class="btn-primary" :disabled="!formName.trim()" data-testid="hb-add-btn">
-            添加
-          </button>
-        </form>
-      </div>
+    <!-- 顶部工具栏：左上角新增习惯按钮 -->
+    <div class="hb-toolbar">
+      <button class="btn-primary hb-add-btn" data-testid="hb-add-btn" @click="openAddDialog">
+        <Icon name="plus" :size="16" /> 新增习惯
+      </button>
     </div>
 
-    <!-- 右栏：习惯卡片网格（多条并排展示，分页在网格下方） -->
+    <!-- 习惯卡片网格（多条并排展示，分页在网格下方） -->
     <div class="hb-main">
       <div v-if="store.habits.length === 0" class="empty-state" data-testid="hb-empty">
-        📌 还没有习惯，先在左侧添加一个吧
+        还没有习惯，点上方「新增习惯」开始吧
       </div>
 
       <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
@@ -247,36 +213,9 @@ onMounted(() => {
           :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
         >
           <span class="hb-card-bar"></span>
-          <Icon name="habits" :size="20" class="hb-card-icon" />
-          <div class="hb-card-main">
-            <template v-if="inlineEditId === v.habit.id">
-              <input
-                v-model="inlineName"
-                type="text"
-                class="form-input hb-inline-input"
-                placeholder="习惯名称"
-                maxlength="30"
-                :data-testid="`hb-inline-name-${v.habit.id}`"
-              />
-              <select v-model="inlineFrequency" class="form-input hb-inline-input" :data-testid="`hb-inline-freq-${v.habit.id}`">
-                <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
-              <div class="hb-color-picker" :data-testid="`hb-inline-color-${v.habit.id}`">
-                <button
-                  v-for="color in TODO_COLOR_PRESETS"
-                  :key="color"
-                  type="button"
-                  class="hb-color-option"
-                  :class="{ active: inlineColor.toLowerCase() === color }"
-                  :style="{ '--hb-swatch': color }"
-                  :title="color"
-                  @click="inlineColor = color"
-                ></button>
-              </div>
-            </template>
-            <template v-else>
+          <div class="hb-card-top">
+            <Icon name="habits" :size="20" class="hb-card-icon" />
+            <div class="hb-card-main">
               <div class="hb-card-name">{{ v.habit.name }}</div>
               <div class="hb-card-badges">
                 <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
@@ -295,36 +234,30 @@ onMounted(() => {
                   }"
                 ></div>
               </div>
-            </template>
+            </div>
+            <button
+              class="hb-check-btn"
+              :class="{ 'is-checked': v.checked }"
+              :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
+              :data-testid="`hb-check-${v.habit.id}`"
+              :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
+              @click="handleCheck(v.habit.id)"
+            >
+              <Icon name="check" :size="16" />
+              <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
+            </button>
           </div>
-          <div class="hb-card-actions">
-            <template v-if="inlineEditId === v.habit.id">
-              <button
-                class="btn-primary hb-inline-save"
-                :data-testid="`hb-inline-save-${v.habit.id}`"
-                @click="saveInlineEdit(v.habit.id)"
-              >
-                保存
-              </button>
-              <button class="btn-secondary hb-inline-cancel" :data-testid="`hb-inline-cancel-${v.habit.id}`" @click="cancelInlineEdit">
-                取消
-              </button>
-            </template>
-            <template v-else>
-              <button
-                class="hb-check-btn"
-                :class="{ 'is-checked': v.checked }"
-                :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-                :data-testid="`hb-check-${v.habit.id}`"
-                :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
-                @click="handleCheck(v.habit.id)"
-              >
-                <Icon name="check" :size="16" />
-                <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
-              </button>
-              <button class="btn-edit" :data-testid="`hb-edit-${v.habit.id}`" @click="startInlineEdit(v.habit.id)">编辑</button>
-              <button class="btn-delete" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">删除</button>
-            </template>
+          <!-- 卡片左下角：打开 / 编辑 / 删除 -->
+          <div class="hb-card-footer">
+            <button class="btn-text" :data-testid="`hb-open-${v.habit.id}`" @click="openRecords(v.habit.id)">
+              <Icon name="eye" :size="14" /> 打开
+            </button>
+            <button class="btn-text" :data-testid="`hb-edit-${v.habit.id}`" @click="openEditDialog(v.habit.id)">
+              <Icon name="pencil" :size="14" /> 编辑
+            </button>
+            <button class="btn-text btn-text-danger" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">
+              <Icon name="trash" :size="14" /> 删除
+            </button>
           </div>
         </div>
         </TransitionGroup>
@@ -332,21 +265,122 @@ onMounted(() => {
 
       <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
     </div>
+
+    <!-- 新增/编辑弹框（顶部按钮与卡片编辑共用） -->
+    <div v-if="showEditDialog" class="dialog-overlay hb-dialog-overlay" @click.self="closeEditDialog">
+      <div class="dialog hb-dialog" role="dialog" aria-modal="true" :aria-label="editingId ? '编辑习惯' : '新增习惯'">
+        <div class="dialog-header">
+          <span class="dialog-title">{{ editingId ? '编辑习惯' : '新增习惯' }}</span>
+          <button class="dialog-close" type="button" aria-label="关闭" @click="closeEditDialog">
+            <Icon name="close" :size="18" />
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="field">
+            <label class="field-label">名称 *</label>
+            <input
+              v-model="dialogName"
+              type="text"
+              class="form-input"
+              placeholder="例如：每天喝水 8 杯"
+              maxlength="30"
+              data-testid="hb-dialog-name"
+            />
+          </div>
+          <div class="field">
+            <label class="field-label">频率</label>
+            <select v-model="dialogFrequency" class="form-input" data-testid="hb-dialog-frequency">
+              <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">颜色</label>
+            <div class="hb-color-picker" data-testid="hb-dialog-color">
+              <button
+                v-for="(color, i) in TODO_COLOR_PRESETS"
+                :key="color"
+                type="button"
+                class="hb-color-option"
+                :class="{ active: dialogColor.toLowerCase() === color }"
+                :style="{ '--hb-swatch': color }"
+                :data-testid="'hb-dialog-color-' + (i + 1)"
+                :title="color"
+                @click="dialogColor = color"
+              ></button>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-secondary" type="button" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</button>
+          <button class="btn-primary" type="button" :disabled="!dialogName.trim()" data-testid="hb-dialog-save" @click="saveEditDialog">
+            {{ editingId ? '保存' : '添加' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 打开：记录详情弹框 -->
+    <div v-if="showRecords" class="dialog-overlay hb-dialog-overlay" @click.self="closeRecords">
+      <div class="dialog hb-dialog" role="dialog" aria-modal="true" aria-label="习惯记录">
+        <div class="dialog-header">
+          <span class="dialog-title">
+            <Icon name="habits" :size="16" class="hb-dlg-ico" /> {{ recordsHabit?.name }}
+          </span>
+          <button class="dialog-close" type="button" aria-label="关闭" @click="closeRecords">
+            <Icon name="close" :size="18" />
+          </button>
+        </div>
+        <div class="dialog-body" v-if="recordsHabit">
+          <div class="hb-rec-summary">
+            <div class="hb-rec-item">
+              <span class="hb-rec-value">{{ recordsStreak.count }} {{ recordsStreak.unit }}</span>
+              <span class="hb-rec-label">连续</span>
+            </div>
+            <div class="hb-rec-item">
+              <span class="hb-rec-value">{{ recordsWeek.completed }}/{{ recordsWeek.target }}</span>
+              <span class="hb-rec-label">本周打卡</span>
+            </div>
+            <div class="hb-rec-item">
+              <span class="hb-rec-value">{{ recordsDates.length }}</span>
+              <span class="hb-rec-label">累计打卡</span>
+            </div>
+          </div>
+          <div class="hb-rec-list">
+            <div v-for="d in recordsDates" :key="d" class="hb-rec-row">
+              <Icon name="check" :size="14" class="hb-rec-ico" />
+              <span>{{ d }}</span>
+            </div>
+            <div v-if="recordsDates.length === 0" class="hb-rec-empty">还没有打卡记录</div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-secondary" type="button" @click="closeRecords">关闭</button>
+          <button class="btn-primary" type="button" data-testid="hb-rec-edit" @click="editFromRecords">编辑</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 面板容器：桌面 ≥1200px 左右双栏（左=统计+表单，右=卡片网格），其余单列堆叠 */
+/* 面板容器：顶部工具栏 + 下方卡片网格（单栏纵向堆叠） */
 .wb-habits {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.hb-side {
+.hb-toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+}
+
+.hb-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .hb-main {
@@ -356,94 +390,7 @@ onMounted(() => {
   min-width: 0;
 }
 
-@media (min-width: 1200px) {
-  .wb-habits {
-    display: grid;
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-    align-items: stretch;
-  }
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.stat-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ===== 本周统计卡 ===== */
-.hb-summary-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.hb-summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 14px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border-radius: var(--radius-md, 8px);
-  min-width: 96px;
-}
-
-.hb-summary-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
-  font-variant-numeric: tabular-nums;
-}
-
-.hb-summary-label {
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-/* ===== 新增/编辑表单 ===== */
-.hb-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.hb-cancel-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
+/* ===== 表单/弹框通用字段 ===== */
 .field {
   display: flex;
   flex-direction: column;
@@ -498,6 +445,7 @@ onMounted(() => {
   transform: scale(1.1);
 }
 
+/* ===== 通用按钮 ===== */
 .btn-primary {
   align-self: flex-start;
   padding: 10px 24px;
@@ -537,7 +485,32 @@ onMounted(() => {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* ===== 习惯卡片网格（右栏，多列并排） ===== */
+/* 卡片左下角文本按钮（打开/编辑/删除） */
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  border: 1px solid var(--color-border, var(--color-border));
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-text:hover {
+  color: var(--color-primary, var(--color-primary));
+  border-color: var(--color-primary, var(--color-primary));
+}
+
+.btn-text-danger:hover {
+  color: var(--color-error, var(--color-error));
+  border-color: var(--color-error, var(--color-error));
+}
+
+/* ===== 习惯卡片网格（多列并排） ===== */
 .hb-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -548,9 +521,9 @@ onMounted(() => {
 .hb-card {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 12px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
@@ -576,6 +549,13 @@ onMounted(() => {
   width: 4px;
   border-radius: var(--radius-md, 10px) 0 0 var(--radius-md, 10px);
   background-color: var(--hb-color, var(--color-primary, var(--color-primary)));
+}
+
+/* 卡片上半部：图标 + 主信息 + 打卡按钮 */
+.hb-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .hb-card-icon {
@@ -629,11 +609,16 @@ onMounted(() => {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.hb-card-actions {
+.hb-badge-ico {
+  flex-shrink: 0;
+}
+
+/* 卡片左下角：打开 / 编辑 / 删除 */
+.hb-card-footer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* 打卡主角按钮：清晰的「打卡/已打卡」CTA，触控区 ≥44px，习惯主色，勾选后填充 */
@@ -667,10 +652,6 @@ onMounted(() => {
   border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
 }
 
-.hb-badge-ico {
-  flex-shrink: 0;
-}
-
 /* 本周进度条：目标完成度一眼可见（颜色随习惯主色） */
 .hb-week-bar {
   height: 6px;
@@ -686,42 +667,139 @@ onMounted(() => {
   transition: width var(--transition-fast, 0.15s ease);
 }
 
-/* 卡片内联编辑：输入控件撑满卡片主区宽度 */
-.hb-inline-input {
+/* ===== 弹框（新增/编辑 + 记录详情，共用 hb-dialog-overlay）===== */
+.hb-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 320; /* 高于卡片与其它面板内弹框(310)，低于全局弹框(1000+) */
+  padding: 20px;
+}
+
+.hb-dialog {
+  background-color: var(--color-bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 12px);
   width: 100%;
-  box-sizing: border-box;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
 
-.hb-inline-save {
-  padding: 4px 14px;
-  font-size: 12px;
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border, var(--color-border));
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-card, var(--color-bg-card));
+  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
 }
 
-.hb-inline-cancel {
-  padding: 4px 14px;
-  font-size: 12px;
+.dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text, var(--color-text));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.btn-edit,
-.btn-delete {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
+.dialog-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, var(--color-text-muted));
   cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
+  padding: 4px;
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  transition: color var(--transition-fast, 0.15s ease);
 }
 
-.btn-edit:hover {
+.dialog-close:hover {
+  color: var(--color-text, var(--color-text));
+}
+
+.dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-border, var(--color-border));
+}
+
+/* 记录详情弹框 */
+.hb-dlg-ico {
   color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
 }
 
-.btn-delete:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
+.hb-rec-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hb-rec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--color-bg-hover, var(--color-bg-card));
+  border-radius: var(--radius-md, 8px);
+  min-width: 90px;
+}
+
+.hb-rec-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary, var(--color-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-rec-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.hb-rec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.hb-rec-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.hb-rec-ico {
+  color: var(--color-primary, var(--color-primary));
+  flex-shrink: 0;
+}
+
+.hb-rec-empty {
+  font-size: 13px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  padding: 8px 0;
 }
 
 /* ===== 空态 ===== */
@@ -735,15 +813,10 @@ onMounted(() => {
   border-radius: var(--radius-md, 10px);
 }
 
-/* ===== 暗色模式覆盖（模式参考 WorkbenchPomodoro）===== */
-:root.dark .stat-card,
+/* ===== 暗色模式覆盖 ===== */
 :root.dark .hb-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
-}
-
-:root.dark .hb-summary-item {
-  background-color: var(--color-bg-card, #1f2937);
 }
 
 :root.dark .hb-badge-streak,
@@ -769,8 +842,7 @@ onMounted(() => {
 }
 
 :root.dark .btn-secondary,
-:root.dark .btn-edit,
-:root.dark .btn-delete {
+:root.dark .btn-text {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
@@ -788,17 +860,24 @@ onMounted(() => {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-@media (max-width: 640px) {
-  .hb-card {
-    flex-wrap: wrap;
-  }
-
-  .hb-card-actions {
-    margin-left: auto;
-  }
+:root.dark .hb-dialog {
+  background-color: var(--color-bg-card, #1f2937);
 }
 
-/* ===== 桌面自适应分页（一屏布局：右栏网格 flex:1 钉满，分页在网格下方）===== */
+:root.dark .dialog-header,
+:root.dark .dialog-title {
+  color: var(--color-text, #f9fafb);
+}
+
+:root.dark .hb-rec-item {
+  background-color: var(--color-bg-input, #374151);
+}
+
+:root.dark .hb-rec-value {
+  color: var(--color-primary, #60a5fa);
+}
+
+/* ===== 桌面自适应分页（一屏布局：网格 flex:1 钉满，分页在网格下方）===== */
 @media (min-width: 769px) {
   .hb-main {
     flex: 1;
@@ -812,6 +891,16 @@ onMounted(() => {
 
   .hb-list-scroll {
     overflow-y: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .hb-card-top {
+    flex-wrap: wrap;
+  }
+
+  .hb-check-btn {
+    margin-left: auto;
   }
 }
 </style>

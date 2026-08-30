@@ -356,7 +356,6 @@ onUnmounted(() => {
               @change="handleToggle(v.todo)"
             />
           </label>
-          <button class="btn-edit" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</button>
           <button class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</button>
         </div>
       </div>
@@ -757,6 +756,7 @@ onUnmounted(() => {
 .td-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   margin-top: auto;
 }

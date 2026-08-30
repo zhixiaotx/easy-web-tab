@@ -250,7 +250,7 @@ onMounted(() => {
           <!-- 卡片左下角：打开 / 编辑 / 删除 -->
           <div class="hb-card-footer">
             <button class="btn-text" :data-testid="`hb-open-${v.habit.id}`" @click="openRecords(v.habit.id)">
-              <Icon name="eye" :size="14" /> 打开
+              <Icon name="eye" :size="14" /> 查看
             </button>
             <button class="btn-text" :data-testid="`hb-edit-${v.habit.id}`" @click="openEditDialog(v.habit.id)">
               <Icon name="pencil" :size="14" /> 编辑
@@ -617,6 +617,7 @@ onMounted(() => {
 .hb-card-footer {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
   flex-wrap: wrap;
 }

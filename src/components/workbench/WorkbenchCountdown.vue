@@ -435,7 +435,6 @@ onUnmounted(() => {
               @click="store.moveCountdown(item.id, 'down')"
             >▼</button>
           </div>
-          <button class="btn-edit" @click="startEdit(item)">编辑</button>
           <button class="btn-delete" @click="handleDelete(item.id)">删除</button>
         </div>
       </div>
@@ -944,6 +943,7 @@ onUnmounted(() => {
 .cd-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
   margin-top: auto;

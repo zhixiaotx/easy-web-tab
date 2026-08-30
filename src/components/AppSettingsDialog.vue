@@ -38,6 +38,13 @@ import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
 import { useCloudSync } from '@/composables/useCloudSync'
+import {
+  useHomeLayout,
+  LAYOUT_CONTAINERS,
+  CONTAINER_LABELS,
+  CARD_LABELS
+} from '@/composables/useHomeLayout'
+import type { ContainerId } from '@/composables/useHomeLayout'
 import Icon from '@/components/Icon.vue'
 import BusinessCategoryManager from '@/components/business/BusinessCategoryManager.vue'
 import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
@@ -189,6 +196,82 @@ function resetRow(id: DialogId) {
 function resetAll() {
   store.resetDefaults()
   syncAll()
+}
+
+// ========================================
+// 主页卡片尺寸（工作台设置 tab）：逐卡设置宽（占几列）/ 高（最小高度 px）
+// 落库走 store.homeCardLayout；改完由 useHomeLayout 内部 600ms 防抖 pushNow 直推云端
+// ========================================
+const layout = useHomeLayout()
+
+/** 按分区组织的卡片列表（顺序取自 LAYOUT_CONTAINERS，与主页网格默认顺序一致） */
+const CARD_SIZE_GROUPS = (Object.keys(LAYOUT_CONTAINERS) as ContainerId[]).map((container) => ({
+  container,
+  label: CONTAINER_LABELS[container],
+  maxCols: LAYOUT_CONTAINERS[container].maxCols,
+  cards: LAYOUT_CONTAINERS[container].ids.map((id) => ({
+    id,
+    label: CARD_LABELS[id] ?? id
+  }))
+}))
+const ALL_CARD_IDS = CARD_SIZE_GROUPS.flatMap((g) => g.cards.map((c) => c.id))
+
+// 草稿态：数字框允许中间态（空串 / 超范围），失焦再回到 store 的 clamp 值
+function createCardSizeDrafts(): Record<string, { w: string; h: string }> {
+  const out: Record<string, { w: string; h: string }> = {}
+  for (const id of ALL_CARD_IDS) {
+    const lay = store.homeCardLayout[id] ?? {}
+    out[id] = { w: lay.w === undefined ? '' : String(lay.w), h: lay.h === undefined ? '' : String(lay.h) }
+  }
+  return out
+}
+const cardSizeDraft = reactive(createCardSizeDrafts())
+
+function syncCardSizeRow(id: string) {
+  const lay = store.homeCardLayout[id] ?? {}
+  cardSizeDraft[id].w = lay.w === undefined ? '' : String(lay.w)
+  cardSizeDraft[id].h = lay.h === undefined ? '' : String(lay.h)
+}
+
+function syncAllCardSizes() {
+  for (const id of ALL_CARD_IDS) syncCardSizeRow(id)
+}
+
+// 宽/高输入：空串 = 清除该项自定义、回退组件默认；合法数字才提交（clamp 由 composable + store 负责）
+function onCardWInput(id: string, event: Event) {
+  const raw = (event.target as HTMLInputElement).value
+  cardSizeDraft[id].w = raw
+  if (raw === '') {
+    layout.setCardSize(id, { w: undefined })
+    return
+  }
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return
+  layout.setCardSize(id, { w: n })
+}
+
+function onCardHInput(id: string, event: Event) {
+  const raw = (event.target as HTMLInputElement).value
+  cardSizeDraft[id].h = raw
+  if (raw === '') {
+    layout.setCardSize(id, { h: undefined })
+    return
+  }
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return
+  layout.setCardSize(id, { h: n })
+}
+
+// 单行恢复默认：只重置该卡宽高，保留用户已拖出来的排序
+function resetCardSizeRow(id: string) {
+  layout.resetCardSize(id)
+  syncCardSizeRow(id)
+}
+
+// 区块恢复默认：全部卡片宽高回默认，同样逐卡保留排序
+function resetAllCardSizes() {
+  layout.resetAllCardSizes()
+  syncAllCardSizes()
 }
 
 // ========================================
@@ -1111,6 +1194,65 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <!-- 主页卡片尺寸（仅工作台设置 tab）：逐卡设置宽（占几列）/ 高（最小高度 px） -->
+        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">主页卡片尺寸</h3>
+            <button type="button" class="row-reset" data-testid="wbcard-reset-all" @click="resetAllCardSizes()">恢复默认</button>
+          </div>
+          <p class="wb-menu-hint">宽度 = 卡片横向占几列（上限为所属网格的列数）；高度 = 卡片最小高度（px），内容更高时自动撑开。留空即回退默认。修改后立即保存并推送到云同步文件。</p>
+
+          <div v-for="group in CARD_SIZE_GROUPS" :key="group.container" class="wb-cardsize-group">
+            <div class="wb-cardsize-group-title">{{ group.label }}</div>
+            <div class="wb-menu-list">
+              <div
+                v-for="card in group.cards"
+                :key="card.id"
+                class="wb-menu-row wb-cardsize-row"
+                :data-testid="`wbcard-row-${card.id}`"
+              >
+                <span class="wb-cardsize-name">{{ card.label }}</span>
+                <label class="wb-cardsize-field">
+                  宽
+                  <input
+                    type="number"
+                    class="num-input"
+                    min="1"
+                    step="1"
+                    :max="group.maxCols"
+                    :value="cardSizeDraft[card.id].w"
+                    :aria-label="`${card.label}宽度`"
+                    :data-testid="`wbcard-w-${card.id}`"
+                    @input="onCardWInput(card.id, $event)"
+                    @blur="syncCardSizeRow(card.id)"
+                  />
+                </label>
+                <label class="wb-cardsize-field">
+                  高
+                  <input
+                    type="number"
+                    class="num-input"
+                    min="60"
+                    max="1200"
+                    step="10"
+                    :value="cardSizeDraft[card.id].h"
+                    :aria-label="`${card.label}高度`"
+                    :data-testid="`wbcard-h-${card.id}`"
+                    @input="onCardHInput(card.id, $event)"
+                    @blur="syncCardSizeRow(card.id)"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="row-reset"
+                  :data-testid="`wbcard-reset-${card.id}`"
+                  @click="resetCardSizeRow(card.id)"
+                >默认</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 待办分类管理（仅工作台设置 tab）：改名/上下移/删除/新增 + 标签页显示勾选 -->
         <div v-if="activeTab === 'wb'" class="wb-menu-config">
           <div class="wb-menu-head">
@@ -2020,6 +2162,45 @@ onUnmounted(() => {
 /* 菜单行开关关闭时的弱化态（行内输入/按钮整体降透明度提示） */
 .wb-menu-row.is-disabled-item {
   opacity: 0.55;
+}
+
+/* 主页卡片尺寸：按分区分组 + 逐卡宽/高数字框 */
+.wb-cardsize-group + .wb-cardsize-group {
+  margin-top: 14px;
+}
+
+.wb-cardsize-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, var(--color-text-muted));
+  margin-bottom: 6px;
+}
+
+.wb-cardsize-row {
+  padding: 2px 0;
+}
+
+.wb-cardsize-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-text, var(--color-text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-cardsize-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.wb-cardsize-field .num-input {
+  width: 72px;
 }
 
 :root.dark .switch-btn {

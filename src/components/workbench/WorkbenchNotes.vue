@@ -1415,8 +1415,9 @@ onUnmounted(() => {
 }
 
 .note-content-input {
-  min-height: 330px;
-  resize: vertical;
+  height: 180px;
+  min-height: 180px;
+  resize: none;
 }
 
 /* ===== 浮层类型 radio + 分类下拉 ===== */

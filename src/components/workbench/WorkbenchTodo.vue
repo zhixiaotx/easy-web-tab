@@ -263,18 +263,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 操作栏：新增/分类管理 + 数量 -->
-    <div class="td-headbar">
-      <div class="td-headbar-actions">
-        <button class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</button>
-      </div>
-      <span class="toolbar-count" data-testid="td-toolbar-count">
-        <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
-        <template v-else>共 {{ store.sortedTodos.length }} 个待办</template>
-      </span>
-    </div>
-
-    <!-- 分类筛选标签页（全部 + 可见分类，点击即时过滤；镜像 nt-cat-tabs） -->
+    <!-- 分类筛选标签页（全部 + 可见分类，点击即时过滤）+ 新增待办按钮靠右 -->
     <div class="td-cat-tabs">
       <button
         class="td-cat-tab"
@@ -290,6 +279,11 @@ onUnmounted(() => {
         :data-testid="`td-cat-${cat}`"
         @click="selectCategoryTab(cat)"
       >{{ cat }}</button>
+      <span class="toolbar-count" data-testid="td-toolbar-count">
+        <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
+        <template v-else>共 {{ store.sortedTodos.length }} 个待办</template>
+      </span>
+      <button class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</button>
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -528,6 +522,7 @@ onUnmounted(() => {
 }
 
 .toolbar-count {
+  margin-left: auto;
   font-size: 14px;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }

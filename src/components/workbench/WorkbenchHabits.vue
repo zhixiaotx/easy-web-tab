@@ -375,6 +375,7 @@ onMounted(() => {
 .hb-toolbar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .hb-add-btn {

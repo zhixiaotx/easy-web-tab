@@ -371,15 +371,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 操作栏（无卡片）：新增便签 + 计数 -->
-    <div class="nt-headbar">
-      <div class="nt-headbar-actions">
-        <button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
-      </div>
-      <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
-    </div>
-
-    <!-- 分类筛选标签页（全部/未分类/可见分类，即时过滤；与倒计时面板 cd-cat-tabs 同构，位于操作栏下方） -->
+    <!-- 分类筛选标签页（全部/未分类/可见分类，即时过滤）+ 新增便签按钮靠右 -->
     <div class="nt-cat-tabs">
       <button
         class="nt-cat-tab"
@@ -401,6 +393,8 @@ onUnmounted(() => {
         :data-testid="`nt-cat-${cat.id}`"
         @click="selectCategoryTab(cat.id)"
       >{{ cat.name }}</button>
+      <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
+      <button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
     </div>
 
     <!-- 时光轴便签（仅在类型=时光轴时渲染，'all' 视图只显示普通便签） -->
@@ -943,6 +937,7 @@ onUnmounted(() => {
 }
 
 .nt-toolbar-count {
+  margin-left: auto;
   font-size: 14px;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }

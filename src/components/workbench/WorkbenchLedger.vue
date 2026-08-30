@@ -71,12 +71,14 @@ function masked(t: string): string {
   return t === '—' ? t : maskOrReveal(t, !store.showAmount)
 }
 
-// ===== 近 6 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
-// endMonthKey：store 无「当前展示月」状态 → 取当月（today），series 默认 6 个月
+// ===== 近 12 月收支趋势（数据/坐标必须走 ledgerCore calcTrendSeries + trendChartScale，禁组件内重算）=====
+// endMonthKey：store 无「当前展示月」状态 → 取当月（today），series 默认 12 个月
 const TREND_W = 600
 const TREND_H = 220
 
-const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories))
+const trendSeries = computed<TrendMonth[]>(() => calcTrendSeries(store.entries, currentMonth(), store.categories, 12))
+const trendTotalIncome = computed(() => trendSeries.value.reduce((s, m) => s + m.income, 0))
+const trendTotalExpense = computed(() => trendSeries.value.reduce((s, m) => s + m.expense, 0))
 const trendScale = computed<TrendChartScale | null>(() => trendChartScale(trendSeries.value, TREND_W, TREND_H))
 
 // 网格线/柱/柱宽派生态（全 0 序列 trendChartScale → null → 空数组，走 ld-trend-empty 空态）
@@ -93,8 +95,8 @@ const trendMonthLabels = computed(() =>
   }))
 )
 
-// ===== 支出分类占比环形图（ring 常量同 WorkbenchPomodoro：R=90，C=2π×90；占比数据来自 monthStats.byCategory）=====
-const RING_R = 90
+// ===== 支出分类占比环形图（总面积 SVG 220×220 不变，增粗彩色环 stroke-width 增大色彩面积）=====
+const RING_R = 80
 const RING_C = 2 * Math.PI * RING_R
 
 interface DonutSegment {
@@ -407,9 +409,19 @@ onUnmounted(() => {
         <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
       </button>
       <div v-show="chartsExpanded" class="ld-charts-row">
-      <!-- 近 6 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
+      <!-- 近 12 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
       <section class="ld-card" data-testid="ld-trend">
-        <h3 class="ld-card-title">近 6 月收支趋势</h3>
+        <div class="ld-trend-header">
+          <h3 class="ld-card-title">近 12 月收支趋势</h3>
+          <div class="ld-trend-totals">
+            <span class="ld-trend-total ld-trend-total-inc">
+              收入合计 <b>¥{{ masked(formatYuan(trendTotalIncome)) }}</b>
+            </span>
+            <span class="ld-trend-total ld-trend-total-exp">
+              支出合计 <b>¥{{ masked(formatYuan(trendTotalExpense)) }}</b>
+            </span>
+          </div>
+        </div>
         <svg
           v-if="trendScale"
           viewBox="0 0 600 220"
@@ -872,7 +884,7 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== 近 6 月收支趋势（内联 SVG 分组柱状图）===== */
+/* ===== 近 12 月收支趋势（内联 SVG 分组柱状图）===== */
 .ld-card {
   display: flex;
   flex-direction: column;
@@ -890,6 +902,40 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
+
+.ld-trend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ld-trend-totals {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.ld-trend-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-secondary, #666);
+}
+
+.ld-trend-total b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #1f2937);
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-trend-total-inc b { color: #10b981; }
+.ld-trend-total-exp b { color: #ef4444; }
+html.dark .ld-trend-total-inc b { color: #34d399; }
+html.dark .ld-trend-total-exp b { color: #f87171; }
 
 .ld-trend-svg {
   display: block;
@@ -923,7 +969,7 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-/* ===== 支出分类占比环形图（ring 常量同 WorkbenchPomodoro：R=90, C=2π×90）===== */
+/* ===== 支出分类占比环形图（总面积 SVG 220×220 不变，stroke-width: 32 增大色彩环面积）===== */
 .ld-donut-layout {
   display: flex;
   align-items: center;
@@ -947,12 +993,12 @@ onUnmounted(() => {
 .ld-donut-track {
   fill: none;
   stroke: var(--color-bg-card, var(--color-bg-hover));
-  stroke-width: 16;
+  stroke-width: 32;
 }
 
 .ld-donut-seg {
   fill: none;
-  stroke-width: 16;
+  stroke-width: 32;
 }
 
 .ld-donut-seg.is-accent {
@@ -965,11 +1011,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+  padding: 0 20px;
+  text-align: center;
 }
 
 .ld-donut-legend {

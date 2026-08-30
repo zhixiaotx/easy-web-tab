@@ -344,16 +344,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 操作行：新增提醒 + 分类管理 靠左 -->
-    <div class="cd-actionbar">
-      <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
-      <span class="toolbar-count" data-testid="cd-toolbar-count">
-        <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
-        <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
-      </span>
-    </div>
-
-    <!-- 分类标签页（即时过滤） -->
+    <!-- 分类标签页（即时过滤）+ 新增提醒按钮靠右 -->
     <div class="cd-cat-tabs">
       <button
         class="cd-cat-tab"
@@ -369,6 +360,11 @@ onUnmounted(() => {
         :data-testid="'cd-cat-' + c"
         @click="selectCategoryTab(c)"
       >{{ categoryLabel(c) }}</button>
+      <span class="toolbar-count" data-testid="cd-toolbar-count">
+        <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
+        <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
+      </span>
+      <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -710,6 +706,7 @@ onUnmounted(() => {
 }
 
 .toolbar-count {
+  margin-left: auto;
   font-size: 14px;
   color: var(--color-text-secondary, var(--color-text-secondary));
 }

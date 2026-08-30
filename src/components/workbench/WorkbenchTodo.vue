@@ -467,10 +467,10 @@ onUnmounted(() => {
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.td-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.td-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.td-field-grow { flex: 1; min-width: 140px; }
-.td-field-grow :is(.td-field-desc, .td-field-title) { width: 100%; }
+.td-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.td-field { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.td-field-grow { flex: 0 0 auto; min-width: 0; }
+.td-field-grow :is(.td-field-desc, .td-field-title) { width: 200px; }
 .td-field-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .td-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
 

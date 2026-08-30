@@ -551,6 +551,14 @@ onUnmounted(() => {
               添加
             </button>
           </div>
+          <button
+            type="button"
+            class="btn-delete card-delete-btn"
+            :data-testid="`note-delete-${note.id}`"
+            @click.stop="handleDelete(note.id)"
+          >
+            删除
+          </button>
         </div>
         </TransitionGroup>
       </div>
@@ -689,6 +697,14 @@ onUnmounted(() => {
               <span>{{ COLOR_LABELS[note.color] }}</span>
             </div>
           </div>
+          <button
+            type="button"
+            class="btn-delete card-delete-btn"
+            :data-testid="`note-delete-${note.id}`"
+            @click.stop="handleDelete(note.id)"
+          >
+            删除
+          </button>
         </div>
         </TransitionGroup>
       </div>
@@ -767,15 +783,6 @@ onUnmounted(() => {
         </div>
 
         <div class="note-form-actions">
-          <button
-            v-if="editingId"
-            type="button"
-            class="btn-delete"
-            data-testid="note-delete-button"
-            @click="handleDelete(editingId)"
-          >
-            删除
-          </button>
           <button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">
             取消
           </button>
@@ -1605,6 +1612,22 @@ onUnmounted(() => {
 .btn-delete:hover {
   background: var(--color-error, var(--color-error));
   color: #fff;
+}
+
+/* 便签卡片右下角删除按钮 */
+.card-delete-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 5px 12px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity var(--transition-fast, 0.15s ease);
+  z-index: 2;
+}
+
+.note-card:hover .card-delete-btn {
+  opacity: 1;
 }
 
 

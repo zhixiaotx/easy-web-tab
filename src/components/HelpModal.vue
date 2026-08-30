@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
+import { useAppSettingsStore } from '@/stores/settings'
+const settingsStore = useAppSettingsStore()
 const emit = defineEmits<{
   close: []
 }>()
@@ -144,6 +146,20 @@ const TABS = [
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 const activeTab = ref<TabKey>('nav')
+
+// 标签页可见性：工作台/销售记账开关关闭时对应标签页隐藏
+const visibleTabs = computed(() => TABS.filter(t => {
+  if (t.key === 'workbench') return settingsStore.workbenchPageVisible !== false
+  if (t.key === 'business') return settingsStore.businessPageVisible !== false
+  return true
+}))
+
+// 确保当前激活标签页可见，开关关闭后自动回退到首项
+const visibleActiveTab = computed(() => {
+  const keys = visibleTabs.value.map(t => t.key)
+  return keys.includes(activeTab.value) ? activeTab.value : keys[0]
+})
+watch(visibleActiveTab, (v) => { if (v && v !== activeTab.value) activeTab.value = v })
 
 // ===== 个人工作台：10 个面板 =====
 interface PanelDoc {
@@ -338,7 +354,7 @@ const skillInstall = [
       <!-- 标签页导航 -->
       <div class="help-tabs" role="tablist">
         <button
-          v-for="tab in TABS"
+          v-for="tab in visibleTabs"
           :key="tab.key"
           class="help-tab"
           :class="{ active: activeTab === tab.key }"

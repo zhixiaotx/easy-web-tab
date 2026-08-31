@@ -31,12 +31,12 @@ const activeSubject = ref<'all' | string>('all')
 // 视图数据（按学科筛选后由 store 排序保证）
 const viewEntries = computed<StudentReviewItem[]>(() => store.filterBySubject(activeSubject.value))
 
-// 自适应分页（行式单列，行高 107px，row-heights.json review MAX 105 + 2）
+// 自适应分页（4 列卡片网格，行高 152px，参考学习计划 150 + 2）
 const mainEl = ref<HTMLElement | null>(null)
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewEntries.value,
-  rowHeight: 107,
+  rowHeight: 152,
   containerRef: mainEl,
   gridRef: listEl
 })
@@ -423,8 +423,8 @@ function daysClass(days: number): string {
 .sr-list {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   overflow-y: auto;
 }
@@ -436,10 +436,13 @@ function daysClass(days: number): string {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  height: 150px;
+  min-height: 150px;
+  overflow: hidden;
 }
 .sr-card.mastered {
   background: rgba(16, 185, 129, 0.06);

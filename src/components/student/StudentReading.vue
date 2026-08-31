@@ -10,7 +10,6 @@ import { useStudentReadingStore } from '@/stores/studentReading'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
-import { formatDuration } from '@/composables/studentReadingCore'
 import type { StudentReadingEntry } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
@@ -33,12 +32,12 @@ const stats = computed(() => store.stats())
 // 视图数据（已排序，store 加载时排好）
 const viewEntries = computed<StudentReadingEntry[]>(() => store.entries)
 
-// 自适应分页（卡片网格 5 列，行高 210px，每页 2 行 = 10 卡；row-heights.json studentReading MAX 208 + 2）
+// 自适应分页（4 列卡片网格，行高 152px，参考学习计划 150 + 2）
 const mainEl = ref<HTMLElement | null>(null)
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewEntries.value,
-  rowHeight: 102,
+  rowHeight: 152,
   containerRef: mainEl,
   gridRef: listEl
 })
@@ -143,16 +142,6 @@ async function handleDelete(id: string): Promise<void> {
   readingErrorToast(result)
 }
 
-async function handleToggleSign(id: string): Promise<void> {
-  // K 段不允许取消签字
-  if (parentSignForced.value) {
-    toast.info('K 段阅读记录需家长签字，不可取消')
-    return
-  }
-  const result = await store.toggleParentSign(id)
-  readingErrorToast(result)
-}
-
 onMounted(async () => {
   await store.loadReading()
 })
@@ -202,20 +191,11 @@ onMounted(async () => {
             @click="openEditDialog(e.id)"
           >
             <div class="sr-book-title" :title="e.bookTitle">{{ e.bookTitle }}</div>
+            <div class="sr-date">{{ e.date }}</div>
             <div class="sr-card-info">
+              <span class="sr-duration">{{ store.formatReadingDuration(e.durationMin) }}</span>
               <span class="sr-pages">{{ e.pages }}页</span>
-              <span class="sr-date">{{ e.date }}</span>
             </div>
-            <button
-              v-if="parentSignVisible"
-              class="sr-sign-btn"
-              :class="{ 'is-signed': e.parentSigned, 'is-locked': parentSignForced }"
-              :data-testid="`sr-sign-${e.id}`"
-              :title="e.parentSigned ? '家长已签字' : '家长签字'"
-              @click.stop="handleToggleSign(e.id)"
-            >
-              <Icon name="check" :size="12" />
-            </button>
           </div>
         </TransitionGroup>
       </div>
@@ -347,24 +327,25 @@ onMounted(async () => {
 }
 .sr-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
   align-content: start;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 .sr-list-scroll {
   overflow-y: auto;
 }
 
 .sr-card {
+  position: relative;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  height: 100px;
-  min-height: 100px;
-  padding: 6px 12px;
+  flex-direction: column;
+  gap: 6px;
+  height: 150px;
+  min-height: 150px;
+  padding: 8px 10px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-left: 3px solid var(--color-border, #e5e7eb);
@@ -382,47 +363,32 @@ onMounted(async () => {
 }
 
 .sr-book-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--color-text, #1f2937);
+}
+
+.sr-date {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+  line-height: 1.2;
 }
 
 .sr-card-info {
   display: flex;
-  flex-shrink: 0;
   gap: 8px;
   align-items: center;
-  font-size: 11px;
-  color: var(--color-text-muted, #6b7280);
+  font-size: 12px;
   line-height: 1.2;
+  color: var(--color-text-muted, #6b7280);
+  flex-wrap: wrap;
 }
-.sr-pages { font-weight: 500; color: var(--color-text, #1f2937); }
-.sr-date { opacity: 0.85; }
-.sr-sign-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-text, #1f2937);
-  cursor: pointer;
-  font-size: 11px;
-  transition: all 0.15s;
-}
-.sr-sign-btn:hover { background: var(--color-hover, #f3f4f6); }
-.sr-sign-btn.is-signed {
-  border-color: #10b981;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
-}
-.sr-sign-btn.is-locked { cursor: not-allowed; opacity: 0.7; }
+.sr-duration { color: var(--color-text, #1f2937); font-weight: 500; }
+.sr-pages { color: var(--color-text, #1f2937); font-weight: 500; }
 
 .empty-state {
   display: flex;
@@ -558,6 +524,6 @@ onMounted(async () => {
   .sr-shell { padding: 12px; }
   .sr-stats { grid-template-columns: repeat(2, 1fr); }
   .sr-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sr-card { height: auto; min-height: 100px; }
+  .sr-card { height: 150px; min-height: 150px; }
 }
 </style>

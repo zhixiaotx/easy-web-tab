@@ -114,8 +114,8 @@ const todayTodoCount = computed(() => {
   return pending.length
 })
 const todayReviewCount = computed(() => {
-  const s = reviewStore.stats()
-  return s.dueToday + s.overdue
+  // 所有未掌握的复习项（不含 mastered）
+  return reviewStore.entries.filter(e => !e.mastered).length
 })
 
 // 今日阅读时长

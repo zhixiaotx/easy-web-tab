@@ -51,12 +51,12 @@ const viewEntries = computed<StudentMistake[]>(() => {
   return list
 })
 
-// 自适应分页（行式单列，行高 274px，row-heights.json mistakes MAX 272 + 2）
+// 自适应分页（4 列卡片网格，行高 152px，参考学习计划 150 + 2）
 const mainEl = ref<HTMLElement | null>(null)
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewEntries.value,
-  rowHeight: 274,
+  rowHeight: 152,
   containerRef: mainEl,
   gridRef: listEl
 })
@@ -543,10 +543,12 @@ onMounted(() => {
 }
 
 .sm-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  overflow-y: auto;
 }
 .sm-list-scroll {
   overflow-y: auto;
@@ -556,10 +558,13 @@ onMounted(() => {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  height: 150px;
+  min-height: 150px;
+  overflow: hidden;
 }
 .sm-card-head {
   display: flex;
@@ -637,15 +642,15 @@ onMounted(() => {
   font-weight: 600;
 }
 .sm-q-content, .sm-a-content, .sm-an-content {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 60px;
+  max-height: 18px;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 

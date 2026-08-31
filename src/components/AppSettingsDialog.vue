@@ -34,6 +34,8 @@ import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
+import { useStudentSettingsStore } from '@/stores/studentSettings'
+import { STAGE_BADGE, type StudentStage } from '@/types'
 import type { WorkbenchData } from '@/types'
 import { COUNTDOWN_CATEGORIES } from '@/types'
 import { categoryLabel } from '@/composables/countdownCore'
@@ -53,8 +55,8 @@ import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 // 作为 drafts/syncAll 的全量来源；渲染分组用下方导出的 NAV/WB 数组
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
-// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 云同步）
-const activeTab = ref<'nav' | 'wb' | 'remind' | 'business' | 'sync'>('nav')
+// 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
+const activeTab = ref<'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'>('nav')
 
 const emit = defineEmits<{
   close: []
@@ -62,6 +64,7 @@ const emit = defineEmits<{
 
 const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
+const studentStore = useStudentSettingsStore()
 // 销售记账分类管理弹框（复用页面内共享组件；null = 关闭）
 const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 // 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
@@ -661,6 +664,98 @@ async function handleBizImportFile(event: Event): Promise<void> {
 }
 
 // ====================
+// 学生工作台（仅学生工作台 tab）：页面名称/可见性 + 学段切换 + 昵称 + 学科清单
+// ====================
+const studentStageOptions: { key: StudentStage; label: string; desc: string }[] = [
+  { key: 'K', label: '幼儿园', desc: '游戏化任务 · 家长主导 · 图标卡片' },
+  { key: 'P', label: '小学', desc: '作业管理 · 习惯养成 · 阅读记录' },
+  { key: 'J', label: '初中', desc: '学科管理 · 复习计划 · 错题本' }
+]
+const studentStageBadgeColor = computed(() => STAGE_BADGE[studentStore.stage].color)
+const studentStageBadgeLabel = computed(() => STAGE_BADGE[studentStore.stage].label)
+const studentStageName = computed(() => studentStore.stageLabelName)
+
+const studentNicknameInput = ref<HTMLInputElement | null>(null)
+const studentNewSubject = ref('')
+
+async function onStudentStageSwitch(newStage: StudentStage): Promise<void> {
+  if (newStage === studentStore.stage) return
+  // 切学段会重置菜单可见性到学段默认值 + 播种默认学科（M2 起补习惯/番茄钟）
+  if (!confirm(`切换到「${studentStageOptions.find(o => o.key === newStage)?.label ?? ''}」学段？\n菜单可见性将应用该学段默认值，已有学段默认学科将重新初始化。`)) return
+  try {
+    await studentStore.switchStage(newStage)
+    toast.success(`已切换到「${studentStageName.value}」学段`)
+  } catch (err) {
+    console.warn('student stage switch failed:', err)
+    toast.error('学段切换失败，请重试')
+  }
+}
+
+function onStudentNicknameCommit(): void {
+  const input = studentNicknameInput.value
+  if (!input) return
+  const name = input.value.trim()
+  studentStore.setNickname(name)
+  toast.success(name ? `昵称已更新为「${name}」` : '昵称已清空')
+}
+
+function onStudentAddSubject(): void {
+  const name = studentNewSubject.value.trim()
+  if (!name) return
+  const ok = studentStore.addSubject(name)
+  if (ok) {
+    studentNewSubject.value = ''
+    toast.success(`已新增学科「${name}」`)
+  } else {
+    toast.error('学科已存在')
+  }
+}
+
+function onStudentRemoveSubject(name: string): void {
+  if (!confirm(`删除学科「${name}」？\n已有作业/复习/错题记录不会自动迁移到其他学科。`)) return
+  const ok = studentStore.removeSubject(name)
+  if (ok) toast.success(`已删除学科「${name}」`)
+  else toast.error('删除失败')
+}
+
+function onStudentResetMenu(): void {
+  if (!confirm('恢复学生菜单为当前学段默认顺序与可见性？')) return
+  studentStore.resetMenu()
+  toast.success('学生菜单已恢复默认')
+}
+
+function onStudentMoveMenu(key: string, dir: 'up' | 'down'): void {
+  const r = studentStore.moveMenuItem(key, dir)
+  if (!r.ok && r.reason === 'boundary') {
+    toast.info('已在边界，无法继续移动')
+  }
+}
+
+function onStudentRenameMenu(key: string): void {
+  // 简易内联改名：使用 prompt（避免引入额外弹窗组件）
+  const current = studentStore.menuLabels[key] ?? ''
+  const next = window.prompt('请输入菜单名称', current)
+  if (next === null) return
+  const r = studentStore.renameMenuItem(key, next)
+  if (!r.ok && r.reason === 'empty') toast.error('名称不能为空')
+}
+
+function onStudentToggleMenu(key: string, visible: boolean): void {
+  studentStore.setMenuVisibility(key, visible)
+}
+
+// 设置弹窗打开时切到学生工作台 tab 的支持（外部 openAppSettings 入口用）
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (tab === 'student' && !studentStore.loaded) {
+      // 弹窗内首次切到学生 tab 时再异步加载（避免阻塞弹窗初始化）
+      void studentStore.loadSettings()
+    }
+  }
+)
+
+// ====================
 // 云同步（仅云同步 tab）
 // ====================
 const cloudSync = useCloudSync()
@@ -911,14 +1006,17 @@ watch(
   }
 )
 
-// 当工作台/销售记账可见性关闭时，自动切离对应 tab
+// 当工作台/销售记账/学生工作台可见性关闭时，自动切离对应 tab
 watch(
-  [() => store.workbenchPageVisible, () => store.businessPageVisible],
+  [() => store.workbenchPageVisible, () => store.businessPageVisible, () => store.studentPageVisible],
   () => {
     if (store.workbenchPageVisible === false && (activeTab.value === 'wb' || activeTab.value === 'remind' || activeTab.value === 'sync')) {
       activeTab.value = 'nav'
     }
     if (store.businessPageVisible === false && activeTab.value === 'business') {
+      activeTab.value = 'nav'
+    }
+    if (store.studentPageVisible === false && activeTab.value === 'student') {
       activeTab.value = 'nav'
     }
   }
@@ -977,6 +1075,16 @@ onUnmounted(() => {
             data-testid="settings-tab-business"
             @click="activeTab = 'business'"
           >{{ store.businessPageDisplayName }}</button>
+          <button
+            v-if="store.studentPageVisible !== false"
+            type="button"
+            role="tab"
+            class="tab-btn"
+            :class="{ active: activeTab === 'student' }"
+            :aria-selected="activeTab === 'student'"
+            data-testid="settings-tab-student"
+            @click="activeTab = 'student'"
+          >{{ store.studentPageDisplayName }}</button>
           <button
             type="button"
             role="tab"
@@ -1064,6 +1172,32 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">
             控制管理页「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
+          </p>
+
+          <!-- 学生工作台 -->
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">学生工作台</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input
+                type="text"
+                class="wb-menu-name-input"
+                :value="store.studentPageName"
+                placeholder="学生工作台"
+                maxlength="20"
+                @input="store.setStudentPageName(($event.target as HTMLInputElement).value)"
+              />
+              <button type="button" class="switch-btn"
+                :class="{ on: store.studentPageVisible !== false }"
+                role="switch"
+                :aria-checked="store.studentPageVisible !== false"
+                data-testid="student-visible-switch"
+                @click="store.setStudentPageVisible(store.studentPageVisible === false)">
+                <span class="switch-thumb"></span>
+              </button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            控制管理页「学生工作台」按钮的显示。关闭后学生工作台设置页一并隐藏。
           </p>
         </div>
 
@@ -1612,6 +1746,207 @@ onUnmounted(() => {
             <button type="button" class="wb-menu-btn" data-testid="bizsettings-export" @click="handleBizExport"><Icon name="upload" /> 导出销售备份</button>
             <button type="button" class="wb-menu-btn" data-testid="bizsettings-import" @click="handleBizImportClick"><Icon name="download" /> 导入销售备份</button>
           </div>
+        </div>
+
+        <!-- 学生工作台（仅学生工作台 tab）：学段切换 + 昵称 + 学科清单 + 学生菜单 -->
+        <div v-if="activeTab === 'student'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">学段</h3>
+            <span
+              class="student-stage-pill"
+              :style="{ backgroundColor: studentStageBadgeColor }"
+              :title="`当前学段：${studentStageName}`"
+            >{{ studentStageBadgeLabel }} {{ studentStageName }}</span>
+          </div>
+          <p class="wb-menu-hint">
+            切换学段会重新应用该学段默认菜单可见性与默认学科清单（已有的自定义学科保留）。
+          </p>
+          <div class="student-stage-grid">
+            <button
+              v-for="opt in studentStageOptions"
+              :key="opt.key"
+              type="button"
+              class="student-stage-card"
+              :class="{ active: studentStore.stage === opt.key }"
+              :data-testid="`stg-stage-card-${opt.key}`"
+              @click="onStudentStageSwitch(opt.key)"
+            >
+              <span
+                class="student-stage-badge"
+                :style="{ backgroundColor: STAGE_BADGE[opt.key].color }"
+              >{{ STAGE_BADGE[opt.key].label }}</span>
+              <span class="student-stage-name">{{ opt.label }}</span>
+              <span class="student-stage-desc">{{ opt.desc }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'student'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">学生信息</h3>
+          </div>
+          <div class="wb-field">
+            <label class="wb-field-label">昵称</label>
+            <input
+              ref="studentNicknameInput"
+              type="text"
+              class="wb-menu-name-input"
+              :value="studentStore.settings.nickname"
+              placeholder="同学"
+              maxlength="12"
+              data-testid="stg-nickname-input"
+              @change="onStudentNicknameCommit"
+            />
+          </div>
+          <div class="wb-field">
+            <label class="wb-field-label">学号</label>
+            <input
+              type="text"
+              class="wb-menu-name-input"
+              :value="studentStore.settings.studentNo"
+              placeholder="选填"
+              maxlength="20"
+              data-testid="stg-studentno-input"
+              @input="studentStore.setStudentNo(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+          <div class="wb-field">
+            <label class="wb-field-label">学校</label>
+            <input
+              type="text"
+              class="wb-menu-name-input"
+              :value="studentStore.settings.school"
+              placeholder="选填"
+              maxlength="40"
+              data-testid="stg-school-input"
+              @input="studentStore.setSchool(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+          <div class="wb-field">
+            <label class="wb-field-label">年级</label>
+            <input
+              type="text"
+              class="wb-menu-name-input"
+              :value="studentStore.settings.grade"
+              placeholder="选填，如 三年级 / 初二"
+              maxlength="20"
+              data-testid="stg-grade-input"
+              @input="studentStore.setGrade(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+          <div class="wb-menu-field">
+            <label class="wb-menu-label">出生日期</label>
+            <input
+              type="date"
+              class="wb-menu-name-input"
+              :value="studentStore.settings.birthday"
+              data-testid="stg-birthday-input"
+              @input="studentStore.setBirthday(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'student'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">学科清单</h3>
+            <span class="wb-menu-hint-inline">{{ studentStore.subjects.length }} 项</span>
+          </div>
+          <p class="wb-menu-hint">
+            K 段无学科；P 段默认 3 科，J 段默认 9 科。可自定义增删，已有作业/复习/错题记录的学科删除后不会自动迁移。
+          </p>
+          <div class="student-subject-chips">
+            <span
+              v-for="s in studentStore.subjects"
+              :key="s"
+              class="student-subject-chip"
+            >
+              <span class="chip-label">{{ s }}</span>
+              <button
+                type="button"
+                class="chip-remove"
+                :data-testid="`stg-subject-remove-${s}`"
+                @click="onStudentRemoveSubject(s)"
+                aria-label="删除"
+              ><Icon name="close" :size="12" /></button>
+            </span>
+            <span v-if="studentStore.subjects.length === 0" class="student-subject-empty">暂无学科</span>
+          </div>
+          <div class="student-subject-add">
+            <input
+              type="text"
+              class="wb-menu-name-input"
+              v-model="studentNewSubject"
+              placeholder="新增学科名称"
+              maxlength="20"
+              data-testid="stg-subject-input"
+              @keydown.enter.prevent="onStudentAddSubject"
+            />
+            <button
+              type="button"
+              class="ob-btn-primary student-subject-add-btn"
+              data-testid="stg-subject-add"
+              @click="onStudentAddSubject"
+            >新增</button>
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'student'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">学生菜单</h3>
+            <button type="button" class="row-reset" data-testid="stg-menu-reset" @click="onStudentResetMenu">恢复默认</button>
+          </div>
+          <p class="wb-menu-hint">
+            主页固定置顶，不可调整顺序或关闭；开关关闭的功能将从学生菜单与首页行动台中隐藏。学段切换会重置开关到该学段默认值。
+          </p>
+          <ul class="wb-menu-list">
+            <li
+              v-for="item in studentStore.menuAllItems"
+              :key="item.key"
+              class="wb-menu-row"
+              :data-testid="`stg-menu-row-${item.key}`"
+            >
+              <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
+              <span class="wb-menu-name">{{ item.label }}</span>
+              <div class="wb-menu-actions">
+                <button
+                  type="button"
+                  class="mini-btn"
+                  :disabled="item.key === 'home'"
+                  :data-testid="`stg-menu-up-${item.key}`"
+                  @click="onStudentMoveMenu(item.key, 'up')"
+                  title="上移"
+                >↑</button>
+                <button
+                  type="button"
+                  class="mini-btn"
+                  :disabled="item.key === 'home'"
+                  :data-testid="`stg-menu-down-${item.key}`"
+                  @click="onStudentMoveMenu(item.key, 'down')"
+                  title="下移"
+                >↓</button>
+                <button
+                  type="button"
+                  class="mini-btn"
+                  :disabled="item.key === 'home'"
+                  :data-testid="`stg-menu-rename-${item.key}`"
+                  @click="onStudentRenameMenu(item.key)"
+                  title="改名"
+                >✎</button>
+                <button
+                  type="button"
+                  class="switch-btn mini-switch"
+                  :class="{ on: studentStore.isMenuEnabled(item.key) }"
+                  role="switch"
+                  :aria-checked="studentStore.isMenuEnabled(item.key)"
+                  :data-testid="`stg-menu-toggle-${item.key}`"
+                  :disabled="item.key === 'home'"
+                  @click="onStudentToggleMenu(item.key, !studentStore.isMenuEnabled(item.key))"
+                >
+                  <span class="switch-thumb"></span>
+                </button>
+              </div>
+            </li>
+          </ul>
         </div>
 
         <!-- 云同步（仅云同步 tab）：WebDAV 配置（开关 + 三字段 + 测试连接 + 立即同步 + 上次同步时间 + 首次使用引导） -->
@@ -2431,5 +2766,199 @@ onUnmounted(() => {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* ===== 学生工作台 tab 专属样式 ===== */
+.student-stage-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+.student-stage-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.student-stage-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.student-stage-card:hover {
+  background: var(--color-hover, #f3f4f6);
+}
+.student-stage-card.active {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
+}
+.student-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.student-stage-name {
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.student-stage-desc {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+  margin-left: auto;
+}
+
+.wb-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+.wb-field-label {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b7280);
+  width: 56px;
+  flex-shrink: 0;
+}
+.wb-menu-hint-inline {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.student-subject-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+.student-subject-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 10px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 14px;
+  background: var(--color-surface, #ffffff);
+  font-size: 13px;
+}
+.chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted, #6b7280);
+  cursor: pointer;
+  padding: 0;
+}
+.chip-remove:hover {
+  background: var(--color-hover, #f3f4f6);
+  color: var(--color-danger, #ef4444);
+}
+.student-subject-empty {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b7280);
+  font-style: italic;
+}
+.student-subject-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.student-subject-add .wb-menu-name-input {
+  flex: 1;
+}
+.student-subject-add-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--color-primary, #3b82f6);
+  color: #ffffff;
+  border: 1px solid var(--color-primary, #3b82f6);
+}
+.student-subject-add-btn:hover {
+  filter: brightness(0.95);
+}
+
+.wb-menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.wb-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.wb-menu-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.wb-menu-name {
+  flex: 1;
+  font-size: 13px;
+}
+.wb-menu-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mini-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+.mini-btn:hover:not(:disabled) {
+  background: var(--color-hover, #f3f4f6);
+}
+.mini-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.mini-switch {
+  width: 32px;
+  height: 18px;
+  border: none;
+  padding: 0;
+}
+.mini-switch .switch-thumb {
+  width: 14px;
+  height: 14px;
 }
 </style>

@@ -1,3 +1,5 @@
+import type { PomodoroData } from '../composables/pomodoroCore'
+
 export interface Site {
   name: string
   url: string
@@ -219,6 +221,8 @@ export interface AppSettingsData {
   businessPageName?: string            // 销售记账页面自定义名称（默认 '销售记账'）
   businessPageVisible?: boolean        // 销售记账页面可见性开关（默认 true）
   businessActiveSection?: string       // 销售记账工作台当前模块（home/products/purchases/daily/expenses/inventory/stats；缺失 = 首页）
+  studentPageName?: string             // 学生工作台页面自定义名称（默认 '学生工作台'）
+  studentPageVisible?: boolean         // 学生工作台页面可见性开关（默认 true；缺失 = 显示）
   cloudSyncEnabled?: boolean           // 云同步总开关（默认 false）
   cloudSyncUrl?: string                // WebDAV URL（空串 = 未配置）
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
@@ -489,4 +493,425 @@ export const DEFAULT_BUSINESS_PRODUCT_CATEGORIES: BusinessProductCategory[] = [
   { id: 'product-daily', name: '日用品', sortOrder: 4, visible: true },
   { id: 'product-clothing', name: '服饰', sortOrder: 5, visible: true }
 ]
+
+// ==================== 学生工作台 ====================
+
+/** 学段：K=幼儿园 / P=小学 / J=初中 */
+export type StudentStage = 'K' | 'P' | 'J'
+
+/** 学生工作台菜单键集合（14 项；home 恒居首位，开关锁定不可关） */
+export const STUDENT_MENU_KEYS: readonly string[] = [
+  'home',
+  'habits',
+  'homework',
+  'timetable',
+  'plan',
+  'review',
+  'mistakes',
+  'reading',
+  'exam',
+  'diary',
+  'pomodoro',
+  'achievements',
+  'rewards',
+  'parent'
+]
+
+/** 默认菜单顺序（home 首位，与键集合一致） */
+export const STUDENT_MENU_DEFAULT_ORDER: readonly string[] = [...STUDENT_MENU_KEYS]
+
+/** 学生菜单默认名称（逐字一致，load-bearing） */
+export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
+  home: '主页',
+  habits: '习惯打卡',
+  homework: '作业管理',
+  timetable: '课程表',
+  plan: '学习计划',
+  review: '复习计划',
+  mistakes: '错题本',
+  reading: '阅读记录',
+  exam: '考试倒计时',
+  diary: '学习日记',
+  pomodoro: '番茄钟',
+  achievements: '成就勋章',
+  rewards: '奖励积分',
+  parent: '家长协同'
+}
+
+/** 学生菜单图标映射（Icon.vue 查表键名） */
+export const STUDENT_MENU_ICONS: Record<string, string> = {
+  home: 'home',
+  habits: 'habits',
+  homework: 'todos',
+  timetable: 'countdowns',
+  plan: 'notes',
+  review: 'diary',
+  mistakes: 'passwords',
+  reading: 'notes',
+  exam: 'countdowns',
+  diary: 'diary',
+  pomodoro: 'pomodoro',
+  achievements: 'habits',
+  rewards: 'ledger',
+  parent: 'health'
+}
+
+/** 学段-菜单可见性矩阵：true=默认显示 / false=默认隐藏（用户可在设置内单独开启） */
+export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>> = {
+  K: {
+    home: true, habits: true, homework: false, timetable: false, plan: false,
+    review: false, mistakes: false, reading: true, exam: false, diary: true,
+    pomodoro: false, achievements: true, rewards: true, parent: true
+  },
+  P: {
+    home: true, habits: true, homework: true, timetable: true, plan: false,
+    review: false, mistakes: false, reading: true, exam: false, diary: true,
+    pomodoro: false, achievements: true, rewards: true, parent: true
+  },
+  J: {
+    home: true, habits: false, homework: true, timetable: true, plan: true,
+    review: true, mistakes: true, reading: true, exam: true, diary: true,
+    pomodoro: true, achievements: false, rewards: false, parent: false
+  }
+}
+
+/** 学段默认学科清单（小学 3 科 / 初中 9 科；K 无学科） */
+export const STAGE_DEFAULT_SUBJECTS: Record<StudentStage, string[]> = {
+  K: [],
+  P: ['语文', '数学', '英语'],
+  J: ['语文', '数学', '英语', '政治', '历史', '地理', '生物', '物理', '化学']
+}
+
+/** 学段默认习惯种子（K 7 项 / P 6 项 / J 5 项） */
+export const STAGE_DEFAULT_HABITS: Record<StudentStage, { name: string; category: string }[]> = {
+  K: [
+    { name: '刷牙', category: 'life' },
+    { name: '洗脸', category: 'life' },
+    { name: '收拾玩具', category: 'life' },
+    { name: '阅读绘本', category: 'study' },
+    { name: '早睡早起', category: 'life' },
+    { name: '运动', category: 'exercise' },
+    { name: '家务', category: 'life' }
+  ],
+  P: [
+    { name: '写作业', category: 'study' },
+    { name: '复习', category: 'study' },
+    { name: '阅读', category: 'study' },
+    { name: '运动', category: 'exercise' },
+    { name: '家务', category: 'life' },
+    { name: '早睡早起', category: 'life' }
+  ],
+  J: [
+    { name: '自主学习', category: 'study' },
+    { name: '复习错题', category: 'study' },
+    { name: '运动', category: 'exercise' },
+    { name: '阅读', category: 'study' },
+    { name: '早睡', category: 'life' }
+  ]
+}
+
+/** 学段默认番茄钟时长（分钟）：小学 25+5 / 初中 50+10 */
+export const STAGE_DEFAULT_POMODORO: Record<StudentStage, { focus: number; break: number }> = {
+  K: { focus: 15, break: 5 },
+  P: { focus: 25, break: 5 },
+  J: { focus: 50, break: 10 }
+}
+
+/** 学段徽标配置 */
+export const STAGE_BADGE: Record<StudentStage, { label: string; color: string }> = {
+  K: { label: 'K', color: '#f59e0b' },
+  P: { label: 'P', color: '#3b82f6' },
+  J: { label: 'J', color: '#a855f7' }
+}
+
+/** 学生工作台设置（IDB store 'student_settings' 单对象） */
+export interface StudentSettings {
+  stage: StudentStage          // 当前学段
+  nickname?: string            // 学生昵称（1-12 code point；缺失回退「同学」）
+  studentNo?: string           // 学号（选填）
+  school?: string              // 学校名（选填）
+  grade?: string               // 年级（选填）
+  birthday?: string            // 出生日期 YYYY-MM-DD（选填；主页顶部据此计算年龄）
+  /** 菜单顺序（home 恒 index 0；归一化保证恒 14 项） */
+  menuOrder?: string[]
+  /** 菜单改名（key → 自定义名） */
+  menuLabels?: Record<string, string>
+  /** 菜单可见性（key → 显示开关；缺失=显示） */
+  menuVisibility?: Record<string, boolean>
+  /** 学段默认值播种标记：值 !== stage 时触发默认学科/习惯/番茄钟播种 */
+  stageSeeded?: StudentStage
+  /** 学科清单（自定义增删；学段切换自动播种默认学科） */
+  subjects?: string[]
+  /** 家长 PIN（PBKDF2 派生密钥 hex；K/P 段使用，J 段隐藏家长入口） */
+  parentPinSalt?: string
+  parentPinVerification?: string
+  /** 家长模式锁定截止时间戳（PIN 连续输错 5 次后 5 分钟锁定） */
+  parentLockedUntil?: number
+  /** 连续 PIN 输错次数（验证成功或锁定到期后清零） */
+  parentPinFailedAttempts?: number
+}
+
+/** 学生设置空数据工厂 */
+export function emptyStudentSettings(): StudentSettings {
+  return { stage: 'P' }
+}
+
+/** 学生工作台数据导出/导入格式（独立信封，与 WorkbenchData 隔离） */
+export const STUDENT_DATA_VERSION = 1
+
+export interface StudentBackupData {
+  type: 'student-backup'
+  version: number
+  exportedAt: string
+  stage: StudentStage
+  studentSettings: StudentSettings
+  // M2-M4 各模块数据（强类型，归一化后读写）
+  homework?: StudentHomeworkData
+  timetable?: StudentTimetableData
+  plans?: StudentPlanData
+  review?: StudentReviewData
+  mistakes?: StudentMistakesData
+  reading?: StudentReadingData
+  achievements?: StudentAchievementsData
+  rewards?: StudentRewardsData
+  // 共享 store 独立副本（严格隔离）
+  studentHabits?: StudentHabitsData
+  studentDiary?: DiaryData
+  studentPomodoro?: PomodoroData
+  studentCountdowns?: { countdowns: Countdown[]; customCategories?: string[]; sortRule?: string }
+  clientId?: string
+  pushedAt?: number
+  prefs?: Record<string, string>
+}
+
+// ==================== 学生模块数据接口（M2-M4） ====================
+
+/** 习惯内置分类：life/study/exercise；用户可增删自定义（string 类型） */
+export const STUDENT_HABIT_BUILTIN_CATEGORIES = ['life', 'study', 'exercise'] as const
+export type StudentHabitCategory = string
+
+/** 学生习惯：扩展成人 Habit 加 category 字段（学段默认播种用） */
+export interface StudentHabit {
+  id: string               // 前缀 shb_
+  name: string             // 1-15 code point，同分类内唯一
+  category: StudentHabitCategory  // life/study/exercise/自定义；空串=未分类
+  frequency: number        // 每周目标打卡次数 1-7
+  color?: string
+  createdAt: string
+}
+
+/** 学生习惯打卡记录（与成人 HabitRecord 同构，前缀 shr_） */
+export interface StudentHabitRecord {
+  id: string
+  habitId: string
+  date: string             // 'YYYY-MM-DD' 本地日期
+  parentMarked?: boolean   // 家长代打卡标记
+  createdAt: string
+}
+
+/** 学生习惯数据模型（双数组，IDB store 'student_habits'） */
+export interface StudentHabitsData {
+  habits: StudentHabit[]
+  records: StudentHabitRecord[]
+}
+
+/** 作业状态：pending 待办 / doing 进行中 / done 已完成 / overdue 逾期 */
+export type StudentHomeworkStatus = 'pending' | 'doing' | 'done' | 'overdue'
+
+/** 作业优先级 */
+export type StudentHomeworkPriority = 'low' | 'normal' | 'high'
+
+/** 学生作业（IDB store 'student_homework'，数组，前缀 hw_） */
+export interface StudentHomework {
+  id: string
+  subject: string          // 学科，来自 student_settings.subjects
+  title: string            // 1-50 字符，必填
+  content?: string         // 详细描述
+  dueDate: string          // 'YYYY-MM-DD' 本地日期，必填
+  status: StudentHomeworkStatus
+  priority: StudentHomeworkPriority
+  source?: 'self' | 'parent'  // 来源标记（家长代为新增）
+  completedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 学生作业数据（数组模型，IDB 单对象 { entries }） */
+export interface StudentHomeworkData {
+  entries: StudentHomework[]
+}
+
+/** 课程表单节课（IDB store 'student_timetable' 单对象 schedule 字典） */
+export interface StudentTimetableCell {
+  subject: string          // 学科
+  teacher?: string        // 1-20 字符
+  room?: string           // 1-20 字符
+  startHHMM: string       // 'HH:MM'
+  endHHMM: string         // 'HH:MM'，> startHHMM
+}
+
+/** 课程表 schedule：key = `${dayOfWeek}_${period}`（1-7_1-12） */
+export type StudentTimetableSchedule = Record<string, StudentTimetableCell>
+
+/** 学生课程表数据（IDB store 'student_timetable'，单对象） */
+export interface StudentTimetableData {
+  version: number
+  weeks: number           // 学周数
+  periodsPerDay: number   // 每日节数 1-12
+  classroom?: string      // 学生所在教室/班级（全局，非按课）
+  schedule: StudentTimetableSchedule
+}
+
+/** 学生计划类型 */
+export type StudentPlanType = 'weekly' | 'monthly' | 'term'
+
+/** 计划目标（含进度 0-100） */
+export interface StudentPlanGoal {
+  id: string              // 前缀 pg_
+  content: string         // 1-100 字符
+  progress: number        // 0-100 整数，递增不递减
+  done: boolean
+}
+
+/** 学生计划（IDB store 'student_plans'，数组，前缀 pl_） */
+export interface StudentPlan {
+  id: string
+  type: StudentPlanType
+  title: string           // 1-50 字符
+  startDate: string      // 'YYYY-MM-DD'
+  endDate: string        // 'YYYY-MM-DD'，> startDate
+  goals: StudentPlanGoal[]
+  review?: string         // 复盘 Markdown，最长 5000 字符
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentPlanData {
+  entries: StudentPlan[]
+}
+
+/** 艾宾浩斯复习阶段间隔（天）：1/2/4/7/15/30 */
+export const REVIEW_INTERVALS = [1, 2, 4, 7, 15, 30] as const
+export const REVIEW_MAX_STAGE = REVIEW_INTERVALS.length
+
+/** 学生复习条目（IDB store 'student_review'，数组，前缀 rv_） */
+export interface StudentReviewItem {
+  id: string
+  subject: string
+  knowledge: string       // 1-200 字符
+  source?: string         // 来源：教材 P45 / 错题本 等
+  learnDate: string       // 初学日期 'YYYY-MM-DD'，≤ today
+  stage: number           // 1-6，递增
+  nextReviewDate: string  // 自动计算
+  mastered: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentReviewData {
+  entries: StudentReviewItem[]
+}
+
+/** 错题状态 */
+export type StudentMistakeStatus = 'new' | 'reviewing' | 'mastered'
+
+/** 学生错题（IDB store 'student_mistakes'，数组，前缀 mk_） */
+export interface StudentMistake {
+  id: string
+  subject: string
+  title?: string          // 题目标题
+  question: string        // Markdown 题干，必填（或图片必填）
+  answer: string          // Markdown 正确答案
+  analysis?: string       // Markdown 解析
+  tags: string[]          // 0-10 个，每个 1-20 字符
+  imageIds: string[]      // 关联 student_images store 的 Blob id
+  status: StudentMistakeStatus
+  linkedReviewId?: string  // 关联 student_review 条目 id
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentMistakesData {
+  entries: StudentMistake[]
+}
+
+/** 学生阅读记录（IDB store 'student_reading'，数组，前缀 rd_） */
+export interface StudentReadingEntry {
+  id: string
+  bookTitle: string      // 1-50 字符
+  pages: number          // 1-999
+  durationMin: number    // 1-480 分钟
+  impression?: string    // Markdown 感悟，最长 2000 字符
+  date: string           // 'YYYY-MM-DD'，≤ today
+  parentSigned?: boolean // 家长签字标记（K 段强制 / P 1-3 年级可选）
+  signedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentReadingData {
+  entries: StudentReadingEntry[]
+}
+
+/** 勋章分类 */
+export type StudentAchievementCategory = 'habit' | 'study' | 'reading' | 'pomodoro'
+
+/** 勋章定义（内置 10 枚，不可编辑） */
+export interface StudentAchievementDef {
+  id: string              // streak-7/streak-30/.../hw-rate-95
+  name: string
+  description: string
+  emoji: string
+  category: StudentAchievementCategory
+  /** 进度计算函数标识（store 监听时按 id 路由） */
+  metric: string
+  target: number
+}
+
+/** 学生成就数据（IDB store 'student_achievements'，单对象） */
+export interface StudentAchievementsData {
+  definitions: StudentAchievementDef[]
+  unlocked: Record<string, string>  // id → 解锁时间 ISO
+}
+
+/** 奖励项（家长配置） */
+export interface StudentRewardItem {
+  id: string              // 前缀 rw_
+  name: string            // 1-30 字符，唯一
+  cost: number            // 1-9999 正整数
+  stock?: number          // 0=售罄
+}
+
+/** 奖励交易记录 */
+export interface StudentRewardTxn {
+  id: string              // 前缀 rt_
+  type: 'earn' | 'redeem'
+  points: number          // earn + / redeem -
+  reason: string
+  rewardId?: string
+  /** autoEarn 幂等去重标识（如 habit:${habitId}:${date}）；手动加分不传 */
+  sourceId?: string
+  createdAt: string
+}
+
+/** 学生奖励数据（IDB store 'student_rewards'，单对象） */
+export interface StudentRewardsData {
+  totalPoints: number
+  history: StudentRewardTxn[]
+  rewards: StudentRewardItem[]
+}
+
+/** 家长每日任务项（家长协同模式下配置） */
+export interface StudentParentTask {
+  id: string              // 前缀 pt_
+  title: string
+  date: string            // 'YYYY-MM-DD'
+  done: boolean
+  source: 'parent'
+}
+
+/** 家长任务数据（IDB store 'student_parent_tasks'，单对象） */
+export interface StudentParentTasksData {
+  tasks: StudentParentTask[]
+}
 

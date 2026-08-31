@@ -23,7 +23,23 @@
     "test:spotlight": "node --experimental-strip-types scripts/test-spotlight-core.ts",
     "test:snapshot": "node --experimental-strip-types scripts/test-snapshot-core.ts",
     "test:pomodoro": "node --experimental-strip-types scripts/test-pomodoro-core.ts",
-    "test:business": "node --experimental-strip-types scripts/test-business-core.ts"
+    "test:business": "node --experimental-strip-types scripts/test-business-core.ts",
+    "qa:student-ui": "node scripts/qa-student-ui.mjs",
+    "test:student-menu": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-menu-core.ts",
+    "test:student-habits": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-habits-core.ts",
+    "test:student-homework": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-homework-core.ts",
+    "test:student-reward": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-reward-core.ts",
+    "test:student-plan": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-plan-core.ts",
+    "test:student-reading": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-reading-core.ts",
+    "test:student-review": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-review-core.ts",
+    "test:student-mistakes": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-mistakes-core.ts",
+    "test:student-timetable": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-timetable-core.ts",
+    "test:student-exam": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-exam-core.ts",
+    "test:student-stage": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-stage-core.ts",
+    "test:student-pomodoro": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-pomodoro-core.ts",
+    "test:student-achievement": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-achievement-core.ts",
+    "test:student-parenttask": "node --experimental-strip-types --experimental-loader ./scripts/resolve-extensionless.mjs scripts/test-student-parenttask-core.ts",
+    "test:student": "npm run test:student-menu && npm run test:student-habits && npm run test:student-homework && npm run test:student-reward && npm run test:student-plan && npm run test:student-reading && npm run test:student-review && npm run test:student-mistakes && npm run test:student-timetable && npm run test:student-exam && npm run test:student-stage && npm run test:student-pomodoro && npm run test:student-achievement && npm run test:student-parenttask"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -62,3 +78,4 @@
   "license": "ISC",
   "types": "./vite.config.d.ts"
 }
+

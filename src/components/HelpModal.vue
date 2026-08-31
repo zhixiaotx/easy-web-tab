@@ -142,15 +142,17 @@ const TABS = [
   { key: 'nav', icon: 'link', label: '网址导航' },
   { key: 'workbench', icon: 'toolbox', label: '个人工作台' },
   { key: 'business', icon: 'store', label: '销售记账台' },
+  { key: 'student', icon: 'notes', label: '学生工作台' },
   { key: 'data', icon: 'keyboard', label: '快捷键与数据' }
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 const activeTab = ref<TabKey>('nav')
 
-// 标签页可见性：工作台/销售记账开关关闭时对应标签页隐藏
+// 标签页可见性：工作台/销售记账/学生工作台开关关闭时对应标签页隐藏
 const visibleTabs = computed(() => TABS.filter(t => {
   if (t.key === 'workbench') return settingsStore.workbenchPageVisible !== false
   if (t.key === 'business') return settingsStore.businessPageVisible !== false
+  if (t.key === 'student') return settingsStore.studentPageVisible !== false
   return true
 }))
 
@@ -295,6 +297,103 @@ const bsFlow = [
   { step: '3', text: '每日收摊：填带出、剩余、损耗，当日营业额自动生成' },
   { step: '4', text: '记支出：登记摊位费等经营支出' },
   { step: '5', text: '看统计：在统计页查看趋势、占比与排行' }
+]
+
+// ===== 学生工作台模块 =====
+const studentModules: PanelDoc[] = [
+  {
+    icon: 'home',
+    name: '主页',
+    desc: '问候条 + 三屏轮播（行动台/数据概览/工具栏），6 秒自动轮播，鼠标悬停暂停。',
+    tips: '学段徽标显示在问候条右侧，点击行动台卡片直接进入对应面板。'
+  },
+  {
+    icon: 'habits',
+    name: '习惯打卡',
+    desc: '按学段播种默认习惯种子（K 7 项 / P 6 项 / J 5 项），家长协同查看完成情况。',
+    tips: 'K 段为家长主导，J 段隐藏习惯面板（自主学习）。'
+  },
+  {
+    icon: 'todos',
+    name: '作业管理',
+    desc: '按学科录入作业，支持截止日期、完成状态、附件图片；K 段改为游戏化任务卡片。',
+    tips: 'P/J 段专属，K 段默认隐藏。'
+  },
+  {
+    icon: 'countdowns',
+    name: '课程表',
+    desc: '周视图 + 当日课时高亮，支持节次配置与调课；K 段改为每日活动安排。',
+    tips: 'P/J 段专属，K 段默认隐藏。'
+  },
+  {
+    icon: 'notes',
+    name: '学习计划',
+    desc: '周计划 + 单元计划，自动联动作业/复习/错题。',
+    tips: 'P/J 段专属，K 段默认隐藏。'
+  },
+  {
+    icon: 'diary',
+    name: '复习计划',
+    desc: '艾宾浩斯遗忘曲线提醒，按学科 + 错题关联。',
+    tips: 'P/J 段专属，K 段默认隐藏。'
+  },
+  {
+    icon: 'passwords',
+    name: '错题本',
+    desc: '拍照录入 + 学科分类 + 复习关联。',
+    tips: 'P/J 段专属，K 段默认隐藏。'
+  },
+  {
+    icon: 'notes',
+    name: '阅读记录',
+    desc: '书目 + 阅读时长 + 笔记摘录，全学段开放。',
+    tips: '所有学段默认显示。'
+  },
+  {
+    icon: 'countdowns',
+    name: '考试倒计时',
+    desc: '复用倒计时引擎，按学科 + 考试类型分类。',
+    tips: 'J 段默认显示，K/P 段默认隐藏。'
+  },
+  {
+    icon: 'diary',
+    name: '学习日记',
+    desc: '每日一篇，Markdown 编辑 + 历史回顾，全学段开放。',
+    tips: '所有学段默认显示。'
+  },
+  {
+    icon: 'pomodoro',
+    name: '番茄钟',
+    desc: '复用成人番茄钟，学段默认时长（K 15+5 / P 25+5 / J 50+10 分钟）。',
+    tips: 'J 段默认显示，K/P 段默认隐藏。'
+  },
+  {
+    icon: 'habits',
+    name: '成就勋章',
+    desc: '完成作业/习惯/阅读自动颁发勋章，K/P 段专属。',
+    tips: 'J 段隐藏（无激励引导）。'
+  },
+  {
+    icon: 'ledger',
+    name: '奖励积分',
+    desc: '完成动作自动攒积分，家长可兑换奖励，K/P 段专属。',
+    tips: 'J 段隐藏（无激励引导）。'
+  },
+  {
+    icon: 'health',
+    name: '家长协同',
+    desc: 'PIN 解锁后查看孩子学习概况、完成情况、奖励兑换，K/P 段专属。',
+    tips: 'J 段隐藏（独立学习，无家长入口）。'
+  }
+]
+
+// ===== 学生工作台使用流程 =====
+const studentFlow = [
+  { step: '1', text: '选择学段：首次进入弹出学段引导，K/P/J 三段菜单自动适配' },
+  { step: '2', text: '设学生信息：昵称、学号、学校、年级（选填）' },
+  { step: '3', text: '管学科清单：K 段无学科，P 段 3 科，J 段 9 科，可自定义增删' },
+  { step: '4', text: '调菜单开关：根据学段默认隐藏的菜单可手动开启' },
+  { step: '5', text: '开始使用：进入各面板录入数据（M2 起逐步上线各模块）' }
 ]
 
 // ===== 工作台快捷键 =====
@@ -498,7 +597,47 @@ const skillInstall = [
           </section>
         </template>
 
-        <!-- ===== 标签 4：快捷键与数据 ===== -->
+        <!-- ===== 标签 4：学生工作台 ===== -->
+        <template v-if="activeTab === 'student'">
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="notes" /> 学生工作台</h3>
+            <div class="panel-intro">
+              <p>路由 <code>/student</code>。面向幼儿园、小学、初中学生的学习成长工作台：复用成人工作台架构，按学段差异化加载面板与默认数据，K/P/J 三段菜单与默认习惯/学科清单自动适配。</p>
+            </div>
+            <div class="panels-grid">
+              <div v-for="m in studentModules" :key="m.name" class="panel-item">
+                <div class="panel-head">
+                  <span class="panel-icon"><Icon :name="m.icon" :size="18" /></span>
+                  <h4>{{ m.name }}</h4>
+                </div>
+                <p class="panel-desc">{{ m.desc }}</p>
+                <p class="panel-tips"><Icon name="lightbulb" :size="13" /> {{ m.tips }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="target" /> 学段差异</h3>
+            <ul class="storage-list">
+              <li><strong>幼儿园（K）</strong>：游戏化任务卡片、家长主导、图标化界面；7 项默认习惯种子（刷牙/洗脸/收拾玩具/阅读绘本等）；无学科；番茄钟默认 15+5 分钟。</li>
+              <li><strong>小学（P）</strong>：作业管理 + 课程表 + 习惯养成 + 阅读记录；3 科默认学科（语数英）；6 项默认习惯种子；番茄钟默认 25+5 分钟。</li>
+              <li><strong>初中（J）</strong>：学科管理 + 复习计划 + 错题本 + 考试倒计时；9 科默认学科；5 项默认习惯种子；番茄钟默认 50+10 分钟；家长入口隐藏。</li>
+            </ul>
+          </section>
+
+          <section class="help-section">
+            <h3 class="section-title"><Icon name="lightbulb" /> 使用流程</h3>
+            <ol class="flow-list">
+              <li v-for="s in studentFlow" :key="s.step">
+                <span class="flow-step">{{ s.step }}</span>
+                <span class="flow-text">{{ s.text }}</span>
+              </li>
+            </ol>
+            <p class="formula-note">学段切换将应用该学段默认菜单可见性与默认学科清单，已有自定义学科保留。</p>
+          </section>
+        </template>
+
+        <!-- ===== 标签 5：快捷键与数据 ===== -->
         <template v-if="activeTab === 'data'">
         <!-- 数据存储 -->
         <section class="help-section">

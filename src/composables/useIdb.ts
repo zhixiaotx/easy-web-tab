@@ -1,7 +1,8 @@
 /**
  * 零依赖 IndexedDB 封装（工作台数据层）
- * DB: easy-web-tab v5；object store 均无 keyPath，统一使用 out-of-line 键 'items'
- * 核心 8 store + 辅助 pomodoro/habits 参与 JSON 备份导出/导入（备份格式 v8 起）
+ * DB: easy-web-tab v7；object store 均无 keyPath，统一使用 out-of-line 键 'items'
+ * 核心 9 store + 辅助 pomodoro/habits 参与 JSON 备份导出/导入（备份格式 v8 起）
+ * 学生工作台 store 独立信封（v7 新增 student_settings；M2-M4 续添 student_* 模块 store）
  * snapshots 仅本地使用，不参与备份导出/导入
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
@@ -17,14 +18,31 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 6
+export const DB_VERSION = 10
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
 export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
+/** 学生工作台 store（独立信封 student-backup，不参与 WorkbenchData 导出/导入）
+ *  v8 新增 13 个学生模块 store：4 共享副本 + 8 独立模块 + 1 图片 Blob store
+ *  v9 新增 1 个：student_parent_tasks（家长每日任务） */
+export const IDB_STUDENT_STORES = [
+  'student_settings',
+  // 4 共享副本（复用 core 纯函数，独立 IDB 名严格隔离）
+  'student_habits', 'student_pomodoro', 'student_diary', 'student_countdowns',
+  // 9 独立模块 store（v9 +student_parent_tasks）
+  'student_homework', 'student_timetable', 'student_plans', 'student_review',
+  'student_mistakes', 'student_reading', 'student_achievements', 'student_rewards',
+  'student_parent_tasks',
+  // 图片 Blob 独立 store（错题本拍照，导出时 base64 编码）
+  'student_images'
+] as const
 export const IDB_KEY = 'items'
 
-export type IdbStore = (typeof IDB_CORE_STORES)[number] | (typeof IDB_AUX_STORES)[number]
+export type IdbStore =
+  | (typeof IDB_CORE_STORES)[number]
+  | (typeof IDB_AUX_STORES)[number]
+  | (typeof IDB_STUDENT_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
 
@@ -35,7 +53,7 @@ export function openIdb(): Promise<IDBDatabase> {
       request.onupgradeneeded = () => {
         const db = request.result
         // 幂等 contains 守卫：旧库升级到新版本时自动补建缺失 store（v5 新增 diary），不清空旧数据
-        for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES]) {
+        for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES, ...IDB_STUDENT_STORES]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
           }
@@ -51,7 +69,16 @@ export function openIdb(): Promise<IDBDatabase> {
         }
         resolve(db)
       }
-      request.onerror = () => reject(request.error)
+      request.onerror = () => {
+        // 清除缓存的 rejected promise，下次调用可重试（否则永远返回同一个拒绝态）
+        dbPromise = undefined
+        reject(request.error)
+      }
+      request.onblocked = () => {
+        // 被其它标签页的旧连接阻塞时：清除缓存并拒绝，用户关闭冲突标签页后可重试
+        dbPromise = undefined
+        reject(new Error('IDB 升级被阻塞，请关闭其它标签页后重试'))
+      }
     })
   }
   return dbPromise

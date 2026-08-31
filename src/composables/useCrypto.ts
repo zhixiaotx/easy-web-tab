@@ -151,3 +151,63 @@ export function adoptPasswordIdentity(saltHex: string, verification: string): vo
   localStorage.setItem(SALT_KEY, saltHex)
   localStorage.setItem(VERIFICATION_KEY, verification)
 }
+
+// ============================================================
+// 家长 PIN PBKDF2（独立于主密码：盐存 settings 而非 localStorage）
+// 安全：PIN 明文永不落地，仅存 saltHex + PBKDF2(SHA256,100k,256bit) 派生 hashHex
+// ============================================================
+
+/** PBKDF2 迭代次数（与主密码一致 10 万次，权衡安全与性能） */
+const PARENT_PIN_ITERATIONS = 100000
+/** PIN 哈希派生 keySize（256bit = 8*32 WordArray） */
+const PARENT_PIN_KEY_SIZE = 256 / 32
+/** 盐字节数（128bit） */
+const PARENT_PIN_SALT_BYTES = 16
+
+/**
+ * 家长 PIN 哈希结果
+ * - saltHex: hex 字符串，存 settings.parentPinSalt
+ * - hashHex: PBKDF2 派生哈希 hex，存 settings.parentPinVerification
+ */
+export interface ParentPinHash {
+  saltHex: string
+  hashHex: string
+}
+
+/**
+ * 计算家长 PIN 的 PBKDF2 哈希。
+ * - 不传 saltHex 时：随机生成 16 字节新盐（首次设置 PIN 用）
+ * - 传入 saltHex 时：用给定盐重算（验证 PIN 用）
+ * @param pin 明文 PIN（如 '123456'）
+ * @param saltHex 可选，已存盐的 hex 字符串
+ */
+export function hashParentPin(pin: string, saltHex?: string): ParentPinHash {
+  const salt = saltHex && typeof saltHex === 'string' && saltHex.length > 0
+    ? CryptoJS.enc.Hex.parse(saltHex)
+    : CryptoJS.lib.WordArray.random(PARENT_PIN_SALT_BYTES)
+  const derived = CryptoJS.PBKDF2(pin, salt, {
+    keySize: PARENT_PIN_KEY_SIZE,
+    iterations: PARENT_PIN_ITERATIONS,
+    hasher: CryptoJS.algo.SHA256
+  })
+  return {
+    saltHex: salt.toString(CryptoJS.enc.Hex),
+    hashHex: derived.toString(CryptoJS.enc.Hex)
+  }
+}
+
+/**
+ * 验证家长 PIN：用存储的盐重算哈希，与期望哈希字符串比对。
+ * @returns true 表示 PIN 正确
+ */
+export function verifyParentPin(
+  pin: string,
+  storedSaltHex: string,
+  expectedHashHex: string
+): boolean {
+  if (!pin || typeof pin !== 'string') return false
+  if (!storedSaltHex || typeof storedSaltHex !== 'string') return false
+  if (!expectedHashHex || typeof expectedHashHex !== 'string') return false
+  const { hashHex } = hashParentPin(pin, storedSaltHex)
+  return hashHex === expectedHashHex
+}

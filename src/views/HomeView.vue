@@ -262,11 +262,12 @@ const handlePageChange = () => {
 </script>
 
 <template>
-  <!-- 顶部统一 App Bar：左=工作台/销售台入口，右=主题/同步/设置/帮助/前台 -->
+  <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=主题/同步/设置/帮助/前台 -->
   <div class="app-bar">
     <div class="app-bar-left">
       <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
       <button v-if="settingsStore.businessPageVisible !== false" class="btn-help" data-testid="nav-business-entry" @click="router.push('/business')" :title="settingsStore.businessPageDisplayName"><Icon name="store" /> <span class="nav-entry-label">{{ settingsStore.businessPageDisplayName }}</span></button>
+      <button v-if="settingsStore.studentPageVisible !== false" class="btn-help" data-testid="nav-student-entry" @click="router.push('/student')" :title="settingsStore.studentPageDisplayName"><Icon name="notes" /> <span class="nav-entry-label">{{ settingsStore.studentPageDisplayName }}</span></button>
     </div>
     <div class="app-bar-right">
       <ThemeToggle />

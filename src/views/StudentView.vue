@@ -7,6 +7,10 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
+import { useStudentRewardsStore } from '@/stores/studentRewards'
+import { useStudentHabitsStore } from '@/stores/studentHabits'
+import { useStudentHomeworkStore } from '@/stores/studentHomework'
+import { useStudentReadingStore } from '@/stores/studentReading'
 import { useAppSettingsStore } from '@/stores/settings'
 import StudentHome from '@/components/student/StudentHome.vue'
 import StudentHabits from '@/components/student/StudentHabits.vue'
@@ -30,6 +34,10 @@ import Icon from '@/components/Icon.vue'
 const router = useRouter()
 const studentStore = useStudentSettingsStore()
 const settingsStore = useAppSettingsStore()
+const rewardsStore = useStudentRewardsStore()
+const habitsStore = useStudentHabitsStore()
+const homeworkStore = useStudentHomeworkStore()
+const readingStore = useStudentReadingStore()
 const showSettingsDialog = ref(false)
 
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
@@ -163,6 +171,7 @@ const stageLabel = computed(() => studentStore.stageLabelName)
 const studentPageDisplayName = computed(() => settingsStore.studentPageDisplayName)
 
 // onMounted：加载学生设置；若未初始化（stageSeeded !== stage）弹学段引导
+// 修复历史数据：加载 rewards+habits+homework+reading 后，存量回溯补分（sourceId 幂等）
 onMounted(async () => {
   await studentStore.loadSettings()
   // 首次进入或学段未播种 → 弹学段引导
@@ -173,6 +182,21 @@ onMounted(async () => {
   // 当前激活区被关 → 回退首个可见项
   if (activeSection.value !== 'home' && !isSectionEnabled(activeSection.value)) {
     activeSection.value = 'home'
+  }
+  // 存量回溯加分：顺序串行，避免并发 IDB 事务互相覆盖
+  try {
+    await rewardsStore.loadRewards()
+    await habitsStore.loadHabits()
+    await homeworkStore.loadHomework()
+    await readingStore.loadReading()
+    await rewardsStore.backfillFromAll({
+      habits: habitsStore.habits,
+      habitRecords: habitsStore.records,
+      homeworks: homeworkStore.entries,
+      readings: readingStore.entries
+    })
+  } catch (e) {
+    console.warn('[StudentView] backfill earn failed', e)
   }
 })
 

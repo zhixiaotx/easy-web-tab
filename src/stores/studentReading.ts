@@ -16,6 +16,7 @@ import {
 } from '@/composables/studentReadingCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import type { StudentReadingData, StudentReadingEntry } from '@/types'
+import { useStudentRewardsStore } from '@/stores/studentRewards'
 
 export type StudentReadingOpError = 'empty' | 'invalid-range' | 'not-found'
 export type StudentReadingOp = { ok: boolean; reason?: StudentReadingOpError }
@@ -100,6 +101,13 @@ export const useStudentReadingStore = defineStore('studentReading', () => {
     }
     entries.value = sortReadingCore([...entries.value, entry])
     await saveReading()
+    // 积分联动（仅 ≥30 分钟生效，内部自动判断；失败仅日志，不回滚）
+    try {
+      const rewardsStore = useStudentRewardsStore()
+      await rewardsStore.earnFromReading(entry.id, entry.bookTitle, entry.durationMin)
+    } catch (e) {
+      console.warn('[studentReading] earnFromReading failed', e)
+    }
     return { ok: true }
   }
 

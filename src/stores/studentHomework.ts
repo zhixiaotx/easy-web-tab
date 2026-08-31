@@ -21,6 +21,7 @@ import type {
   StudentHomeworkData,
   StudentHomeworkPriority
 } from '@/types'
+import { useStudentRewardsStore } from '@/stores/studentRewards'
 
 // 作业 CRUD 操作错误语义
 export type StudentHomeworkOpError = 'empty' | 'duplicate' | 'not-found'
@@ -166,7 +167,8 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
 
   /**
    * 推进作业状态：pending → doing → done；doing → done；overdue → doing。
-   * 切到 done 时写 completedAt；切回非 done 时清除 completedAt。
+   * 切到 done 时写 completedAt + 联动积分 earnFromHomework（sourceId 幂等）。
+   * 切回非 done 时清除 completedAt，不做扣分（保持系统正向激励）。
    */
   async function advanceStatus(id: string): Promise<StudentHomeworkOp> {
     const index = entries.value.findIndex(e => e.id === id)
@@ -179,13 +181,22 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
       status: next,
       updatedAt: isoNow()
     }
-    if (next === 'done') {
+    const becameDone = next === 'done'
+    if (becameDone) {
       updated.completedAt = isoNow()
     } else {
       updated.completedAt = undefined
     }
     entries.value[index] = updated
     await saveHomework()
+    if (becameDone) {
+      try {
+        const rewardsStore = useStudentRewardsStore()
+        await rewardsStore.earnFromHomework(cur.id, cur.title)
+      } catch (e) {
+        console.warn('[studentHomework] earnFromHomework failed', e)
+      }
+    }
     return { ok: true }
   }
 

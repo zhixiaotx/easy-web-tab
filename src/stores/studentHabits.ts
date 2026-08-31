@@ -25,6 +25,7 @@ import type {
   StudentHabitsData,
   StudentStage
 } from '@/types'
+import { useStudentRewardsStore } from '@/stores/studentRewards'
 
 // 分类 CRUD 操作错误语义
 export type StudentHabitOpError = 'empty' | 'duplicate' | 'not-found' | 'in-use'
@@ -110,10 +111,14 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
     return { ok: true }
   }
 
-  /** 打卡/取消打卡：同一天已打卡 → 移除（取消），未打卡 → 追加（id 前缀 shr_）；幂等。 */
+  /** 打卡/取消打卡：同一天已打卡 → 移除（取消），未打卡 → 追加（id 前缀 shr_）；幂等。
+   *  注意：追加打卡成功时联动积分（useStudentRewardsStore.earnFromHabit），取消打卡不扣分。
+   */
   async function toggleCheckIn(habitId: string, date: string, parentMarked = false): Promise<StudentHabitOp> {
-    if (!habits.value.some(h => h.id === habitId)) return { ok: false, reason: 'not-found' }
+    const habit = habits.value.find(h => h.id === habitId)
+    if (!habit) return { ok: false, reason: 'not-found' }
     const existing = records.value.find(r => r.habitId === habitId && r.date === date)
+    let shouldEarn = false
     if (existing) {
       records.value = records.value.filter(r => r.id !== existing.id)
     } else {
@@ -124,8 +129,18 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
         parentMarked: parentMarked || undefined,
         createdAt: new Date().toISOString()
       })
+      shouldEarn = true
     }
     await saveHabits()
+    // 积分联动：在 save 后触发，失败仅记录日志不回滚
+    if (shouldEarn) {
+      try {
+        const rewardsStore = useStudentRewardsStore()
+        await rewardsStore.earnFromHabit(habit.id, habit.name, date)
+      } catch (e) {
+        console.warn('[studentHabits] earnFromHabit failed', e)
+      }
+    }
     return { ok: true }
   }
 

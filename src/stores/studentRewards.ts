@@ -35,7 +35,15 @@ import {
   type RewardStats
 } from '@/composables/studentRewardCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
-import type { StudentRewardsData, StudentRewardItem, StudentRewardTxn } from '@/types'
+import type {
+  StudentRewardsData,
+  StudentRewardItem,
+  StudentRewardTxn,
+  StudentHabit,
+  StudentHabitRecord,
+  StudentHomework,
+  StudentReadingEntry
+} from '@/types'
 
 const STORE_KEY = 'student_rewards'
 
@@ -261,6 +269,60 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
     return pointsRulesTextCore()
   }
 
+  // ========================================
+  // 存量数据回溯加分（修复"过往习惯/作业/阅读已完成但积分为 0"）
+  // 所有条目基于 sourceId 幂等判定，已加过分的 noop，未加的补分。
+  // 由 StudentView / StudentReward onMounted 在 loadRewards 之后调用（非每次页面切换）。
+  // ========================================
+
+  interface BackfillInput {
+    habits: readonly StudentHabit[]
+    habitRecords: readonly StudentHabitRecord[]
+    homeworks: readonly StudentHomework[]
+    readings: readonly StudentReadingEntry[]
+  }
+
+  /** 回溯加分：扫描存量行为，返回本次新增加分的条数。 */
+  async function backfillFromAll(input: BackfillInput): Promise<number> {
+    const habitMap = new Map<string, StudentHabit>()
+    for (const h of input.habits) habitMap.set(h.id, h)
+
+    const earnCalls: Array<() => Promise<StudentRewardOp>> = []
+    for (const r of input.habitRecords) {
+      const habit = habitMap.get(r.habitId)
+      if (!habit) continue
+      const points = POINTS_HABIT
+      const reason = habitEarnReason(habit.name)
+      const sourceId = `habit:${habit.id}:${r.date}`
+      earnCalls.push(() => autoAddPoints(points, reason, sourceId))
+    }
+    for (const hw of input.homeworks) {
+      if (hw.status !== 'done') continue
+      const points = POINTS_HOMEWORK
+      const reason = homeworkEarnReason(hw.title)
+      const sourceId = `homework:${hw.id}`
+      earnCalls.push(() => autoAddPoints(points, reason, sourceId))
+    }
+    for (const rd of input.readings) {
+      if (!isReadingEligible(rd.durationMin)) continue
+      const points = POINTS_READING
+      const reason = readingEarnReason(rd.bookTitle, rd.durationMin)
+      const sourceId = `reading:${rd.id}`
+      earnCalls.push(() => autoAddPoints(points, reason, sourceId))
+    }
+    // 串行执行：避免 autoAddPoints 内并发 saveRewards 覆盖 data.value
+    let earned = 0
+    for (const fn of earnCalls) {
+      try {
+        const result = await fn()
+        if (result.ok) earned++
+      } catch (e) {
+        console.warn('[studentRewards] backfill item failed', e)
+      }
+    }
+    return earned
+  }
+
   return {
     // 状态
     data,
@@ -277,6 +339,8 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
     earnFromHabit,
     earnFromHomework,
     earnFromReading,
+    // 回溯
+    backfillFromAll,
     // 兑换
     redeem,
     // 查询

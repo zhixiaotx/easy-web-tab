@@ -253,6 +253,7 @@ function progressColor(progress: number): string {
           :key="plan.id"
           class="sp-card"
           :data-testid="`sp-card-${plan.id}`"
+          @click="openEditDialog(plan.id)"
         >
           <div class="sp-card-head">
             <span class="sp-type-badge" :class="`sp-type-${plan.type}`">{{ typeLabel(plan.type) }}</span>
@@ -276,7 +277,7 @@ function progressColor(progress: number): string {
               ></div>
             </div>
           </div>
-          <div class="sp-goals">
+          <div class="sp-goals" @click.stop>
             <div
               v-for="goal in plan.goals"
               :key="goal.id"
@@ -304,13 +305,6 @@ function progressColor(progress: number): string {
                 <span class="sp-goal-percent">{{ goal.progress }}%</span>
               </div>
             </div>
-          </div>
-          <div class="sp-card-foot">
-            <button
-              class="sp-edit-btn"
-              :data-testid="`sp-edit-${plan.id}`"
-              @click="openEditDialog(plan.id)"
-            >编辑</button>
           </div>
         </div>
       </div>
@@ -521,6 +515,11 @@ function progressColor(progress: number): string {
   height: 150px;
   min-height: 150px;
   overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.sp-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .sp-card-head {
@@ -654,22 +653,6 @@ function progressColor(progress: number): string {
   color: var(--color-text-secondary, #6b7280);
   width: 36px;
   text-align: right;
-}
-
-.sp-card-foot {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.sp-edit-btn {
-  padding: 2px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 11px;
-  line-height: 1.4;
 }
 
 .sp-dialog-mask {

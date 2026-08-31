@@ -63,12 +63,12 @@ const viewEntries = computed(() => {
   return store.sortEntries(list)
 })
 
-// ===== 自适应分页（行式单列，行高 82px，row-heights.json homework MAX 80 + 2）=====
+// ===== 自适应分页（4 列卡片网格，行高 152px，参考学习计划 150 + 2）=====
 const mainEl = ref<HTMLElement | null>(null)
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewEntries.value,
-  rowHeight: 82,
+  rowHeight: 152,
   containerRef: mainEl,
   gridRef: listEl
 })
@@ -263,6 +263,9 @@ onMounted(async () => {
             </div>
             <div class="shw-card-main">
               <div class="shw-card-title" :title="e.title">{{ e.title }}</div>
+              <span class="shw-priority" :class="`shw-priority-${e.priority}`" :data-testid="`shw-priority-${e.id}`">
+                优先级 {{ priorityLabel(e.priority) }}
+              </span>
               <div class="shw-card-sub" v-if="e.content">{{ e.content }}</div>
             </div>
             <div class="shw-card-info">
@@ -270,9 +273,6 @@ onMounted(async () => {
                 {{ dueInfo(e.dueDate, e.status).text }}
               </span>
               <span class="shw-date">截止 {{ e.dueDate }}</span>
-              <span class="shw-priority" :class="`shw-priority-${e.priority}`" :data-testid="`shw-priority-${e.id}`">
-                优先级 {{ priorityLabel(e.priority) }}
-              </span>
               <span class="shw-status" :class="statusBadgeClass(e.status)" :data-testid="`shw-status-${e.id}`">
                 {{ statusLabel(e.status) }}
               </span>
@@ -440,9 +440,12 @@ onMounted(async () => {
 }
 .shw-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
   align-content: start;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .shw-list-scroll {
   overflow-y: auto;
@@ -450,10 +453,11 @@ onMounted(async () => {
 
 .shw-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 80px;
-  padding: 0 14px;
+  flex-direction: column;
+  gap: 4px;
+  height: 150px;
+  min-height: 150px;
+  padding: 6px 10px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-left: 3px solid var(--color-border, #e5e7eb);
@@ -471,15 +475,18 @@ onMounted(async () => {
 .shw-card.shw-status-done { border-left-color: #10b981; opacity: 0.75; }
 
 .shw-card-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
 }
 .shw-subject-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 1px 8px;
   border-radius: 6px;
   background: var(--color-hover, #f3f4f6);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--color-text, #1f2937);
 }
@@ -492,14 +499,14 @@ onMounted(async () => {
   gap: 2px;
 }
 .shw-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .shw-card-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-muted, #6b7280);
   white-space: nowrap;
   overflow: hidden;
@@ -508,9 +515,9 @@ onMounted(async () => {
 
 .shw-card-info {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   flex-shrink: 0;
   font-size: 11px;
   color: var(--color-text-muted, #6b7280);
@@ -521,17 +528,20 @@ onMounted(async () => {
 .shw-due.tomorrow { color: #3b82f6; }
 .shw-date { font-size: 10px; opacity: 0.7; }
 .shw-priority {
-  padding: 1px 6px;
-  border-radius: 4px;
+  align-self: flex-start;
+  padding: 0 4px;
+  border-radius: 3px;
   background: var(--color-hover, #f3f4f6);
+  font-size: 10px;
 }
 .shw-priority-high { color: #ef4444; }
 .shw-priority-normal { color: #6b7280; }
 .shw-priority-low { color: #9ca3af; }
 .shw-status {
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
   font-weight: 500;
+  font-size: 10px;
 }
 .shw-status.shw-status-pending { background: #f3f4f6; color: #6b7280; }
 .shw-status.shw-status-doing { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
@@ -540,18 +550,20 @@ onMounted(async () => {
 
 .shw-card-actions {
   flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
 }
 .shw-advance-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
+  padding: 3px 8px;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: var(--color-text, #1f2937);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: all 0.15s;
 }
 .shw-advance-btn:hover {
@@ -565,7 +577,7 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   color: #10b981;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .empty-state {
@@ -704,7 +716,7 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .shw-shell { padding: 12px; }
-  .shw-card { height: auto; min-height: 80px; flex-wrap: wrap; }
+  .shw-card { height: 150px; min-height: 150px; }
   .shw-card-info { align-items: flex-start; }
 }
 </style>

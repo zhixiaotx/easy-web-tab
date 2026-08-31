@@ -11,7 +11,6 @@ import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
 import {
   repeatLabel,
-  categoryLabel,
   examTypeOptions,
   type CountdownFilterCriteria
 } from '@/composables/studentExamCore'
@@ -265,7 +264,6 @@ onMounted(async () => {
             <span class="se-remaining-value">{{ item.remaining.label }}</span>
           </div>
           <div class="se-meta">
-            <span class="se-type" v-if="item.category">{{ categoryLabel(item.category) }}</span>
             <span class="se-datetime">{{ item.remaining.nextTime }}</span>
           </div>
           <button
@@ -504,16 +502,20 @@ onMounted(async () => {
   gap: 2px;
 }
 .se-remaining-label {
-  font-size: 11px;
-  color: var(--color-text-muted, #6b7280);
+  font-size: 16px;
+  font-weight: 700;
 }
 .se-remaining-value {
   font-size: 16px;
   font-weight: 700;
 }
+.status-normal .se-remaining-label,
 .status-normal .se-remaining-value { color: var(--color-text, #1f2937); }
+.status-urgent .se-remaining-label,
 .status-urgent .se-remaining-value { color: #f59e0b; }
+.status-critical .se-remaining-label,
 .status-critical .se-remaining-value { color: #ef4444; }
+.status-expired .se-remaining-label,
 .status-expired .se-remaining-value { color: var(--color-text-muted, #9ca3af); }
 
 .se-meta {
@@ -524,12 +526,6 @@ onMounted(async () => {
   color: var(--color-text-muted, #6b7280);
   border-top: 1px dashed var(--color-border, #e5e7eb);
   padding-top: 6px;
-}
-.se-type {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-hover, #f3f4f6);
-  color: var(--color-text, #1f2937);
 }
 .se-datetime { font-size: 10px; }
 

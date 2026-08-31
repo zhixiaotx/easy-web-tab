@@ -198,7 +198,7 @@ async function onOnboardingComplete() {
     <header class="st-header">
       <div class="st-header-left">
         <button class="st-btn" @click="router.push('/')" title="返回管理页">
-          <Icon name="home" />
+          <Icon name="arrow-left" />
         </button>
         <h1>{{ studentPageDisplayName }}</h1>
         <span
@@ -233,10 +233,6 @@ async function onOnboardingComplete() {
             >{{ parentHasPin ? '解锁' : '设置 PIN' }}</button>
           </template>
         </div>
-        <button class="st-btn" @click="onboardingVisible = true" title="切换学段">
-          <Icon name="countdowns" />
-          <span class="st-stage-label">{{ stageLabel }}</span>
-        </button>
         <button class="st-btn" @click="showSettingsDialog = true" title="设置">
           <Icon name="cog" />
         </button>
@@ -367,10 +363,6 @@ async function onOnboardingComplete() {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.st-stage-label {
-  font-size: 13px;
 }
 
 .st-btn {
@@ -561,9 +553,6 @@ async function onOnboardingComplete() {
   }
   .st-menu-label {
     font-size: 11px;
-  }
-  .st-stage-label {
-    display: none;
   }
 }
 </style>

@@ -1,5 +1,5 @@
 // 学生工作台成就勋章纯逻辑模块。
-// 内置 10 枚勋章定义（streak-7/30/100、book-10/50/100、pomo-50/200/500、hw-rate-95），
+// 内置 16 枚勋章定义（streak-1..6 小红花、streak-7/30/100、book-10/50/100、pomo-50/200/500、hw-rate-95），
 // 不可编辑、不可手动撤销；解锁由各 store 数据聚合判定（max-streak/reading-count/pomo-count/hw-rate）。
 // 零 vue/pinia 运行时依赖，纯函数，node --experimental-strip-types 可测。
 
@@ -16,6 +16,12 @@ import type { PomodoroRecord } from '@/composables/pomodoroCore'
 
 /** 内置勋章 id 集合（load-bearing，store 监听按 id 路由） */
 export const BUILTIN_ACHIEVEMENT_IDS: readonly string[] = [
+  'streak-1',
+  'streak-2',
+  'streak-3',
+  'streak-4',
+  'streak-5',
+  'streak-6',
   'streak-7',
   'streak-30',
   'streak-100',
@@ -52,11 +58,65 @@ function isoNow(): string {
 }
 
 /**
- * 构建内置 10 枚勋章定义（每次返回全新数组，幂等）。
+ * 构建内置 16 枚勋章定义（每次返回全新数组，幂等）。
  * id/name/description/emoji/category/metric/target 全部 load-bearing，勿改。
  */
 export function buildBuiltinAchievements(): StudentAchievementDef[] {
   return [
+    {
+      id: 'streak-1',
+      name: '1 天小红花',
+      description: '任意习惯连续打卡 1 天',
+      emoji: '🌸',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 1
+    },
+    {
+      id: 'streak-2',
+      name: '2 天小红花',
+      description: '任意习惯连续打卡 2 天',
+      emoji: '🌸',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 2
+    },
+    {
+      id: 'streak-3',
+      name: '3 天小红花',
+      description: '任意习惯连续打卡 3 天',
+      emoji: '🌸',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 3
+    },
+    {
+      id: 'streak-4',
+      name: '4 天小红花',
+      description: '任意习惯连续打卡 4 天',
+      emoji: '🌸',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 4
+    },
+    {
+      id: 'streak-5',
+      name: '5 天小红花',
+      description: '任意习惯连续打卡 5 天',
+      emoji: '🌸',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 5
+    },
+    {
+      id: 'streak-6',
+      name: '6 天小红花',
+      description: '任意习惯连续打卡 6 天',
+      emoji: '🌸',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 6
+    },
     {
       id: 'streak-7',
       name: '一周坚持',

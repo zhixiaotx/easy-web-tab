@@ -369,6 +369,9 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   justify-content: center;
+  aspect-ratio: 1 / 1;
+  max-height: 100%;
+  margin: 0 auto;
 }
 
 .spm-ring-wrap {

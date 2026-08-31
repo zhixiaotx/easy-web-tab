@@ -86,9 +86,7 @@ onUnmounted(() => {
   stopAutoplay()
 })
 
-// 学段徽标 + 昵称
-const stageBadge = computed(() => store.stageBadgeInfo)
-const stageLabel = computed(() => store.stageLabelName)
+// 昵称
 const displayName = computed(() => store.displayName)
 const age = computed(() => calcAge(store.settings.birthday))
 
@@ -169,13 +167,6 @@ function onActionClick(section: string) {
       <div class="greeting-left">
         <span class="greeting-text">{{ greeting }}，{{ displayName }}！<span v-if="age !== null" class="greeting-age">{{ age }} 岁</span></span>
         <span class="greeting-sub">今日待办 {{ todayTodoCount }} 项 · 待复习 {{ todayReviewCount }} 项</span>
-      </div>
-      <div class="greeting-right">
-        <span
-          class="greeting-stage"
-          :style="{ backgroundColor: stageBadge.color }"
-          :title="`当前学段：${stageLabel}`"
-        >{{ stageBadge.label }}</span>
       </div>
     </div>
 
@@ -290,17 +281,6 @@ function onActionClick(section: string) {
 .greeting-sub {
   font-size: 13px;
   color: var(--color-text-muted, #6b7280);
-}
-.greeting-stage {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
 }
 
 .carousel {

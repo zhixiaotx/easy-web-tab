@@ -238,7 +238,7 @@ async function onOnboardingComplete() {
           <span class="st-stage-label">{{ stageLabel }}</span>
         </button>
         <button class="st-btn" @click="showSettingsDialog = true" title="设置">
-          <Icon name="passwords" />
+          <Icon name="cog" />
         </button>
       </div>
     </header>
@@ -248,15 +248,21 @@ async function onOnboardingComplete() {
         <button
           class="st-sidebar-toggle"
           @click="sidebarCollapsed = !sidebarCollapsed"
-          :title="sidebarCollapsed ? '展开菜单' : '收起菜单'"
+          :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+          :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
         >
-          <Icon :name="sidebarCollapsed ? 'home' : 'home'" />
+          <span class="st-menu-icon">
+            <Icon :name="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
+          </span>
+          <span class="st-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
         <button
           v-for="item in menuItems"
           :key="item.key"
           class="st-menu-item"
           :class="{ active: activeSection === item.key }"
+          :title="item.label"
+          :aria-label="item.label"
           @click="navigateTo(item.key as StudentSectionKey)"
         >
           <span class="st-menu-icon"><Icon :name="item.icon" /></span>
@@ -463,17 +469,27 @@ async function onOnboardingComplete() {
 }
 
 .st-sidebar-toggle {
-  align-self: flex-end;
-  margin: 0 8px 8px;
-  padding: 4px 8px;
-  border: none;
-  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: transparent;
+  color: var(--color-text-secondary, #6b7280);
   cursor: pointer;
-  color: inherit;
-  opacity: 0.6;
+  width: 100%;
+  font-size: 14px;
+  transition: background-color 0.15s, color 0.15s;
 }
 .st-sidebar-toggle:hover {
-  opacity: 1;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+}
+.st-menu.collapsed .st-sidebar-toggle {
+  justify-content: center;
+  padding: 10px 0;
 }
 
 .st-menu-item {

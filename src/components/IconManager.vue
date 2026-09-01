@@ -42,7 +42,7 @@ function handleUpload(event: Event) {
   }
 
   const reader = new FileReader()
-  reader.onload = () => {
+  reader.onload = async () => {
     const dataUrl = reader.result as string
     const name = prompt('请输入图标名称', file.name.replace(/\.[^.]+$/, ''))
     if (!name || !name.trim()) {
@@ -50,13 +50,23 @@ function handleUpload(event: Event) {
       return
     }
 
-    store.addIcon({
-      name: name.trim(),
-      label: name.trim(),
-      dataUrl,
-      category: activeCategory.value === '全部' ? '其他' : activeCategory.value
-    })
-    input.value = ''
+    try {
+      await store.addIcon({
+        name: name.trim(),
+        label: name.trim(),
+        dataUrl,
+        category: activeCategory.value === '全部' ? '其他' : activeCategory.value
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e ?? '')
+      if (/Quota|配额|space|exceed/i.test(msg)) {
+        alert('图标保存失败：存储空间不足，请减少自定义图标数量后重试')
+      } else {
+        alert('图标保存失败：' + (msg || '未知错误'))
+      }
+    } finally {
+      input.value = ''
+    }
   }
   reader.readAsDataURL(file)
 }
@@ -98,10 +108,15 @@ function startEdit(icon: MergedIcon) {
   editingLabel.value = icon.label
 }
 
-function saveEdit() {
+async function saveEdit() {
   if (!editingId.value || !editingLabel.value.trim()) return
-  store.updateIcon(editingId.value, { label: editingLabel.value.trim() })
-  cancelEdit()
+  try {
+    await store.updateIcon(editingId.value, { label: editingLabel.value.trim() })
+    cancelEdit()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e ?? '')
+    alert('保存失败：' + (msg || '未知错误'))
+  }
 }
 
 function cancelEdit() {
@@ -110,12 +125,16 @@ function cancelEdit() {
 }
 
 // 删除
-function handleDelete(iconId: string) {
-  if (confirm('确定删除该图标？')) {
-    store.deleteIcon(iconId)
+async function handleDelete(iconId: string) {
+  if (!confirm('确定删除该图标？')) return
+  try {
+    await store.deleteIcon(iconId)
     if (editingId.value === iconId) {
       cancelEdit()
     }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e ?? '')
+    alert('删除失败：' + (msg || '未知错误'))
   }
 }
 
@@ -140,18 +159,42 @@ function handleImport(event: Event) {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = () => {
+  reader.onload = async () => {
+    // 阶段 1：JSON 解析
+    let data: IconExportData
     try {
-      const data = JSON.parse(reader.result as string) as IconExportData
-      if (data.version !== 1 || !Array.isArray(data.icons)) {
-        alert('导入文件格式不正确')
-        return
-      }
-      store.importIcons(data)
+      data = JSON.parse(reader.result as string) as IconExportData
     } catch {
-      alert('导入文件解析失败')
+      alert('导入失败：文件不是合法的 JSON，请确认文件未损坏或编码正确')
+      input.value = ''
+      return
     }
-    input.value = ''
+    // 阶段 2：结构校验
+    if (!data || typeof data !== 'object' || data.version !== 1 || !Array.isArray(data.icons)) {
+      alert('导入失败：文件格式不正确（必须是 icons 导出文件，含 version=1 和 icons 数组）')
+      input.value = ''
+      return
+    }
+    // 阶段 3：持久化（store.importIcons 内部已先写持久化成功后才改内存，避免假成功）
+    try {
+      const { added } = await store.importIcons(data)
+      if (added > 0) {
+        alert('导入成功：新增 ' + added + ' 个图标（重复 ID 已自动跳过）')
+      } else {
+        alert('导入完成：没有新增图标（全部为已存在的重复 ID）')
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e ?? '')
+      if (/Quota|配额|space|exceed/i.test(msg)) {
+        alert('导入失败：存储空间不足，请减少自定义图标后再试')
+      } else if (/格式/.test(msg)) {
+        alert('导入失败：' + msg)
+      } else {
+        alert('导入失败：保存图标出错 - ' + (msg || '未知错误'))
+      }
+    } finally {
+      input.value = ''
+    }
   }
   reader.readAsText(file)
 }

@@ -18,17 +18,19 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 10
+export const DB_VERSION = 11
 /** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business） */
 export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
 export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
+/** 自定义图标 store（v11 新增：原 localStorage 容量仅 ~5MB 易抛 QuotaExceededError，迁移至 IDB 获 50MB+ 容量） */
+export const IDB_ICONS_STORES = ['icons'] as const
 /** 学生工作台 store（独立信封 student-backup，不参与 WorkbenchData 导出/导入）
  *  v8 新增 13 个学生模块 store：4 共享副本 + 8 独立模块 + 1 图片 Blob store
  *  v9 新增 1 个：student_parent_tasks（家长每日任务） */
 export const IDB_STUDENT_STORES = [
   'student_settings',
-  // 4 共享副本（复用 core 纯函数，独立 IDB 名严格隔离）
+  // 4 共享副本（复用 core 纯函数，严格隔离）
   'student_habits', 'student_pomodoro', 'student_diary', 'student_countdowns',
   // 9 独立模块 store（v9 +student_parent_tasks）
   'student_homework', 'student_timetable', 'student_plans', 'student_review',
@@ -42,6 +44,7 @@ export const IDB_KEY = 'items'
 export type IdbStore =
   | (typeof IDB_CORE_STORES)[number]
   | (typeof IDB_AUX_STORES)[number]
+  | (typeof IDB_ICONS_STORES)[number]
   | (typeof IDB_STUDENT_STORES)[number]
 
 let dbPromise: Promise<IDBDatabase> | undefined
@@ -52,8 +55,8 @@ export function openIdb(): Promise<IDBDatabase> {
       const request = indexedDB.open(DB_NAME, DB_VERSION)
       request.onupgradeneeded = () => {
         const db = request.result
-        // 幂等 contains 守卫：旧库升级到新版本时自动补建缺失 store（v5 新增 diary），不清空旧数据
-        for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES, ...IDB_STUDENT_STORES]) {
+        // 幂等 contains 守卫：旧库升级到新版本时自动补建缺失 store（v5 新增 diary / v11 新增 icons），不清空旧数据
+        for (const name of [...IDB_CORE_STORES, ...IDB_AUX_STORES, ...IDB_ICONS_STORES, ...IDB_STUDENT_STORES]) {
           if (!db.objectStoreNames.contains(name)) {
             db.createObjectStore(name) // 无 keyPath → out-of-line 键 'items'
           }
@@ -272,7 +275,7 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
 // ==================== 云同步多文件信封（v10 拆分）====================
 // 5 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json
 // workbench 不含 business（独立走 business.json）；settings 不含 cloudSync* 5 字段（保留本地凭证）
-// icons 走 localStorage；其余 4 份按各自 IDB store 读写
+// 自定义图标 v11 起从 localStorage 迁移至 IDB icons store（localStorage ~5MB 容量瓶颈）
 
 /** 自定义图标 localStorage 键（与 stores/icons.ts STORAGE_KEY 保持一致） */
 export const ICONS_STORAGE_KEY = 'user-custom-icons'
@@ -317,14 +320,20 @@ export function importNavData(remote: NavSyncData): void {
   applyPrefsToLocalStorage(remote?.prefs)
 }
 
-// ---------- icons.json（localStorage user-custom-icons） ----------
+// ---------- icons.json（v11 起存 IDB 'icons' object store，值为 CustomIcon[] 数组；首次从 localStorage 迁移） ----------
 
-export function exportIcons(): IconsSyncData {
+export async function exportIcons(): Promise<IconsSyncData> {
   let icons: IconsSyncData['icons'] = []
   try {
-    const raw = localStorage.getItem(ICONS_STORAGE_KEY)
-    icons = raw ? JSON.parse(raw) as IconsSyncData['icons'] : []
-  } catch { icons = [] }
+    const raw = await idbGet<IconsSyncData['icons']>('icons')
+    icons = Array.isArray(raw) ? raw : []
+  } catch {
+    // IDB 不可用时兜底：尝试读取 localStorage 旧键（可能尚未迁移）
+    try {
+      const legacy = localStorage.getItem(ICONS_STORAGE_KEY)
+      icons = legacy ? (JSON.parse(legacy) as IconsSyncData['icons']) : []
+    } catch { icons = [] }
+  }
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -332,9 +341,37 @@ export function exportIcons(): IconsSyncData {
   }
 }
 
-export function importIconsData(remote: IconsSyncData): void {
+export async function importIconsData(remote: IconsSyncData): Promise<void> {
   if (!remote || !Array.isArray(remote.icons)) return
-  localStorage.setItem(ICONS_STORAGE_KEY, JSON.stringify(remote.icons))
+  await idbPut('icons', remote.icons)
+  // 同步写一份到 localStorage 作为过渡冗余（迁移期双写；IDB 为主），便于旧版回退时不至于丢数据
+  try {
+    localStorage.setItem(ICONS_STORAGE_KEY, JSON.stringify(remote.icons))
+  } catch {
+    // localStorage 可能超配额；IDB 已写成功即可，忽略此处异常
+  }
+}
+
+/** 供 icons store 一次性迁移用：若 localStorage 有旧数据且 IDB 为空 → 搬入 IDB 并删除旧 localStorage 键 */
+export async function migrateIconsFromLocalStorageIfNeeded(): Promise<{ migrated: boolean; count: number }> {
+  const legacyRaw = localStorage.getItem(ICONS_STORAGE_KEY)
+  let legacyList: IconsSyncData['icons'] = []
+  if (legacyRaw) {
+    try {
+      const parsed = JSON.parse(legacyRaw)
+      legacyList = Array.isArray(parsed) ? parsed : []
+    } catch { legacyList = [] }
+  }
+  const idbRaw = await idbGet<IconsSyncData['icons']>('icons').catch(() => undefined)
+  const idbEmpty = !Array.isArray(idbRaw) || idbRaw.length === 0
+  // 仅当 IDB 空且 localStorage 有数据时迁移；否则认为已迁移完成或 IDB 数据为新
+  if (idbEmpty && legacyList.length > 0) {
+    await idbPut('icons', legacyList)
+    // 删除旧键（双写逻辑仅在云同步导入时保留，主动迁移后清理 localStorage 避免重复占用）
+    try { localStorage.removeItem(ICONS_STORAGE_KEY) } catch { /* ignore */ }
+    return { migrated: true, count: legacyList.length }
+  }
+  return { migrated: false, count: 0 }
 }
 
 // ---------- workbench.json（不含 business；settings 不含 cloudSync*） ----------

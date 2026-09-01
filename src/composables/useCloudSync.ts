@@ -835,7 +835,7 @@ async function reloadNavStores(): Promise<void> {
 async function reloadIconsStores(): Promise<void> {
   try {
     const { useIconsStore } = await import('../stores/icons')
-    useIconsStore().reloadCustomIcons()
+    await useIconsStore().reloadCustomIcons()
   } catch {
     // 同上：store 未就绪时静默跳过
   }
@@ -866,7 +866,7 @@ const FILE_CONFIGS: FileConfig[] = [
   {
     name: 'icons.json',
     exportLocal: () => exportIcons(),
-    importRemote: async (data) => { importIconsData(data as IconsSyncData); return undefined },
+    importRemote: async (data) => { await importIconsData(data as IconsSyncData); return undefined },
     signature: (data) => sigIcons(data as IconsSyncData),
     merge: (l, r) => mergeIcons(l as IconsSyncData, r as IconsSyncData),
     reload: reloadIconsStores,

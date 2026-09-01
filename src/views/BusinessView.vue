@@ -123,7 +123,9 @@ onMounted(() => {
     <!-- 头部：左 = 返回 + 标题；右 = 云同步（开关显示）+ 设置 -->
     <header class="bs-header">
       <div class="bs-header-left">
-        <button class="bs-btn" @click="router.push('/')">← 管理页</button>
+        <button class="bs-btn" @click="router.push('/')" title="返回管理页">
+          <Icon name="arrow-left" />
+        </button>
         <h1>{{ settingsStore.businessPageDisplayName }}</h1>
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>

@@ -221,7 +221,9 @@ async function handleSyncNowClick(): Promise<void> {
     <!-- 头部：左 = 返回 + 标题；右 = 全局搜索 + 云同步（开关显示）+ 设置 -->
     <header class="wb-header">
       <div class="wb-header-left">
-        <button class="wb-btn" @click="router.push('/')">← 管理页</button>
+        <button class="wb-btn" @click="router.push('/')" title="返回管理页">
+          <Icon name="arrow-left" />
+        </button>
         <h1>{{ settingsStore.workbenchPageDisplayName }}</h1>
       </div>
       <div class="wb-header-right">

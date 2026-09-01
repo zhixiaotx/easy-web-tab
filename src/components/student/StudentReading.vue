@@ -190,12 +190,33 @@ onMounted(async () => {
             :data-testid="`sr-card-${e.id}`"
             @click="openEditDialog(e.id)"
           >
-            <div class="sr-book-title" :title="e.bookTitle">{{ e.bookTitle }}</div>
-            <div class="sr-date">{{ e.date }}</div>
-            <div class="sr-card-info">
-              <span class="sr-duration">{{ store.formatReadingDuration(e.durationMin) }}</span>
-              <span class="sr-pages">{{ e.pages }}页</span>
+            <!-- 顶部渐变条 -->
+            <div class="sr-card-bar"></div>
+            <!-- 家长签字角标 -->
+            <div v-if="e.parentSigned" class="sr-signed-badge">✓ 已签</div>
+            <!-- 书名 -->
+            <div class="sr-book-title" :title="e.bookTitle">
+              <span class="sr-book-icon">📖</span>
+              <span class="sr-book-text">{{ e.bookTitle }}</span>
             </div>
+            <!-- 日期 -->
+            <div class="sr-date">
+              <span class="sr-date-icon">📅</span>
+              <span>{{ e.date }}</span>
+            </div>
+            <!-- 统计徽章 -->
+            <div class="sr-card-info">
+              <span class="sr-badge sr-badge-time">
+                <span class="sr-badge-icon">⏱</span>
+                {{ store.formatReadingDuration(e.durationMin) }}
+              </span>
+              <span class="sr-badge sr-badge-page">
+                <span class="sr-badge-icon">📄</span>
+                {{ e.pages }} 页
+              </span>
+            </div>
+            <!-- 读后感预览 -->
+            <div v-if="e.impression" class="sr-impression" :title="e.impression">{{ e.impression }}</div>
           </div>
         </TransitionGroup>
       </div>
@@ -345,50 +366,122 @@ onMounted(async () => {
   gap: 6px;
   height: 150px;
   min-height: 150px;
-  padding: 8px 10px;
+  padding: 10px 12px 8px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
-  border-left: 3px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
 }
 .sr-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.3);
 }
 .sr-card.is-signed {
-  border-left-color: #10b981;
-  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.sr-card.is-signed:hover {
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.5);
 }
 
+/* 顶部渐变条 */
+.sr-card-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 10px 10px 0 0;
+}
+.sr-card.is-signed .sr-card-bar {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* 家长签字角标 */
+.sr-signed-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+/* 书名 */
 .sr-book-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--color-text, #1f2937);
+  padding-top: 2px;
+}
+.sr-book-icon { flex-shrink: 0; font-size: 13px; line-height: 1.3; }
+.sr-book-text {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+/* 日期 */
 .sr-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: var(--color-text-muted, #6b7280);
-  line-height: 1.2;
 }
+.sr-date-icon { font-size: 11px; }
 
+/* 统计徽章 */
 .sr-card-info {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  font-size: 12px;
-  line-height: 1.2;
-  color: var(--color-text-muted, #6b7280);
   flex-wrap: wrap;
 }
-.sr-duration { color: var(--color-text, #1f2937); font-weight: 500; }
-.sr-pages { color: var(--color-text, #1f2937); font-weight: 500; }
+.sr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.sr-badge-icon { font-size: 10px; }
+.sr-badge-time {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+.sr-badge-page {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+/* 读后感预览 */
+.sr-impression {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-muted, #9ca3af);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: auto;
+}
 
 .empty-state {
   display: flex;

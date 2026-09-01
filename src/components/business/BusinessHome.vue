@@ -110,9 +110,17 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
         </div>
       </section>
 
-      <!-- 低库存概览 -->
-      <div class="bizhome-row">
-        <div class="bizhome-card clickable" role="button" tabindex="0" data-testid="bizhome-lowstock" @click="go('inventory')" @keydown.enter="go('inventory')">
+      <!-- 低库存 + 销售排行：一行两列（40% / 60%） -->
+      <div class="bizhome-row bizhome-split-row">
+        <!-- 低库存概览（左 40%） -->
+        <div
+          class="bizhome-card bizhome-col bizhome-col-40 clickable"
+          role="button"
+          tabindex="0"
+          data-testid="bizhome-lowstock"
+          @click="go('inventory')"
+          @keydown.enter="go('inventory')"
+        >
           <div class="bizhome-card-title"><Icon name="alert" :size="15" />低库存预警（阈值 {{ store.settings.lowStockThreshold }}）</div>
           <p v-if="lowStock.length === 0" class="bizhome-empty" data-testid="bizhome-lowstock-empty">暂无低库存商品</p>
           <div v-else class="bizhome-low-list">
@@ -122,43 +130,43 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- P1-1：销售排行（分类→商品树状展开） -->
-      <section class="bizhome-card" data-testid="bizhome-rank-tree">
-        <div class="bizhome-card-title"><Icon name="stats" :size="15" />销售排行（分类→商品）</div>
-        <p v-if="treeRank.length === 0" class="bizhome-empty">暂无数据</p>
-        <div v-else class="bizhome-tree">
-          <div v-for="node in treeRank" :key="node.categoryId" class="bizhome-tree-node" :data-testid="'bizhome-tree-cat-' + node.categoryId">
-            <!-- 分类行 -->
-            <div class="bizhome-tree-cat" @click="toggleCategory(node.categoryId)">
-              <span class="bizhome-tree-arrow">{{ isCategoryExpanded(node.categoryId) ? '▾' : '▸' }}</span>
-              <span class="bizhome-tree-cat-name">{{ node.categoryName }}</span>
-              <span class="bizhome-tree-cat-val">{{ formatYuanOf(node.categoryRevenue) }}</span>
-              <span class="bizhome-tree-cat-sold">×{{ node.categorySold }}</span>
-            </div>
-            <!-- 商品排行（展开后显示） -->
-            <div v-if="isCategoryExpanded(node.categoryId)" class="bizhome-tree-products">
-              <div
-                v-for="(prod, pi) in node.products"
-                :key="prod.productId"
-                class="bizhome-tree-prod"
-                :data-testid="'bizhome-tree-prod-' + prod.productId"
-                @click="emit('navigate', 'purchases', prod.productId)"
-              >
-                <span class="bizhome-tree-prod-idx">{{ pi + 1 }}</span>
-                <span class="bizhome-tree-prod-name">{{ prod.name }}</span>
-                <div class="bizhome-tree-prod-bar">
-                  <div class="bizhome-tree-prod-fill" :style="{ width: (prod.revenue / maxProductRevenue(node)) * 100 + '%' }"></div>
-                </div>
-                <span class="bizhome-tree-prod-val">{{ formatYuanOf(prod.revenue) }}</span>
-                <span class="bizhome-tree-prod-sold">×{{ prod.sold }}</span>
+        <!-- 销售排行（右 60%，分类→商品树状展开） -->
+        <section class="bizhome-card bizhome-col bizhome-col-60" data-testid="bizhome-rank-tree">
+          <div class="bizhome-card-title"><Icon name="stats" :size="15" />销售排行（分类→商品）</div>
+          <p v-if="treeRank.length === 0" class="bizhome-empty">暂无数据</p>
+          <div v-else class="bizhome-tree">
+            <div v-for="node in treeRank" :key="node.categoryId" class="bizhome-tree-node" :data-testid="'bizhome-tree-cat-' + node.categoryId">
+              <!-- 分类行 -->
+              <div class="bizhome-tree-cat" @click="toggleCategory(node.categoryId)">
+                <span class="bizhome-tree-arrow">{{ isCategoryExpanded(node.categoryId) ? '▾' : '▸' }}</span>
+                <span class="bizhome-tree-cat-name">{{ node.categoryName }}</span>
+                <span class="bizhome-tree-cat-val">{{ formatYuanOf(node.categoryRevenue) }}</span>
+                <span class="bizhome-tree-cat-sold">×{{ node.categorySold }}</span>
               </div>
-              <p v-if="node.products.length === 0" class="bizhome-tree-empty">该分类暂无商品销售数据</p>
+              <!-- 商品排行（展开后显示） -->
+              <div v-if="isCategoryExpanded(node.categoryId)" class="bizhome-tree-products">
+                <div
+                  v-for="(prod, pi) in node.products"
+                  :key="prod.productId"
+                  class="bizhome-tree-prod"
+                  :data-testid="'bizhome-tree-prod-' + prod.productId"
+                  @click="emit('navigate', 'purchases', prod.productId)"
+                >
+                  <span class="bizhome-tree-prod-idx">{{ pi + 1 }}</span>
+                  <span class="bizhome-tree-prod-name">{{ prod.name }}</span>
+                  <div class="bizhome-tree-prod-bar">
+                    <div class="bizhome-tree-prod-fill" :style="{ width: (prod.revenue / maxProductRevenue(node)) * 100 + '%' }"></div>
+                  </div>
+                  <span class="bizhome-tree-prod-val">{{ formatYuanOf(prod.revenue) }}</span>
+                  <span class="bizhome-tree-prod-sold">×{{ prod.sold }}</span>
+                </div>
+                <p v-if="node.products.length === 0" class="bizhome-tree-empty">该分类暂无商品销售数据</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </template>
   </div>
 </template>
@@ -370,6 +378,17 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
 .bizhome-row {
   display: block;
 }
+
+/* 双列并排：低库存 40% + 销售排行 60%，桌面端一行，移动端堆叠 */
+.bizhome-split-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: stretch;
+}
+.bizhome-col { flex: 0 0 auto; min-width: 0; }
+.bizhome-col-40 { flex-basis: 40%; }
+.bizhome-col-60 { flex-basis: 60%; }
 
 .bizhome-card {
   display: flex;
@@ -622,6 +641,11 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
   .bizhome-hero {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* 窄屏下双列堆叠为上下，各自 100% 宽度 */
+  .bizhome-split-row { flex-direction: column; }
+  .bizhome-col-40,
+  .bizhome-col-60 { flex-basis: auto; }
 }
 
 @media (max-width: 480px) {

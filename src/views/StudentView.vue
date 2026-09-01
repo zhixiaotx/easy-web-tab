@@ -11,6 +11,7 @@ import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
+import { useStudentDiaryStore } from '@/stores/studentDiary'
 import { useAppSettingsStore } from '@/stores/settings'
 import StudentHome from '@/components/student/StudentHome.vue'
 import StudentHabits from '@/components/student/StudentHabits.vue'
@@ -19,6 +20,7 @@ import StudentTimetable from '@/components/student/StudentTimetable.vue'
 import StudentReading from '@/components/student/StudentReading.vue'
 import StudentExam from '@/components/student/StudentExam.vue'
 import StudentEducation from '@/components/student/StudentEducation.vue'
+import StudentDiary from '@/components/student/StudentDiary.vue'
 import StudentPlan from '@/components/student/StudentPlan.vue'
 import StudentReview from '@/components/student/StudentReview.vue'
 import StudentMistakes from '@/components/student/StudentMistakes.vue'
@@ -41,6 +43,7 @@ const rewardsStore = useStudentRewardsStore()
 const habitsStore = useStudentHabitsStore()
 const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
+const diaryStore = useStudentDiaryStore()
 const showSettingsDialog = ref(false)
 
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
@@ -227,6 +230,7 @@ onMounted(async () => {
     await habitsStore.loadHabits()
     await homeworkStore.loadHomework()
     await readingStore.loadReading()
+    await diaryStore.loadDiary()
     await rewardsStore.backfillFromAll({
       habits: habitsStore.habits,
       habitRecords: habitsStore.records,
@@ -345,6 +349,7 @@ async function onOnboardingComplete() {
         <StudentReading v-else-if="activeSection === 'reading'" />
         <StudentExam v-else-if="activeSection === 'exam'" />
         <StudentEducation v-else-if="activeSection === 'education'" />
+        <StudentDiary v-else-if="activeSection === 'diary'" />
         <StudentPlan v-else-if="activeSection === 'plan'" />
         <StudentReview v-else-if="activeSection === 'review'" />
         <StudentMistakes v-else-if="activeSection === 'mistakes'" />

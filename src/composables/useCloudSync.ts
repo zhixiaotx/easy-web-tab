@@ -788,7 +788,8 @@ async function reloadStudentStores(): Promise<void> {
     { useStudentExamStore }, { useStudentHomeworkStore },
     { useStudentTimetableStore }, { useStudentPlanStore }, { useStudentReviewStore },
     { useStudentMistakesStore }, { useStudentReadingStore }, { useStudentAchievementsStore },
-    { useStudentRewardsStore }, { useStudentParentTasksStore }, { useStudentEducationStore }
+    { useStudentRewardsStore }, { useStudentParentTasksStore }, { useStudentEducationStore },
+    { useStudentDiaryStore }
   ] = await Promise.all([
     import('../stores/studentSettings'),
     import('../stores/studentHabits'),
@@ -803,7 +804,8 @@ async function reloadStudentStores(): Promise<void> {
     import('../stores/studentAchievements'),
     import('../stores/studentRewards'),
     import('../stores/studentParentTasks'),
-    import('../stores/studentEducation')
+    import('../stores/studentEducation'),
+    import('../stores/studentDiary')
   ])
   await Promise.all([
     useStudentSettingsStore().loadSettings(),
@@ -819,7 +821,8 @@ async function reloadStudentStores(): Promise<void> {
     useStudentAchievementsStore().loadAchievements(),
     useStudentRewardsStore().loadRewards(),
     useStudentParentTasksStore().loadTasks(),
-    useStudentEducationStore().loadEducation()
+    useStudentEducationStore().loadEducation(),
+    useStudentDiaryStore().loadDiary()
   ])
 }
 

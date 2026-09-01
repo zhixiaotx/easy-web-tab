@@ -558,7 +558,7 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   reading: '阅读记录',
   exam: '考试倒计时',
   education: '教育经历',
-  diary: '学习日记',
+  diary: '日记本',
   pomodoro: '番茄钟',
   achievements: '成就勋章',
   rewards: '奖励积分',

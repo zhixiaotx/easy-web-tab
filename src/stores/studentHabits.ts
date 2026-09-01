@@ -26,6 +26,7 @@ import type {
   StudentStage
 } from '@/types'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 分类 CRUD 操作错误语义
 export type StudentHabitOpError = 'empty' | 'duplicate' | 'not-found' | 'in-use'
@@ -52,6 +53,7 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
     try {
       //, ：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError）
       await idbPut('student_habits', { habits: JSON.parse(JSON.stringify(habits.value)), records: JSON.parse(JSON.stringify(records.value)) })
+      markDirty()
       // M2-M4 云同步 student-backup 信封留后续阶段接入
     } catch (e) {
       console.error('[studentHabits] save failed', e)

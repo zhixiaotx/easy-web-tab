@@ -1,4 +1,4 @@
-// 学生工作台复习计划 store（艾宾浩斯间隔复习）
+﻿// 学生工作台复习计划 store（艾宾浩斯间隔复习）
 // 数据存 IndexedDB store 'student_review' 单对象 { entries }，严格隔离成人数据。
 // 薄委托 studentReviewCore：归一化/排序/学科筛选/阶段推进/统计均为纯函数，store 禁止内联重算。
 
@@ -20,6 +20,7 @@ import {
 } from '@/composables/studentReviewCore'
 import { localToday } from '@/composables/todoCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { StudentReviewData, StudentReviewItem } from '@/types'
 
 const STORE_KEY = 'student_review'
@@ -72,6 +73,7 @@ export const useStudentReviewStore = defineStore('studentReview', () => {
   async function saveReview(): Promise<void> {
     try {
       await idbPut(STORE_KEY, { entries: JSON.parse(JSON.stringify(entries.value)) })
+    markDirty()
     } catch (e) {
       console.error('[studentReview] save failed', e)
     }

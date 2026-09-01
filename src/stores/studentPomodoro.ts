@@ -14,6 +14,7 @@ import {
   type PomodoroSettings
 } from '@/composables/studentPomodoroCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { StudentStage } from '@/types'
 
 const STORE_KEY = 'student_pomodoro'
@@ -41,6 +42,7 @@ export const useStudentPomodoroStore = defineStore('studentPomodoro', () => {
         settings: JSON.parse(JSON.stringify(data.value.settings)),
         records: JSON.parse(JSON.stringify(data.value.records))
       })
+      markDirty()
     } catch (e) {
       console.error('[studentPomodoro] save failed', e)
     }

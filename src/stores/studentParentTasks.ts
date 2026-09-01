@@ -1,4 +1,4 @@
-// 学生工作台 - 家长每日任务 store（家长协同面板调用）
+﻿// 学生工作台 - 家长每日任务 store（家长协同面板调用）
 // 数据存 IndexedDB store 'student_parent_tasks' 单对象信封 { tasks: StudentParentTask[] }
 // 薄委托 studentParentTaskCore：归一化/排序/按日期过滤/7 日窗口统计/表单校验/新 ID
 // CRUD：addTask / updateTask / deleteTask / toggleDone（学生在主页也能打卡 → 双向同读）
@@ -6,6 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import {
   emptyParentTasksData,
   normalizeParentTasksData,
@@ -55,6 +56,7 @@ export const useStudentParentTasksStore = defineStore('studentParentTasks', () =
       // 写信封对象（嵌套数组单独, ，防内层 Proxy 致 DataCloneError）
       const payload: StudentParentTasksData = { tasks: JSON.parse(JSON.stringify(tasks.value)) }
       await idbPut(STORE_KEY, payload)
+    markDirty()
     } catch (e) {
       console.error('[studentParentTasks] saveTasks failed', e)
     }

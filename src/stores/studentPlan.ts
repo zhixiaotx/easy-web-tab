@@ -20,6 +20,7 @@ import {
 } from '@/composables/studentPlanCore'
 import { localToday } from '@/composables/todoCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { StudentPlan, StudentPlanData, StudentPlanGoal, StudentPlanType } from '@/types'
 
 const STORE_KEY = 'student_plans'
@@ -79,6 +80,7 @@ export const useStudentPlanStore = defineStore('studentPlan', () => {
     try {
       // 深拷贝：剥离 reactive Proxy，防 IDB DataCloneError
       await idbPut(STORE_KEY, { entries: JSON.parse(JSON.stringify(entries.value)) })
+      markDirty()
     } catch (e) {
       console.error('[studentPlan] save failed', e)
       // eslint-disable-next-line no-console

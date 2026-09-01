@@ -34,6 +34,7 @@ import {
   type StudentSettings,
   type StudentStage
 } from '@/types'
+import { markDirty } from '@/composables/useCloudSync'
 
 const STORE_KEY = 'student_settings'
 
@@ -117,6 +118,7 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
     // JSON.parse(JSON.stringify(...)) 彻底剥离所有 Proxy，保证 IDB 可序列化。
     const raw = JSON.parse(JSON.stringify(settings.value))
     await idbPut(STORE_KEY, raw)
+    markDirty()
   }
 
   /** 非异步 setter 统一用此包装持久化：catch 错误日志，防止 fire-and-forget 静默丢数据 */

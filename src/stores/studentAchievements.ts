@@ -1,4 +1,4 @@
-// 学生工作台成就勋章 store
+﻿// 学生工作台成就勋章 store
 // 数据存 IndexedDB store 'student_achievements' 单对象 { definitions, unlocked }。
 // 内置 10 枚勋章定义不可编辑、不可手动撤销；解锁由各 store 数据聚合触发（recomputeUnlocks）。
 // 薄委托 studentAchievementCore：归一化/合并内置/指标计算/解锁判定/统计/分类筛选均为纯函数，
@@ -20,6 +20,7 @@ import {
   type AchievementStats
 } from '@/composables/studentAchievementCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type {
   StudentAchievementCategory,
   StudentAchievementDef,
@@ -64,6 +65,7 @@ export const useStudentAchievementsStore = defineStore('studentAchievements', ()
         definitions: JSON.parse(JSON.stringify(definitions.value)),
         unlocked: JSON.parse(JSON.stringify(unlocked.value))
       })
+      markDirty()
     } catch (e) {
       console.error('[studentAchievements] save failed', e)
     }

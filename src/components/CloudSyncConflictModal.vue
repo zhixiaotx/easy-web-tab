@@ -122,7 +122,7 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
             </div>
           </div>
 
-          <p class="merge-hint"><Icon name="merge" /> 合并：按模块逐条按 ID 去重，保留双方新增项；同条目取较新版本。密码库与本地设置保留当前设备。</p>
+          <p class="merge-hint" style="display: none;"><Icon name="merge" /> 合并：按模块逐条按 ID 去重，保留双方新增项；同条目取较新版本。密码库与本地设置保留当前设备。</p>
         </div>
 
         <footer class="conflict-foot">
@@ -130,15 +130,16 @@ const hasConflict = computed(() => conflictRows.value.length > 0)
             type="button"
             class="conflict-btn conflict-btn-danger"
             @click="cloudSync.resolveConflict('remote')"
-          ><Icon name="cloud" /> 全部云端覆盖</button>
+          ><Icon name="cloud" /> 全部拉取</button>
           <button
             type="button"
             class="conflict-btn conflict-btn-primary"
             @click="cloudSync.resolveConflict('local')"
-          ><Icon name="monitor" /> 全部本地覆盖</button>
+          ><Icon name="monitor" /> 全部推送</button>
           <button
             type="button"
             class="conflict-btn conflict-btn-merge"
+            style="display: none;"
             @click="cloudSync.resolveConflict('merge')"
           ><Icon name="merge" /> 全部合并</button>
           <button

@@ -13,6 +13,7 @@ import {
   isValidTimeRange
 } from '@/composables/studentTimetableCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { StudentTimetableCell, StudentTimetableData } from '@/types'
 
 export type StudentTimetableOpError = 'empty' | 'invalid-time' | 'not-found'
@@ -33,6 +34,7 @@ export const useStudentTimetableStore = defineStore('studentTimetable', () => {
   async function saveTimetable(): Promise<void> {
     try {
       await idbPut('student_timetable', JSON.parse(JSON.stringify(data.value)))
+      markDirty()
     } catch (e) {
       console.error('[studentTimetable] save failed', e)
     }

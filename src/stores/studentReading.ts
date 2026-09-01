@@ -1,4 +1,4 @@
-// 学生工作台阅读记录 store（数据存 IndexedDB store 'student_reading' 单对象 { entries }）
+﻿// 学生工作台阅读记录 store（数据存 IndexedDB store 'student_reading' 单对象 { entries }）
 // 薄委托 studentReadingCore：归一化/排序/范围筛选/统计均为纯函数，store 禁止内联重算。
 // 严格隔离成人数据（独立 IDB 名 + 独立前缀 rd_）。
 
@@ -15,6 +15,7 @@ import {
   type ReadingStats
 } from '@/composables/studentReadingCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { StudentReadingData, StudentReadingEntry } from '@/types'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
 
@@ -70,6 +71,7 @@ export const useStudentReadingStore = defineStore('studentReading', () => {
   async function saveReading(): Promise<void> {
     try {
       await idbPut('student_reading', { entries: JSON.parse(JSON.stringify(entries.value)) })
+      markDirty()
     } catch (e) {
       console.error('[studentReading] save failed', e)
     }

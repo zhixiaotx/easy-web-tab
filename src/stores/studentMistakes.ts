@@ -1,4 +1,4 @@
-// 学生工作台错题本 store
+﻿// 学生工作台错题本 store
 // 数据存 IndexedDB store 'student_mistakes' 单对象 { entries }，严格隔离成人数据。
 // 薄委托 studentMistakesCore：归一化/排序/学科筛选/状态/标签/关键词/统计/状态流转均为纯函数，
 // store 禁止内联重算。
@@ -21,6 +21,7 @@ import {
 } from '@/composables/studentMistakesCore'
 import { localToday } from '@/composables/todoCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { StudentMistake, StudentMistakeStatus, StudentMistakesData } from '@/types'
 
 const STORE_KEY = 'student_mistakes'
@@ -97,6 +98,7 @@ export const useStudentMistakesStore = defineStore('studentMistakes', () => {
   async function saveMistakes(): Promise<void> {
     try {
       await idbPut(STORE_KEY, { entries: JSON.parse(JSON.stringify(entries.value)) })
+    markDirty()
     } catch (e) {
       console.error('[studentMistakes] save failed', e)
     }

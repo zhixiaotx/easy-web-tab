@@ -1,4 +1,4 @@
-// 学生工作台奖励积分 store
+﻿// 学生工作台奖励积分 store
 // 数据存 IndexedDB store 'student_rewards' 单对象 {totalPoints, history, rewards}。
 // 半自动积分：习惯/作业/阅读完成时由各 store 调用 autoEarn（sourceId 幂等防重复加分）；
 // 家长可手动加分（manualEarn）；兑换奖励（redeemReward）扣分 + 减库存 + 写交易历史。
@@ -35,6 +35,7 @@ import {
   type RewardStats
 } from '@/composables/studentRewardCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type {
   StudentRewardsData,
   StudentRewardItem,
@@ -85,6 +86,7 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
         history: JSON.parse(JSON.stringify(data.value.history)),
         rewards: JSON.parse(JSON.stringify(data.value.rewards))
       })
+      markDirty()
     } catch (e) {
       console.error('[studentRewards] save failed', e)
     }

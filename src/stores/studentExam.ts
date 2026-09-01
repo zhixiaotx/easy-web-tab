@@ -21,6 +21,7 @@ import {
   type CountdownFilterCriteria
 } from '@/composables/studentExamCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { Countdown, CountdownCategory, CountdownItem, CountdownRepeat, StudentStage } from '@/types'
 
 const STORE_KEY = 'student_countdowns'
@@ -92,6 +93,7 @@ export const useStudentExamStore = defineStore('studentExam', () => {
         customCategories: JSON.parse(JSON.stringify(customCategories.value)),
         sortRule: sortMode.value
       })
+      markDirty()
       // M2-M4 云同步 student-backup 信封留后续阶段接入
     } catch (e) {
       console.error('[studentExam] save failed', e)

@@ -4,6 +4,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { idbGet, idbPut } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 import type { EducationEntry, EducationData } from '@/types'
 import {
   emptyEducationData,
@@ -52,6 +53,7 @@ export const useStudentEducationStore = defineStore('studentEducation', () => {
   async function saveEducation(): Promise<void> {
     try {
       await idbPut('student_education', { entries: JSON.parse(JSON.stringify(entries.value)) })
+    markDirty()
     } catch (e) {
       console.error('[studentEducation] save failed', e)
     }

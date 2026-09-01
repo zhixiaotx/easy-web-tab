@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 云同步 composable（WebDAV + v10 多文件同步信封）
  *
  * 5 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json
@@ -712,7 +712,7 @@ function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentS
   const FIELD_KEYS: Array<keyof StudentSyncData> = [
     'studentSettings', 'studentHabits', 'studentPomodoro', 'studentDiary', 'studentCountdowns',
     'homework', 'timetable', 'plans', 'review', 'mistakes', 'reading',
-    'achievements', 'rewards', 'parentTasks', 'studentImages'
+    'achievements', 'rewards', 'parentTasks', 'studentImages', 'education'
   ]
   for (const key of FIELD_KEYS) {
     const lv = local[key]

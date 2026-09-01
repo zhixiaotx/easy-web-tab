@@ -22,6 +22,7 @@ import type {
   StudentHomeworkPriority
 } from '@/types'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
+import { markDirty } from '@/composables/useCloudSync'
 
 // 作业 CRUD 操作错误语义
 export type StudentHomeworkOpError = 'empty' | 'duplicate' | 'not-found'
@@ -80,6 +81,7 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
     try {
       //, ：IDB 结构化克隆无法处理 Vue reactive Proxy（DataCloneError）
       await idbPut('student_homework', { entries: JSON.parse(JSON.stringify(entries.value)) })
+      markDirty()
       // M2-M4 云同步 student-backup 信封留后续阶段接入
     } catch (e) {
       console.error('[studentHomework] save failed', e)

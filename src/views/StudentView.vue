@@ -18,6 +18,7 @@ import StudentHomework from '@/components/student/StudentHomework.vue'
 import StudentTimetable from '@/components/student/StudentTimetable.vue'
 import StudentReading from '@/components/student/StudentReading.vue'
 import StudentExam from '@/components/student/StudentExam.vue'
+import StudentEducation from '@/components/student/StudentEducation.vue'
 import StudentPlan from '@/components/student/StudentPlan.vue'
 import StudentReview from '@/components/student/StudentReview.vue'
 import StudentMistakes from '@/components/student/StudentMistakes.vue'
@@ -43,12 +44,12 @@ const showSettingsDialog = ref(false)
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
 type StudentSectionKey =
   | 'home' | 'habits' | 'homework' | 'timetable' | 'plan'
-  | 'review' | 'mistakes' | 'reading' | 'exam' | 'diary'
+  | 'review' | 'mistakes' | 'reading' | 'exam' | 'education' | 'diary'
   | 'pomodoro' | 'achievements' | 'rewards' | 'parent'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
   'home', 'habits', 'homework', 'timetable', 'plan',
-  'review', 'mistakes', 'reading', 'exam', 'diary',
+  'review', 'mistakes', 'reading', 'exam', 'education', 'diary',
   'pomodoro', 'achievements', 'rewards', 'parent'
 ]
 
@@ -297,6 +298,7 @@ async function onOnboardingComplete() {
         <StudentTimetable v-else-if="activeSection === 'timetable'" />
         <StudentReading v-else-if="activeSection === 'reading'" />
         <StudentExam v-else-if="activeSection === 'exam'" />
+        <StudentEducation v-else-if="activeSection === 'education'" />
         <StudentPlan v-else-if="activeSection === 'plan'" />
         <StudentReview v-else-if="activeSection === 'review'" />
         <StudentMistakes v-else-if="activeSection === 'mistakes'" />

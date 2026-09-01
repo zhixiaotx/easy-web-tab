@@ -499,7 +499,32 @@ export const DEFAULT_BUSINESS_PRODUCT_CATEGORIES: BusinessProductCategory[] = [
 /** 学段：K=幼儿园 / P=小学 / J=初中 */
 export type StudentStage = 'K' | 'P' | 'J'
 
-/** 学生工作台菜单键集合（14 项；home 恒居首位，开关锁定不可关） */
+/** 教育经历条目 */
+export interface EducationEntry {
+  id: string
+  schoolName: string
+  degree: string
+  major?: string
+  startDate: string
+  endDate?: string
+  isActive: boolean
+  classTeacher?: string
+  courseTeacher?: string
+  phone?: string
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 教育经历数据（IDB store 'student_education' 单对象 { entries }） */
+export interface EducationData {
+  entries: EducationEntry[]
+}
+
+/** 学历/学段选项（教育经历下拉） */
+export const DEGREE_OPTIONS = ['幼儿园', '小学', '初中', '高中', '中职', '专科', '本科', '硕士', '博士'] as const
+
+/** 学生工作台菜单键集合（15 项；home 恒居首位，开关锁定不可关） */
 export const STUDENT_MENU_KEYS: readonly string[] = [
   'home',
   'habits',
@@ -510,6 +535,7 @@ export const STUDENT_MENU_KEYS: readonly string[] = [
   'mistakes',
   'reading',
   'exam',
+  'education',
   'diary',
   'pomodoro',
   'achievements',
@@ -531,6 +557,7 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   mistakes: '错题本',
   reading: '阅读记录',
   exam: '考试倒计时',
+  education: '教育经历',
   diary: '学习日记',
   pomodoro: '番茄钟',
   achievements: '成就勋章',
@@ -549,6 +576,7 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
   mistakes: 'passwords',
   reading: 'notes',
   exam: 'countdowns',
+  education: 'diary',
   diary: 'diary',
   pomodoro: 'pomodoro',
   achievements: 'habits',
@@ -560,18 +588,18 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
 export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>> = {
   K: {
     home: true, habits: true, homework: false, timetable: false, plan: false,
-    review: false, mistakes: false, reading: true, exam: false, diary: true,
-    pomodoro: false, achievements: true, rewards: true, parent: true
+    review: false, mistakes: false, reading: true, exam: false, education: true,
+    diary: true, pomodoro: false, achievements: true, rewards: true, parent: true
   },
   P: {
     home: true, habits: true, homework: true, timetable: true, plan: false,
-    review: false, mistakes: false, reading: true, exam: false, diary: true,
-    pomodoro: false, achievements: true, rewards: true, parent: true
+    review: false, mistakes: false, reading: true, exam: false, education: true,
+    diary: true, pomodoro: false, achievements: true, rewards: true, parent: true
   },
   J: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
-    review: true, mistakes: true, reading: true, exam: true, diary: true,
-    pomodoro: true, achievements: false, rewards: false, parent: false
+    review: true, mistakes: true, reading: true, exam: true, education: true,
+    diary: true, pomodoro: true, achievements: false, rewards: false, parent: false
   }
 }
 
@@ -632,7 +660,7 @@ export interface StudentSettings {
   school?: string              // 学校名（选填）
   grade?: string               // 年级（选填）
   birthday?: string            // 出生日期 YYYY-MM-DD（选填；主页顶部据此计算年龄）
-  /** 菜单顺序（home 恒 index 0；归一化保证恒 14 项） */
+  /** 菜单顺序（home 恒 index 0；归一化保证恒 15 项） */
   menuOrder?: string[]
   /** 菜单改名（key → 自定义名） */
   menuLabels?: Record<string, string>
@@ -978,7 +1006,7 @@ export interface BusinessSyncData {
   business: BusinessData
 }
 
-/** StudentSyncData：学生工作台独立同步信封（15 store 字段名映射，逐字段透传为 unknown） */
+/** StudentSyncData：学生工作台独立同步信封（16 store 字段名映射，逐字段透传为 unknown） */
 export interface StudentSyncData {
   version: 1
   exportedAt: string
@@ -998,6 +1026,7 @@ export interface StudentSyncData {
   achievements?: unknown
   rewards?: unknown
   parentTasks?: unknown
+  education?: unknown
   studentImages?: unknown
 }
 

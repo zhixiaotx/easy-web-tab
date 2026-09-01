@@ -31,6 +31,8 @@ import StudentPanelPlaceholder from '@/components/student/StudentPanelPlaceholde
 import StudentOnboarding from '@/components/student/StudentOnboarding.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import Icon from '@/components/Icon.vue'
+import { useCloudSync } from '@/composables/useCloudSync'
+import type { SyncStatus } from '@/composables/useCloudSync'
 
 const router = useRouter()
 const studentStore = useStudentSettingsStore()
@@ -171,6 +173,41 @@ const stageLabel = computed(() => studentStore.stageLabelName)
 // 页面显示名（来自全局 settings store）
 const studentPageDisplayName = computed(() => settingsStore.studentPageDisplayName)
 
+// ===== 右上角云同步按钮（与工作台复用同一套开关：cloudSyncEnabled 时在设置按钮左边显示） =====
+const cloudSync = useCloudSync()
+const syncBusy = ref(false)
+const cloudEnabled = computed(() => !!settingsStore.cloudSyncEnabled)
+const syncStatusClass = computed(
+  (): Record<string, boolean> => ({
+    'st-sync-btn-pending': cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing',
+    'st-sync-btn-conflict': cloudSync.status.value === 'conflict',
+    'st-sync-btn-error': cloudSync.status.value === 'error'
+  })
+)
+function pad2(n: number): string { return n < 10 ? `0${n}` : `${n}` }
+function formatDate(d: Date): string { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
+const syncLabel = computed((): string => {
+  switch (cloudSync.status.value as SyncStatus) {
+    case 'pulling': return '拉取中…'
+    case 'pushing': return '推送中…'
+    case 'conflict': return '处理冲突'
+    case 'error': return '同步失败'
+    default: return '云同步'
+  }
+})
+const syncTip = computed((): string => {
+  const t = cloudSync.lastSyncAt.value
+  if (!t) return '未同步过；点击立即同步'
+  const d = new Date(t)
+  return `上次同步：${formatDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}；点击立即同步`
+})
+async function handleSyncNowClick(): Promise<void> {
+  if (syncBusy.value) return
+  syncBusy.value = true
+  await cloudSync.syncNow()
+  syncBusy.value = false
+}
+
 // onMounted：加载学生设置；若未初始化（stageSeeded !== stage）弹学段引导
 // 修复历史数据：加载 rewards+habits+homework+reading 后，存量回溯补分（sourceId 幂等）
 onMounted(async () => {
@@ -258,6 +295,15 @@ async function onOnboardingComplete() {
             >{{ parentHasPin ? '解锁' : '设置 PIN' }}</button>
           </template>
         </div>
+        <button
+          v-if="cloudEnabled"
+          class="st-btn st-sync-btn"
+          :class="syncStatusClass"
+          :title="syncTip"
+          data-testid="st-sync-now"
+          :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
+          @click="handleSyncNowClick"
+        ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="st-btn" @click="showSettingsDialog = true" title="设置">
           <Icon name="cog" />
         </button>
@@ -462,6 +508,23 @@ async function onOnboardingComplete() {
 }
 .st-parent-bar.unlocked .st-parent-bar-btn { color: #b91c1c; border-color: rgba(185, 28, 28, 0.35); background: #fff; }
 .st-parent-bar.unlocked .st-parent-bar-btn:hover { background: rgba(185, 28, 28, 0.08); }
+
+/* ===== 右上角云同步按钮（头部设置按钮左侧）状态视觉 ===== */
+.st-sync-btn {
+  gap: 4px;
+  position: relative;
+}
+.st-sync-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+.st-sync-btn-pending {
+  color: #2563eb;
+  animation: st-sync-pulse 1.4s ease-in-out infinite;
+}
+.st-sync-btn-conflict { color: #b45309; }
+.st-sync-btn-error { color: #b91c1c; }
+@keyframes st-sync-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
 
 .st-body {
   flex: 1;

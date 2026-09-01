@@ -138,14 +138,6 @@ onMounted(() => {
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="bs-btn" title="设置" data-testid="bs-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
-        <button
-          v-if="settingsStore.workbenchPageVisible !== false"
-          class="bs-btn"
-          title="切换到个人工作台"
-          :aria-label="settingsStore.workbenchPageDisplayName"
-          data-testid="bs-workbench-link"
-          @click="router.push('/workbench')"
-        ><Icon name="toolbox" :size="15" /> {{ settingsStore.workbenchPageDisplayName }}</button>
       </div>
     </header>
 

@@ -348,7 +348,7 @@ onMounted(async () => {
 }
 .sr-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   align-content: start;
   flex: 1;

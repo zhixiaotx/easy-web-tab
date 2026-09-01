@@ -236,14 +236,6 @@ async function handleSyncNowClick(): Promise<void> {
           @click="handleSyncNowClick"
         ><Icon name="cloud" :size="14" /> {{ syncLabel }}</button>
         <button class="wb-btn" title="设置" data-testid="wb-settings" @click="showSettingsDialog = true"><Icon name="cog" :size="15" /> 设置</button>
-        <button
-          v-if="settingsStore.businessPageVisible !== false"
-          class="wb-btn"
-          title="切换到销售记账工作台"
-          :aria-label="settingsStore.businessPageDisplayName"
-          data-testid="wb-business-link"
-          @click="router.push('/business')"
-        ><Icon name="store" :size="15" /> {{ settingsStore.businessPageDisplayName }}</button>
       </div>
     </header>
 

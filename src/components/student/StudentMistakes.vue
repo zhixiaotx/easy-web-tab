@@ -269,6 +269,7 @@ onMounted(() => {
           :key="item.id"
           class="sm-card"
           :data-testid="`sm-card-${item.id}`"
+          @click="openEditDialog(item.id)"
         >
           <div class="sm-card-head">
             <span class="sm-subject-badge">{{ item.subject }}</span>
@@ -305,18 +306,18 @@ onMounted(() => {
               v-if="item.status !== 'mastered'"
               class="sm-action-btn sm-advance-btn"
               :data-testid="`sm-advance-${item.id}`"
-              @click="handleAdvance(item.id)"
+              @click.stop="handleAdvance(item.id)"
             >{{ item.status === 'new' ? '标记复习中' : '标记已掌握' }}</button>
             <button
               v-if="item.status !== 'new'"
               class="sm-action-btn sm-reset-btn"
               :data-testid="`sm-reset-${item.id}`"
-              @click="handleReset(item.id)"
+              @click.stop="handleReset(item.id)"
             >重置未复习</button>
             <button
               class="sm-edit-btn"
               :data-testid="`sm-edit-${item.id}`"
-              @click="openEditDialog(item.id)"
+              @click.stop="openEditDialog(item.id)"
             >编辑</button>
           </div>
         </div>
@@ -565,6 +566,13 @@ onMounted(() => {
   height: 150px;
   min-height: 150px;
   overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+}
+.sm-card:hover {
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.12);
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.35);
 }
 .sm-card-head {
   display: flex;

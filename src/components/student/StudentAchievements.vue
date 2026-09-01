@@ -12,6 +12,7 @@ import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
 import { useStudentPomodoroStore } from '@/stores/studentPomodoro'
+import { useStudentReviewStore } from '@/stores/studentReview'
 import { useToast } from '@/composables/useToast'
 import {
   calcMaxStreak,
@@ -19,6 +20,11 @@ import {
   calcTotalPomoSessions,
   calcHwCompletionRate,
   calcHwTotal,
+  calcReviewCount,
+  calcReviewTotal,
+  calcReviewMasteredCount,
+  calcAchievementCount,
+  calcAllBuiltUnlocked,
   type AchievementMetrics
 } from '@/composables/studentAchievementCore'
 import type { StudentAchievementCategory, StudentAchievementDef } from '@/types'
@@ -32,6 +38,7 @@ const habitsStore = useStudentHabitsStore()
 const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
 const pomodoroStore = useStudentPomodoroStore()
+const reviewStore = useStudentReviewStore()
 const toast = useToast()
 
 const today = localToday()
@@ -47,12 +54,19 @@ const CATEGORY_TABS: { key: 'all' | StudentAchievementCategory; label: string }[
 const activeCategory = ref<'all' | StudentAchievementCategory>('all')
 
 // 跨 store 指标聚合（薄委托 core 纯函数）
+// 注意：achievement-count/all-built-unlocked 依赖 store.unlocked，recomputeUnlocks 调用时
+// 传入当前 unlocked 状态，"勋章收藏家""全能学霸"可能在达成轮延迟一轮触发（可接受）
 const metrics = computed<AchievementMetrics>(() => ({
   'max-streak': calcMaxStreak(habitsStore.habits, habitsStore.records, today),
   'reading-count': calcTotalReadingEntries(readingStore.entries),
   'pomo-count': calcTotalPomoSessions(pomodoroStore.data.records),
   'hw-rate': calcHwCompletionRate(homeworkStore.entries),
-  'hw-total': calcHwTotal(homeworkStore.entries)
+  'hw-total': calcHwTotal(homeworkStore.entries),
+  'review-count': calcReviewCount(reviewStore.entries),
+  'review-total': calcReviewTotal(reviewStore.entries),
+  'review-mastered-count': calcReviewMasteredCount(reviewStore.entries),
+  'achievement-count': calcAchievementCount(store.unlocked),
+  'all-built-unlocked': calcAllBuiltUnlocked(store.unlocked)
 }))
 
 // 视图数据：按分类筛选
@@ -108,13 +122,14 @@ const detailUnlockTime = computed(() => detailDef.value ? store.unlockTimeText(d
 const detailProgress = computed(() => detailDef.value ? progressOf(detailDef.value) : 0)
 
 onMounted(async () => {
-  // 并行加载：成就定义 + 4 个指标来源 store
+  // 并行加载：成就定义 + 5 个指标来源 store
   await Promise.all([
     store.loadAchievements(),
     habitsStore.loadHabits(),
     homeworkStore.loadHomework(),
     readingStore.loadReading(),
-    pomodoroStore.loadPomodoro()
+    pomodoroStore.loadPomodoro(),
+    reviewStore.loadReview()
   ])
   // 基于当前指标重算解锁（新达成的写入 IDB，幂等）
   const newlyUnlocked = await store.recomputeUnlocks(metrics.value)

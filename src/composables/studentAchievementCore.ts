@@ -1,6 +1,8 @@
 // 学生工作台成就勋章纯逻辑模块。
-// 内置 16 枚勋章定义（streak-1..6 小红花、streak-7/30/100、book-10/50/100、pomo-50/200/500、hw-rate-95），
-// 不可编辑、不可手动撤销；解锁由各 store 数据聚合判定（max-streak/reading-count/pomo-count/hw-rate）。
+// 内置 27 枚勋章定义（streak-1..6 小红花、streak-7/30/100、book-10/50/100、pomo-50/200/500、hw-rate-95、
+// 首次里程碑5、复习3、收集成就3），
+// 不可编辑、不可手动撤销；解锁由各 store 数据聚合判定（max-streak/reading-count/pomo-count/hw-rate/hw-total/
+// review-count/review-total/review-mastered-count/achievement-count/all-built-unlocked）。
 // 零 vue/pinia 运行时依赖，纯函数，node --experimental-strip-types 可测。
 
 import type {
@@ -10,12 +12,14 @@ import type {
   StudentHabit,
   StudentHabitRecord,
   StudentHomework,
-  StudentReadingEntry
+  StudentReadingEntry,
+  StudentReviewItem
 } from '@/types'
 import type { PomodoroRecord } from '@/composables/pomodoroCore'
 
 /** 内置勋章 id 集合（load-bearing，store 监听按 id 路由） */
 export const BUILTIN_ACHIEVEMENT_IDS: readonly string[] = [
+  // 习惯连续打卡
   'streak-1',
   'streak-2',
   'streak-3',
@@ -25,13 +29,28 @@ export const BUILTIN_ACHIEVEMENT_IDS: readonly string[] = [
   'streak-7',
   'streak-30',
   'streak-100',
+  'streak-365',
+  // 阅读累计
+  'book-1',
   'book-10',
   'book-50',
   'book-100',
+  // 番茄专注
+  'pomo-1',
   'pomo-50',
   'pomo-200',
   'pomo-500',
-  'hw-rate-95'
+  // 作业
+  'hw-first',
+  'hw-rate-95',
+  // 复习
+  'review-first',
+  'review-50',
+  'review-total-7',
+  'review-mastered-3',
+  // 收集成就
+  'achievement-collector-20',
+  'all-built-unlocked'
 ]
 
 /** 手动解锁勋章 id 集合（家长模式下发放的特殊勋章；M3 暂为空，家长协同阶段续填） */
@@ -42,7 +61,13 @@ export const KNOWN_METRICS: readonly string[] = [
   'max-streak',
   'reading-count',
   'pomo-count',
-  'hw-rate'
+  'hw-rate',
+  'hw-total',
+  'review-count',
+  'review-total',
+  'review-mastered-count',
+  'achievement-count',
+  'all-built-unlocked'
 ]
 
 /** 分类中文标签 */
@@ -145,6 +170,24 @@ export function buildBuiltinAchievements(): StudentAchievementDef[] {
       target: 100
     },
     {
+      id: 'streak-365',
+      name: '满级',
+      description: '任意习惯连续打卡 365 天',
+      emoji: '💎',
+      category: 'habit',
+      metric: 'max-streak',
+      target: 365
+    },
+    {
+      id: 'book-1',
+      name: '读书种子',
+      description: '完成第 1 篇阅读记录',
+      emoji: '📖',
+      category: 'reading',
+      metric: 'reading-count',
+      target: 1
+    },
+    {
       id: 'book-10',
       name: '阅读新手',
       description: '累计完成 10 篇阅读记录',
@@ -170,6 +213,15 @@ export function buildBuiltinAchievements(): StudentAchievementDef[] {
       category: 'reading',
       metric: 'reading-count',
       target: 100
+    },
+    {
+      id: 'pomo-1',
+      name: '蓄势待发',
+      description: '完成第 1 个专注番茄',
+      emoji: '⚡',
+      category: 'pomodoro',
+      metric: 'pomo-count',
+      target: 1
     },
     {
       id: 'pomo-50',
@@ -199,6 +251,15 @@ export function buildBuiltinAchievements(): StudentAchievementDef[] {
       target: 500
     },
     {
+      id: 'hw-first',
+      name: '首战告捷',
+      description: '完成第 1 篇作业',
+      emoji: '🎯',
+      category: 'study',
+      metric: 'hw-total',
+      target: 1
+    },
+    {
       id: 'hw-rate-95',
       name: '作业标兵',
       description: '作业完成率达 95%（至少 10 篇作业）',
@@ -206,6 +267,60 @@ export function buildBuiltinAchievements(): StudentAchievementDef[] {
       category: 'study',
       metric: 'hw-rate',
       target: 95
+    },
+    {
+      id: 'review-first',
+      name: '温故知新',
+      description: '首次完成复习推进 1 次',
+      emoji: '🔄',
+      category: 'study',
+      metric: 'review-count',
+      target: 1
+    },
+    {
+      id: 'review-50',
+      name: '记忆大师',
+      description: '累计完成 50 次复习推进',
+      emoji: '🧠',
+      category: 'study',
+      metric: 'review-count',
+      target: 50
+    },
+    {
+      id: 'review-total-7',
+      name: '持之以恒',
+      description: '累计 7 个复习项',
+      emoji: '📅',
+      category: 'study',
+      metric: 'review-total',
+      target: 7
+    },
+    {
+      id: 'review-mastered-3',
+      name: '学霸',
+      description: '掌握 3 个复习项',
+      emoji: '🎓',
+      category: 'study',
+      metric: 'review-mastered-count',
+      target: 3
+    },
+    {
+      id: 'achievement-collector-20',
+      name: '勋章收藏家',
+      description: '累计获得 20 枚勋章',
+      emoji: '👑',
+      category: 'habit',
+      metric: 'achievement-count',
+      target: 20
+    },
+    {
+      id: 'all-built-unlocked',
+      name: '全能学霸',
+      description: '解锁所有内置勋章',
+      emoji: '🌟',
+      category: 'habit',
+      metric: 'all-built-unlocked',
+      target: 1
     }
   ]
 }
@@ -400,18 +515,78 @@ export function calcHwTotal(entries: readonly StudentHomework[]): number {
   return entries.length
 }
 
-/** 指标聚合结果（4 个核心字段 + hw-total 门槛，跨 store 聚合后传入） */
+/**
+ * 复习勋章指标：累计复习推进次数（review-count）。
+ * 每个 review entry 的 stage 表示当前阶段（1=刚学未复习），推进次数 = max(0, stage-1)。
+ * mastered 项仍按 stage-1 计入历史推进次数。
+ */
+export function calcReviewCount(entries: readonly StudentReviewItem[]): number {
+  let total = 0
+  for (const e of entries) {
+    const s = typeof e.stage === 'number' ? e.stage : Number(e.stage)
+    if (Number.isFinite(s) && s > 1) total += Math.floor(s - 1)
+  }
+  return total
+}
+
+/** 复习项总数（review-total）。 */
+export function calcReviewTotal(entries: readonly StudentReviewItem[]): number {
+  return entries.length
+}
+
+/** 已掌握复习项数（review-mastered-count，mastered===true）。 */
+export function calcReviewMasteredCount(entries: readonly StudentReviewItem[]): number {
+  let n = 0
+  for (const e of entries) if (e.mastered === true) n++
+  return n
+}
+
+/**
+ * 已解锁勋章数（achievement-count，只计内置勋章 id，避免手动解锁干扰）。
+ * 用于"勋章收藏家"类勋章判定。
+ */
+export function calcAchievementCount(unlocked: Record<string, string>): number {
+  const known = new Set<string>(BUILTIN_ACHIEVEMENT_IDS)
+  let n = 0
+  for (const id of Object.keys(unlocked)) {
+    if (known.has(id)) n++
+  }
+  return n
+}
+
+/**
+ * 是否已解锁全部内置勋章（all-built-unlocked，0 或 1）。
+ * 用于"全能学霸"类勋章判定；BUILTIN_ACHIEVEMENT_IDS 全部在 unlocked 中返回 1。
+ */
+export function calcAllBuiltUnlocked(unlocked: Record<string, string>): number {
+  for (const id of BUILTIN_ACHIEVEMENT_IDS) {
+    if (!unlocked[id]) return 0
+  }
+  return 1
+}
+
+/** 指标聚合结果（跨 store 聚合后传入） */
 export interface AchievementMetrics {
   'max-streak': number
   'reading-count': number
   'pomo-count': number
   'hw-rate': number
-  /** 作业总数（hw-rate-95 门槛校验用） */
+  /** 作业总数（hw-rate-95 门槛校验、hw-first 首战告捷用） */
   'hw-total': number
+  /** 累计复习推进次数（review-first/review-50 用） */
+  'review-count': number
+  /** 复习项总数（review-total-7 用） */
+  'review-total': number
+  /** 已掌握复习项数（review-mastered-3 用） */
+  'review-mastered-count': number
+  /** 已解锁内置勋章数（achievement-collector-20 用） */
+  'achievement-count': number
+  /** 是否全部内置解锁（all-built-unlocked，0/1） */
+  'all-built-unlocked': number
 }
 
 /**
- * 按 metric 取当前进度值（绝对数；hw-rate 取百分比整数）。
+ * 按 metric 取当前进度值（绝对数；hw-rate 取百分比整数；all-built-unlocked 取 0/1）。
  * 不在 KNOWN_METRICS 中的 metric 返回 0。
  */
 export function metricValue(metric: string, metrics: AchievementMetrics): number {
@@ -420,6 +595,12 @@ export function metricValue(metric: string, metrics: AchievementMetrics): number
     case 'reading-count': return metrics['reading-count']
     case 'pomo-count': return metrics['pomo-count']
     case 'hw-rate': return metrics['hw-rate']
+    case 'hw-total': return metrics['hw-total']
+    case 'review-count': return metrics['review-count']
+    case 'review-total': return metrics['review-total']
+    case 'review-mastered-count': return metrics['review-mastered-count']
+    case 'achievement-count': return metrics['achievement-count']
+    case 'all-built-unlocked': return metrics['all-built-unlocked']
     default: return 0
   }
 }
@@ -427,8 +608,8 @@ export function metricValue(metric: string, metrics: AchievementMetrics): number
 /**
  * 计算单条勋章当前进度百分比（0-100 整数）。
  * - 已解锁返回 100；
- * - hw-rate-95 特殊：作业总数 < 10 → 进度按 (hw-total/10 * 50) + (rate/95) * 50 上限 99（达不到门槛不算达成）；
- *   即门槛未达时进度条显示半段；
+ * - hw-rate-95 特殊：作业总数 < 10 → 进度按 (hw-total/10 * 50) + (rate/95) * 50 上限 99；
+ * - all-built-unlocked 特殊：按已解锁内置数 / 内置总数 * 100（封顶 99，未全解锁不算达成）；
  * - 其他勋章：current / target * 100；
  * - target ≤ 0 → 100（防御性）；
  * - 不已知 metric → 0。
@@ -451,6 +632,14 @@ export function calcProgressPercent(
     }
     return Math.min(100, Math.floor((rate / def.target) * 100))
   }
+  if (def.id === 'all-built-unlocked') {
+    // 按已解锁内置数 / 总数 比例显示，未全解锁封顶 99
+    const unlockedCount = metrics['achievement-count']
+    const totalCount = BUILTIN_ACHIEVEMENT_IDS.length
+    if (totalCount <= 0) return 0
+    const pct = Math.floor((unlockedCount / totalCount) * 100)
+    return Math.min(99, pct)
+  }
   const cur = metricValue(def.metric, metrics)
   return Math.min(100, Math.floor((cur / def.target) * 100))
 }
@@ -458,6 +647,7 @@ export function calcProgressPercent(
 /**
  * 判定单条勋章是否达成（达成即可解锁）。
  * - hw-rate-95 特殊：total ≥ 10 且 rate ≥ 95；
+ * - all-built-unlocked 特殊：metrics['all-built-unlocked'] ≥ 1（即全部内置已解锁）；
  * - 其他：metricValue ≥ target。
  */
 export function isAchievementEarned(
@@ -466,6 +656,9 @@ export function isAchievementEarned(
 ): boolean {
   if (def.id === 'hw-rate-95') {
     return metrics['hw-total'] >= 10 && metrics['hw-rate'] >= def.target
+  }
+  if (def.id === 'all-built-unlocked') {
+    return metrics['all-built-unlocked'] >= 1
   }
   return metricValue(def.metric, metrics) >= def.target
 }

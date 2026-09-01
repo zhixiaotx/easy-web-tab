@@ -24,96 +24,28 @@ const activeView = ref<ViewTab>('rewards')
 // ===== 统计卡数据 =====
 const stats = computed(() => store.stats())
 
-// ===== 奖励项网格视图（行高 92px，row-heights.json rewards MAX 90 + 2） =====
+// ===== 奖励项网格视图（行高 152px，参考学习计划 4 列 150px 高卡片） =====
 const mainEl = ref<HTMLElement | null>(null)
 const rewardListEl = ref<HTMLElement | null>(null)
 const rewardPaging = usePanelPaging({
   items: () => store.allRewards(),
-  rowHeight: 92,
+  rowHeight: 152,
   containerRef: mainEl,
   gridRef: rewardListEl
 })
 const { pageItems: rewardPageItems, currentPage: rewardCurrentPage, totalPages: rewardTotalPages, fitsOnePage: rewardFitsOnePage, next: rewardNext, prev: rewardPrev } = rewardPaging
 
-// ===== 历史记录列表视图（一维列表，行高 42px，row-heights.json rewardsHistory MAX 40 + 2） =====
+// ===== 历史记录卡片网格（6 列/行 × 3 行/页 = 每页 18 卡；卡片行高 150px） =====
+const historyWrapEl = ref<HTMLElement | null>(null)
 const historyListEl = ref<HTMLElement | null>(null)
 const historyPaging = usePanelPaging({
   items: () => store.allHistory(),
-  rowHeight: 42,
-  containerRef: historyListEl
+  rowHeight: 150,
+  maxRows: 3,
+  containerRef: historyWrapEl,
+  gridRef: historyListEl
 })
 const { pageItems: historyPageItems, currentPage: historyCurrentPage, totalPages: historyTotalPages, fitsOnePage: historyFitsOnePage, next: historyNext, prev: historyPrev } = historyPaging
-
-// ===== 奖励项新增/编辑弹框 =====
-const showRewardDialog = ref(false)
-const editingReward = ref<StudentRewardItem | null>(null)
-const rewardForm = ref({ name: '', cost: 1, stock: 0 })
-const stockEnabled = ref(false)
-
-function openAddReward(): void {
-  editingReward.value = null
-  rewardForm.value = { name: '', cost: 1, stock: 0 }
-  stockEnabled.value = false
-  showRewardDialog.value = true
-}
-
-function openEditReward(item: StudentRewardItem): void {
-  editingReward.value = item
-  rewardForm.value = {
-    name: item.name,
-    cost: item.cost,
-    stock: item.stock ?? 0
-  }
-  stockEnabled.value = item.stock !== undefined
-  showRewardDialog.value = true
-}
-
-function closeRewardDialog(): void {
-  showRewardDialog.value = false
-  editingReward.value = null
-}
-
-async function submitReward(): Promise<void> {
-  const { name, cost, stock } = rewardForm.value
-  const trimmed = name.trim()
-  if (!trimmed) {
-    toast.error('奖励名称不能为空')
-    return
-  }
-  if (!Number.isFinite(cost) || cost < 1 || cost > 9999) {
-    toast.error('积分需在 1-9999 之间')
-    return
-  }
-  if (editingReward.value) {
-    const patch: { name?: string; cost?: number; stock?: number } = { name: trimmed, cost: Math.floor(cost) }
-    if (stockEnabled.value) patch.stock = Math.max(0, Math.floor(stock))
-    else patch.stock = undefined
-    const result = await store.updateReward(editingReward.value.id, patch)
-    if (!result.ok) {
-      toast.error(mapRewardError(result.reason))
-      return
-    }
-    toast.success('奖励已更新')
-  } else {
-    const result = await store.addReward(trimmed, Math.floor(cost), stockEnabled.value ? Math.max(0, Math.floor(stock)) : undefined)
-    if (!result.ok) {
-      toast.error(mapRewardError(result.reason))
-      return
-    }
-    toast.success('奖励已添加')
-  }
-  closeRewardDialog()
-}
-
-async function removeReward(item: StudentRewardItem): Promise<void> {
-  if (!confirm(`确认删除奖励「${item.name}」？`)) return
-  const result = await store.deleteReward(item.id)
-  if (!result.ok) {
-    toast.error(mapRewardError(result.reason))
-    return
-  }
-  toast.success('奖励已删除')
-}
 
 // ===== 兑换 =====
 async function redeem(item: StudentRewardItem): Promise<void> {
@@ -127,39 +59,6 @@ async function redeem(item: StudentRewardItem): Promise<void> {
     return
   }
   toast.success(`兑换成功「${item.name}」，消耗 ${item.cost} 分`)
-}
-
-// ===== 手动加分弹框 =====
-const showEarnDialog = ref(false)
-const earnForm = ref({ points: 5, reason: '' })
-
-function openEarnDialog(): void {
-  earnForm.value = { points: 5, reason: '' }
-  showEarnDialog.value = true
-}
-
-function closeEarnDialog(): void {
-  showEarnDialog.value = false
-}
-
-async function submitEarn(): Promise<void> {
-  const { points, reason } = earnForm.value
-  if (!Number.isFinite(points) || points <= 0) {
-    toast.error('积分必须为正数')
-    return
-  }
-  const reasonTrim = reason.trim()
-  if (!reasonTrim) {
-    toast.error('加分原因不能为空')
-    return
-  }
-  const result = await store.manualAddPoints(Math.floor(points), reasonTrim)
-  if (!result.ok) {
-    toast.error(mapRewardError(result.reason))
-    return
-  }
-  toast.success(`已加 ${Math.floor(points)} 分`)
-  closeEarnDialog()
 }
 
 // ===== 积分规则弹框 =====
@@ -199,12 +98,6 @@ onMounted(async () => {
         <button class="sr-btn sr-btn-secondary" @click="showRulesDialog = true" title="积分规则" data-testid="sr-rules-btn">
           <Icon name="countdowns" :size="16" />
           <span>规则</span>
-        </button>
-        <button class="sr-btn sr-btn-secondary" @click="openEarnDialog" data-testid="sr-manual-earn-btn">
-          <span>＋手动加分</span>
-        </button>
-        <button class="sr-btn sr-btn-primary" @click="openAddReward" data-testid="sr-add-reward-btn">
-          <span>＋新增奖励</span>
         </button>
       </div>
     </div>
@@ -250,7 +143,7 @@ onMounted(async () => {
     <!-- 奖励项视图 -->
     <div v-if="activeView === 'rewards'" ref="mainEl" class="sr-main">
       <div v-if="stats.rewardCount === 0" class="empty-state" data-testid="sr-empty-rewards">
-        <p>还没有奖励项，点击「＋新增奖励」添加</p>
+        <p>还没有奖励项，请在「家长协同」→「配置奖励」中添加</p>
       </div>
       <div v-else ref="rewardListEl" class="sr-grid" :class="{ 'sr-grid-scroll': !rewardFitsOnePage }">
         <div
@@ -261,22 +154,17 @@ onMounted(async () => {
           :data-testid="`sr-reward-${item.id}`"
         >
           <div class="sr-reward-head">
-            <div class="sr-reward-name" :title="item.name">{{ item.name }}</div>
             <div class="sr-reward-cost">
               <span class="sr-reward-cost-num">{{ item.cost }}</span>
               <span class="sr-reward-cost-unit">分</span>
             </div>
           </div>
+          <div class="sr-reward-name" :title="item.name">{{ item.name }}</div>
+          <div class="sr-reward-stock" :class="{ zero: isSoldOut(item), unlimited: item.stock === undefined }">
+            {{ item.stock !== undefined ? (isSoldOut(item) ? '已售罄' : `库存 ${item.stock}`) : '无限库存' }}
+          </div>
           <div class="sr-reward-foot">
-            <div v-if="item.stock !== undefined" class="sr-reward-stock" :class="{ zero: isSoldOut(item) }">
-              库存 {{ item.stock }}
-            </div>
-            <div v-else class="sr-reward-stock unlimited">无限</div>
-            <div class="sr-reward-ops">
-              <button class="sr-mini-btn" @click="redeem(item)" :disabled="isSoldOut(item)" :data-testid="`sr-redeem-${item.id}`">兑换</button>
-              <button class="sr-mini-btn" @click="openEditReward(item)" :data-testid="`sr-edit-${item.id}`">编辑</button>
-              <button class="sr-mini-btn danger" @click="removeReward(item)" :data-testid="`sr-del-${item.id}`">删除</button>
-            </div>
+            <button class="sr-redeem-btn" @click.stop="redeem(item)" :disabled="isSoldOut(item)" :data-testid="`sr-redeem-${item.id}`">立即兑换</button>
           </div>
         </div>
       </div>
@@ -294,20 +182,21 @@ onMounted(async () => {
       <div v-if="stats.txnCount === 0" class="empty-state" data-testid="sr-empty-history">
         <p>暂无交易记录</p>
       </div>
-      <div v-else>
-        <div ref="historyListEl" class="sr-history-list" :class="{ 'sr-history-scroll': !historyFitsOnePage }">
+      <div v-else ref="historyWrapEl" class="sr-history-wrap">
+        <div ref="historyListEl" class="sr-history-grid" :class="{ 'sr-history-scroll': !historyFitsOnePage }">
           <div
             v-for="t in historyPageItems"
             :key="t.id"
-            class="sr-txn-row"
+            class="sr-txn-card"
             :class="{ earn: t.type === 'earn', redeem: t.type === 'redeem' }"
             :data-testid="`sr-txn-${t.id}`"
           >
-            <div class="sr-txn-points" :class="t.type">
-              {{ txnPointsText(t) }}
+            <div class="sr-txn-card-head">
+              <span class="sr-txn-points" :class="t.type">{{ txnPointsText(t) }}</span>
+              <span class="sr-txn-type-tag">{{ t.type === 'earn' ? '加分' : '兑换' }}</span>
             </div>
-            <div class="sr-txn-reason" :title="t.reason">{{ t.reason }}</div>
-            <div class="sr-txn-date">{{ txnDateText(t.createdAt) }}</div>
+            <div class="sr-txn-card-reason" :title="t.reason">{{ t.reason }}</div>
+            <div class="sr-txn-card-date">{{ txnDateText(t.createdAt) }}</div>
           </div>
         </div>
         <PanelPager
@@ -317,104 +206,6 @@ onMounted(async () => {
           @prev="historyPrev"
           @next="historyNext"
         />
-      </div>
-    </div>
-
-    <!-- 新增/编辑奖励弹框 -->
-    <div v-if="showRewardDialog" class="sr-dialog-overlay" @click.self="closeRewardDialog">
-      <div class="sr-dialog" data-testid="sr-reward-dialog">
-        <div class="sr-dialog-head">
-          <h3>{{ editingReward ? '编辑奖励' : '新增奖励' }}</h3>
-          <button class="sr-dialog-close" @click="closeRewardDialog" title="关闭">
-            <Icon name="close" :size="18" />
-          </button>
-        </div>
-        <div class="sr-dialog-body">
-          <div class="sr-field">
-            <label class="sr-label">奖励名称</label>
-            <input
-              v-model="rewardForm.name"
-              type="text"
-              class="sr-input"
-              maxlength="30"
-              placeholder="如：看 30 分钟动画片"
-              data-testid="sr-form-name"
-            />
-          </div>
-          <div class="sr-field">
-            <label class="sr-label">所需积分</label>
-            <input
-              v-model.number="rewardForm.cost"
-              type="number"
-              min="1"
-              max="9999"
-              class="sr-input"
-              data-testid="sr-form-cost"
-            />
-          </div>
-          <div class="sr-field">
-            <label class="sr-checkbox-label">
-              <input v-model="stockEnabled" type="checkbox" data-testid="sr-form-stock-toggle" />
-              <span>启用库存</span>
-            </label>
-            <input
-              v-if="stockEnabled"
-              v-model.number="rewardForm.stock"
-              type="number"
-              min="0"
-              class="sr-input sr-input-stock"
-              placeholder="库存数量"
-              data-testid="sr-form-stock"
-            />
-          </div>
-        </div>
-        <div class="sr-dialog-foot">
-          <button class="sr-btn sr-btn-secondary" @click="closeRewardDialog">取消</button>
-          <button class="sr-btn sr-btn-primary" @click="submitReward" data-testid="sr-form-submit">
-            {{ editingReward ? '保存' : '添加' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 手动加分弹框 -->
-    <div v-if="showEarnDialog" class="sr-dialog-overlay" @click.self="closeEarnDialog">
-      <div class="sr-dialog" data-testid="sr-earn-dialog">
-        <div class="sr-dialog-head">
-          <h3>手动加分</h3>
-          <button class="sr-dialog-close" @click="closeEarnDialog" title="关闭">
-            <Icon name="close" :size="18" />
-          </button>
-        </div>
-        <div class="sr-dialog-body">
-          <div class="sr-field">
-            <label class="sr-label">加分原因</label>
-            <input
-              v-model="earnForm.reason"
-              type="text"
-              class="sr-input"
-              maxlength="100"
-              placeholder="如：主动做家务一次"
-              data-testid="sr-earn-reason"
-            />
-          </div>
-          <div class="sr-field">
-            <label class="sr-label">积分数</label>
-            <input
-              v-model.number="earnForm.points"
-              type="number"
-              min="1"
-              max="9999"
-              class="sr-input"
-              data-testid="sr-earn-points"
-            />
-          </div>
-          <p class="sr-hint">手动加分允许重复加同一原因，每次都会写入交易记录。</p>
-        </div>
-        <div class="sr-dialog-foot">
-          <button class="sr-btn sr-btn-secondary" @click="closeEarnDialog">取消</button>
-          <button class="sr-btn sr-btn-primary" @click="submitEarn" data-testid="sr-earn-submit">加分</button>
-        </div>
       </div>
     </div>
 
@@ -437,7 +228,7 @@ onMounted(async () => {
               </span>
             </li>
           </ul>
-          <p class="sr-hint">完成习惯/作业/阅读自动加分，每条只加一次（幂等）；同一行为不会重复加分。</p>
+          <p class="sr-hint">完成习惯/作业/阅读自动加分，每条只加一次（幂等）；同一行为不会重复加分。如需新增奖励项或手工加分，请到「家长协同」面板使用。</p>
         </div>
         <div class="sr-dialog-foot">
           <button class="sr-btn sr-btn-primary" @click="showRulesDialog = false">知道了</button>
@@ -576,41 +367,41 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
 }
 .sr-grid-scroll { overflow-y: auto; }
 
 .sr-reward-card {
+  position: relative;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 10px 10px 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 90px;
+  height: 150px;
+  min-height: 150px;
+  overflow: hidden;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: box-shadow 0.15s ease;
+}
+.sr-reward-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .sr-reward-card.sold-out {
   opacity: 0.55;
   background: var(--color-bg, #f9fafb);
+  cursor: default;
 }
 .sr-reward-head {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 6px;
-}
-.sr-reward-name {
-  font-size: 13px;
-  font-weight: 600;
-  word-break: break-all;
-  flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  justify-content: flex-start;
+  align-items: baseline;
+  flex-shrink: 0;
 }
 .sr-reward-cost {
   display: inline-flex;
@@ -620,48 +411,147 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 .sr-reward-cost-num {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
 }
 .sr-reward-cost-unit {
-  font-size: 11px;
+  font-size: 12px;
 }
-.sr-reward-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  margin-top: auto;
+.sr-reward-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 .sr-reward-stock {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-soft, #6b7280);
+  flex-shrink: 0;
 }
 .sr-reward-stock.zero { color: #ef4444; }
 .sr-reward-stock.unlimited { color: #10b981; }
-.sr-reward-ops {
+.sr-reward-foot {
+  margin-top: auto;
   display: flex;
-  gap: 4px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
 }
-.sr-mini-btn {
-  padding: 3px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #1f2937);
-  border-radius: 4px;
-  font-size: 11px;
+.sr-redeem-btn {
+  padding: 4px 12px;
+  border: none;
+  background: #10b981;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
 }
-.sr-mini-btn:hover { background: var(--color-surface-hover, #f3f4f6); }
-.sr-mini-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.sr-mini-btn.danger { color: #ef4444; }
+.sr-redeem-btn:hover { background: #059669; }
+.sr-redeem-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #9ca3af;
+}
 
+/* ===== 奖励工作台一屏布局：中间包装层（grid + Pager 之间的 wrapper）必须 flex 列 ===== */
+/* 参考密码面板 .pwd-main 规则：缺此规则时 .sr-history-grid 的 flex:1 失效、RO 只测到 1 行高 → rowsPerPage=1 */
+.sr-history-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sr-history-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  padding: 4px 2px;
+}
+.sr-history-scroll { overflow-y: auto; }
+
+.sr-txn-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px 10px;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  /* 宽时封顶 150px；窄时自动跟随宽度（正方形 1:1）收窄，不会出现"高 150 但卡窄成细长条" */
+  aspect-ratio: 1 / 1;
+  max-height: 150px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  overflow: hidden;
+}
+.sr-txn-card.redeem {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
+}
+.sr-txn-card.earn {
+  border-color: #a7f3d0;
+  background: linear-gradient(180deg, #fff 0%, #ecfdf5 100%);
+}
+.sr-txn-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sr-txn-card .sr-txn-points {
+  font-weight: 800;
+  font-size: 18px;
+  width: auto;
+  text-align: left;
+}
+.sr-txn-card .sr-txn-points.earn { color: #059669; }
+.sr-txn-card .sr-txn-points.redeem { color: #dc2626; }
+.sr-txn-type-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.8);
+  color: var(--color-text-soft, #6b7280);
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+.sr-txn-card-reason {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #374151);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  flex: 1;
+}
+.sr-txn-card-date {
+  font-size: 11px;
+  color: var(--color-text-soft, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 保留旧类（其他模块无引用），以安全过渡 */
 .sr-history-list {
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
-.sr-history-scroll { overflow-y: auto; }
 .sr-txn-row {
   display: flex;
   align-items: center;
@@ -670,15 +560,6 @@ onMounted(async () => {
   border-bottom: 1px solid var(--color-border, #f3f4f6);
   font-size: 13px;
 }
-.sr-txn-points {
-  font-weight: 700;
-  font-size: 14px;
-  width: 56px;
-  flex-shrink: 0;
-  text-align: right;
-}
-.sr-txn-points.earn { color: #10b981; }
-.sr-txn-points.redeem { color: #ef4444; }
 .sr-txn-reason {
   flex: 1;
   white-space: nowrap;
@@ -764,17 +645,6 @@ onMounted(async () => {
 .sr-input:focus {
   outline: none;
   border-color: #3b82f6;
-}
-.sr-input-stock {
-  margin-top: 6px;
-}
-.sr-checkbox-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--color-text, #1f2937);
-  cursor: pointer;
 }
 .sr-hint {
   font-size: 12px;

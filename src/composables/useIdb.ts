@@ -7,7 +7,7 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, BusinessData, Countdown, DiaryData, HealthData, LedgerData, NoteData, WorkbenchData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessSyncData, Countdown, DiaryData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { emptyBusinessData } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
@@ -267,4 +267,239 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   const hasPrefs = typeof data.prefs === 'object' && data.prefs !== null && Object.keys(data.prefs).length > 0
   if (hasPrefs) applyPrefsToLocalStorage(data.prefs)
   return { adoptedPasswordIdentity, appliedPrefs: hasPrefs }
+}
+
+// ==================== 云同步多文件信封（v10 拆分）====================
+// 5 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json
+// workbench 不含 business（独立走 business.json）；settings 不含 cloudSync* 5 字段（保留本地凭证）
+// icons 走 localStorage；其余 4 份按各自 IDB store 读写
+
+/** 自定义图标 localStorage 键（与 stores/icons.ts STORAGE_KEY 保持一致） */
+export const ICONS_STORAGE_KEY = 'user-custom-icons'
+
+/** settings 中 cloudSync* 5 字段键名（exportWorkbench 删除 / importWorkbenchData 回填用） */
+const CLOUD_SYNC_SETTING_KEYS = [
+  'cloudSyncEnabled',
+  'cloudSyncUrl',
+  'cloudSyncUsername',
+  'cloudSyncPassword',
+  'cloudSyncInterval'
+] as const
+
+/** 从 AppSettingsData 中剥离 cloudSync* 5 字段，返回 WorkbenchSyncData.settings 形状 */
+function stripCloudSyncSettings(settings: AppSettingsData): AppSettingsDataNoCloudSync {
+  const out: Record<string, unknown> = { ...settings }
+  for (const k of CLOUD_SYNC_SETTING_KEYS) delete out[k]
+  return out as unknown as AppSettingsDataNoCloudSync
+}
+
+/** 读取本地 settings 中的 cloudSync* 5 字段（用于 importWorkbenchData 合并回 remote.settings） */
+function pickLocalCloudSyncSettings(local: AppSettingsData | undefined): Partial<AppSettingsData> {
+  if (!local) return {}
+  const picked: Record<string, unknown> = {}
+  for (const k of CLOUD_SYNC_SETTING_KEYS) {
+    picked[k] = local[k as keyof AppSettingsData]
+  }
+  return picked as Partial<AppSettingsData>
+}
+
+// ---------- nav.json（localStorage 偏好打包） ----------
+
+export function exportNav(): NavSyncData {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    prefs: packPrefsFromLocalStorage()
+  }
+}
+
+export function importNavData(remote: NavSyncData): void {
+  applyPrefsToLocalStorage(remote?.prefs)
+}
+
+// ---------- icons.json（localStorage user-custom-icons） ----------
+
+export function exportIcons(): IconsSyncData {
+  let icons: IconsSyncData['icons'] = []
+  try {
+    const raw = localStorage.getItem(ICONS_STORAGE_KEY)
+    icons = raw ? JSON.parse(raw) as IconsSyncData['icons'] : []
+  } catch { icons = [] }
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    icons
+  }
+}
+
+export function importIconsData(remote: IconsSyncData): void {
+  if (!remote || !Array.isArray(remote.icons)) return
+  localStorage.setItem(ICONS_STORAGE_KEY, JSON.stringify(remote.icons))
+}
+
+// ---------- workbench.json（不含 business；settings 不含 cloudSync*） ----------
+
+export async function exportWorkbench(): Promise<WorkbenchSyncData> {
+  const full = await idbExportAll()
+  return {
+    version: 1,
+    exportedAt: full.exportedAt,
+    clientId: full.clientId,
+    pushedAt: full.pushedAt,
+    todos: full.todos,
+    notes: full.notes,
+    diary: full.diary,
+    countdowns: full.countdowns,
+    passwords: full.passwords,
+    health: full.health,
+    ledger: full.ledger,
+    // 剥离 cloudSync* 5 字段：workbench.json 不携带云同步凭证（仅本地保留，避免覆盖其他设备）
+    settings: stripCloudSyncSettings(full.settings),
+    pomodoro: full.pomodoro,
+    habits: full.habits,
+    passwordsSalt: full.passwordsSalt,
+    passwordVerification: full.passwordVerification,
+    prefs: full.prefs
+    // 注意：business 字段独立走 business.json，不在此输出
+  }
+}
+
+export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ adoptedPasswordIdentity: boolean; appliedPrefs: boolean }> {
+  // 1) 读本地 settings（用于把 cloudSync* 5 字段合并回 remote.settings，保留本机凭证）
+  // 2) 读本地 business（idbImportAll 会写 business store，workbench.json 不携带 business 时需保留本地数据）
+  const [localSettings, localBusiness] = await Promise.all([
+    idbGet<AppSettingsData>('settings'),
+    idbGet<BusinessData>('business')
+  ])
+
+  // 合并：remote.settings + 本机 cloudSync* 5 字段
+  const mergedSettings: AppSettingsData = {
+    ...(remote.settings ?? emptyAppSettingsData()),
+    ...pickLocalCloudSyncSettings(localSettings)
+  }
+
+  const workbenchData: WorkbenchData = {
+    version: WORKBENCH_DATA_VERSION,
+    exportedAt: remote.exportedAt,
+    todos: remote.todos ?? [],
+    notes: normalizeNoteData(remote.notes ?? emptyNoteData()),
+    diary: remote.diary ?? emptyDiaryData(),
+    countdowns: remote.countdowns ?? [],
+    passwords: remote.passwords ?? '',
+    health: remote.health ?? emptyHealthData(),
+    ledger: remote.ledger ?? emptyLedgerData(),
+    settings: mergedSettings,
+    pomodoro: remote.pomodoro ?? emptyPomodoroData(),
+    habits: remote.habits ?? emptyHabitsData(),
+    // 保留本地 business（workbench.json 不携带；idbImportAll 会写入此值，等同 no-op）
+    business: localBusiness ?? emptyBusinessData(),
+    passwordsSalt: remote.passwordsSalt,
+    passwordVerification: remote.passwordVerification,
+    prefs: remote.prefs,
+    clientId: remote.clientId,
+    pushedAt: remote.pushedAt
+  }
+
+  return await idbImportAll(workbenchData)
+}
+
+// ---------- business.json（销售记账独立信封） ----------
+
+export async function exportBusiness(): Promise<BusinessSyncData> {
+  const business = await idbGet<BusinessData>('business')
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    business: business ?? emptyBusinessData()
+  }
+}
+
+export async function importBusinessData(remote: BusinessSyncData): Promise<void> {
+  const data = remote?.business ?? emptyBusinessData()
+  await idbPut('business', data)
+}
+
+// ---------- student.json（学生工作台 15 store 单事务写入） ----------
+
+/** student store 名 → StudentSyncData 字段名映射 */
+const STUDENT_STORE_TO_FIELD: Record<string, keyof StudentSyncData> = {
+  student_settings: 'studentSettings',
+  student_habits: 'studentHabits',
+  student_pomodoro: 'studentPomodoro',
+  student_diary: 'studentDiary',
+  student_countdowns: 'studentCountdowns',
+  student_homework: 'homework',
+  student_timetable: 'timetable',
+  student_plans: 'plans',
+  student_review: 'review',
+  student_mistakes: 'mistakes',
+  student_reading: 'reading',
+  student_achievements: 'achievements',
+  student_rewards: 'rewards',
+  student_parent_tasks: 'parentTasks',
+  student_images: 'studentImages'
+}
+
+export async function exportStudent(): Promise<StudentSyncData> {
+  const [
+    studentSettings, studentHabits, studentPomodoro, studentDiary, studentCountdowns,
+    homework, timetable, plans, review, mistakes, reading,
+    achievements, rewards, parentTasks, studentImages
+  ] = await Promise.all([
+    idbGet('student_settings'),
+    idbGet('student_habits'),
+    idbGet('student_pomodoro'),
+    idbGet('student_diary'),
+    idbGet('student_countdowns'),
+    idbGet('student_homework'),
+    idbGet('student_timetable'),
+    idbGet('student_plans'),
+    idbGet('student_review'),
+    idbGet('student_mistakes'),
+    idbGet('student_reading'),
+    idbGet('student_achievements'),
+    idbGet('student_rewards'),
+    idbGet('student_parent_tasks'),
+    idbGet('student_images')
+  ])
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    studentSettings,
+    studentHabits,
+    studentPomodoro,
+    studentDiary,
+    studentCountdowns,
+    homework,
+    timetable,
+    plans,
+    review,
+    mistakes,
+    reading,
+    achievements,
+    rewards,
+    parentTasks,
+    studentImages
+  }
+}
+
+export async function importStudentData(remote: StudentSyncData): Promise<void> {
+  if (!remote) return
+  const db = await openIdb()
+  const remoteFields = remote as unknown as Record<string, unknown>
+  // 单事务覆盖 15 个学生 store：仅写 remote 中存在的字段，缺失字段不写入（不 put undefined）
+  const tx = db.transaction([...IDB_STUDENT_STORES], 'readwrite')
+  for (const storeName of [...IDB_STUDENT_STORES]) {
+    const fieldName = STUDENT_STORE_TO_FIELD[storeName]
+    if (!fieldName) continue
+    if (!(fieldName in remoteFields)) continue
+    const store = tx.objectStore(storeName)
+    store.clear()
+    store.put(remoteFields[fieldName], IDB_KEY)
+  }
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+    tx.onabort = () => reject(tx.error)
+  })
 }

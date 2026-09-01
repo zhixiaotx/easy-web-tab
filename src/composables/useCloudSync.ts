@@ -1,5 +1,12 @@
 /**
- * 云同步 composable（WebDAV + v9 同步信封）
+ * 云同步 composable（WebDAV + v10 多文件同步信封）
+ *
+ * 5 份独立信封：nav.json / icons.json / workbench.json / business.json / student.json
+ *   - nav.json：localStorage 偏好打包（user-sites/categories/engines/theme/countdown-* 等）
+ *   - icons.json：自定义图标（localStorage user-custom-icons）
+ *   - workbench.json：工作台核心 9 store（不含 business；settings 不含 cloudSync* 5 字段）
+ *   - business.json：销售记账独立信封
+ *   - student.json：学生工作台 15 store 独立信封
  *
  * 单例设计：模块级 ref 持有全局状态（参考 useCountdownReminder / useToast 的单例模式）
  * 触发器：
@@ -8,7 +15,11 @@
  *   - 设置弹窗「立即同步」按钮
  *   - localStorage dirty 标记（各 store 的 save* 后 markDirty()）
  *
- * 冲突判定：本地 dirty=true 且 远端 pushedAt > lastSyncAt
+ * 冲突判定：本地 dirty=true 且 远端 pushedAt > lastSyncAt（逐文件独立判定，累积到 conflictData Record）
+ * 冲突解决：3 选 1（全部云端覆盖 / 全部本地覆盖 / 全部合并）
+ *
+ * 首次迁移：5 份都 404 但 backup.json 存在 → 读 backup.json → idbImportAll 落本地 →
+ *           export 5 份 → 上传 → DELETE backup.json
  *
  * CORS 兼容：WebDAV 原生自定义方法（MKCOL）+ Authorization 会触发浏览器预检（OPTIONS），
  * 坚果云/Nextcloud 默认不回 Access-Control-Allow-Origin。
@@ -16,12 +27,37 @@
  * 由服务端带凭证直接代发 HTTP → 天然无 CORS。
  */
 import { ref, shallowRef } from 'vue'
-import { idbExportAll, idbImportAll } from './useIdb'
+import {
+  idbImportAll,
+  exportWorkbench,
+  importWorkbenchData,
+  exportBusiness,
+  importBusinessData,
+  exportStudent,
+  importStudentData,
+  exportNav,
+  importNavData,
+  exportIcons,
+  importIconsData
+} from './useIdb'
 import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
-import { WORKBENCH_DATA_VERSION } from '../types'
-import type { WorkbenchData, WorkbenchTodo, NoteData, DiaryData, Countdown, HealthData, LedgerData, BusinessData, AppSettingsData } from '../types'
+import type {
+  BusinessData,
+  BusinessSyncData,
+  Countdown,
+  DiaryData,
+  HealthData,
+  IconsSyncData,
+  LedgerData,
+  NavSyncData,
+  NoteData,
+  StudentSyncData,
+  WorkbenchData,
+  WorkbenchSyncData,
+  WorkbenchTodo
+} from '../types'
 import type { PomodoroData } from './pomodoroCore'
 import type { HabitsData } from './habitCore'
 
@@ -29,16 +65,33 @@ const CLIENT_ID_KEY = 'easy-web-tab-client-id'
 const LAST_SYNC_KEY = 'easy-web-tab-last-sync'
 const DIRTY_KEY = 'easy-web-tab-dirty'
 const PROXY_PATH = '/api/webdav-proxy'
-const BACKUP_FILE = 'backup.json'
 const DATA_DIR = 'easy-web-tab'
+/** 5 份多文件信封（顺序：nav → icons → workbench → business → student），见下方 FILE_CONFIGS */
+/** 仅用于首次迁移检测（v9 单文件 backup.json） */
+const LEGACY_BACKUP_FILE = 'backup.json'
 
 export type SyncStatus = 'idle' | 'pushing' | 'pulling' | 'conflict' | 'error'
+
+interface ConflictEntry {
+  local: unknown
+  remote: unknown
+}
+
+interface FileConfig {
+  name: string
+  exportLocal: () => Promise<unknown> | unknown
+  importRemote: (data: unknown) => Promise<unknown>
+  signature: (data: unknown) => string
+  merge: (local: unknown, remote: unknown) => unknown
+  reload: () => Promise<void>
+  diffSize: (local: unknown, remote: unknown) => number
+}
 
 // 单例状态（模块级引用，composable 返回同一引用）
 const status = ref<SyncStatus>('idle')
 const lastSyncAt = ref<number | null>(null)
 const errorMessage = ref<string>('')
-const conflictData = shallowRef<{ local: WorkbenchData; remote: WorkbenchData } | null>(null)
+const conflictData = shallowRef<Record<string, ConflictEntry> | null>(null)
 
 // ========== 基础工具 ==========
 
@@ -84,7 +137,7 @@ function btoaSafe(s: string): string {
 
 // ========== WebDAV 通过同源代理请求（彻底避免 CORS）==========
 
-type DavMethod = 'GET' | 'PUT' | 'MKCOL'
+type DavMethod = 'GET' | 'PUT' | 'MKCOL' | 'DELETE'
 
 interface ProxyRequest {
   target: string
@@ -98,10 +151,6 @@ interface ProxyRequest {
  *   body.target = 完整目标 URL（含协议+host+path）
  *   Authorization 头用 X-Webdav-Auth 带基础凭证（避免预检）
  *   body.body = PUT 的 JSON 字符串（仅 PUT）
- *
- * 返回的 Response 还挂有 `diagnostics` 字段（非 2xx 时有用）：
- *   - upstreamStatus：代理端返回的 X-Upstream-Status
- *   - snippet：代理端返回的 X-Upstream-Body-Snippet（坚果云真实错误正文）
  */
 async function proxyDav(targetUrl: string, method: DavMethod, username: string, password: string, body?: string): Promise<Response> {
   const payload: ProxyRequest = { target: targetUrl, method }
@@ -136,10 +185,6 @@ function davErrorLabel(method: string, upstreamStatus: string | null, snippet: s
   const st = upstreamStatus || String(fallbackStatus)
   const detail = snippet || textBody
   if (st === '401') {
-    // 坚果云 401 常见 3 种原因：
-    //  1) 填了登录密码而不是"应用密码"；
-    //  2) 用户名/邮箱大小写不对；
-    //  3) 账号含中文但旧版 btoa 编码错误（已修）。
     const base = `WebDAV ${method} ${st}：用户名或应用密码错误。`
     const tips = [
       '坚果云请使用"账户→安全选项→添加应用"生成的专用「应用密码」（不是登录密码）',
@@ -178,32 +223,47 @@ function stableStringify(obj: unknown): string {
   return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify((obj as Record<string, unknown>)[k])).join(',') + '}'
 }
 
-/**
- * 提取业务数据签名：剔除 exportedAt/pushedAt/clientId 等不稳定元数据字段后，
- * 走 stableStringify（递归排序 key）→ 语义相同的数据必产出相同字符串。
- * 解决：每次 idbExportAll() 的 exportedAt 时间戳不同、不同设备 clientId 不同、
- * JSON key 顺序不同 → hash 永远不等 → 误判冲突。
- */
-function businessSignature(data: WorkbenchData): string {
+/** 各信封通用签名：剔除 exportedAt/pushedAt/clientId 三个不稳定元数据字段后 stableStringify */
+function envelopeSignature(data: Record<string, unknown>): string {
   const copy: Record<string, unknown> = { ...data }
   delete copy.exportedAt
   delete copy.pushedAt
   delete copy.clientId
-  // prefs 包含设备级 localStorage 快照（如 user-todo-tab-categories 等可能不同步存在的 key），
-  // 不同设备间 prefs 内容天然可能不同 → 哈希永不等 → 误判冲突。
-  // prefs 的同步由 idbImportAll/applyPrefsToLocalStorage 负责，不参与内容哈希比较。
+  return stableStringify(copy)
+}
+
+/** workbench.json 额外剔除 prefs（设备级 localStorage 快照，不同设备天然不同，避免误判冲突） */
+function workbenchSignature(data: WorkbenchSyncData): string {
+  const copy: Record<string, unknown> = { ...(data as unknown as Record<string, unknown>) }
+  delete copy.exportedAt
+  delete copy.pushedAt
+  delete copy.clientId
   delete copy.prefs
   return stableStringify(copy)
 }
 
+function sigNav(data: NavSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigIcons(data: IconsSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigBusiness(data: BusinessSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+function sigStudent(data: StudentSyncData): string { return envelopeSignature(data as unknown as Record<string, unknown>) }
+
 /**
- * 计算本地与远程各模块的数据差异总量（Σ|local_len - remote_len|）。
+ * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
  * 差异总量 < DIFF_THRESHOLD → 视为微小差异，静默合并不弹框。
  */
 const MODULE_DIFF_THRESHOLD = 500
 
-function moduleDiffSize(local: WorkbenchData, remote: WorkbenchData): number {
-  const keys: Array<keyof WorkbenchData> = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'business', 'settings', 'pomodoro', 'habits']
+function totalDiffSize(local: unknown, remote: unknown): number {
+  try {
+    const l = local !== undefined && local !== null ? stableStringify(local).length : 0
+    const r = remote !== undefined && remote !== null ? stableStringify(remote).length : 0
+    return Math.abs(l - r)
+  } catch { return 0 }
+}
+
+/** workbench 字段级差异量（保留原 moduleDiffSize 行为，移除 business 字段） */
+function workbenchDiffSize(local: WorkbenchSyncData, remote: WorkbenchSyncData): number {
+  const keys: Array<keyof WorkbenchSyncData> = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'pomodoro', 'habits', 'prefs']
   let total = 0
   for (const k of keys) {
     const lv = local[k]
@@ -219,7 +279,7 @@ function moduleDiffSize(local: WorkbenchData, remote: WorkbenchData): number {
 
 // 注：密码在 IndexedDB 中是"整库用一个主密码加密"的单个密文串（savePasswords 里
 // encrypt(JSON.stringify(passwords)) 后整体 idbPut），并非逐条加密，密文层面无法条目级合并。
-// 同步策略（用户明确要求）：**密码永远云端覆盖本地** —— 由 mergeData 单向取云端实现，
+// 同步策略（用户明确要求）：**密码永远云端覆盖本地** —— 由 mergeWorkbench 单向取云端实现，
 // 拉取 / 静默合并 / 冲突解决选择云端这三条路径因此对密码行为一致，无需在此额外判定。
 
 async function sha1Hash(text: string): Promise<string> {
@@ -247,7 +307,7 @@ async function sha1Hash(text: string): Promise<string> {
 }
 
 interface WebdavGetResult {
-  data: WorkbenchData | null
+  data: unknown | null
   /** 响应头 Last-Modified 解析成的 ms（解析失败 = 0） */
   lastModifiedMs: number
   /** 原始 JSON 字符串（供 hash 比对，避免重复 fetch） */
@@ -269,7 +329,7 @@ async function webdavGet(url: string, username: string, password: string): Promi
     if (!Number.isNaN(t)) lastModifiedMs = t
   }
   if (!text) return { data: null, lastModifiedMs, rawText: '' }
-  return { data: JSON.parse(text) as WorkbenchData, lastModifiedMs, rawText: text }
+  return { data: JSON.parse(text), lastModifiedMs, rawText: text }
 }
 
 async function webdavPut(url: string, username: string, password: string, body: string): Promise<void> {
@@ -278,6 +338,14 @@ async function webdavPut(url: string, username: string, password: string, body: 
     const diag = await readDavDiagnostics(res)
     throw new Error(davErrorLabel('PUT', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
   }
+}
+
+async function webdavDelete(url: string, username: string, password: string): Promise<void> {
+  const res = await proxyDav(url, 'DELETE', username, password)
+  // 404 视作成功（文件本就不存在）
+  if (res.ok || res.status === 404) return
+  const diag = await readDavDiagnostics(res)
+  throw new Error(davErrorLabel('DELETE', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
 }
 
 /** 创建目录（MKCOL）；代理返回 2xx/405 视作成功 */
@@ -293,7 +361,7 @@ function dirUrl(base: string): string {
   return clean.endsWith(`/${DATA_DIR}`) ? clean : `${clean}/${DATA_DIR}`
 }
 
-/** 探测连接 + 确保 easy-web-tab 目录存在 */
+/** 探测连接 + 确保 easy-web-tab 目录存在（v10 改为只 MKCOL 探目录，不再 GET backup.json） */
 export async function testConnection(
   url: string,
   username: string,
@@ -303,16 +371,6 @@ export async function testConnection(
   try {
     const dir = dirUrl(url)
     await webdavMkcol(dir, username, password)
-    // 探测 GET（404 正常，因为第一次可能无文件）
-    try {
-      const probe = await webdavGet(`${dir}/${BACKUP_FILE}`, username, password)
-      // 404 已经在 webdavGet 内部返回 data=null，data===null 即等价 404；
-      // 其余 status code（比如 401/403）在 webdavGet 里已经 throw
-      void probe
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : ''
-      if (!msg.includes('404')) throw e
-    }
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : '连接失败'
@@ -321,96 +379,6 @@ export async function testConnection(
       : msg
     return { ok: false, error: hint }
   }
-}
-
-// ========== 导入后各 store reload ==========
-
-async function reloadAllStores(): Promise<void> {
-  // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchBusinessStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useAppSettingsStore }] = await Promise.all([
-    import('../stores/workbenchTodos'),
-    import('../stores/workbenchNotes'),
-    import('../stores/workbenchDiary'),
-    import('../stores/countdowns'),
-    import('../stores/workbenchHealth'),
-    import('../stores/workbenchLedger'),
-    import('../stores/workbenchBusiness'),
-    import('../stores/workbenchPomodoro'),
-    import('../stores/workbenchHabits'),
-    import('../stores/settings')
-  ])
-  await Promise.all([
-    useWorkbenchTodosStore().loadTodos(),
-    useWorkbenchNotesStore().loadNotes(),
-    useWorkbenchDiaryStore().loadDiary(),
-    useCountdownsStore().loadCountdowns(),
-    useWorkbenchHealthStore().loadHealth(),
-    useWorkbenchLedgerStore().loadLedger(),
-    useWorkbenchBusinessStore().loadBusiness(),
-    useWorkbenchPomodoroStore().loadPomodoro(),
-    useWorkbenchHabitsStore().loadHabits(),
-    useAppSettingsStore().initSettings()
-  ])
-}
-
-// ========== 核心同步流程 ==========
-
-async function pushNow(silent = false): Promise<boolean> {
-  const settings = useAppSettingsStore()
-  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
-    return false
-  }
-  status.value = 'pushing'
-  errorMessage.value = ''
-  try {
-    const data = await idbExportAll()
-    data.clientId = getClientId()
-    data.pushedAt = Date.now()
-    const dir = dirUrl(settings.cloudSyncUrl!)
-    try {
-      await webdavMkcol(dir, settings.cloudSyncUsername!, settings.cloudSyncPassword!)
-    } catch {
-      // 目录已存在或 MKCOL 失败（后续 PUT 会直接抛错），这里不中断
-    }
-    await webdavPut(`${dir}/${BACKUP_FILE}`, settings.cloudSyncUsername!, settings.cloudSyncPassword!, JSON.stringify(data))
-    const now = data.pushedAt
-    localStorage.setItem(LAST_SYNC_KEY, String(now))
-    lastSyncAt.value = now
-    clearDirty()
-    status.value = 'idle'
-    if (!silent) useToast().success('云同步推送成功')
-    return true
-  } catch (e) {
-    status.value = 'error'
-    errorMessage.value = e instanceof Error ? e.message : '推送失败'
-    if (!silent) useToast().error(`云同步推送失败：${errorMessage.value}`)
-    return false
-  }
-}
-
-async function applyRemote(remote: WorkbenchData, silent = false): Promise<void> {
-  // 在 idbImportAll 覆盖前，先保存本地已有的密码身份
-  const localSaltBefore = getStoredSaltHex()
-  const localVerificationBefore = getStoredVerification()
-  const result = await idbImportAll(remote)
-  localStorage.setItem(LAST_SYNC_KEY, String(remote.pushedAt ?? Date.now()))
-  lastSyncAt.value = remote.pushedAt ?? Date.now()
-  // 判断密码身份是否真的变了：远端 salt/verification 与本地已有不同才算"新身份"
-  // 同设备推后拉、或远端密码身份未变时 → 不提示"已锁定"，避免频繁打扰
-  const identityChanged = result.adoptedPasswordIdentity
-    && (remote.passwordsSalt !== localSaltBefore || remote.passwordVerification !== localVerificationBefore)
-  if (identityChanged) {
-    // 例外：密码身份变更会锁定面板，必须告知原因，否则用户看到锁屏却不知为何。
-    // 此提示不受 silent 约束（它不是"同步成功"的例行播报，而是状态变更的解释）。
-    useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
-  } else if (!silent) {
-    useToast().success('云同步完成')
-  }
-  status.value = 'idle'
-  await reloadAllStores()
-  // clearDirty 必须在 reloadAllStores 之后：部分 store 的 load 方法会触发 save（如记账自动复制计划），
-  // 若在 reload 之前清 dirty，reload 中的 markDirty 会重新置位 → 下次 pullNow 误判冲突。
-  clearDirty()
 }
 
 // ========== 字段级合并辅助函数 ==========
@@ -478,7 +446,7 @@ function dedupeByDateKeepNewest<T extends { date: string; updatedAt?: string; cr
   return [...map.values()]
 }
 
-// ========== 模块级合并函数 ==========
+// ========== 模块级合并函数（workbench.json 复用） ==========
 
 function mergeTodos(l: WorkbenchTodo[], r: WorkbenchTodo[]): WorkbenchTodo[] {
   return mergeById(l ?? [], r ?? [], 'id', 'updatedAt')
@@ -567,10 +535,6 @@ function mergePomodoro(l: PomodoroData | undefined, r: PomodoroData | undefined)
     settings: l?.settings ?? r?.settings ?? { workMinutes: 25, breakMinutes: 5, longBreakMinutes: 15, sessionsPerCycle: 4 },
     records: mergeByDateWithMax(l?.records ?? [], r?.records ?? [])
   }
-}
-
-function mergeSettings(l: AppSettingsData, _r: AppSettingsData): AppSettingsData {
-  return l // 整体保留本地（包含云同步凭证）
 }
 
 /** 逐 key 合并 prefs（值均为 JSON 字符串）；单个 key 损坏不中断整体合并。 */
@@ -663,61 +627,639 @@ function mergePrefs(l: Record<string, string> | undefined, r: Record<string, str
   return out
 }
 
+// ========== 各信封合并入口 ==========
+
+/** nav.json：复用 mergePrefs（与 workbench.json 的 prefs 同一逻辑） */
+function mergeNav(local: NavSyncData, remote: NavSyncData): NavSyncData {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clientId: getClientId(),
+    prefs: mergePrefs(local.prefs, remote.prefs)
+  }
+}
+
+/** icons.json：按 id 去重，同 id 取 createdAt 较新者 */
+function mergeIcons(local: IconsSyncData, remote: IconsSyncData): IconsSyncData {
+  const map = new Map<string, IconsSyncData['icons'][number]>()
+  for (const icon of [...(local.icons ?? []), ...(remote.icons ?? [])]) {
+    const existing = map.get(icon.id)
+    if (!existing) {
+      map.set(icon.id, icon)
+    } else if ((icon.createdAt ?? '') > (existing.createdAt ?? '')) {
+      map.set(icon.id, icon)
+    }
+  }
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clientId: getClientId(),
+    icons: [...map.values()]
+  }
+}
+
 /**
- * 顶层合并入口：调用各模块合并函数组装结果，修正元数据字段。
+ * workbench.json 合并入口：调用各模块合并函数组装结果，修正元数据字段。
  * 纯函数——不触碰 IDB / localStorage。
  * 例外（不并集、单向覆盖）：密码 + 密码身份整体取云端；settings 整体取本地。
+ * 注意：与旧 mergeData 区别——不含 business（独立走 business.json），settings 为 AppSettingsDataNoCloudSync。
  */
-function mergeData(local: WorkbenchData, remote: WorkbenchData): WorkbenchData {
+function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): WorkbenchSyncData {
   return {
-    version: WORKBENCH_DATA_VERSION,
+    version: 1,
     exportedAt: new Date().toISOString(),
+    clientId: getClientId(),
     todos: mergeTodos(local.todos, remote.todos),
     notes: mergeNotes(local.notes, remote.notes),
     diary: mergeDiary(local.diary, remote.diary),
     countdowns: mergeCountdowns(local.countdowns, remote.countdowns),
-    // 密码整体取云端（永不拆分、永不并集）：
-    // 1. 密码是"整库用一个主密码加密成的单个密文串"，密文层面无法按条目合并；
-    // 2. 用户明确要求"密码同步永远云端覆盖本地"——任何以本地为准的合并都会让
-    //    另一台设备的更新无声消失，属于数据丢失；
-    // 3. 密文必须与其加密身份（salt/verification）同源，否则换了密文留着旧盐
-    //    → 本地主密码解不开 → 不可恢复。故三者必须一起取云端。
-    // remote 缺省时回退本地，避免旧备份文件（无 passwords 字段）清空本地密码库。
+    // 密码整体取云端（永不拆分、永不并集），原因详见注释
     passwords: remote.passwords ?? local.passwords,
     passwordsSalt: remote.passwordsSalt ?? local.passwordsSalt,
     passwordVerification: remote.passwordVerification ?? local.passwordVerification,
     health: mergeHealth(local.health, remote.health),
     ledger: mergeLedger(local.ledger, remote.ledger),
-    settings: mergeSettings(local.settings, remote.settings),
+    // settings 整体保留本地（本地 settings 不含 cloudSync* 5 字段，由 importWorkbenchData 合并本机凭证）
+    settings: local.settings,
     pomodoro: mergePomodoro(local.pomodoro as PomodoroData | undefined, remote.pomodoro as PomodoroData | undefined),
     habits: mergeHabits(local.habits as HabitsData | undefined, remote.habits as HabitsData | undefined),
-    business: mergeBusiness(local.business, remote.business),
-    prefs: mergePrefs(local.prefs, remote.prefs),
-    clientId: getClientId()
+    prefs: mergePrefs(local.prefs, remote.prefs)
     // pushedAt 不设——由后续 pushNow 写入
   }
 }
 
-export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 'merge'): Promise<void> {
-  if (!conflictData.value) return
-  const { local, remote } = conflictData.value
-  if (decision === 'remote') {
-    conflictData.value = null
-    await applyRemote(remote)
+/** business.json：复用 mergeBusiness，包装信封 */
+function mergeBusinessEnvelope(local: BusinessSyncData, remote: BusinessSyncData): BusinessSyncData {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clientId: getClientId(),
+    business: mergeBusiness(local.business, remote.business)
+  }
+}
+
+/**
+ * student.json 合并：递归合并对象/数组。
+ * 数组走 mergeById（按 id，同 id 取 updatedAt 较新者，缺失则取 createdAt）；
+ * 对象逐字段递归合并；单值取云端（无时戳可比较）。
+ */
+function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentSyncData {
+  const out: StudentSyncData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clientId: getClientId()
+  }
+  const FIELD_KEYS: Array<keyof StudentSyncData> = [
+    'studentSettings', 'studentHabits', 'studentPomodoro', 'studentDiary', 'studentCountdowns',
+    'homework', 'timetable', 'plans', 'review', 'mistakes', 'reading',
+    'achievements', 'rewards', 'parentTasks', 'studentImages'
+  ]
+  for (const key of FIELD_KEYS) {
+    const lv = local[key]
+    const rv = remote[key]
+    if (lv === undefined && rv === undefined) continue
+    ;(out as unknown as Record<string, unknown>)[key] = mergeStudentValue(lv, rv)
+  }
+  return out
+}
+
+function mergeStudentValue(lv: unknown, rv: unknown): unknown {
+  // 都是数组 → mergeById
+  if (Array.isArray(lv) && Array.isArray(rv)) {
+    return mergeById(
+      lv as Array<{ id: string; updatedAt?: string; createdAt?: string }>,
+      rv as Array<{ id: string; updatedAt?: string; createdAt?: string }>,
+      'id', 'updatedAt'
+    )
+  }
+  // 都是对象（非数组）→ 逐字段递归合并
+  if (lv && typeof lv === 'object' && rv && typeof rv === 'object' && !Array.isArray(lv) && !Array.isArray(rv)) {
+    const lo = lv as Record<string, unknown>
+    const ro = rv as Record<string, unknown>
+    const out: Record<string, unknown> = {}
+    const allKeys = new Set([...Object.keys(lo), ...Object.keys(ro)])
+    for (const k of allKeys) {
+      out[k] = mergeStudentValue(lo[k], ro[k])
+    }
+    return out
+  }
+  // 单值（string/number/boolean/null/undefined）→ 取云端
+  return rv ?? lv
+}
+
+// ========== 导入后各 store reload ==========
+
+async function reloadWorkbenchStores(): Promise<void> {
+  // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useAppSettingsStore }] = await Promise.all([
+    import('../stores/workbenchTodos'),
+    import('../stores/workbenchNotes'),
+    import('../stores/workbenchDiary'),
+    import('../stores/countdowns'),
+    import('../stores/workbenchHealth'),
+    import('../stores/workbenchLedger'),
+    import('../stores/workbenchPomodoro'),
+    import('../stores/workbenchHabits'),
+    import('../stores/settings')
+  ])
+  await Promise.all([
+    useWorkbenchTodosStore().loadTodos(),
+    useWorkbenchNotesStore().loadNotes(),
+    useWorkbenchDiaryStore().loadDiary(),
+    useCountdownsStore().loadCountdowns(),
+    useWorkbenchHealthStore().loadHealth(),
+    useWorkbenchLedgerStore().loadLedger(),
+    useWorkbenchPomodoroStore().loadPomodoro(),
+    useWorkbenchHabitsStore().loadHabits(),
+    useAppSettingsStore().initSettings()
+  ])
+}
+
+async function reloadBusinessStore(): Promise<void> {
+  const [{ useWorkbenchBusinessStore }] = await Promise.all([import('../stores/workbenchBusiness')])
+  await useWorkbenchBusinessStore().loadBusiness()
+}
+
+async function reloadStudentStores(): Promise<void> {
+  // 学生 13 store 全量 reload（数据被云端覆盖后刷新 Vue 状态）
+  // 注：student_diary 数据无独立 Pinia store，直接读 IDB；同步后组件下次访问自动刷新
+  const [
+    { useStudentSettingsStore }, { useStudentHabitsStore }, { useStudentPomodoroStore },
+    { useStudentExamStore }, { useStudentHomeworkStore },
+    { useStudentTimetableStore }, { useStudentPlanStore }, { useStudentReviewStore },
+    { useStudentMistakesStore }, { useStudentReadingStore }, { useStudentAchievementsStore },
+    { useStudentRewardsStore }, { useStudentParentTasksStore }
+  ] = await Promise.all([
+    import('../stores/studentSettings'),
+    import('../stores/studentHabits'),
+    import('../stores/studentPomodoro'),
+    import('../stores/studentExam'),
+    import('../stores/studentHomework'),
+    import('../stores/studentTimetable'),
+    import('../stores/studentPlan'),
+    import('../stores/studentReview'),
+    import('../stores/studentMistakes'),
+    import('../stores/studentReading'),
+    import('../stores/studentAchievements'),
+    import('../stores/studentRewards'),
+    import('../stores/studentParentTasks')
+  ])
+  await Promise.all([
+    useStudentSettingsStore().loadSettings(),
+    useStudentHabitsStore().loadHabits(),
+    useStudentPomodoroStore().loadPomodoro(),
+    useStudentExamStore().loadExams(),
+    useStudentHomeworkStore().loadHomework(),
+    useStudentTimetableStore().loadTimetable(),
+    useStudentPlanStore().loadPlans(),
+    useStudentReviewStore().loadReview(),
+    useStudentMistakesStore().loadMistakes(),
+    useStudentReadingStore().loadReading(),
+    useStudentAchievementsStore().loadAchievements(),
+    useStudentRewardsStore().loadRewards(),
+    useStudentParentTasksStore().loadTasks()
+  ])
+}
+
+async function reloadNavStores(): Promise<void> {
+  // Nav prefs 写入 localStorage 后刷新消费 store（loadSites 内部会 loadGames；
+  // categories/engines/theme 等无 reload 方法的 store 由页面刷新或下次渲染自然刷新）
+  try {
+    const [{ useSitesStore }] = await Promise.all([import('../stores/sites')])
+    await useSitesStore().loadSites()
+  } catch {
+    // store 未就绪（如首次同步早于组件树挂载）→ 静默跳过，下次访问会从 localStorage 自然读取
+  }
+}
+
+async function reloadIconsStores(): Promise<void> {
+  try {
+    const { useIconsStore } = await import('../stores/icons')
+    useIconsStore().reloadCustomIcons()
+  } catch {
+    // 同上：store 未就绪时静默跳过
+  }
+}
+
+async function reloadAllStores(): Promise<void> {
+  await Promise.all([
+    reloadWorkbenchStores(),
+    reloadBusinessStore(),
+    reloadStudentStores(),
+    reloadNavStores(),
+    reloadIconsStores()
+  ])
+}
+
+// ========== 文件配置表 ==========
+
+const FILE_CONFIGS: FileConfig[] = [
+  {
+    name: 'nav.json',
+    exportLocal: () => exportNav(),
+    importRemote: async (data) => { importNavData(data as NavSyncData); return undefined },
+    signature: (data) => sigNav(data as NavSyncData),
+    merge: (l, r) => mergeNav(l as NavSyncData, r as NavSyncData),
+    reload: reloadNavStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    name: 'icons.json',
+    exportLocal: () => exportIcons(),
+    importRemote: async (data) => { importIconsData(data as IconsSyncData); return undefined },
+    signature: (data) => sigIcons(data as IconsSyncData),
+    merge: (l, r) => mergeIcons(l as IconsSyncData, r as IconsSyncData),
+    reload: reloadIconsStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    name: 'workbench.json',
+    exportLocal: () => exportWorkbench(),
+    importRemote: (data) => importWorkbenchData(data as WorkbenchSyncData),
+    signature: (data) => workbenchSignature(data as WorkbenchSyncData),
+    merge: (l, r) => mergeWorkbench(l as WorkbenchSyncData, r as WorkbenchSyncData),
+    reload: reloadWorkbenchStores,
+    diffSize: (l, r) => workbenchDiffSize(l as WorkbenchSyncData, r as WorkbenchSyncData)
+  },
+  {
+    name: 'business.json',
+    exportLocal: () => exportBusiness(),
+    importRemote: async (data) => { await importBusinessData(data as BusinessSyncData); return undefined },
+    signature: (data) => sigBusiness(data as BusinessSyncData),
+    merge: (l, r) => mergeBusinessEnvelope(l as BusinessSyncData, r as BusinessSyncData),
+    reload: reloadBusinessStore,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  },
+  {
+    name: 'student.json',
+    exportLocal: () => exportStudent(),
+    importRemote: async (data) => { await importStudentData(data as StudentSyncData); return undefined },
+    signature: (data) => sigStudent(data as StudentSyncData),
+    merge: (l, r) => mergeStudent(l as StudentSyncData, r as StudentSyncData),
+    reload: reloadStudentStores,
+    diffSize: (l, r) => totalDiffSize(l, r)
+  }
+]
+
+// ========== 首次迁移：v9 单文件 backup.json → v10 多文件 ==========
+
+/**
+ * 首次迁移流程：
+ * 1. 已读 backup.json（WorkbenchData）传入
+ * 2. idbImportAll 落本地 IDB（含密码身份接管）
+ * 3. 调用 5 个 export 函数从本地拆出 5 份信封
+ * 4. 为每份信封设置 clientId + pushedAt
+ * 5. PUT 5 份到 cloud
+ * 6. DELETE cloud 上的 backup.json
+ * 7. 更新 lastSyncAt + clearDirty + reloadAllStores
+ */
+async function migrateFromLegacyBackup(
+  legacyBackup: WorkbenchData,
+  dir: string,
+  username: string,
+  password: string,
+  silent: boolean
+): Promise<void> {
+  // 1) 先记录本地密码身份（用于检测是否变更）
+  const localSaltBefore = getStoredSaltHex()
+  const localVerificationBefore = getStoredVerification()
+  // 2) 落本地 IDB（idbImportAll 会接管密码身份）
+  const importResult = await idbImportAll(legacyBackup)
+  // 3) 5 个 export 函数从本地拆出 5 份信封
+  const clientId = getClientId()
+  const pushedAt = Date.now()
+  const [nav, icons, workbench, business, student] = await Promise.all([
+    exportNav(),
+    exportIcons(),
+    exportWorkbench(),
+    exportBusiness(),
+    exportStudent()
+  ])
+  // 4) 设置 clientId + pushedAt
+  const envelopes: Array<{ name: string; data: unknown }> = [
+    { name: 'nav.json', data: { ...(nav as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'icons.json', data: { ...(icons as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'workbench.json', data: { ...(workbench as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'business.json', data: { ...(business as unknown as Record<string, unknown>), clientId, pushedAt } },
+    { name: 'student.json', data: { ...(student as unknown as Record<string, unknown>), clientId, pushedAt } }
+  ]
+  // 5) PUT 5 份到 cloud（任一失败标记 error 不中断后续）
+  let pushError: string | null = null
+  for (const env of envelopes) {
+    try {
+      await webdavPut(`${dir}/${env.name}`, username, password, JSON.stringify(env.data))
+    } catch (e) {
+      if (!pushError) pushError = e instanceof Error ? e.message : '推送失败'
+    }
+  }
+  // 6) DELETE backup.json（即使 5 份中有失败，仍尝试删除 legacy 文件，避免下次再次走迁移）
+  try {
+    await webdavDelete(`${dir}/${LEGACY_BACKUP_FILE}`, username, password)
+  } catch {
+    // 删除失败不阻塞：下次 pullNow 会检测到 5 份已存在，跳过迁移分支
+  }
+  // 7) 更新 lastSyncAt + clearDirty + reload
+  localStorage.setItem(LAST_SYNC_KEY, String(pushedAt))
+  lastSyncAt.value = pushedAt
+  clearDirty()
+  status.value = pushError ? 'error' : 'idle'
+  if (pushError) {
+    errorMessage.value = pushError
+    if (!silent) useToast().error(`云同步首次迁移部分失败：${pushError}`)
+  } else {
+    errorMessage.value = ''
+    const identityChanged = importResult.adoptedPasswordIdentity
+      && (legacyBackup.passwordsSalt !== localSaltBefore || legacyBackup.passwordVerification !== localVerificationBefore)
+    if (identityChanged) {
+      useToast().success('云同步首次迁移完成，密码面板已锁定，请输入来源设备主密码解锁')
+    } else if (!silent) {
+      useToast().success('云同步首次迁移完成')
+    }
+  }
+  await reloadAllStores()
+  // clearDirty 必须在 reloadAllStores 之后：部分 store 的 load 方法会触发 save
+  clearDirty()
+}
+
+// ========== 核心同步流程 ==========
+
+/**
+ * 推送本地到云端：串行 5 export → 5 PUT，任一失败标记 error 不中断后续。
+ * silent=true 用于后台自动同步：不弹任何 toast。
+ */
+async function pushNow(silent = false): Promise<boolean> {
+  const settings = useAppSettingsStore()
+  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
+    return false
+  }
+  status.value = 'pushing'
+  errorMessage.value = ''
+  const dir = dirUrl(settings.cloudSyncUrl!)
+  const username = settings.cloudSyncUsername!
+  const password = settings.cloudSyncPassword!
+  try {
+    // 确保 easy-web-tab 目录存在（MKCOL 失败不中断，PUT 会再次抛错）
+    try {
+      await webdavMkcol(dir, username, password)
+    } catch {
+      // 目录已存在或 MKCOL 失败，后续 PUT 直接尝试
+    }
+    // 串行 export → PUT 5 份；任一失败累积到 errors 但不中断后续
+    const clientId = getClientId()
+    const pushedAt = Date.now()
+    let hasError = false
+    let firstError = ''
+    for (const cfg of FILE_CONFIGS) {
+      try {
+        const local = await cfg.exportLocal()
+        const envelope = { ...(local as Record<string, unknown>), clientId, pushedAt }
+        await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
+      } catch (e) {
+        hasError = true
+        if (!firstError) firstError = e instanceof Error ? e.message : `${cfg.name} 推送失败`
+      }
+    }
+    if (hasError) {
+      status.value = 'error'
+      errorMessage.value = firstError
+      if (!silent) useToast().error(`云同步推送部分失败：${firstError}`)
+      return false
+    }
+    localStorage.setItem(LAST_SYNC_KEY, String(pushedAt))
+    lastSyncAt.value = pushedAt
+    clearDirty()
+    status.value = 'idle'
+    if (!silent) useToast().success('云同步推送成功')
+    return true
+  } catch (e) {
+    status.value = 'error'
+    errorMessage.value = e instanceof Error ? e.message : '推送失败'
+    if (!silent) useToast().error(`云同步推送失败：${errorMessage.value}`)
+    return false
+  }
+}
+
+/**
+ * 应用远端到本地（workbench 文件额外检测密码身份变更）。
+ * 注意：此函数仅写本地（IDB/localStorage），不 reload Vue stores —— reload 由调用方在所有文件处理完后统一执行。
+ */
+async function applyFileRemote(cfg: FileConfig, remote: unknown): Promise<{ identityChanged: boolean }> {
+  let identityChanged = false
+  if (cfg.name === 'workbench.json') {
+    const localSaltBefore = getStoredSaltHex()
+    const localVerificationBefore = getStoredVerification()
+    const result = await cfg.importRemote(remote) as { adoptedPasswordIdentity?: boolean } | undefined
+    const remoteData = remote as WorkbenchSyncData
+    identityChanged = !!result?.adoptedPasswordIdentity
+      && (remoteData.passwordsSalt !== localSaltBefore || remoteData.passwordVerification !== localVerificationBefore)
+  } else {
+    await cfg.importRemote(remote)
+  }
+  return { identityChanged }
+}
+
+/**
+ * 拉取云端并落地本地。
+ *
+ * silent=true 用于后台自动同步（定时轮询 / 页面重新可见）：全程不弹 toast。
+ * 失败也不会被吞掉——status 置为 'error'、errorMessage 落值、同步按钮会变红并显示
+ * 「同步失败」，用户点「立即同步」即可看到具体错误提示。
+ */
+async function pullNow(silent = false): Promise<void> {
+  const settings = useAppSettingsStore()
+  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
     return
   }
+  status.value = 'pulling'
+  errorMessage.value = ''
+  const dir = dirUrl(settings.cloudSyncUrl!)
+  const username = settings.cloudSyncUsername!
+  const password = settings.cloudSyncPassword!
+  try {
+    // ===== 1) 串行 GET 5 份文件，记录 data + lastModifiedMs =====
+    const remoteResults: Record<string, { data: unknown; lastModifiedMs: number }> = {}
+    let allMissing = true
+    for (const cfg of FILE_CONFIGS) {
+      const result = await webdavGet(`${dir}/${cfg.name}`, username, password)
+      if (result.data) {
+        allMissing = false
+        remoteResults[cfg.name] = { data: result.data, lastModifiedMs: result.lastModifiedMs }
+      }
+    }
+
+    // ===== 2) 首次迁移检测：5 份全 404 但 backup.json 存在 =====
+    if (allMissing) {
+      let legacyBackup: WorkbenchData | null = null
+      try {
+        const legacyResult = await webdavGet(`${dir}/${LEGACY_BACKUP_FILE}`, username, password)
+        legacyBackup = (legacyResult.data ?? null) as WorkbenchData | null
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : ''
+        if (!msg.includes('404')) throw e
+      }
+      if (legacyBackup) {
+        await migrateFromLegacyBackup(legacyBackup, dir, username, password, silent)
+        return
+      }
+      // 无任何云端数据 → 若本地 dirty 则推送
+      status.value = 'idle'
+      if (isDirty()) await pushNow(silent)
+      return
+    }
+
+    // ===== 3) 逐文件处理：contentSame / dirty / conflict 判定 =====
+    const dirty = isDirty()
+    const localTs = Number(localStorage.getItem(LAST_SYNC_KEY) || '0')
+    let hasConflict = false
+    let appliedAny = false
+    let workbenchIdentityChanged = false
+
+    for (const cfg of FILE_CONFIGS) {
+      const remoteInfo = remoteResults[cfg.name]
+      if (!remoteInfo) continue  // 此文件远端不存在 → 跳过
+      const remote = remoteInfo.data
+
+      // 内容 hash：剔除元数据后 stableStringify → sha1 比较
+      const remoteSig = cfg.signature(remote)
+      const localExport = await cfg.exportLocal()
+      const localSig = cfg.signature(localExport)
+      const remoteHash = await sha1Hash(remoteSig)
+      const localHash = await sha1Hash(localSig)
+      if (remoteHash === localHash) continue  // 内容一致 → noop
+
+      // remoteTs：信封内嵌 pushedAt 与 Last-Modified 取较大值
+      const remoteTs = Math.max(
+        (remote as { pushedAt?: number }).pushedAt ?? 0,
+        remoteInfo.lastModifiedMs
+      )
+
+      if (dirty && (remoteTs > localTs || remoteTs <= localTs)) {
+        // 本地 dirty 且内容不同 → 计算差异量
+        const diff = cfg.diffSize(localExport, remote)
+        if (diff < MODULE_DIFF_THRESHOLD) {
+          // 微小差异 → 静默合并
+          const merged = cfg.merge(localExport, remote)
+          await cfg.importRemote(merged)
+          appliedAny = true
+        } else {
+          // 差异较大 → 冲突
+          if (!conflictData.value) conflictData.value = {}
+          conflictData.value[cfg.name] = { local: localExport, remote }
+          hasConflict = true
+        }
+      } else if (!dirty) {
+        // 本地无变更 → 直接拉取覆盖本地
+        const result = await applyFileRemote(cfg, remote)
+        if (result.identityChanged) workbenchIdentityChanged = true
+        appliedAny = true
+      }
+    }
+
+    // ===== 4) 处理完毕：reload / clearDirty / 状态 =====
+    if (hasConflict) {
+      status.value = 'conflict'
+      useToast().warning('云同步检测到冲突，请选择解决方式')
+      // 即使有冲突，对已应用的无冲突文件仍需 reload（让 Vue 状态刷新）
+      if (appliedAny) {
+        await reloadAllStores()
+      }
+      return
+    }
+
+    if (appliedAny) {
+      // 更新 lastSyncAt（取所有 remoteTs 最大值）
+      let maxTs = localTs
+      for (const cfg of FILE_CONFIGS) {
+        const info = remoteResults[cfg.name]
+        if (!info) continue
+        const ts = Math.max((info.data as { pushedAt?: number }).pushedAt ?? 0, info.lastModifiedMs)
+        if (ts > maxTs) maxTs = ts
+      }
+      localStorage.setItem(LAST_SYNC_KEY, String(maxTs))
+      lastSyncAt.value = maxTs
+      await reloadAllStores()
+      // clearDirty 必须在 reloadAllStores 之后：reload 中的 save 会 markDirty
+      clearDirty()
+      if (workbenchIdentityChanged) {
+        useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
+      } else if (!silent) {
+        useToast().success('云同步完成')
+      }
+    }
+    status.value = 'idle'
+  } catch (e) {
+    status.value = 'error'
+    errorMessage.value = e instanceof Error ? e.message : '拉取失败'
+    if (silent) {
+      console.error('[CloudSync] 后台拉取失败：', errorMessage.value)
+    } else {
+      useToast().error(`云同步拉取失败：${errorMessage.value}`)
+    }
+  }
+}
+
+/**
+ * 解决冲突：3 选 1（全部云端覆盖 / 全部本地覆盖 / 全部合并）。
+ * conflictData 形状：Record<fileName, {local, remote}>，决策对全部冲突文件统一生效。
+ */
+export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 'merge'): Promise<void> {
+  if (!conflictData.value) return
+  const conflicts = conflictData.value
+
+  if (decision === 'remote') {
+    // 全部取云端：逐文件 apply remote
+    conflictData.value = null
+    status.value = 'pulling'
+    let workbenchIdentityChanged = false
+    try {
+      for (const cfg of FILE_CONFIGS) {
+        const entry = conflicts[cfg.name]
+        if (!entry) continue
+        const result = await applyFileRemote(cfg, entry.remote)
+        if (result.identityChanged) workbenchIdentityChanged = true
+      }
+      const now = Date.now()
+      localStorage.setItem(LAST_SYNC_KEY, String(now))
+      lastSyncAt.value = now
+      await reloadAllStores()
+      clearDirty()
+      status.value = 'idle'
+      if (workbenchIdentityChanged) {
+        useToast().success('云同步完成（云端覆盖本地），密码面板已锁定，请输入来源设备主密码解锁')
+      } else {
+        useToast().success('云同步完成（云端覆盖本地）')
+      }
+    } catch (e) {
+      status.value = 'error'
+      errorMessage.value = e instanceof Error ? e.message : '应用云端失败'
+      useToast().error(`云同步解决冲突失败：${errorMessage.value}`)
+    }
+    return
+  }
+
   if (decision === 'local') {
+    // 全部推送本地
     conflictData.value = null
     await pushNow()
     return
   }
+
   if (decision === 'merge') {
+    // 全部走各自 merge 函数：apply merged → push merged
     conflictData.value = null
     status.value = 'pushing'
     try {
-      const merged = mergeData(local, remote)
-      await applyRemote(merged, true) // 写本地 + reload stores（静默，不弹 toast）
-      const pushOk = await pushNow(true) // 推云端（静默）
+      // 1) 计算并应用 merged 到本地（写本地）
+      for (const cfg of FILE_CONFIGS) {
+        const entry = conflicts[cfg.name]
+        if (!entry) continue
+        const merged = cfg.merge(entry.local, entry.remote)
+        await cfg.importRemote(merged)
+      }
+      // 2) reload stores（让 Vue 刷新到 merged 数据）
+      await reloadAllStores()
+      // 3) 推送 merged 到云端（静默 push，最后统一 toast）
+      const pushOk = await pushNow(true)
       if (pushOk) {
         useToast().success('云同步合并完成')
       } else {
@@ -730,131 +1272,22 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
     }
     return
   }
-  // cancel：保留本地，但记下 lastSyncAt = remote.pushedAt 避免重复弹框
-  const ts = remote.pushedAt ?? Date.now()
-  localStorage.setItem(LAST_SYNC_KEY, String(ts))
-  lastSyncAt.value = ts
+
+  // cancel：保留本地，但更新 lastSyncAt 避免重复弹框
+  // 取所有 remote.pushedAt 最大值（或 Date.now() 兜底）
+  let maxTs = Date.now()
+  for (const cfg of FILE_CONFIGS) {
+    const entry = conflicts[cfg.name]
+    if (!entry) continue
+    const ts = (entry.remote as { pushedAt?: number }).pushedAt ?? 0
+    if (ts > maxTs) maxTs = ts
+  }
+  localStorage.setItem(LAST_SYNC_KEY, String(maxTs))
+  lastSyncAt.value = maxTs
   clearDirty()
   conflictData.value = null
   status.value = 'idle'
   useToast().info('已取消同步冲突')
-}
-
-/**
- * 拉取云端并落地本地。
- *
- * silent=true 用于**后台自动同步**（定时轮询 / 页面重新可见）：全程不弹 toast。
- * 失败也不会被吞掉——status 置为 'error'、errorMessage 落值、同步按钮会变红并显示
- * 「同步失败」，用户点「立即同步」即可看到具体错误提示。
- * 后台同步若每次都弹成功/失败 toast，用户什么都没点也会被反复打扰。
- */
-async function pullNow(silent = false): Promise<void> {
-  const settings = useAppSettingsStore()
-  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
-    return
-  }
-  status.value = 'pulling'
-  errorMessage.value = ''
-  try {
-    const dir = dirUrl(settings.cloudSyncUrl!)
-    const getResult = await webdavGet(`${dir}/${BACKUP_FILE}`, settings.cloudSyncUsername!, settings.cloudSyncPassword!)
-    const remote = getResult.data
-    if (!remote) {
-      status.value = 'idle'
-      // 远端无备份（首次使用）→ 若本地 dirty 则推送
-      if (isDirty()) await pushNow(silent)
-      return
-    }
-    // ===== 修复方案 B：双兜底判定 =====
-    // 1) 时间戳：remote.pushedAt（信封内嵌）和 Last-Modified（WebDAV 响应头）取较大值
-    //    解决：用户手动改坚果云文件没更新 pushedAt → Last-Modified 兜底
-    const remoteTs = Math.max(remote.pushedAt ?? 0, getResult.lastModifiedMs)
-    const localTs = Number(localStorage.getItem(LAST_SYNC_KEY) || '0')
-    const dirty = isDirty()
-
-    // 2) 内容 hash：剔除元数据字段（exportedAt/pushedAt/clientId）+ 递归排序 key 后比较
-    //    解决：每次 idbExportAll() 的 exportedAt 时间戳不同、不同设备 clientId 不同、
-    //    JSON key 顺序不同 → hash 永远不等 → 误判冲突
-    const remoteSig = businessSignature(remote)
-    const localExport = await idbExportAll()
-    const localSig = businessSignature(localExport)
-    const remoteHash = await sha1Hash(remoteSig)
-    const localHash = await sha1Hash(localSig)
-    const contentSame = remoteHash === localHash
-
-    // ===== 快速路径：内容完全一致 → noop =====
-    if (contentSame) {
-      // lastSyncAt 补到最新（避免下次再走重复流程），但不做任何导入/推送
-      const ceiling = Math.max(remoteTs, localTs)
-      if (ceiling > 0 && ceiling !== localTs) {
-        localStorage.setItem(LAST_SYNC_KEY, String(ceiling))
-        lastSyncAt.value = ceiling
-      }
-      clearDirty()
-      status.value = 'idle'
-      return
-    }
-
-    // ===== 内容不同：走 4 分支决策 =====
-    // 注意：remoteTs <= localTs 的场景现在也不能盲推，因为"外部手动改文件
-    // 但 pushedAt 没动 + Last-Modified 没变化 / 代理丢头"时 hash 已经判定内容不同。
-    if (dirty && remoteTs > localTs) {
-      // 双方都有新变更（时间戳维度）→ 计算模块级差异量
-      const local = localExport
-      const diffSize = moduleDiffSize(local, remote)
-      if (diffSize < MODULE_DIFF_THRESHOLD) {
-        // 微小差异（归一化/时间戳/设备级噪音）→ 静默合并，不弹框
-        // 密码在此由 mergeData 单向取云端，无需额外保护
-        const merged = mergeData(local, remote)
-        await applyRemote(merged, true)
-        await pushNow(true)
-        return
-      }
-      conflictData.value = { local, remote }
-      status.value = 'conflict'
-      useToast().warning('云同步检测到冲突，请选择解决方式')
-      return
-    }
-    if (dirty && remoteTs <= localTs) {
-      // 本地 dirty 但 remoteTs 看起来没更新 —— 计算模块级差异量
-      const local = localExport
-      const diffSize = moduleDiffSize(local, remote)
-      if (diffSize < MODULE_DIFF_THRESHOLD) {
-        // 微小差异 → 静默合并，不弹框
-        // 密码在此由 mergeData 单向取云端，无需额外保护
-        const merged = mergeData(local, remote)
-        await applyRemote(merged, true)
-        await pushNow(true)
-        return
-      }
-      // 差异较大 + remoteTs 没更新 → 可能外部手动改文件，弹框让用户选择
-      conflictData.value = { local, remote }
-      status.value = 'conflict'
-      useToast().warning('云同步检测到内容不一致（本地有未同步变更），请选择解决方式')
-      return
-    }
-    if (!dirty) {
-      // 本地无变更、内容 hash 不同 → 远端有新变更（不管时间戳维度谁大）→ 直接拉取覆盖本地
-      // 这正是"用户在坚果云手动改 backup.json → 回到 Web 端点立即同步"的目标场景：
-      //   → 直接 applyRemote（不会盲推覆盖远端了！）
-      //
-      // 密码在此一并被云端覆盖（mergeData 语义：passwords + salt + verification 单向取云端），
-      // 符合"密码同步永远云端覆盖本地"的策略。若两端主密码不同，applyRemote 会采用云端
-      // 密码身份并锁定面板，提示用户输入来源设备主密码解锁——这是预期行为，非异常。
-      await applyRemote(remote, silent)
-      return
-    }
-    // 都无新变更 → noop（理论上已被 contentSame 短路吞掉，留作兜底）
-    status.value = 'idle'
-  } catch (e) {
-    status.value = 'error'
-    errorMessage.value = e instanceof Error ? e.message : '拉取失败'
-    if (silent) {
-      console.error('[CloudSync] 后台拉取失败：', errorMessage.value)
-    } else {
-      useToast().error(`云同步拉取失败：${errorMessage.value}`)
-    }
-  }
 }
 
 /**
@@ -929,8 +1362,6 @@ export function init(): void {
       /* ignore: store 未就绪，下一次修改会重启 */
     }
   })
-  // 每次设置变更（间隔/开关）重启轮询：通过 visibilitychange+操作时兜底 + 简单轮询 watch 即可
-  // 这里不直接 watch settings 实例（避免单例 init 早于 store 初始化报错）
   setInterval(() => {
     try { startInterval() } catch { /* ignore */ }
   }, 60 * 1000).unref?.()
@@ -949,7 +1380,6 @@ export function init(): void {
 
   window.addEventListener('beforeunload', () => {
     // beforeunload 中 fetch 可能被中断（尤其是异步）；仅在 visibilitychange hidden 已兜底
-    // 此处用 sendBeacon 仅做最佳尝试（PUT body 需 blob，但 sendBeacon 对大文件不可靠）
     // 简化：依赖 visibilitychange hidden 推送，beforeunload 不额外推送
   })
 }

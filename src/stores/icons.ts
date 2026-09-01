@@ -102,6 +102,11 @@ export const useIconsStore = defineStore('icons', () => {
     return allIcons.value.filter(icon => icon.category === category)
   }
 
+  // 云同步 icons.json 拉取后从 localStorage 重新加载自定义图标（不弹 toast，纯刷新）
+  function reloadCustomIcons() {
+    customIcons.value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+  }
+
   return {
     customIcons,
     allIcons,
@@ -111,6 +116,7 @@ export const useIconsStore = defineStore('icons', () => {
     importIcons,
     exportIcons,
     searchIcons,
-    getIconsByCategory
+    getIconsByCategory,
+    reloadCustomIcons
   }
 })

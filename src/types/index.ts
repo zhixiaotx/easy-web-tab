@@ -915,3 +915,89 @@ export interface StudentParentTasksData {
   tasks: StudentParentTask[]
 }
 
+// ==================== 云同步多文件信封（v10 拆分） ====================
+
+/** AppSettingsData 去除 cloudSync* 5 字段后的类型（WorkbenchSyncData.settings 专用） */
+export type AppSettingsDataNoCloudSync = Omit<
+  AppSettingsData,
+  'cloudSyncEnabled' | 'cloudSyncUrl' | 'cloudSyncUsername' | 'cloudSyncPassword' | 'cloudSyncInterval'
+>
+
+/** NavSyncData：导航（localStorage 偏好打包）同步信封 */
+export interface NavSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  prefs: Record<string, string>
+}
+
+/** IconsSyncData：自定义图标同步信封 */
+export interface IconsSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  icons: Array<{
+    id: string
+    name: string
+    label: string
+    dataUrl: string
+    category: string
+    createdAt: string
+  }>
+}
+
+/** WorkbenchSyncData：工作台数据同步信封（business 独立走 business.json；settings 不含 cloudSync* 5 字段） */
+export interface WorkbenchSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  todos: WorkbenchTodo[]
+  notes: NoteData
+  diary: DiaryData
+  countdowns: Countdown[]
+  passwords: string
+  health: HealthData
+  ledger: LedgerData
+  settings: AppSettingsDataNoCloudSync
+  pomodoro?: unknown
+  habits?: unknown
+  passwordsSalt?: string
+  passwordVerification?: string
+  prefs?: Record<string, string>
+}
+
+/** BusinessSyncData：销售记账独立同步信封 */
+export interface BusinessSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  business: BusinessData
+}
+
+/** StudentSyncData：学生工作台独立同步信封（15 store 字段名映射，逐字段透传为 unknown） */
+export interface StudentSyncData {
+  version: 1
+  exportedAt: string
+  clientId?: string
+  pushedAt?: number
+  studentSettings?: unknown
+  studentHabits?: unknown
+  studentPomodoro?: unknown
+  studentDiary?: unknown
+  studentCountdowns?: unknown
+  homework?: unknown
+  timetable?: unknown
+  plans?: unknown
+  review?: unknown
+  mistakes?: unknown
+  reading?: unknown
+  achievements?: unknown
+  rewards?: unknown
+  parentTasks?: unknown
+  studentImages?: unknown
+}
+

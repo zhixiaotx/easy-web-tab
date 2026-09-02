@@ -93,6 +93,16 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
   }
 
   // ========================================
+  // 重置（家长模式：恢复到初始化状态）
+  // ========================================
+
+  /** 重置奖励积分：积分归零 + 清空交易历史 + 清空奖励项 */
+  async function resetRewards(): Promise<void> {
+    data.value = emptyRewardsData()
+    await saveRewards()
+  }
+
+  // ========================================
   // 奖励项 CRUD（薄委托 core 结果函数）
   // ========================================
 
@@ -331,6 +341,8 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
     // 持久化
     loadRewards,
     saveRewards,
+    // 重置
+    resetRewards,
     // 奖励 CRUD
     addReward,
     updateReward,

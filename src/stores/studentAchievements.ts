@@ -94,6 +94,16 @@ export const useStudentAchievementsStore = defineStore('studentAchievements', ()
   }
 
   // ========================================
+  // 重置（家长模式：恢复到初始化状态）
+  // ========================================
+
+  /** 重置成就勋章：保留内置定义，清空所有解锁记录（全部变回未解锁） */
+  async function resetAchievements(): Promise<void> {
+    unlocked.value = {}
+    await saveAchievements()
+  }
+
+  // ========================================
   // 手动解锁（家长模式；M3 桩，不接受未在 definitions 的 id）
   // ========================================
 
@@ -153,6 +163,8 @@ export const useStudentAchievementsStore = defineStore('studentAchievements', ()
     // 持久化
     loadAchievements,
     saveAchievements,
+    // 重置
+    resetAchievements,
     // 解锁
     recomputeUnlocks,
     manualUnlock,

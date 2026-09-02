@@ -327,6 +327,38 @@ function rewardErrorText(reason?: string): string {
   }
 }
 
+// ===== 重置操作（家长模式：恢复到初始化状态） =====
+const resettingAchievements = ref(false)
+const resettingRewards = ref(false)
+
+async function handleResetAchievements() {
+  if (!props.parentMode) return
+  if (!confirm('确定要重置所有成就勋章吗？\n\n27 枚内置勋章将全部变回未解锁状态，\n已获得的勋章解锁时间记录会被清空。此操作不可撤销！')) return
+  resettingAchievements.value = true
+  try {
+    await achievementsStore.resetAchievements()
+    toast.success('成就勋章已重置为初始状态')
+  } catch {
+    toast.error('重置失败，请重试')
+  } finally {
+    resettingAchievements.value = false
+  }
+}
+
+async function handleResetRewards() {
+  if (!props.parentMode) return
+  if (!confirm('确定要重置奖励积分吗？\n\n当前积分将归零、所有加分/兑换历史将清空，\n家长配置的奖励兑换项也会全部删除。此操作不可撤销！')) return
+  resettingRewards.value = true
+  try {
+    await rewardsStore.resetRewards()
+    toast.success('奖励积分已重置为初始状态')
+  } catch {
+    toast.error('重置失败，请重试')
+  } finally {
+    resettingRewards.value = false
+  }
+}
+
 onMounted(ensureAllLoaded)
 watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: true })
 </script>
@@ -378,6 +410,28 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           <div class="stp-stat-label">奖励积分余额</div>
           <div class="stp-stat-value">{{ statTotalPoints }}</div>
           <div class="stp-stat-sub">可用积分</div>
+        </div>
+      </div>
+
+      <!-- 重置操作卡片 -->
+      <div class="stp-reset-card">
+        <div class="stp-reset-info">
+          <span class="stp-reset-title">⚠️ 重置操作</span>
+          <span class="stp-reset-desc">以下操作会将对应数据恢复到初始化状态，不可撤销，请谨慎使用。</span>
+        </div>
+        <div class="stp-reset-actions">
+          <button
+            type="button"
+            class="stp-btn-reset"
+            :disabled="resettingAchievements"
+            @click="handleResetAchievements"
+          >{{ resettingAchievements ? '重置中…' : '🏅 重置成就勋章' }}</button>
+          <button
+            type="button"
+            class="stp-btn-reset"
+            :disabled="resettingRewards"
+            @click="handleResetRewards"
+          >{{ resettingRewards ? '重置中…' : '🎁 重置奖励积分' }}</button>
         </div>
       </div>
 
@@ -712,6 +766,27 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-stat-accent .stp-stat-sub { color: rgba(255, 255, 255, 0.85); }
 .stp-stat-accent .stp-stat-value { color: #fff; }
 
+.stp-reset-card {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 12px; padding: 12px 16px;
+}
+.stp-reset-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stp-reset-title { font-size: 14px; font-weight: 600; color: #dc2626; }
+.stp-reset-desc { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.stp-reset-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.stp-btn-reset {
+  background: transparent; color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all 0.12s; white-space: nowrap;
+}
+.stp-btn-reset:hover:not(:disabled) { background: rgba(220, 38, 38, 0.08); }
+.stp-btn-reset:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .stp-tabs {
   display: flex; flex-wrap: wrap; gap: 6px;
   padding: 6px;
@@ -949,6 +1024,8 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   .stp-stats-grid { grid-template-columns: 1fr 1fr; }
   .stp-stat-value { font-size: 22px; }
   .stp-task-grid, .stp-reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stp-reset-actions { flex-direction: column; width: 100%; }
+  .stp-btn-reset { text-align: center; }
   .stp-badge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stp-tabs { flex-direction: row; }
   .stp-tab { min-width: 0; flex: 1 1 0; padding: 8px 6px; font-size: 12px; }

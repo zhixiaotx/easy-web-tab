@@ -24,6 +24,7 @@ import {
   formatTxnDate as formatTxnDateCore,
   pointsRulesText as pointsRulesTextCore,
   hasSourceId,
+  revokeEarn as revokeEarnCore,
   habitEarnReason,
   homeworkEarnReason,
   readingEarnReason,
@@ -208,6 +209,39 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
   }
 
   // ========================================
+  // 撤销加分（取消打卡/删除记录时触发）
+  // ========================================
+
+  /**
+   * 按 sourceId 撤销加分（移除 earn txn + 减积分）。
+   * 未加过分则 noop（幂等）。
+   */
+  async function revokeEarnBySourceId(sourceId: string): Promise<StudentRewardOp> {
+    const result = revokeEarnCore(data.value, sourceId)
+    if (!result.ok) return { ok: false, reason: result.reason }
+    if (result.data) {
+      data.value = result.data
+      await saveRewards()
+    }
+    return { ok: true }
+  }
+
+  /** 撤销习惯打卡加分（取消打卡/删除习惯时触发） */
+  async function revokeFromHabit(habitId: string, date: string): Promise<StudentRewardOp> {
+    return revokeEarnBySourceId(`habit:${habitId}:${date}`)
+  }
+
+  /** 撤销作业完成加分（从 done 切回/删除作业时触发） */
+  async function revokeFromHomework(hwId: string): Promise<StudentRewardOp> {
+    return revokeEarnBySourceId(`homework:${hwId}`)
+  }
+
+  /** 撤销阅读加分（删除阅读记录时触发；未加过分则 noop） */
+  async function revokeFromReading(entryId: string): Promise<StudentRewardOp> {
+    return revokeEarnBySourceId(`reading:${entryId}`)
+  }
+
+  // ========================================
   // 兑换
   // ========================================
 
@@ -353,6 +387,10 @@ export const useStudentRewardsStore = defineStore('studentRewards', () => {
     earnFromHabit,
     earnFromHomework,
     earnFromReading,
+    // 撤销加分
+    revokeFromHabit,
+    revokeFromHomework,
+    revokeFromReading,
     // 回溯
     backfillFromAll,
     // 兑换

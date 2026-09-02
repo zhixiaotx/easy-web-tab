@@ -154,6 +154,13 @@ export const useStudentReadingStore = defineStore('studentReading', () => {
 
   async function deleteReading(id: string): Promise<StudentReadingOp> {
     if (!entries.value.some(e => e.id === id)) return { ok: false, reason: 'not-found' }
+    // 撤销阅读加分（未加过分则自动 noop）
+    try {
+      const rewardsStore = useStudentRewardsStore()
+      await rewardsStore.revokeFromReading(id)
+    } catch (e) {
+      console.warn('[studentReading] revokeFromReading failed', e)
+    }
     entries.value = entries.value.filter(e => e.id !== id)
     await saveReading()
     return { ok: true }

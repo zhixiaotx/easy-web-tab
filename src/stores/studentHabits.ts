@@ -104,9 +104,21 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
     return { ok: true }
   }
 
-  /** 删除习惯：同时清理全部打卡记录（,  原始数组 filter 防 DataCloneError）。 */
+  /** 删除习惯：同时清理全部打卡记录，并撤销所有已加分记录的积分。 */
   async function deleteHabit(id: string): Promise<StudentHabitOp> {
     if (!habits.value.some(h => h.id === id)) return { ok: false, reason: 'not-found' }
+    // 撤销该习惯所有打卡记录的加分
+    const habitRecords = records.value.filter(r => r.habitId === id)
+    if (habitRecords.length > 0) {
+      try {
+        const rewardsStore = useStudentRewardsStore()
+        for (const r of habitRecords) {
+          await rewardsStore.revokeFromHabit(id, r.date)
+        }
+      } catch (e) {
+        console.warn('[studentHabits] revokeFromHabit (delete) failed', e)
+      }
+    }
     habits.value = habits.value.filter(h => h.id !== id)
     records.value = records.value.filter(r => r.habitId !== id)
     await saveHabits()
@@ -114,15 +126,17 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
   }
 
   /** 打卡/取消打卡：同一天已打卡 → 移除（取消），未打卡 → 追加（id 前缀 shr_）；幂等。
-   *  注意：追加打卡成功时联动积分（useStudentRewardsStore.earnFromHabit），取消打卡不扣分。
+   *  打卡成功时联动积分（earnFromHabit +5），取消打卡时撤销积分（revokeFromHabit -5）。
    */
   async function toggleCheckIn(habitId: string, date: string, parentMarked = false): Promise<StudentHabitOp> {
     const habit = habits.value.find(h => h.id === habitId)
     if (!habit) return { ok: false, reason: 'not-found' }
     const existing = records.value.find(r => r.habitId === habitId && r.date === date)
     let shouldEarn = false
+    let shouldRevoke = false
     if (existing) {
       records.value = records.value.filter(r => r.id !== existing.id)
+      shouldRevoke = true
     } else {
       records.value.push({
         id: `${STUDENT_HABIT_RECORD_ID_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -135,12 +149,18 @@ export const useStudentHabitsStore = defineStore('studentHabits', () => {
     }
     await saveHabits()
     // 积分联动：在 save 后触发，失败仅记录日志不回滚
+    const rewardsStore = useStudentRewardsStore()
     if (shouldEarn) {
       try {
-        const rewardsStore = useStudentRewardsStore()
         await rewardsStore.earnFromHabit(habit.id, habit.name, date)
       } catch (e) {
         console.warn('[studentHabits] earnFromHabit failed', e)
+      }
+    } else if (shouldRevoke) {
+      try {
+        await rewardsStore.revokeFromHabit(habitId, date)
+      } catch (e) {
+        console.warn('[studentHabits] revokeFromHabit failed', e)
       }
     }
     return { ok: true }

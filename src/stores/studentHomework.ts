@@ -159,9 +159,19 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
     return { ok: true }
   }
 
-  /** 删除作业。 */
+  /** 删除作业：若已完成则撤销加分。 */
   async function deleteHomework(id: string): Promise<StudentHomeworkOp> {
-    if (!entries.value.some(e => e.id === id)) return { ok: false, reason: 'not-found' }
+    const hw = entries.value.find(e => e.id === id)
+    if (!hw) return { ok: false, reason: 'not-found' }
+    // 如果作业已完成，撤销加分
+    if (hw.status === 'done') {
+      try {
+        const rewardsStore = useStudentRewardsStore()
+        await rewardsStore.revokeFromHomework(id)
+      } catch (e) {
+        console.warn('[studentHomework] revokeFromHomework (delete) failed', e)
+      }
+    }
     entries.value = entries.value.filter(e => e.id !== id)
     await saveHomework()
     return { ok: true }
@@ -170,7 +180,7 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
   /**
    * 推进作业状态：pending → doing → done；doing → done；overdue → doing。
    * 切到 done 时写 completedAt + 联动积分 earnFromHomework（sourceId 幂等）。
-   * 切回非 done 时清除 completedAt，不做扣分（保持系统正向激励）。
+   * 从 done 切回非 done 时清除 completedAt + 撤销加分（revokeFromHomework）。
    */
   async function advanceStatus(id: string): Promise<StudentHomeworkOp> {
     const index = entries.value.findIndex(e => e.id === id)
@@ -184,6 +194,7 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
       updatedAt: isoNow()
     }
     const becameDone = next === 'done'
+    const leftDone = cur.status === 'done' && next !== 'done'
     if (becameDone) {
       updated.completedAt = isoNow()
     } else {
@@ -191,12 +202,18 @@ export const useStudentHomeworkStore = defineStore('studentHomework', () => {
     }
     entries.value[index] = updated
     await saveHomework()
+    const rewardsStore = useStudentRewardsStore()
     if (becameDone) {
       try {
-        const rewardsStore = useStudentRewardsStore()
         await rewardsStore.earnFromHomework(cur.id, cur.title)
       } catch (e) {
         console.warn('[studentHomework] earnFromHomework failed', e)
+      }
+    } else if (leftDone) {
+      try {
+        await rewardsStore.revokeFromHomework(cur.id)
+      } catch (e) {
+        console.warn('[studentHomework] revokeFromHomework failed', e)
       }
     }
     return { ok: true }

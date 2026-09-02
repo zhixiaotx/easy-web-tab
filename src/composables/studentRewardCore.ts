@@ -189,6 +189,26 @@ export function isReadingEligible(durationMin: number): boolean {
   return Number.isFinite(durationMin) && durationMin >= READING_MIN_MINUTES
 }
 
+/**
+ * 撤销加分（取消打卡/删除记录时触发）：
+ * - 查找历史中 sourceId 对应的 earn txn；
+ * - 找到 → 从历史移除该 txn，totalPoints 减去对应积分（min 0）；
+ * - 未找到 → noop（从未加过分，不需要撤销）。
+ * 不改入参，返回新 data（有变更时）或 undefined（noop）。
+ */
+export function revokeEarn(
+  data: StudentRewardsData,
+  sourceId: string
+): RewardOp & { data?: StudentRewardsData } {
+  const sourceIdTrim = sourceId.trim()
+  if (!sourceIdTrim) return { ok: false, reason: 'invalid-source' }
+  const earnTxn = data.history.find(t => t.sourceId === sourceIdTrim && t.type === 'earn')
+  if (!earnTxn) return { ok: true } // 未加过分，noop
+  const history = data.history.filter(t => t.id !== earnTxn.id)
+  const totalPoints = Math.max(0, data.totalPoints - earnTxn.points)
+  return { ok: true, data: { ...data, history, totalPoints } }
+}
+
 // ---- CRUD 结果函数（不改入参，返回新对象/数组）----
 
 /**

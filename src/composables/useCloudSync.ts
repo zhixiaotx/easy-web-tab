@@ -718,14 +718,28 @@ function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentS
     const lv = local[key]
     const rv = remote[key]
     if (lv === undefined && rv === undefined) continue
-    ;(out as unknown as Record<string, unknown>)[key] = mergeStudentValue(lv, rv)
+    if (key === 'studentSettings') {
+      // settings 整对象取远程：进入 merge 即代表 remoteTs > localTs，远程是明确推送过的新版本
+      // settings 为轻量偏好对象，整端取避免字段级混杂（如新菜单顺序配旧菜单标签）
+      ;(out as unknown as Record<string, unknown>)[key] = rv ?? lv
+    } else {
+      ;(out as unknown as Record<string, unknown>)[key] = mergeStudentValue(lv, rv)
+    }
   }
   return out
 }
 
 function mergeStudentValue(lv: unknown, rv: unknown): unknown {
-  // 都是数组 → mergeById
+  // 都是数组
   if (Array.isArray(lv) && Array.isArray(rv)) {
+    // 基元数组（元素为 string/number/boolean/null 等非对象）：不能用 mergeById('id')，
+    // 直接取远程（进入 merge 时已保证 remoteTs > localTs，远程是明确推送的新版本）
+    const isPrimitiveArr = (arr: unknown[]) =>
+      arr.length === 0 || arr.every(x => x === null || typeof x !== 'object')
+    if (isPrimitiveArr(lv) && isPrimitiveArr(rv)) {
+      return rv.length > 0 ? rv : lv
+    }
+    // 对象数组 → mergeById（按 id 主键 + updatedAt 时间戳）
     return mergeById(
       lv as Array<{ id: string; updatedAt?: string; createdAt?: string }>,
       rv as Array<{ id: string; updatedAt?: string; createdAt?: string }>,
@@ -1138,8 +1152,8 @@ async function pullNow(silent = false): Promise<void> {
         remoteInfo.lastModifiedMs
       )
 
-      if (dirty && (remoteTs > localTs || remoteTs <= localTs)) {
-        // 本地 dirty 且内容不同 → 计算差异量
+      if (dirty && remoteTs > localTs) {
+        // 本地 dirty 且远程更新 → 两端都有变更，合并或冲突
         const diff = cfg.diffSize(localExport, remote)
         if (diff < MODULE_DIFF_THRESHOLD) {
           // 微小差异 → 静默合并
@@ -1152,6 +1166,9 @@ async function pullNow(silent = false): Promise<void> {
           conflictData.value[cfg.name] = { local: localExport, remote }
           hasConflict = true
         }
+      } else if (dirty && remoteTs <= localTs) {
+        // 本地 dirty 但远程更旧或相同（本地改动尚未推送）→ 跳过此文件，保留本地新值
+        // 等待 pushNow 用本地内容覆盖远程
       } else if (!dirty) {
         // 本地无变更 → 直接拉取覆盖本地
         const result = await applyFileRemote(cfg, remote)

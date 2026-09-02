@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
 import { useSitesStore } from '../stores/sites'
@@ -20,6 +20,77 @@ const emit = defineEmits<{
 
 const sitesStore = useSitesStore()
 const isHovered = ref(false)
+
+// ========================================
+// 描述弹框：hover 3s 打开 / 2s 自动关 / 鼠标在弹框中不关 / 点叉即关
+// ========================================
+const showDescPopup = ref(false)
+// hover 定时器：卡片进入 ≥ 3s 未离开 → 开弹框
+let hoverTimer: ReturnType<typeof setTimeout> | null = null
+// 自动关闭定时器：弹框显示后 2s 自动关（鼠标进入弹框时暂停、离开时重新计时）
+let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearHoverTimer() {
+  if (hoverTimer !== null) { clearTimeout(hoverTimer); hoverTimer = null }
+}
+function clearAutoCloseTimer() {
+  if (autoCloseTimer !== null) { clearTimeout(autoCloseTimer); autoCloseTimer = null }
+}
+
+/** 描述文本是否非空 */
+function hasDescription(): boolean {
+  return !!props.site.description?.trim()
+}
+
+/** (重新)启动 2s 自动关闭倒计时 */
+function restartAutoClose() {
+  clearAutoCloseTimer()
+  autoCloseTimer = setTimeout(() => {
+    showDescPopup.value = false
+    autoCloseTimer = null
+  }, 2000)
+}
+
+/** 立即关闭弹框（点叉或外部需要） */
+function closeDescPopup() {
+  clearAutoCloseTimer()
+  showDescPopup.value = false
+}
+
+// 卡片事件：进入 -> 启动 3s 打开；离开 -> 取消打开 / 已开则开始 2s 自动关
+function handleCardMouseEnter() {
+  isHovered.value = true
+  if (!hasDescription()) return
+  clearHoverTimer()
+  hoverTimer = setTimeout(() => {
+    showDescPopup.value = true
+    restartAutoClose()
+    hoverTimer = null
+  }, 3000)
+}
+
+function handleCardMouseLeave() {
+  isHovered.value = false
+  // 还没到 3s 就离开 → 取消打开（鼠标进入 popup 不会触发 card leave，因为 popup 是 card 子元素）
+  clearHoverTimer()
+  // 已打开 → 启动 2s 自动关倒计时（离开卡片但没进 popup 时 2s 关；进了 popup 会被 enterPopup 暂停）
+  if (showDescPopup.value) {
+    restartAutoClose()
+  }
+}
+
+// 弹框事件：进入 → 暂停自动关；离开 → 重新开始 2s 倒计时
+function handlePopupMouseEnter() {
+  clearAutoCloseTimer()
+}
+function handlePopupMouseLeave() {
+  restartAutoClose()
+}
+
+onBeforeUnmount(() => {
+  clearHoverTimer()
+  clearAutoCloseTimer()
+})
 
 // 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
 const handleIconError = (event: Event) => {
@@ -46,8 +117,8 @@ const handleClick = () => {
     class="site-card"
     :class="{ 'is-drag-over': props.isDragOver, 'is-dragging': props.isDragging }"
     :data-site-url="site.url"
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
+    @mouseenter="handleCardMouseEnter"
+    @mouseleave="handleCardMouseLeave"
     @click="handleClick"
   >
     <div class="card-header">
@@ -85,6 +156,27 @@ const handleClick = () => {
       </div>
     </div>
     <h3 class="site-name">{{ site.name }}</h3>
+
+    <!-- 描述弹框：显示在卡片正上方（底部距卡片顶部 10px），Transition 淡入淡出 -->
+    <Transition name="desc-popup-fade">
+      <div
+        v-if="showDescPopup && hasDescription()"
+        class="desc-popup"
+        role="tooltip"
+        @mouseenter="handlePopupMouseEnter"
+        @mouseleave="handlePopupMouseLeave"
+      >
+        <button
+          type="button"
+          class="desc-popup-close"
+          aria-label="关闭网站描述弹框"
+          @click.stop="closeDescPopup"
+        >×</button>
+        <p class="desc-popup-text">{{ site.description }}</p>
+        <!-- 指向卡片的小三角（双层做边框颜色） -->
+        <div class="desc-popup-arrow" aria-hidden="true"></div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -224,5 +316,114 @@ const handleClick = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ================================
+   描述弹框：卡片正上方显示
+   ================================ */
+.desc-popup {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 12px 14px;
+  width: 240px;
+  max-width: 80vw;
+  z-index: 1500;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: default;
+}
+
+.desc-popup-close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: #94a3b8;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background-color 0.15s;
+}
+.desc-popup-close:hover {
+  color: #1e293b;
+  background-color: #f1f5f9;
+}
+
+.desc-popup-text {
+  margin: 0;
+  padding-right: 18px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  color: #1e293b;
+}
+
+.desc-popup-arrow {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #e2e8f0;
+}
+.desc-popup-arrow::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #ffffff;
+}
+
+/* Transition：淡入淡出 + 轻微上下位移，保持 translateX(-50%) 居中 */
+.desc-popup-fade-enter-active,
+.desc-popup-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.desc-popup-fade-enter-from,
+.desc-popup-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
+}
+
+/* ================ 暗色主题 ================ */
+:global(.dark) .desc-popup {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+:global(.dark) .desc-popup-close {
+  color: #64748b;
+}
+:global(.dark) .desc-popup-close:hover {
+  color: #f8fafc;
+  background-color: #334155;
+}
+:global(.dark) .desc-popup-text {
+  color: #e2e8f0;
+}
+:global(.dark) .desc-popup-arrow {
+  border-top-color: #334155;
+}
+:global(.dark) .desc-popup-arrow::after {
+  border-top-color: #1e293b;
 }
 </style>

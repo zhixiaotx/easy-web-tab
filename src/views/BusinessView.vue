@@ -186,7 +186,7 @@ onMounted(() => {
       </main>
     </div>
 
-    <AppSettingsDialog v-if="showSettingsDialog" @close="showSettingsDialog = false" />
+    <AppSettingsDialog v-if="showSettingsDialog" source="business" @close="showSettingsDialog = false" />
   </div>
 </template>
 

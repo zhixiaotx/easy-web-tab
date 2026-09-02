@@ -294,6 +294,7 @@ async function handleSyncNowClick(): Promise<void> {
     />
     <AppSettingsDialog
       v-if="showSettingsDialog"
+      source="workbench"
       @close="showSettingsDialog = false"
     />
   </div>

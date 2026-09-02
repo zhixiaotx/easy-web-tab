@@ -56,7 +56,29 @@ import CloudSyncConflictModal from './CloudSyncConflictModal.vue'
 const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
 // 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
-const activeTab = ref<'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'>('nav')
+type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
+/** 来源页：nav=管理页、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
+type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
+const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
+
+/** 来源页 → 允许显示的 tab keys：按需求始终保留 sync 云同步 + remind 提醒设置，其余只显示来源页自己的 */
+const SOURCE_TABS: Record<SettingsSource, SettingsTabKey[]> = {
+  nav:        ['nav',      'sync', 'remind'],
+  workbench:  ['wb',       'sync', 'remind'],
+  business:   ['business', 'sync', 'remind'],
+  student:    ['student',  'sync', 'remind'],
+  all:        ['nav', 'wb', 'remind', 'business', 'student', 'sync']
+}
+
+/** 来源页默认激活的 tab（第一个=自己页面的设置tab），若不在可见集合里会被 visibleTabs watcher 回退到第一个可见 */
+const DEFAULT_TAB_FOR_SOURCE: Record<SettingsSource, SettingsTabKey> = {
+  nav: 'nav',
+  workbench: 'wb',
+  business: 'business',
+  student: 'student',
+  all: 'nav'
+}
+const activeTab = ref<SettingsTabKey>(DEFAULT_TAB_FOR_SOURCE[props.source] ?? 'nav')
 
 const emit = defineEmits<{
   close: []
@@ -65,6 +87,29 @@ const emit = defineEmits<{
 const store = useAppSettingsStore()
 const businessStore = useWorkbenchBusinessStore()
 const studentStore = useStudentSettingsStore()
+
+/**
+ * 最终可见 tabs：
+ *   1) 按来源页 SOURCE_TABS 白名单过滤（只显示该页面专属 + 云同步 + 提醒设置）
+ *   2) 再叠加 pageVisible 关闭隐藏（保留旧行为：入口被关的 tab 仍然隐藏）
+ */
+const visibleTabs = computed<SettingsTabKey[]>(() => {
+  const allowed = SOURCE_TABS[props.source]
+  return allowed.filter(tab => {
+    if (tab === 'wb' || tab === 'remind') return store.workbenchPageVisible !== false
+    if (tab === 'business') return store.businessPageVisible !== false
+    if (tab === 'student') return store.studentPageVisible !== false
+    return true
+  })
+})
+// 可见 tabs 变化时：若当前激活 tab 已被隐藏，跳到第一个可见 tab
+// 保证 source='student' 打开时不会停在不存在的 'nav' tab 导致白屏
+watch(visibleTabs, (tabs) => {
+  if (tabs.length > 0 && !tabs.includes(activeTab.value)) {
+    activeTab.value = tabs[0]
+  }
+}, { immediate: true })
+
 // 销售记账分类管理弹框（复用页面内共享组件；null = 关闭）
 const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 // 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
@@ -990,7 +1035,12 @@ onMounted(() => {
     () => appSettings.showAppSettings.value,
     (open) => {
       if (open) {
-        activeTab.value = 'wb'
+        // WeatherCard 入口只在工作台页面有意义；如果来源页不含 wb（极端来源），仍然选首个可见 tab
+        if (visibleTabs.value.includes('wb')) {
+          activeTab.value = 'wb'
+        } else if (visibleTabs.value.length > 0 && !visibleTabs.value.includes(activeTab.value)) {
+          activeTab.value = visibleTabs.value[0]
+        }
         nextTick(() => cityInput.value?.focus())
         appSettings.closeAppSettings()
       }
@@ -1007,17 +1057,13 @@ watch(
 )
 
 // 当工作台/销售记账/学生工作台可见性关闭时，自动切离对应 tab
+// visibleTabs 已经把 pageVisible 关闭的过滤掉了，所以只要当前激活的 tab 不在可见集合里，就回退可见 tab 的第一个
 watch(
   [() => store.workbenchPageVisible, () => store.businessPageVisible, () => store.studentPageVisible],
   () => {
-    if (store.workbenchPageVisible === false && (activeTab.value === 'wb' || activeTab.value === 'remind' || activeTab.value === 'sync')) {
-      activeTab.value = 'nav'
-    }
-    if (store.businessPageVisible === false && activeTab.value === 'business') {
-      activeTab.value = 'nav'
-    }
-    if (store.studentPageVisible === false && activeTab.value === 'student') {
-      activeTab.value = 'nav'
+    const tabs = visibleTabs.value
+    if (tabs.length > 0 && !tabs.includes(activeTab.value)) {
+      activeTab.value = tabs[0]
     }
   }
 )
@@ -1040,6 +1086,7 @@ onUnmounted(() => {
       <div class="manager-body">
         <div class="settings-tabs" role="tablist">
           <button
+            v-if="visibleTabs.includes('nav')"
             type="button"
             role="tab"
             class="tab-btn"
@@ -1048,7 +1095,7 @@ onUnmounted(() => {
             @click="activeTab = 'nav'"
           >导航设置</button>
           <button
-            v-if="store.workbenchPageVisible !== false"
+            v-if="visibleTabs.includes('wb')"
             type="button"
             role="tab"
             class="tab-btn"
@@ -1057,7 +1104,7 @@ onUnmounted(() => {
             @click="activeTab = 'wb'"
           >工作台设置</button>
           <button
-            v-if="store.workbenchPageVisible !== false"
+            v-if="visibleTabs.includes('remind')"
             type="button"
             role="tab"
             class="tab-btn"
@@ -1066,7 +1113,7 @@ onUnmounted(() => {
             @click="activeTab = 'remind'"
           >提醒设置</button>
           <button
-            v-if="store.businessPageVisible !== false"
+            v-if="visibleTabs.includes('business')"
             type="button"
             role="tab"
             class="tab-btn"
@@ -1076,7 +1123,7 @@ onUnmounted(() => {
             @click="activeTab = 'business'"
           >{{ store.businessPageDisplayName }}</button>
           <button
-            v-if="store.studentPageVisible !== false"
+            v-if="visibleTabs.includes('student')"
             type="button"
             role="tab"
             class="tab-btn"
@@ -1086,6 +1133,7 @@ onUnmounted(() => {
             @click="activeTab = 'student'"
           >{{ store.studentPageDisplayName }}</button>
           <button
+            v-if="visibleTabs.includes('sync')"
             type="button"
             role="tab"
             class="tab-btn"

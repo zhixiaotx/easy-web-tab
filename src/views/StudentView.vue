@@ -388,6 +388,7 @@ async function onOnboardingComplete() {
 
     <AppSettingsDialog
       v-if="showSettingsDialog"
+      source="student"
       @close="showSettingsDialog = false"
     />
   </div>

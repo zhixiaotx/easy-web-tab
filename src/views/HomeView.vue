@@ -361,6 +361,7 @@ const handlePageChange = () => {
 
     <AppSettingsDialog
       v-if="showSettingsDialog"
+      source="nav"
       @close="showSettingsDialog = false"
     />
 

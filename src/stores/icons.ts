@@ -68,7 +68,8 @@ export const useIconsStore = defineStore('icons', () => {
   // 持久化到 IDB
   async function saveCustomIcons(): Promise<void> {
     // 初始化未完成时也允许写入（直接用当前内存值）
-    await idbPut('icons', customIcons.value)
+    // JSON.parse(JSON.stringify()) 深拷贝剥离 Vue reactive Proxy，否则 IDB 结构化克隆报 DataCloneError
+    await idbPut('icons', JSON.parse(JSON.stringify(customIcons.value)))
     // 迁移期过渡双写：localStorage 也写一份（失败忽略）
     try { localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(customIcons.value)) } catch { /* ignore */ }
   }
@@ -145,7 +146,8 @@ export const useIconsStore = defineStore('icons', () => {
     if (toAdd.length === 0) return { added: 0 }
     const next = [...customIcons.value, ...toAdd]
     // 先持久化，成功后再替换内存（避免"假成功"）
-    await idbPut('icons', next)
+    // JSON.parse(JSON.stringify()) 深拷贝剥离 Vue reactive Proxy，否则 IDB 结构化克隆报 DataCloneError
+    await idbPut('icons', JSON.parse(JSON.stringify(next)))
     try { localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
     customIcons.value = next
     return { added: toAdd.length }

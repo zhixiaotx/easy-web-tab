@@ -28,7 +28,7 @@ export const STORAGE_KEY = 'user-countdown-reminder-date'
 
 const REMIND_HOUR = 9
 const TICK_MS = 60_000
-const OVERDUE_THRESHOLD_MS = 10 * 60_000 // 超过 10 分钟不再触发提醒
+const OVERDUE_THRESHOLD_MS = TICK_MS // 超过 1 个 tick 周期（60s）不再触发提醒
 
 // 单例状态：所有组件共享
 const state = shallowRef<CountdownReminderState>({ open: false, items: [] })

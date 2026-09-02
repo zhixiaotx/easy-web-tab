@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { type PresetIcon, PRESET_ICONS } from '@/composables/presetIcons'
 import { idbGet, idbPut, ICONS_STORAGE_KEY, migrateIconsFromLocalStorageIfNeeded } from '@/composables/useIdb'
+import { markDirty } from '@/composables/useCloudSync'
 
 export interface CustomIcon {
   id: string
@@ -70,6 +71,8 @@ export const useIconsStore = defineStore('icons', () => {
     // 初始化未完成时也允许写入（直接用当前内存值）
     // JSON.parse(JSON.stringify()) 深拷贝剥离 Vue reactive Proxy，否则 IDB 结构化克隆报 DataCloneError
     await idbPut('icons', JSON.parse(JSON.stringify(customIcons.value)))
+    // 云同步脏标记：增删改都会经过这里
+    markDirty()
     // 迁移期过渡双写：localStorage 也写一份（失败忽略）
     try { localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(customIcons.value)) } catch { /* ignore */ }
   }
@@ -148,6 +151,8 @@ export const useIconsStore = defineStore('icons', () => {
     // 先持久化，成功后再替换内存（避免"假成功"）
     // JSON.parse(JSON.stringify()) 深拷贝剥离 Vue reactive Proxy，否则 IDB 结构化克隆报 DataCloneError
     await idbPut('icons', JSON.parse(JSON.stringify(next)))
+    // 云同步脏标记：导入图标也算变更
+    markDirty()
     try { localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
     customIcons.value = next
     return { added: toAdd.length }

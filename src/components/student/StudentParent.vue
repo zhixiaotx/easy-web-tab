@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 家长协同控制台面板（学生工作台的「家长协同」section）
-// 5 个 Tabs：📝 每日任务 / 📊 孩子报告 / ➕ 手动加分 / 🏅 发放勋章 / 🎁 配置奖励
-// 4 张统计卡：今日任务完成率 / 本周习惯打卡率 / 本周作业完成率 / 当前奖励积分余额
+// 6 个 Tabs：📊 统计 / 📝 每日任务 / 📑 孩子报告 / ➕ 手动加分 / 🏅 发放勋章 / 🎁 配置奖励
+// （容器样式参考个人工作台健康管理 WorkbenchHealth.vue 的 tabs 容器）
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStudentParentTasksStore, type ParentTaskOpError } from '@/stores/studentParentTasks'
@@ -52,15 +52,16 @@ async function ensureAllLoaded() {
 }
 
 // ===== Tabs =====
-type ParentTabKey = 'tasks' | 'report' | 'points' | 'badges' | 'rewards'
-const TABS: { key: ParentTabKey; label: string; emoji: string }[] = [
-  { key: 'tasks', label: '每日任务', emoji: '📝' },
-  { key: 'report', label: '孩子报告', emoji: '📊' },
-  { key: 'points', label: '手动加分', emoji: '➕' },
-  { key: 'badges', label: '发放勋章', emoji: '🏅' },
-  { key: 'rewards', label: '配置奖励', emoji: '🎁' }
+type ParentTabKey = 'stats' | 'tasks' | 'report' | 'points' | 'badges' | 'rewards'
+const TABS: { key: ParentTabKey; label: string; emoji: string; icon: string }[] = [
+  { key: 'stats',   label: '统计',       emoji: '📊', icon: 'chart-bar' },
+  { key: 'tasks',   label: '每日任务',   emoji: '📝', icon: 'clipboard-list' },
+  { key: 'report',  label: '孩子报告',   emoji: '📑', icon: 'file-chart' },
+  { key: 'points',  label: '手动加分',   emoji: '➕', icon: 'plus-circle' },
+  { key: 'badges',  label: '发放勋章',   emoji: '🏅', icon: 'medal' },
+  { key: 'rewards', label: '配置奖励',   emoji: '🎁', icon: 'gift' }
 ]
-const activeTab = ref<ParentTabKey>('tasks')
+const activeTab = ref<ParentTabKey>('stats')
 
 const focusTab = (tab: ParentTabKey) => {
   activeTab.value = tab
@@ -381,82 +382,91 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         <div class="stp-title-group">
           <h2 class="stp-title">👨‍👩‍👧 家长协同控制台</h2>
         </div>
-        <div class="stp-toolbar-actions">
-          <label class="stp-date-label">
-            <span>日期</span>
-            <input type="date" class="stp-date-input" v-model="toolbarDate" />
-          </label>
-        </div>
       </header>
 
-      <!-- 统计卡 4 张 -->
-      <div class="stp-stats-grid">
-        <div class="stp-stat-card">
-          <div class="stp-stat-label">今日任务完成率</div>
-          <div class="stp-stat-value">{{ pct(statTaskCompletion) }}</div>
-          <div class="stp-stat-sub">{{ statTaskText }}</div>
-        </div>
-        <div class="stp-stat-card">
-          <div class="stp-stat-label">本周习惯打卡率</div>
-          <div class="stp-stat-value">{{ pct(statHabitCompletion) }}</div>
-          <div class="stp-stat-sub">{{ habitsStore.habits.length }} 个习惯</div>
-        </div>
-        <div class="stp-stat-card">
-          <div class="stp-stat-label">本周作业完成率</div>
-          <div class="stp-stat-value">{{ pct(statHomeworkCompletion) }}</div>
-          <div class="stp-stat-sub">近 7 天作业条目</div>
-        </div>
-        <div class="stp-stat-card stp-stat-accent">
-          <div class="stp-stat-label">奖励积分余额</div>
-          <div class="stp-stat-value">{{ statTotalPoints }}</div>
-          <div class="stp-stat-sub">可用积分</div>
-        </div>
-      </div>
-
-      <!-- 重置操作卡片 -->
-      <div class="stp-reset-card">
-        <div class="stp-reset-info">
-          <span class="stp-reset-title">⚠️ 重置操作</span>
-          <span class="stp-reset-desc">以下操作会将对应数据恢复到初始化状态，不可撤销，请谨慎使用。</span>
-        </div>
-        <div class="stp-reset-actions">
-          <button
-            type="button"
-            class="stp-btn-reset"
-            :disabled="resettingAchievements"
-            @click="handleResetAchievements"
-          >{{ resettingAchievements ? '重置中…' : '🏅 重置成就勋章' }}</button>
-          <button
-            type="button"
-            class="stp-btn-reset"
-            :disabled="resettingRewards"
-            @click="handleResetRewards"
-          >{{ resettingRewards ? '重置中…' : '🎁 重置奖励积分' }}</button>
-        </div>
-      </div>
-
-      <!-- Tabs 标签栏 -->
-      <nav class="stp-tabs" role="tablist">
+      <!-- Tabs 标签栏（样式参考健康管理 WorkbenchHealth.vue 的 hd-tabs/hd-tab） -->
+      <nav class="hd-tabs stp-tabs" role="tablist" data-testid="stp-tabs">
         <button
           v-for="t in TABS"
           :key="t.key"
           role="tab"
           type="button"
-          class="stp-tab"
+          class="hd-tab stp-tab"
           :class="{ active: activeTab === t.key }"
+          :aria-selected="activeTab === t.key"
+          :data-testid="`stp-tab-${t.key}`"
           @click="activeTab = t.key"
         >
-          <span class="stp-tab-emoji">{{ t.emoji }}</span>
-          <span>{{ t.label }}</span>
+          <span class="hd-tab-icon stp-tab-icon"><Icon :name="t.icon" /></span>
+          <span class="hd-tab-label">{{ t.label }}</span>
         </button>
       </nav>
 
       <div class="stp-tab-content">
-        <!-- Tab 1: 每日任务 -->
-        <section v-if="activeTab === 'tasks'" class="stp-tab-pane">
+        <!-- Tab 1: 统计（4 张统计卡 + 重置操作卡） -->
+        <section v-if="activeTab === 'stats'" class="stp-tab-pane">
+          <!-- 统计卡 4 张 -->
+          <div class="stp-stats-grid">
+            <div class="stp-stat-card">
+              <div class="stp-stat-label">今日任务完成率</div>
+              <div class="stp-stat-value">{{ pct(statTaskCompletion) }}</div>
+              <div class="stp-stat-sub">{{ statTaskText }}</div>
+            </div>
+            <div class="stp-stat-card">
+              <div class="stp-stat-label">本周习惯打卡率</div>
+              <div class="stp-stat-value">{{ pct(statHabitCompletion) }}</div>
+              <div class="stp-stat-sub">{{ habitsStore.habits.length }} 个习惯</div>
+            </div>
+            <div class="stp-stat-card">
+              <div class="stp-stat-label">本周作业完成率</div>
+              <div class="stp-stat-value">{{ pct(statHomeworkCompletion) }}</div>
+              <div class="stp-stat-sub">近 7 天作业条目</div>
+            </div>
+            <div class="stp-stat-card stp-stat-accent">
+              <div class="stp-stat-label">奖励积分余额</div>
+              <div class="stp-stat-value">{{ statTotalPoints }}</div>
+              <div class="stp-stat-sub">可用积分</div>
+            </div>
+          </div>
+
+          <!-- 重置操作卡片 -->
+          <div class="stp-reset-card">
+            <div class="stp-reset-info">
+              <span class="stp-reset-title">⚠️ 重置操作</span>
+              <span class="stp-reset-desc">以下操作会将对应数据恢复到初始化状态，不可撤销，请谨慎使用。</span>
+            </div>
+            <div class="stp-reset-actions">
+              <button
+                type="button"
+                class="stp-btn-reset"
+                :disabled="resettingAchievements"
+                @click="handleResetAchievements"
+              >{{ resettingAchievements ? '重置中…' : '🏅 重置成就勋章' }}</button>
+              <button
+                type="button"
+                class="stp-btn-reset"
+                :disabled="resettingRewards"
+                @click="handleResetRewards"
+              >{{ resettingRewards ? '重置中…' : '🎁 重置奖励积分' }}</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 2: 每日任务（日期选择器放在 pane-toolbar 右侧） -->
+        <section v-else-if="activeTab === 'tasks'" class="stp-tab-pane">
           <div class="stp-pane-toolbar">
-            <h3 class="stp-pane-title">{{ toolbarDate }} · 当日任务</h3>
-            <button type="button" class="stp-btn-primary" @click="openAddTask">＋ 新增当日任务</button>
+            <h3 class="stp-pane-title">当日任务</h3>
+            <div class="stp-pane-actions">
+              <label class="stp-date-label">
+                <span>日期</span>
+                <input type="date" class="stp-date-input" v-model="toolbarDate" />
+              </label>
+              <button type="button" class="stp-btn-primary" @click="openAddTask">＋ 新增当日任务</button>
+            </div>
+          </div>
+          <div class="stp-pane-toolbar-sub">
+            <span class="stp-date-chip">📅 {{ toolbarDate }}</span>
+            <span class="stp-pane-sub-hint">布置/批改今天的任务条清单；完成勾选自动进入统计</span>
           </div>
           <div v-if="taskList.length === 0" class="stp-empty">
             <p>暂无任务。点击右上角「＋ 新增当日任务」开始布置今天的任务条吧～</p>
@@ -483,10 +493,10 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           </div>
         </section>
 
-        <!-- Tab 2: 孩子报告 -->
+        <!-- Tab 3: 孩子报告 -->
         <section v-else-if="activeTab === 'report'" class="stp-tab-pane">
           <div class="stp-pane-toolbar">
-            <h3 class="stp-pane-title">📊 孩子报告</h3>
+            <h3 class="stp-pane-title">📑 孩子报告</h3>
           </div>
           <div class="stp-report-block">
             <h4 class="stp-report-subtitle">今日摘要</h4>
@@ -543,7 +553,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           </div>
         </section>
 
-        <!-- Tab 3: 手动加分 -->
+        <!-- Tab 4: 手动加分 -->
         <section v-else-if="activeTab === 'points'" class="stp-tab-pane">
           <div class="stp-pane-toolbar">
             <h3 class="stp-pane-title">➕ 手动加分（家长模式）</h3>
@@ -572,7 +582,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           </div>
         </section>
 
-        <!-- Tab 4: 发放勋章 -->
+        <!-- Tab 5: 发放勋章 -->
         <section v-else-if="activeTab === 'badges'" class="stp-tab-pane">
           <div class="stp-pane-toolbar">
             <h3 class="stp-pane-title">🏅 发放特殊勋章</h3>
@@ -618,7 +628,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           </div>
         </section>
 
-        <!-- Tab 5: 配置奖励 -->
+        <!-- Tab 6: 配置奖励 -->
         <section v-else-if="activeTab === 'rewards'" class="stp-tab-pane">
           <div class="stp-pane-toolbar">
             <h3 class="stp-pane-title">🎁 奖励项管理</h3>
@@ -787,26 +797,56 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-btn-reset:hover:not(:disabled) { background: rgba(220, 38, 38, 0.08); }
 .stp-btn-reset:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ============================================================
+   Tabs：复用健康管理 WorkbenchHealth.vue 的 hd-tabs/hd-tab 样式。
+   以下只覆盖局部差异：底部间距、暗色下 stp-tab-icon 与图标字色。
+   （hd-tabs/hd-tab/hd-tab-icon/hd-tab-label/暗色覆盖 均已在 WorkbenchHealth.vue 定义了
+   全局无 scope 的等价规则是不存在的，因此这里就地补全 hd-tabs/hd-tab 的完整健康管理样式
+   以保证 StudentParent.vue scoped 下也能生效。）
+   ============================================================ */
 .stp-tabs {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  padding: 6px;
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 .stp-tab {
-  flex: 1 1 auto; min-width: 108px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 12px; border: 0; background: transparent; border-radius: 8px;
-  font-size: 14px; font-weight: 500; color: var(--color-text-secondary, #6b7280);
-  cursor: pointer; transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.stp-tab:hover { background: var(--color-surface-2, #f3f4f6); color: var(--color-text, #1f2937); }
+.stp-tab-icon { display: inline-flex; align-items: center; justify-content: center; }
+.stp-tab:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-primary, #10b981);
+}
 .stp-tab.active {
-  background: var(--color-primary, #10b981); color: #fff;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.22);
+  background-color: var(--color-primary-light, #ecfdf5);
+  color: var(--color-primary, #10b981);
+  font-weight: 600;
 }
-.stp-tab-emoji { font-size: 15px; }
+/* 暗色模式（视觉对齐健康管理 WorkbenchHealth.vue:91-105） */
+:root.dark .stp-tab {
+  background-color: var(--color-bg-card, #1f2937);
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
+}
+:root.dark .stp-tab:hover {
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #f9fafb);
+}
+:root.dark .stp-tab.active {
+  background-color: #1e3a5f;
+  color: #60a5fa;
+}
 
 .stp-tab-content {
   background: var(--color-surface, #fff);
@@ -818,6 +858,36 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-tab-pane { display: flex; flex-direction: column; gap: 16px; }
 
 .stp-pane-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.stp-pane-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.stp-pane-toolbar-sub {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-surface-2, #f9fafb);
+  border: 1px solid var(--color-border, #e5e7eb);
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+}
+.stp-date-chip {
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+  background: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+.stp-pane-sub-hint { opacity: 0.9; }
+:root.dark .stp-pane-toolbar-sub {
+  background: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+}
+:root.dark .stp-date-chip {
+  background: #111827;
+  border-color: #374151;
+  color: #f9fafb;
+}
 .stp-pane-title { margin: 0; font-size: 16px; font-weight: 600; }
 
 .stp-btn-primary {
@@ -1027,12 +1097,14 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   .stp-reset-actions { flex-direction: column; width: 100%; }
   .stp-btn-reset { text-align: center; }
   .stp-badge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stp-tabs { flex-direction: row; }
-  .stp-tab { min-width: 0; flex: 1 1 0; padding: 8px 6px; font-size: 12px; }
+  .stp-tab { padding: 8px 10px; font-size: 12px; }
   .stp-summary-grid { grid-template-columns: 1fr 1fr; }
   .stp-points-form { grid-template-columns: 1fr; }
   .stp-txn-item { grid-template-columns: 72px 1fr; }
   .stp-txn-date { grid-column: 1 / -1; text-align: right; }
+  .stp-pane-actions { width: 100%; }
+  .stp-pane-actions .stp-date-label { flex: 1; min-width: 0; }
+  .stp-pane-actions .stp-date-label .stp-date-input { flex: 1; min-width: 0; }
 }
 @media (max-width: 480px) {
   .stp-stats-grid { grid-template-columns: 1fr; }

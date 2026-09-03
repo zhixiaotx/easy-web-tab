@@ -252,18 +252,6 @@ async function grantBadge(id: string) {
   else toast.error(r.reason === 'not-found' ? '勋章未找到' : '勋章已解锁')
 }
 
-const recentBadges = computed(() => {
-  const unlocked = Object.entries(achievementsStore.unlocked || {})
-  return unlocked
-    .sort((a, b) => (b[1] > a[1] ? 1 : -1))
-    .slice(0, 10)
-    .map(([id, time]) => ({
-      id,
-      time,
-      def: achievementsStore.definitions.find(d => d.id === id)
-    }))
-})
-
 // ===== Tab 5: 配置奖励 =====
 const rewardFormVisible = ref(false)
 const rewardFormMode = ref<'add' | 'edit'>('add')
@@ -688,17 +676,6 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
             <span class="stp-pager-info" data-testid="stp-pager-badges-info">第 {{ pageBadges }} / {{ badgesTotalPages }} 页 · 共 {{ badgeList.length }} 枚</span>
             <button type="button" class="stp-pager-btn" data-testid="stp-pager-badges-next" :disabled="pageBadges >= badgesTotalPages" @click="pageBadges = clampPage(pageBadges + 1, badgesTotalPages)"><Icon name="chevron-right" /></button>
           </nav>
-          <div class="stp-report-block">
-            <h4 class="stp-report-subtitle">最近解锁</h4>
-            <div v-if="recentBadges.length === 0" class="stp-empty stp-empty-small">暂未解锁任何勋章</div>
-            <ul v-else class="stp-badge-history">
-              <li v-for="b in recentBadges" :key="b.id" class="stp-badge-history-item">
-                <span class="stp-badge-history-emoji">{{ b.def?.emoji || '🏅' }}</span>
-                <span class="stp-badge-history-name">{{ b.def?.name ?? b.id }}</span>
-                <span class="stp-badge-history-time">{{ b.time }}</span>
-              </li>
-            </ul>
-          </div>
         </section>
 
         <!-- Tab 6: 配置奖励 -->
@@ -1147,30 +1124,28 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-txn-reason { color: var(--color-text, #1f2937); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stp-txn-date { color: var(--color-text-secondary, #6b7280); font-size: 12px; font-variant-numeric: tabular-nums; }
 
-.stp-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.stp-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; }
 .stp-badge-card {
   background: var(--color-surface-2, #fafafa);
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 12px; padding: 14px;
-  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+  border-radius: 10px; padding: 10px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
 }
 .stp-badge-card.unlocked { border-color: var(--color-primary, #10b981); background: rgba(16, 185, 129, 0.08); }
-.stp-badge-icon { font-size: 32px; }
-.stp-badge-name { font-size: 14px; font-weight: 600; }
-.stp-badge-desc { font-size: 12px; color: var(--color-text-secondary, #6b7280); line-height: 1.4; min-height: 32px; }
-.stp-badge-status { font-size: 11px; color: var(--color-text-secondary, #6b7280); }
-
-.stp-badge-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.stp-badge-history-item {
-  display: grid; grid-template-columns: 32px 1fr auto;
-  gap: 12px; align-items: center;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px; font-size: 13px;
+.stp-badge-icon { font-size: 26px; line-height: 1; }
+.stp-badge-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.stp-badge-desc {
+  font-size: 11px; color: var(--color-text-secondary, #6b7280);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(11px * 1.35 * 2); /* 稳占 2 行高度，避免卡片忽高忽低 */
 }
-.stp-badge-history-emoji { font-size: 18px; text-align: center; }
-.stp-badge-history-name { font-weight: 500; }
-.stp-badge-history-time { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
+.stp-badge-status { font-size: 11px; color: var(--color-text-secondary, #6b7280); line-height: 1.2; }
+/* 勋章卡上的"手动发放"按钮再紧凑一点（原 stp-btn-small 6/12 变 5/10） */
+.stp-badge-card .stp-btn-small { padding: 4px 10px; font-size: 11px; margin-top: 2px; }
 
 .stp-reward-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .stp-reward-card {

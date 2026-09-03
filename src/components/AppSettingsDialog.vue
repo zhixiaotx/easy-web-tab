@@ -57,6 +57,11 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 
 // 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
+// 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
+type NavSubTab = 'nav-display' | 'nav-site' | 'nav-size'
+type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-cat' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
+type BizSubTab = 'biz-base' | 'biz-backup'
+type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-menu'
 /** 来源页：nav=管理页、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
@@ -79,6 +84,58 @@ const DEFAULT_TAB_FOR_SOURCE: Record<SettingsSource, SettingsTabKey> = {
   all: 'nav'
 }
 const activeTab = ref<SettingsTabKey>(DEFAULT_TAB_FOR_SOURCE[props.source] ?? 'nav')
+
+// ========================================
+// 第二层：子 tab（每个内容较多的主 tab 内部再分组）
+// 子 tab 列表定义：key + 显示名称；主 tab 切换时 activeSubTab 回退到该主 tab 默认的第一个
+// ========================================
+type SubTabKey = NavSubTab | WbSubTab | BizSubTab | StuSubTab
+interface SubTabDef { key: SubTabKey; label: string }
+/** 主 tab → 子 tab 列表（顺序即显示顺序，第一个 = 默认选中） */
+const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
+  nav: [
+    { key: 'nav-display', label: '显示控制' },
+    { key: 'nav-site',    label: '站点管理' },
+    { key: 'nav-size',    label: '弹窗尺寸' }
+  ],
+  wb: [
+    { key: 'wb-city',     label: '天气城市' },
+    { key: 'wb-menu',     label: '工作台菜单' },
+    { key: 'wb-card',     label: '卡片尺寸' },
+    { key: 'wb-cat',      label: '分类管理' },
+    { key: 'wb-backup',   label: '工作台备份' },
+    { key: 'wb-snapshot', label: '数据时光机' },
+    { key: 'wb-size',     label: '弹窗尺寸' }
+  ],
+  business: [
+    { key: 'biz-base',    label: '基础设置' },
+    { key: 'biz-backup',  label: '备份导入导出' }
+  ],
+  student: [
+    { key: 'stu-stage',   label: '学段' },
+    { key: 'stu-info',    label: '学生信息' },
+    { key: 'stu-subject', label: '学科清单' },
+    { key: 'stu-menu',    label: '学生菜单' }
+  ]
+}
+/** 当前激活的子 tab（主 tab 为 remind/sync 时此值无意义，模板不会渲染第二层） */
+const activeSubTab = ref<SubTabKey>((SUB_TABS[DEFAULT_TAB_FOR_SOURCE[props.source] as 'nav']?.[0]?.key as SubTabKey) ?? 'nav-display')
+
+/** 当前主 tab 的子 tab 列表（用于模板渲染第二层子 tab 条；主 tab 无 sub-tabs 时返回空数组） */
+const currentSubTabs = computed<SubTabDef[]>(() => {
+  const k = activeTab.value as SettingsTabKey
+  if (k === 'nav' || k === 'wb' || k === 'business' || k === 'student') return SUB_TABS[k]
+  return []
+})
+
+/** 切主 tab 时：若子 tab 不在新主 tab 的列表里，回退到新列表第一个（保证永不白屏） */
+watch(activeTab, (_tab) => {
+  const list = currentSubTabs.value
+  if (list.length === 0) return
+  if (!list.some(s => s.key === activeSubTab.value)) {
+    activeSubTab.value = list[0].key
+  }
+}, { immediate: true })
 
 const emit = defineEmits<{
   close: []
@@ -1143,10 +1200,26 @@ onUnmounted(() => {
           >云同步</button>
         </div>
 
-        <p v-if="activeTab === 'nav' || activeTab === 'wb'" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+        <!-- 第二层：子 tab 条（仅 nav/wb/business/student 四个内容多的主 tab 才渲染；remind/sync 不显示） -->
+        <div v-if="currentSubTabs.length > 0" class="settings-tabs settings-tabs-sub" role="tablist">
+          <button
+            v-for="st in currentSubTabs"
+            :key="st.key"
+            type="button"
+            role="tab"
+            class="tab-btn sub-tab-btn"
+            :class="{ active: activeSubTab === st.key }"
+            :aria-selected="activeSubTab === st.key"
+            :data-testid="`subtab-${st.key}`"
+            @click="activeSubTab = st.key"
+          >{{ st.label }}</button>
+        </div>
 
-        <!-- 导航筛选栏（仅导航设置 tab）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
-        <div v-if="activeTab === 'nav'" class="wb-menu-config nav-filter-config">
+        <!-- 弹窗尺寸提示：仅当导航/工作台 tab 且子 tab 切到"弹窗尺寸"时才显示 -->
+        <p v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+
+        <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config nav-filter-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">导航筛选栏</h3>
             <button
@@ -1166,8 +1239,8 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 页面导航名称与可见性 -->
-        <div v-if="activeTab === 'nav'" class="wb-menu-config">
+        <!-- 页面导航名称与可见性（导航设置 tab - 显示控制） -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
           <h3 class="wb-menu-title">页面导航</h3>
 
           <!-- 工作台 -->
@@ -1249,8 +1322,8 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- 站点管理（仅导航设置 tab）：原管理页工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
-        <div v-if="activeTab === 'nav'" class="wb-menu-config">
+        <!-- 站点管理（导航设置 tab - 站点管理）：原管理页工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-site'" class="wb-menu-config">
           <h3 class="wb-menu-title">站点管理</h3>
           <div class="site-actions-grid" data-testid="stg-site-actions">
             <button type="button" class="site-action-btn" data-testid="stg-act-import" @click="triggerSiteImport"><Icon name="download" /> 导入</button>
@@ -1295,8 +1368,8 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- 天气城市（仅工作台设置 tab）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
-        <div v-if="activeTab === 'wb'" class="wb-city-config">
+        <!-- 天气城市（工作台设置 tab - 天气城市）：配置工作台天气卡显示城市；留空 = 未配置（天气卡显示占位） -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-city'" class="wb-city-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">天气城市</h3>
           </div>
@@ -1312,8 +1385,8 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- 工作台菜单（仅工作台设置 tab）：排序 + 改名 + 区块恢复默认；主页恒置顶不可动 -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+        <!-- 工作台菜单（工作台设置 tab - 工作台菜单）：排序 + 改名 + 区块恢复默认；主页恒置顶不可动 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-menu'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">工作台菜单</h3>
             <button type="button" class="row-reset" data-testid="wbmenu-reset" @click="store.resetWorkbenchMenu()">恢复默认</button>
@@ -1376,8 +1449,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 主页卡片尺寸（仅工作台设置 tab）：逐卡设置宽（占几列）/ 高（最小高度 px） -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+        <!-- 主页卡片尺寸（工作台设置 tab - 卡片尺寸）：逐卡设置宽（占几列）/ 高（最小高度 px） -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-card'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">主页卡片尺寸</h3>
             <button type="button" class="row-reset" data-testid="wbcard-reset-all" @click="resetAllCardSizes()">恢复默认</button>
@@ -1435,8 +1508,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 待办分类管理（仅工作台设置 tab）：改名/上下移/删除/新增 + 标签页显示勾选 -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+        <!-- 待办分类管理（工作台设置 tab - 分类管理）：改名/上下移/删除/新增 + 标签页显示勾选 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">待办分类</h3>
           </div>
@@ -1484,8 +1557,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 倒计时分类管理（仅工作台设置 tab）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+        <!-- 倒计时分类管理（工作台设置 tab - 分类管理）：内置分类标签页显示 + 自定义分类改名/上下移/删除/新增 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">倒计时分类</h3>
           </div>
@@ -1555,8 +1628,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 便签分类管理（仅工作台设置 tab）：改名/上下移/删除/新增 -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+        <!-- 便签分类管理（工作台设置 tab - 分类管理）：改名/上下移/删除/新增 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">便签分类</h3>
           </div>
@@ -1604,8 +1677,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 工作台导入/导出（仅工作台设置 tab；原 WorkbenchView 头部按钮迁移入口） -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config">
+        <!-- 工作台导入/导出（工作台设置 tab - 工作台备份；原 WorkbenchView 头部按钮迁移入口） -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-backup'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">工作台备份（导入/导出）</h3>
           </div>
@@ -1616,8 +1689,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 数据时光机（仅工作台设置 tab）：快照列表 + 立即备份 + 单条恢复；数据存 IDB store 'snapshots' -->
-        <div v-if="activeTab === 'wb'" class="wb-menu-config wb-snapshot-config">
+        <!-- 数据时光机（工作台设置 tab - 数据时光机）：快照列表 + 立即备份 + 单条恢复；数据存 IDB store 'snapshots' -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-snapshot'" class="wb-menu-config wb-snapshot-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">数据时光机</h3>
             <button
@@ -1750,8 +1823,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 销售记账（仅销售记账 tab）：摊位名称 + 低库存阈值 + 商品/支出分类管理（复用页面内共享弹框） -->
-        <div v-if="activeTab === 'business'" class="wb-menu-config">
+        <!-- 销售记账（销售记账 tab - 基础设置）：摊位名称 + 低库存阈值 + 商品/支出分类管理（复用页面内共享弹框） -->
+        <div v-if="activeTab === 'business' && activeSubTab === 'biz-base'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账设置</h3>
           </div>
@@ -1786,7 +1859,11 @@ onUnmounted(() => {
             <button type="button" class="wb-menu-btn" data-testid="bizsettings-product-cats" @click="bizCatManagerKind = 'product'">管理商品分类</button>
             <button type="button" class="wb-menu-btn" data-testid="bizsettings-expense-cats" @click="bizCatManagerKind = 'expense'">管理支出分类</button>
           </div>
-          <div class="wb-menu-head" style="margin-top: 24px;">
+        </div>
+
+        <!-- 销售记账备份（销售记账 tab - 备份导入导出）：独立导出/导入销售记账七字段 -->
+        <div v-if="activeTab === 'business' && activeSubTab === 'biz-backup'" class="wb-menu-config">
+          <div class="wb-menu-head">
             <h3 class="wb-menu-title">销售记账备份（导入/导出）</h3>
           </div>
           <p class="wb-menu-hint">独立导出销售记账七字段（商品/进货/收摊/支出/分类/设置）为 JSON 文件；导入时当前销售记账数据将被覆盖</p>
@@ -1796,8 +1873,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- 学生工作台（仅学生工作台 tab）：学段切换 + 昵称 + 学科清单 + 学生菜单 -->
-        <div v-if="activeTab === 'student'" class="wb-menu-config">
+        <!-- 学段（学生工作台 tab - 学段）：幼儿园/小学/初中 三卡片选择 + 当前学段徽章 -->
+        <div v-if="activeTab === 'student' && activeSubTab === 'stu-stage'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">学段</h3>
             <span
@@ -1829,7 +1906,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-if="activeTab === 'student'" class="wb-menu-config">
+        <!-- 学生信息（学生工作台 tab - 学生信息）：昵称/学号/学校/年级/出生日期 -->
+        <div v-if="activeTab === 'student' && activeSubTab === 'stu-info'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">学生信息</h3>
           </div>
@@ -1894,7 +1972,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-if="activeTab === 'student'" class="wb-menu-config">
+        <!-- 学科清单（学生工作台 tab - 学科清单）：学科芯片列表 + 新增/删除 -->
+        <div v-if="activeTab === 'student' && activeSubTab === 'stu-subject'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">学科清单</h3>
             <span class="wb-menu-hint-inline">{{ studentStore.subjects.length }} 项</span>
@@ -1938,7 +2017,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-if="activeTab === 'student'" class="wb-menu-config">
+        <!-- 学生菜单（学生工作台 tab - 学生菜单）：菜单列表上下移/改名/显示开关 + 恢复默认 -->
+        <div v-if="activeTab === 'student' && activeSubTab === 'stu-menu'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">学生菜单</h3>
             <button type="button" class="row-reset" data-testid="stg-menu-reset" @click="onStudentResetMenu">恢复默认</button>
@@ -2100,7 +2180,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="settings-grid" v-if="activeTab === 'nav' || activeTab === 'wb'">
+        <div class="settings-grid" v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')">
           <div class="grid-header">
             <span class="col-label">弹窗</span>
             <span>宽度 (px)</span>
@@ -2179,9 +2259,12 @@ onUnmounted(() => {
 .manager {
   background-color: var(--color-bg-card, var(--color-bg-card));
   border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 1296px;
-  max-height: 80vh;
+  /* 设置弹框默认尺寸：宽度 60vw / 高度 80vh；大屏限 max-width，小屏保底 min-* */
+  width: 60vw;
+  max-width: 1200px;
+  min-width: 320px;
+  height: 80vh;
+  min-height: 480px;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-modal);
@@ -2235,6 +2318,27 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
+}
+
+/* 第二层：子 tab 条（视觉层级稍低——字号更小、padding 更紧凑，作为主 tab 条下的内容分组切换） */
+.settings-tabs.settings-tabs-sub {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border, var(--color-border));
+  flex-wrap: wrap;
+}
+.sub-tab-btn {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  border-radius: calc(var(--radius-md, 8px) - 2px) !important;
+}
+.sub-tab-btn.active {
+  border-color: var(--color-primary, var(--color-primary)) !important;
+  box-shadow: 0 0 0 1px var(--color-primary, var(--color-primary)) inset;
+}
+:root.dark .sub-tab-btn.active {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 1px #60a5fa inset;
 }
 
 .tab-btn {

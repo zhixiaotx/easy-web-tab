@@ -523,6 +523,7 @@ export interface EducationData {
 
 /** 学历/学段选项（教育经历下拉） */
 export const DEGREE_OPTIONS = ['幼儿园', '小学', '初中', '高中', '中职', '专科', '本科', '硕士', '博士'] as const
+export type EducationDegree = typeof DEGREE_OPTIONS[number]
 
 /** 学生工作台菜单键集合（15 项；home 恒居首位，开关锁定不可关） */
 export const STUDENT_MENU_KEYS: readonly string[] = [

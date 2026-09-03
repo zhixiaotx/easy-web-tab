@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 // 学生工作台教育经历面板
 // 布局：顶部工具条（+ 新增）+ 表格列表 + 分页
 // 数据：useStudentEducationStore（IDB store 'student_education'）
@@ -6,25 +6,35 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentEducationStore } from '@/stores/studentEducation'
 import { useToast } from '@/composables/useToast'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 import { DEGREE_OPTIONS } from '@/types'
-import type { EducationEntry } from '@/types'
+import type { EducationEntry, EducationDegree } from '@/types'
 import { validateEducationEntry } from '@/composables/studentEducationCore'
 import type { NewEducationInput } from '@/stores/studentEducation'
 
 const store = useStudentEducationStore()
 const toast = useToast()
 
-const mainEl = ref<HTMLElement | null>(null)
-
-const paging = usePanelPaging({
-  items: () => store.sortedEntries,
-  rowHeight: 52,
-  containerRef: mainEl
+// ===== 分页：Element Plus el-pagination，固定 10 条/页 =====
+const LIST_PAGE_SIZE = 10
+const listPage = ref(1)
+const listPageItems = computed<EducationEntry[]>(() => {
+  const arr = store.sortedEntries
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return arr.slice(start, start + LIST_PAGE_SIZE)
 })
-const { currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
-const pageEntries = computed<EducationEntry[]>(() => paging.pageItems.value as EducationEntry[])
+
+// 学位到彩色徽章样式类（9 级）
+const DEGREE_BADGE_CLASS: Record<EducationDegree, string> = {
+  '幼儿园': 'edu-degree-kindergarten',
+  '小学': 'edu-degree-primary',
+  '初中': 'edu-degree-junior',
+  '高中': 'edu-degree-high',
+  '中职': 'edu-degree-vocational',
+  '专科': 'edu-degree-college',
+  '本科': 'edu-degree-bachelor',
+  '硕士': 'edu-degree-master',
+  '博士': 'edu-degree-doctor'
+}
 
 // ===== 弹框状态 =====
 const dialogVisible = ref(false)
@@ -105,7 +115,7 @@ async function submitForm() {
     toast.success('教育经历已添加')
   }
   closeDialog()
-  goto(1)
+  listPage.value = 1
 }
 
 // ===== 删除确认 =====
@@ -127,7 +137,7 @@ async function confirmDelete() {
   }
   deleteConfirmVisible.value = false
   deleteTargetId.value = null
-  goto(1)
+  listPage.value = 1
 }
 
 // ===== 在读切换时清除毕业日期 =====
@@ -143,71 +153,104 @@ const degreeOptions = DEGREE_OPTIONS
 </script>
 
 <template>
-  <section class="edu-panel" ref="mainEl">
+  <section class="edu-panel">
     <!-- 顶部工具条 -->
     <div class="edu-toolbar">
-      <button class="edu-add-btn" @click="openAdd">
-        <span>+ 新增</span>
+      <button class="btn-add" data-testid="edu-add" @click="openAdd">
+        <span>＋ 新增</span>
       </button>
       <div class="edu-count">共 {{ store.totalCount }} 条记录</div>
     </div>
 
-    <!-- 表格区 -->
-    <div class="edu-table-wrap" :class="{ 'edu-scroll': !fitsOnePage }">
-      <div class="edu-table">
-        <!-- 表头 -->
-        <div class="edu-row edu-row-header">
-          <span class="edu-col edu-col-school">学校名称</span>
-          <span class="edu-col edu-col-degree">学段</span>
-          <span class="edu-col edu-col-major">专业</span>
-          <span class="edu-col edu-col-start">入学时间</span>
-          <span class="edu-col edu-col-end">毕业时间</span>
-          <span class="edu-col edu-col-teacher">班主任</span>
-          <span class="edu-col edu-col-teacher">课老师</span>
-          <span class="edu-col edu-col-phone">电话号码</span>
-          <span class="edu-col edu-col-note">备注</span>
-          <span class="edu-col edu-col-status">状态</span>
-          <span class="edu-col edu-col-ops">操作</span>
-        </div>
-        <!-- 数据行 -->
-        <div
-          v-for="entry in pageEntries"
-          :key="entry.id"
-          class="edu-row edu-row-data"
-        >
-          <span class="edu-col edu-col-school" :title="entry.schoolName">{{ entry.schoolName }}</span>
-          <span class="edu-col edu-col-degree">{{ entry.degree }}</span>
-          <span class="edu-col edu-col-major" :title="entry.major || ''">{{ entry.major || '—' }}</span>
-          <span class="edu-col edu-col-start">{{ entry.startDate }}</span>
-          <span class="edu-col edu-col-end">{{ entry.endDate || '至今' }}</span>
-          <span class="edu-col edu-col-teacher" :title="entry.classTeacher || ''">{{ entry.classTeacher || '—' }}</span>
-          <span class="edu-col edu-col-teacher" :title="entry.courseTeacher || ''">{{ entry.courseTeacher || '—' }}</span>
-          <span class="edu-col edu-col-phone" :title="entry.phone || ''">{{ entry.phone || '—' }}</span>
-          <span class="edu-col edu-col-note" :title="entry.note || ''">{{ entry.note || '—' }}</span>
-          <span class="edu-col edu-col-status">
-            <span class="edu-badge" :class="entry.isActive ? 'edu-badge-active' : 'edu-badge-done'">
-              {{ entry.isActive ? '在读' : '已毕' }}
+    <!-- 表格区（Element Plus Table） -->
+    <div class="edu-list">
+      <el-table
+        :data="listPageItems"
+        stripe
+        border
+        size="default"
+        style="width: 100%"
+        height="100%"
+        empty-text="暂无教育经历记录，点击「＋ 新增」添加"
+      >
+        <el-table-column label="学校名称" min-width="220" align="left" show-overflow-tooltip>
+          <template #default="{ row }"><span style="font-weight:600;">{{ row.schoolName }}</span></template>
+        </el-table-column>
+        <el-table-column label="学段" width="110" align="center">
+          <template #default="{ row }">
+            <span class="edu-degree-badge" :class="DEGREE_BADGE_CLASS[row.degree as EducationDegree]">{{ row.degree }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="专业" min-width="180" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.major">{{ row.major }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="入学时间" width="120" align="center">
+          <template #default="{ row }">{{ row.startDate }}</template>
+        </el-table-column>
+        <el-table-column label="毕业时间" width="120" align="center">
+          <template #default="{ row }">
+            <span v-if="row.endDate">{{ row.endDate }}</span>
+            <span v-else-if="row.isActive" class="edu-enddate-today">至今</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="班主任" width="110" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.classTeacher">{{ row.classTeacher }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="课老师" width="110" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.courseTeacher">{{ row.courseTeacher }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="电话号码" width="140" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.phone" style="font-variant-numeric: tabular-nums;">{{ row.phone }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="200" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.note">{{ row.note }}</span>
+            <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <span class="edu-badge" :class="row.isActive ? 'edu-badge-active' : 'edu-badge-done'">
+              {{ row.isActive ? '在读' : '已毕' }}
             </span>
-          </span>
-          <span class="edu-col edu-col-ops">
-            <button class="edu-text-btn edu-text-edit" @click="openEdit(entry)">编辑</button>
-            <button class="edu-text-btn edu-text-del" @click="askDelete(entry)">删除</button>
-          </span>
-        </div>
-        <!-- 空状态 -->
-        <div v-if="pageEntries.length === 0" class="edu-empty">
-          暂无教育经历记录，点击「新增」添加
-        </div>
-      </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" align="center" fixed="right">
+          <template #default="{ row }">
+            <button class="btn-edit" :data-testid="`edu-edit-${row.id}`" @click="openEdit(row)" style="margin-right:6px;">编辑</button>
+            <button class="btn-delete" :data-testid="`edu-delete-${row.id}`" @click="askDelete(row)">删除</button>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
-    <!-- 分页条 -->
-    <PanelPager
-      :page="currentPage"
-      :total="totalPages"
-      @prev="prev"
-      @next="next"
-    />
+    <!-- 分页条（Element Plus Pagination） -->
+    <div class="edu-list-pager">
+      <el-pagination
+        v-model:current-page="listPage"
+        :page-size="LIST_PAGE_SIZE"
+        :page-sizes="[LIST_PAGE_SIZE]"
+        layout="total, prev, pager, next, jumper"
+        :total="store.totalCount"
+        background
+        small
+        prev-text="上一页"
+        next-text="下一页"
+      />
+    </div>
 
     <!-- 新增/编辑弹框 -->
     <div v-if="dialogVisible" class="edu-dialog-overlay" @click.self="closeDialog">
@@ -310,104 +353,193 @@ const degreeOptions = DEGREE_OPTIONS
   padding: 0 12px 8px;
   flex-shrink: 0;
 }
-.edu-add-btn {
-  padding: 6px 14px;
-  background: var(--color-primary, #3b82f6);
+/* ===== 新增按钮（与健康面板同款 .btn-add） ===== */
+.btn-add {
+  padding: 8px 16px;
+  background: var(--color-primary, #10b981);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md, 8px);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.18);
+  white-space: nowrap;
 }
-.edu-add-btn:hover { opacity: 0.88; }
-.edu-count {
-  font-size: 12px;
-  color: var(--color-text-secondary, #909399);
-}
-.edu-table-wrap {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.edu-table-wrap.edu-scroll { overflow-y: auto; }
-.edu-table {
+.btn-add:hover { opacity: 0.92; transform: translateY(-1px); }
+
+/* ===== 列表容器（学生工作台无强制一屏：直接 flex 列撑满即可） ===== */
+.edu-list {
+  flex: 1 1 auto;
+  min-height: 240px;
+  width: 100%;
+  padding: 0 16px 0;
   display: flex;
   flex-direction: column;
-  min-width: 900px;
+  box-sizing: border-box;
 }
-.edu-row {
-  display: flex;
-  align-items: stretch;
-  border-bottom: 1px solid var(--color-border, #ebeef5);
-}
-.edu-row-header {
-  background: var(--color-bg-secondary, #f5f7fa);
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--color-text-secondary, #909399);
-}
-.edu-row-data {
+.edu-list > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.06);
   font-size: 13px;
-  min-height: 52px;
-  color: var(--color-text, #303133);
-}
-.edu-row-data:hover { background: var(--color-hover, #f5f7fa); }
-.edu-col {
-  padding: 6px 8px;
-  display: flex;
-  align-items: center;
+  border-radius: 10px;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
-.edu-col-school { flex: 1.5 1 0; min-width: 0; }
-.edu-col-degree { width: 56px; flex-shrink: 0; justify-content: center; }
-.edu-col-major { flex: 1 1 0; min-width: 0; }
-.edu-col-start { width: 88px; flex-shrink: 0; justify-content: center; font-size: 12px; }
-.edu-col-end { width: 88px; flex-shrink: 0; justify-content: center; font-size: 12px; }
-.edu-col-teacher { width: 72px; flex-shrink: 0; min-width: 0; }
-.edu-col-phone { width: 100px; flex-shrink: 0; min-width: 0; font-size: 12px; }
-.edu-col-note { flex: 1.5 1 0; min-width: 0; }
-.edu-col-status { width: 50px; flex-shrink: 0; justify-content: center; }
-.edu-col-ops { width: 80px; flex-shrink: 0; gap: 8px; justify-content: center; }
-.edu-badge {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
+.edu-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
 }
-.edu-badge-active {
-  background: rgba(64, 158, 255, 0.15);
-  color: #409eff;
+.edu-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
 }
-.edu-badge-done {
-  background: rgba(103, 194, 58, 0.15);
-  color: #67c23a;
+:global(:root.dark) .edu-list > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(:root.dark) .edu-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(:root.dark) .edu-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+/* 每个 cell 最小内容宽兜底：避免 11 列时只剩学校+操作 */
+.edu-list > :global(.el-table .el-table__body-wrapper .cell),
+.edu-list > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
 }
 
-/* Element-UI 风格文字按钮 */
-.edu-text-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 12px;
-  cursor: pointer;
+/* ===== 分页条 ===== */
+.edu-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 16px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.edu-text-edit {
-  color: #409eff;
+:global(:root.dark) .edu-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
 }
-.edu-text-edit:hover { color: #66b1ff; }
-.edu-text-del {
-  color: #f56c6c;
+.edu-list-pager > :global(.el-pagination) {
+  --el-pagination-bg-color: transparent;
 }
-.edu-text-del:hover { color: #f78989; }
-
-.edu-empty {
-  padding: 40px 16px;
-  text-align: center;
-  color: var(--color-text-secondary, #909399);
+.edu-list-pager > :global(.el-pagination button),
+.edu-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.edu-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #10b981) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #10b981) !important;
+}
+:global(:root.dark) .edu-list-pager > :global(.el-pagination button),
+:global(:root.dark) .edu-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(:root.dark) .edu-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #10b981) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #10b981) !important;
+}
+.edu-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
   font-size: 13px;
 }
+
+/* ===== 按钮：编辑 / 删除（与健康面板同款 .btn-edit / .btn-delete） ===== */
+.btn-edit, .btn-delete {
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transition-fast, 0.15s ease);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.btn-edit {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--color-link, #3b82f6);
+}
+.btn-edit:hover {
+  background: rgba(59, 130, 246, 0.18);
+  transform: translateY(-1px);
+}
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ===== 状态徽章：在读（蓝）/ 已毕（绿） ===== */
+.edu-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.edu-badge-active { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.edu-badge-done   { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+/* ===== 毕业时间「至今」绿色文字 ===== */
+.edu-enddate-today {
+  color: var(--color-primary, #10b981);
+  font-weight: 600;
+}
+
+/* ===== 学段彩色徽章（9 级，幼儿园→博士渐深）===== */
+.edu-degree-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.edu-degree-kindergarten { background: #fdf2f8; color: #db2777; } /* 幼儿园 - 粉红 */
+.edu-degree-primary      { background: #ecfdf5; color: #059669; } /* 小学   - 浅绿 */
+.edu-degree-junior       { background: #dbeafe; color: #2563eb; } /* 初中   - 蓝 */
+.edu-degree-high         { background: #ede9fe; color: #7c3aed; } /* 高中   - 紫 */
+.edu-degree-vocational   { background: #ffedd5; color: #ea580c; } /* 中职   - 橙 */
+.edu-degree-college      { background: #fef9c3; color: #ca8a04; } /* 专科   - 琥珀黄 */
+.edu-degree-bachelor     { background: #dcfce7; color: #15803d; } /* 本科   - 深绿 */
+.edu-degree-master       { background: #cffafe; color: #0891b2; } /* 硕士   - 青 */
+.edu-degree-doctor       { background: #fee2e2; color: #b91c1c; } /* 博士   - 深红 */
+:global(:root.dark) .edu-degree-kindergarten { background: rgba(219, 39, 119, 0.22); }
+:global(:root.dark) .edu-degree-primary      { background: rgba(5, 150, 105, 0.2); }
+:global(:root.dark) .edu-degree-junior       { background: rgba(37, 99, 235, 0.22); }
+:global(:root.dark) .edu-degree-high         { background: rgba(124, 58, 237, 0.25); }
+:global(:root.dark) .edu-degree-vocational   { background: rgba(234, 88, 12, 0.2); }
+:global(:root.dark) .edu-degree-college      { background: rgba(202, 138, 4, 0.2); }
+:global(:root.dark) .edu-degree-bachelor     { background: rgba(21, 128, 61, 0.22); }
+:global(:root.dark) .edu-degree-master       { background: rgba(8, 145, 178, 0.22); }
+:global(:root.dark) .edu-degree-doctor       { background: rgba(185, 28, 28, 0.28); }
 
 /* ===== 弹框（白色背景，与习惯打卡一致） ===== */
 .edu-dialog-overlay {

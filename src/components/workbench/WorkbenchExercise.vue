@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcExerciseAttainment, calcYearDistanceTotals } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
-import PanelPager from './PanelPager.vue'
-import { usePanelPaging } from '@/composables/usePanelPaging'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import Icon from '@/components/Icon.vue'
 
@@ -101,25 +99,19 @@ const formNote = ref('')
 const DISTANCE_TYPES = new Set(['跑步', '游泳', '骑行'])
 const showDistanceField = computed(() => DISTANCE_TYPES.has(formType.value))
 
-// ===== 记录列表弹框（点击「展开记录」弹出模态，5 列 × 3 行 = 15 卡/页）=====
+// ===== 记录列表弹框（点击「查看」弹出 Element Plus Table，每页 10 条）=====
 const showListDialog = ref(false)
+const listPage = ref(1)
+const LIST_PAGE_SIZE = 10
 
-// ===== 自适应分页：弹框内 5 列 × maxRows 3 = 每页 15 个 =====
-const listEl = ref<HTMLElement | null>(null)
-const paging = reactive(
-  usePanelPaging({
-    items: () => sortedRecords.value,
-    rowHeight: 180,
-    maxRows: 3,
-    gap: 10,
-    containerRef: listEl,
-    gridRef: listEl
-  })
-)
+const listPageItems = computed(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return sortedRecords.value.slice(start, start + LIST_PAGE_SIZE)
+})
 
 function openListDialog(): void {
+  listPage.value = 1
   showListDialog.value = true
-  paging.goto(1)
 }
 
 function closeListDialog(): void {
@@ -182,14 +174,14 @@ async function handleSaveRecord(): Promise<void> {
   } else {
     await store.addRecord('exercise', payload)
   }
-  paging.goto(1) // 新增/编辑后回第 1 页（T10）
+  listPage.value = 1 // 新增/编辑后回到第 1 页
   cancelRecordForm()
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
   if (confirm('确定要删除这条运动记录吗？')) {
     await store.deleteRecord('exercise', id)
-    paging.goto(1) // 删除后回第 1 页（T10）
+    listPage.value = 1 // 删除后回到第 1 页
   }
 }
 
@@ -227,13 +219,24 @@ onUnmounted(() => {
 
 <template>
   <div class="wb-exercise">
-    <!-- 顶部目标卡（复用 stat-card 结构） -->
+    <!-- 顶部目标卡（复用 stat-card 结构）——右上角按钮顺序：【＋ 新增】在前，【查看】在后 -->
     <div class="stat-card">
       <div class="stat-header">
         <Icon name="exercise" :size="16" class="stat-icon" />
         <span class="stat-label">运动目标</span>
         <span class="stat-pill" data-testid="ex-year-run">跑步 {{ yearTotals['跑步'] ?? 0 }} 公里</span>
         <span class="stat-pill" data-testid="ex-year-ride">骑行 {{ yearTotals['骑行'] ?? 0 }} 公里</span>
+        <div class="stat-panel-actions">
+          <button class="btn-add" data-testid="ex-add" @click="startAddRecord">＋ 新增</button>
+          <button
+            v-if="store.records.exercise.length > 0"
+            class="btn-manage"
+            data-testid="ex-toggle-list"
+            @click="openListDialog"
+          >
+            查看（{{ store.records.exercise.length }}）
+          </button>
+        </div>
         <button v-if="targetView" class="nav-btn" data-testid="ex-edit-target" @click="openTargetDialog">
           调整目标
         </button>
@@ -252,19 +255,6 @@ onUnmounted(() => {
     <!-- 定时提醒（只读小模块） -->
     <WorkbenchHealthReminders module="exercise" />
 
-    <!-- 操作栏：展开记录 + 新增 -->
-    <div class="ex-headbar">
-      <button
-        v-if="store.records.exercise.length > 0"
-        class="btn-toggle-list"
-        data-testid="ex-toggle-list"
-        @click="openListDialog"
-      >
-        展开记录（{{ store.records.exercise.length }}）
-      </button>
-      <button class="btn-add" data-testid="ex-add" @click="startAddRecord">＋ 新增记录</button>
-    </div>
-
     <!-- 空态 -->
     <div
       v-if="store.records.exercise.length === 0"
@@ -275,31 +265,77 @@ onUnmounted(() => {
       ＋ 新增第一条运动记录
     </div>
 
-    <!-- 记录列表弹框（5 列 × 3 行 = 15 卡/页） -->
+    <!-- 记录列表弹框（Element Plus Table：日期/类型/时长/强度/距离/消耗/备注/操作，每页 10 条） -->
     <Transition name="dialog">
       <div v-if="showListDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeListDialog">
         <div class="dialog list-dialog" data-testid="ex-list-dialog">
           <div class="dialog-header">
-            <h3>运动记录（{{ store.records.exercise.length }}）</h3>
+            <h3>运动记录（{{ store.records.exercise.length }} 条）</h3>
             <button class="close-btn" @click="closeListDialog"><Icon name="close" /></button>
           </div>
-          <div ref="listEl" class="ex-list" :class="{ 'ex-list-scroll': !paging.fitsOnePage }">
-            <div v-for="rec in paging.pageItems" :key="rec.id" class="ex-item" data-testid="ex-item">
-              <div class="ex-item-head">
-                <span class="ex-date">{{ rec.date }}</span>
-                <span class="ex-type-badge">{{ rec.exerciseType }}</span>
-              </div>
-              <div class="ex-meta">
-                时长 {{ rec.duration }} 分钟<span v-if="rec.distanceKm !== undefined && DISTANCE_TYPES.has(rec.exerciseType)"> · {{ rec.distanceKm }} 公里</span> · {{ rec.calories }} 千卡
-              </div>
-              <div v-if="rec.note" class="ex-note">{{ rec.note }}</div>
-              <div class="ex-actions">
-                <button class="btn-edit" :data-testid="`ex-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
-                <button class="btn-delete" :data-testid="`ex-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">删除</button>
-              </div>
-            </div>
+          <div class="ex-list">
+            <el-table
+              :data="listPageItems"
+              stripe
+              border
+              size="default"
+              style="width: 100%"
+              height="100%"
+              empty-text="暂无运动记录"
+            >
+              <el-table-column label="日期" width="130" align="center">
+                <template #default="{ row }">{{ row.date }}</template>
+              </el-table-column>
+              <el-table-column label="类型" width="120" align="center">
+                <template #default="{ row }">
+                  <span class="ld-cat-type-badge">{{ row.exerciseType }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="时长" width="110" align="right">
+                <template #default="{ row }">{{ row.duration }} 分钟</template>
+              </el-table-column>
+              <el-table-column label="距离" width="110" align="right">
+                <template #default="{ row }">
+                  <template v-if="DISTANCE_TYPES.has(row.exerciseType) && row.distanceKm !== undefined">
+                    {{ Number(row.distanceKm).toFixed(1) }} km
+                  </template>
+                  <template v-else style="color: var(--color-text-secondary, #9ca3af);">—</template>
+                </template>
+              </el-table-column>
+              <el-table-column label="消耗" width="110" align="right">
+                <template #default="{ row }">
+                  <span style="font-weight: 700; color: var(--color-success, #16a34a); font-variant-numeric: tabular-nums;">
+                    {{ row.calories }} kcal
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="备注" min-width="200" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span v-if="row.note">{{ row.note }}</span>
+                  <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="150" align="center" fixed="right">
+                <template #default="{ row }">
+                  <button class="btn-edit" :data-testid="`ex-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right: 6px;">编辑</button>
+                  <button class="btn-delete" :data-testid="`ex-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</button>
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
-          <PanelPager v-if="paging.totalPages > 1" :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+          <div class="ex-list-pager">
+            <el-pagination
+              v-model:current-page="listPage"
+              :page-size="LIST_PAGE_SIZE"
+              :page-sizes="[LIST_PAGE_SIZE]"
+              layout="total, prev, pager, next, jumper"
+              :total="sortedRecords.length"
+              background
+              small
+              prev-text="上一页"
+              next-text="下一页"
+            />
+          </div>
         </div>
       </div>
     </Transition>
@@ -555,30 +591,106 @@ onUnmounted(() => {
   transition: width var(--transition-fast, 0.15s ease);
 }
 
-/* ===== 操作栏 ===== */
-.ex-headbar {
+/* ===== 顶部 stat-header 右上角新增/查看 按钮容器 ===== */
+.stat-panel-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
-
-.btn-toggle-list {
-  padding: 10px 16px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
+.stat-panel-actions .btn-add { padding: 8px 14px; font-size: 13px; }
+.stat-panel-actions .btn-manage {
+  padding: 8px 14px;
+  font-size: 13px;
+  background: var(--color-bg-card, #fff);
+  color: var(--color-text, #111827);
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
   cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
+  transition: all 0.15s ease;
+}
+.stat-panel-actions .btn-manage:hover {
+  color: var(--color-primary, #10b981);
+  border-color: var(--color-primary, #10b981);
 }
 
-.btn-toggle-list:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+/* ===== 操作栏（已弃用，占位保留样式兼容）===== */
+.ex-headbar { display: none; }
+.btn-toggle-list { display: none; }
+
+/* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh）===== */
+.list-dialog-overlay { z-index: 310; }
+.record-dialog-overlay { z-index: 320; }
+
+.dialog.list-dialog {
+  width: 85vw;
+  height: 85vh;
+  max-width: 1200px;
+  min-width: 560px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ex-list {
+  padding: 16px 20px 0 20px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ex-list-pager {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: var(--color-surface-2, #fafafa);
+  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+}
+
+/* 暗色适配：.ld-cat-type-badge 已在 WorkbenchLedger 全局引入样式类在 AppSettingsDialog 内定义，
+   但这里 scoped + 同名样式会被覆盖，重新定义一次保证运动/饮食/睡眠/体重等面板也生效 */
+.ld-cat-type-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
+}
+:global(:root.dark) .ld-cat-type-badge {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+@media (max-width: 640px) {
+  .stat-header {
+    flex-wrap: wrap;
+  }
+  .stat-panel-actions { margin-left: 0; width: 100%; }
+  .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
+  .field-date,
+  .field-type,
+  .field-duration,
+  .field-calories,
+  .field-distance { width: 100%; }
+}
+
+/* ===== 桌面端 ≥769px：面板钉满健康 tab 容器 ===== */
+@media (min-width: 769px) {
+  :global(.wb-health) {
+    display: flex;
+    flex-direction: column;
+  }
+  .wb-exercise {
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 .btn-add {
@@ -597,79 +709,9 @@ onUnmounted(() => {
   background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
-/* ===== 记录列表（弹框内 5 列卡片网格：5 卡/行 × maxRows 3 = 15 卡/页）===== */
-.ex-list {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  align-content: start;
-}
-
-.ex-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px 12px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  background-image: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-primary, #3b82f6) 7%, transparent),
-    transparent 55%
-  );
-  border: 1px solid var(--color-border, var(--color-border));
-  border-left: 4px solid var(--color-primary, var(--color-primary));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-}
-
-.ex-item-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ex-date {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-}
-
-.ex-type-badge {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: var(--radius-full, 999px);
-  color: var(--color-primary, var(--color-primary));
-  background: var(--color-primary-light, #eff6ff);
-  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
-}
-
-.ex-meta {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-variant-numeric: tabular-nums;
-}
-
-.ex-note {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.ex-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-}
+/* ===== 旧卡片网格样式（已弃用：改为 ElTable，保留仅避免样式声明冗余报错）===== */
+.ex-list { /* 空规则：ElTable 容器样式在更下方用 .dialog.list-dialog .ex-list 覆盖 */ }
+.ex-item, .ex-item-head, .ex-date, .ex-type-badge, .ex-meta, .ex-note, .ex-actions { display: none; }
 
 /* ===== 按钮（复用 WorkbenchTodo 体系）===== */
 .btn-edit,
@@ -977,74 +1019,74 @@ onUnmounted(() => {
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-toggle-list,
-:root.dark .btn-cancel,
-:root.dark .btn-edit,
-:root.dark .btn-delete {
+/* 暗色适配：ld-cat-type-badge 暗色（:global 穿透 scoped）*/
+:global(:root.dark) .ld-cat-type-badge {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+:global(:root.dark) .btn-cancel,
+:global(:root.dark) .btn-edit,
+:global(:root.dark) .btn-delete,
+:global(:root.dark) .stat-panel-actions .btn-manage {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
 @media (max-width: 640px) {
-  .stat-header {
-    flex-wrap: wrap;
-  }
+  .stat-header { flex-wrap: wrap; }
+  .stat-panel-actions { margin-left: 0; width: 100%; }
+  .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
   .field-date,
   .field-type,
   .field-duration,
   .field-calories,
-  .field-distance {
-    width: 100%;
-  }
+  .field-distance { width: 100%; }
 }
 
-/* ===== 记录列表弹框（宽弹框，5 列 × 3 行）— 用 .dialog.list-dialog 提高特异性覆盖 .dialog 基础类 ===== */
-.list-dialog-overlay {
-  z-index: 310;
-}
-
-/* 编辑/新增记录弹框需压在记录列表弹框（z-index:310）之上，否则从列表中编辑时看不见 */
-.record-dialog-overlay {
-  z-index: 320;
-}
+/* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh）===== */
+.list-dialog-overlay { z-index: 310; }
+.record-dialog-overlay { z-index: 320; }
 
 .dialog.list-dialog {
-  max-width: 1000px;
-  max-height: 80vh;
+  width: 85vw;
+  height: 85vh;
+  max-width: 1200px;
+  min-width: 560px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
+
+.ex-list {
+  padding: 16px 20px 0 20px;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.dialog.list-dialog .ex-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 16px;
+.ex-list-pager {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: var(--color-surface-2, #fafafa);
+  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
 }
 
-/* ===== 移动端 ≤768px：网格自适应列数 ===== */
-@media (max-width: 768px) {
-  .ex-list {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-}
-
-/* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */
+/* ===== 桌面端 ≥769px：面板钉满健康 tab 容器 ===== */
 @media (min-width: 769px) {
   :global(.wb-health) {
     display: flex;
     flex-direction: column;
   }
-
   .wb-exercise {
     flex: 1;
     min-height: 0;
-  }
-
-  .ex-list-scroll {
-    overflow-y: auto;
   }
 }
 </style>

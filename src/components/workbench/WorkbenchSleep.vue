@@ -1,43 +1,46 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import Icon from '@/components/Icon.vue'
+import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { calcDailyAttainment, sleepDurationHours } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
-import PanelPager from './PanelPager.vue'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
-import Icon from '@/components/Icon.vue'
+import type { SleepRecord } from '@/types'
 
 const store = useWorkbenchHealthStore()
 
 // ===== 顶部目标卡 =====
 const todayStr = localToday()
 
-// 小时数展示：整数去尾 0，小数保留 1 位（如 7 / 7.5）
-function fmtHours(n: number): string {
-  const r = Math.round(n * 10) / 10
-  return Number.isInteger(r) ? String(r) : r.toFixed(1)
-}
-
-// 今日进度禁止在组件内重算，必须调 healthCore 纯函数（sleep 分支 ΣdurationHours）
 const targetView = computed<{ label: string; current: number; target: number; percent: number } | null>(() => {
   const plan = store.plans.sleep
   if (!plan) return null
   const a = calcDailyAttainment(store.records.sleep, store.plans.sleep, todayStr)
   return {
-    label: `每日睡眠目标 ${fmtHours(plan.target)} 小时`,
+    label: `每日睡眠目标 ${plan.target} 小时`,
     current: a?.current ?? 0,
     target: a?.target ?? plan.target,
-    // 进度条宽度 = min(percent,1)*100%（取整显示，超量钳到 100%）
     percent: Math.floor(Math.min(a?.percent ?? 0, 1) * 100)
   }
 })
 
-// ===== 目标弹框（睡眠目标固定 duration/daily）=====
+// 今日记录 & 最近一条（空态辅助文字用）
+const todayRecords = computed<SleepRecord[]>(() => store.records.sleep.filter(r => r.date === todayStr))
+const latestRecord = computed<SleepRecord | null>(() => {
+  const recs = store.records.sleep.slice().sort((a, b) => (a.date < b.date ? 1 : -1))
+  return recs[0] ?? null
+})
+
+function fmtHours(h: number): string {
+  if (!isFinite(h)) return '—'
+  const rounded = Math.round(h * 10) / 10
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+}
+
+// ===== 目标弹框（sleep metric=duration，period=daily，不暴露选择器）=====
 const showTargetDialog = ref(false)
 const formTarget = ref('')
 
-// 目标必须 > 0（允许 1 位小数），否则保存按钮 disabled
 const isTargetValid = computed(() => {
   const t = Number(formTarget.value)
   return Number.isFinite(t) && t > 0
@@ -45,7 +48,7 @@ const isTargetValid = computed(() => {
 
 function openTargetDialog(): void {
   const plan = store.plans.sleep
-  formTarget.value = plan ? String(plan.target) : ''
+  formTarget.value = plan ? String(plan.target) : '8'
   showTargetDialog.value = true
 }
 
@@ -60,24 +63,22 @@ async function handleSaveTarget(): Promise<void> {
 }
 
 async function handleClearTarget(): Promise<void> {
-  if (confirm('确定要清除睡眠目标吗？')) {
+  if (confirm('确定要清除每日睡眠目标吗？')) {
     await store.setPlan('sleep', null)
     closeTargetDialog()
   }
 }
 
-// ===== 记录列表（date 降序，同日按 createdAt 降序）=====
-const sortedRecords = computed(() => {
-  return [...store.records.sleep].sort((a, b) =>
-    a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1
-  )
+// ===== 列表排序（date 倒序 → 入睡倒序 → id 稳定）=====
+const sortedRecords = computed<SleepRecord[]>(() => {
+  return store.records.sleep.slice().sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1
+    if (a.sleepTime !== b.sleepTime) return (a.sleepTime ?? '') < (b.sleepTime ?? '') ? 1 : -1
+    return (a.id ?? '').localeCompare(b.id ?? '')
+  })
 })
 
-const todayRecords = computed(() => store.records.sleep.filter(r => r.date === todayStr))
-// 最近一次记录（列表第一条）
-const latestRecord = computed(() => sortedRecords.value[0] ?? null)
-
-// ===== 记录表单（新增/编辑共用弹框）=====
+// ===== 新增/编辑记录表单 =====
 const showRecordDialog = ref(false)
 const editingId = ref<string | null>(null)
 const formDate = ref(localToday())
@@ -86,31 +87,19 @@ const formWakeTime = ref('')
 const formQuality = ref('3')
 const formNote = ref('')
 
-// ===== 记录列表弹框（5 列 × 3 行 = 15 卡/页）=====
+// ===== 列表弹框 + 分页（每页 10 条）=====
+const LIST_PAGE_SIZE = 10
 const showListDialog = ref(false)
+const listPage = ref(1)
+const listPageItems = computed<SleepRecord[]>(() => {
+  const arr = sortedRecords.value
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return arr.slice(start, start + LIST_PAGE_SIZE)
+})
+function openListDialog(): void { listPage.value = 1; showListDialog.value = true }
+function closeListDialog(): void { showListDialog.value = false }
 
-const listEl = ref<HTMLElement | null>(null)
-const paging = reactive(
-  usePanelPaging({
-    items: () => sortedRecords.value,
-    rowHeight: 180,
-    maxRows: 3,
-    gap: 10,
-    containerRef: listEl,
-    gridRef: listEl
-  })
-)
-
-function openListDialog(): void {
-  showListDialog.value = true
-  paging.goto(1)
-}
-
-function closeListDialog(): void {
-  showListDialog.value = false
-}
-
-// date + 入睡/起床时间 必填，否则保存按钮 disabled
+// date 必填 + 入睡/起床时间 必填，否则保存按钮 disabled
 const isFormValid = computed(() => {
   return formDate.value !== '' && formSleepTime.value !== '' && formWakeTime.value !== ''
 })
@@ -169,14 +158,14 @@ async function handleSaveRecord(): Promise<void> {
   } else {
     await store.addRecord('sleep', payload)
   }
-  paging.goto(1) // 新增/编辑后回第 1 页（T10）
+  listPage.value = 1
   cancelRecordForm()
 }
 
 async function handleDeleteRecord(id: string): Promise<void> {
   if (confirm('确定要删除这条睡眠记录吗？')) {
     await store.deleteRecord('sleep', id)
-    paging.goto(1) // 删除后回第 1 页（T10）
+    listPage.value = 1
   }
 }
 
@@ -219,6 +208,17 @@ onUnmounted(() => {
       <div class="stat-header">
         <Icon name="sleep" :size="16" class="stat-icon" />
         <span class="stat-label">睡眠目标</span>
+        <div class="stat-panel-actions">
+          <button class="btn-add" data-testid="sl-add" @click="startAddRecord">＋ 新增</button>
+          <button
+            v-if="store.records.sleep.length > 0"
+            class="btn-manage"
+            data-testid="sl-toggle-list"
+            @click="openListDialog"
+          >
+            查看（{{ store.records.sleep.length }}）
+          </button>
+        </div>
         <button v-if="targetView" class="nav-btn" data-testid="sl-edit-target" @click="openTargetDialog">
           调整目标
         </button>
@@ -242,18 +242,7 @@ onUnmounted(() => {
     <!-- 定时提醒（只读小模块） -->
     <WorkbenchHealthReminders module="sleep" />
 
-    <!-- 操作栏：展开记录 + 新增 -->
-    <div class="ex-headbar">
-      <button
-        v-if="store.records.sleep.length > 0"
-        class="btn-toggle-list"
-        data-testid="sl-toggle-list"
-        @click="openListDialog"
-      >
-        展开记录（{{ store.records.sleep.length }}）
-      </button>
-      <button class="btn-add" data-testid="sl-add" @click="startAddRecord">＋ 新增记录</button>
-    </div>
+    <!-- 操作栏（已移除：右上角 stat-panel-actions 代替） -->
 
     <!-- 空态 -->
     <div
@@ -265,29 +254,74 @@ onUnmounted(() => {
       ＋ 新增第一条睡眠记录
     </div>
 
-    <!-- 记录列表弹框（5 列 × 3 行 = 15 卡/页） -->
+    <!-- 记录列表弹框（Element Plus Table：日期/入睡/起床/时长/质量/备注/操作，每页 10 条） -->
     <Transition name="dialog">
       <div v-if="showListDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeListDialog">
         <div class="dialog list-dialog" data-testid="sl-list-dialog">
           <div class="dialog-header">
-            <h3>睡眠记录（{{ store.records.sleep.length }}）</h3>
+            <h3>睡眠记录（{{ store.records.sleep.length }} 条）</h3>
             <button class="close-btn" @click="closeListDialog"><Icon name="close" /></button>
           </div>
-          <div ref="listEl" class="ex-list" :class="{ 'ex-list-scroll': !paging.fitsOnePage }">
-            <div v-for="rec in paging.pageItems" :key="rec.id" class="ex-item" data-testid="sl-item">
-              <div class="ex-item-head">
-                <span class="ex-date">{{ rec.date }}</span>
-                <span class="ex-type-badge">{{ rec.sleepTime }} → {{ rec.wakeTime }}</span>
-              </div>
-              <div class="ex-meta">{{ fmtHours(rec.durationHours) }} 小时 · {{ '★'.repeat(rec.quality) }}</div>
-              <div v-if="rec.note" class="ex-note">{{ rec.note }}</div>
-              <div class="ex-actions">
-                <button class="btn-edit" :data-testid="`sl-edit-${rec.id}`" @click="startEditRecord(rec.id)">编辑</button>
-                <button class="btn-delete" :data-testid="`sl-delete-${rec.id}`" @click="handleDeleteRecord(rec.id)">删除</button>
-              </div>
-            </div>
+          <div class="ex-list">
+            <el-table
+              :data="listPageItems"
+              stripe
+              border
+              size="default"
+              style="width: 100%"
+              height="100%"
+              empty-text="暂无睡眠记录"
+            >
+              <el-table-column label="日期" width="130" align="center">
+                <template #default="{ row }">{{ row.date }}</template>
+              </el-table-column>
+              <el-table-column label="入睡 🌙" width="120" align="center">
+                <template #default="{ row }">{{ row.sleepTime || '—' }}</template>
+              </el-table-column>
+              <el-table-column label="起床 ☀️" width="120" align="center">
+                <template #default="{ row }">{{ row.wakeTime || '—' }}</template>
+              </el-table-column>
+              <el-table-column label="时长(h)" width="110" align="right">
+                <template #default="{ row }">
+                  <span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">
+                    {{ fmtHours(row.durationHours) }} h
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="质量" width="110" align="center">
+                <template #default="{ row }">
+                  <span :title="'★'.repeat(row.quality)" :class="`sl-quality-${row.quality}`">
+                    {{ row.quality >= 4 ? '优' : row.quality === 3 ? '良' : row.quality === 2 ? '中' : '差' }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="备注" min-width="200" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span v-if="row.note">{{ row.note }}</span>
+                  <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="150" align="center" fixed="right">
+                <template #default="{ row }">
+                  <button class="btn-edit" :data-testid="`sl-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right:6px;">编辑</button>
+                  <button class="btn-delete" :data-testid="`sl-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</button>
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
-          <PanelPager v-if="paging.totalPages > 1" :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+          <div class="ex-list-pager">
+            <el-pagination
+              v-model:current-page="listPage"
+              :page-size="LIST_PAGE_SIZE"
+              :page-sizes="[LIST_PAGE_SIZE]"
+              layout="total, prev, pager, next, jumper"
+              :total="sortedRecords.length"
+              background
+              small
+              prev-text="上一页"
+              next-text="下一页"
+            />
+          </div>
         </div>
       </div>
     </Transition>
@@ -510,13 +544,40 @@ onUnmounted(() => {
   transition: width var(--transition-fast, 0.15s ease);
 }
 
-/* ===== 操作栏 ===== */
-.ex-headbar {
+/* ===== 操作栏（已废弃：stat-panel-actions 代替） ===== */
+
+/* ===== stat-card 右上角按钮组（与 Exercise/Diet/Weight 一致） ===== */
+.stat-panel-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.stat-panel-actions .btn-add { padding: 8px 14px; font-size: 13px; }
+.stat-panel-actions .btn-manage {
+  padding: 8px 14px;
+  font-size: 13px;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  color: var(--color-text-secondary, #6b7280);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  white-space: nowrap;
+}
+.stat-panel-actions .btn-manage:hover {
+  color: var(--color-primary, #10b981);
+  border-color: var(--color-primary, #10b981);
+}
+:global(:root.dark) .stat-panel-actions .btn-manage {
+  background: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(:root.dark) .stat-panel-actions .btn-manage:hover {
+  color: var(--color-primary, #10b981);
+  border-color: var(--color-primary, #10b981);
 }
 
 .btn-toggle-list {
@@ -947,36 +1008,130 @@ onUnmounted(() => {
   }
 }
 
-/* ===== 记录列表弹框（宽弹框，5 列 × 3 行）— 用 .dialog.list-dialog 提高特异性覆盖 .dialog 基础类 ===== */
-.list-dialog-overlay {
-  z-index: 310;
-}
-
-/* 编辑/新增记录弹框需压在记录列表弹框（z-index:310）之上，否则从列表中编辑时看不见 */
-.record-dialog-overlay {
-  z-index: 320;
-}
-
-.dialog.list-dialog {
-  max-width: 1000px;
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.dialog.list-dialog .ex-list {
+/* 旧的 .ex-list（5 列卡片网格）废弃：现在 Sleep 列表用 ElTable，.ex-list 重定义为 ElTable 容器（与 Weight 一致） */
+.ex-list {
+  padding: 16px 20px 0 20px;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.ex-list > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ex-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.ex-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(:root.dark) .ex-list > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(:root.dark) .ex-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(:root.dark) .ex-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+/* 强制：每个非 fixed 列 cell 都有最小内容宽，避免整体缩成只剩日期+操作 */
+.ex-list > :global(.el-table .el-table__body-wrapper .cell),
+.ex-list > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+  white-space: nowrap;
 }
 
-/* ===== 移动端 ≤768px：网格自适应列数 ===== */
+.ex-list-pager {
+  flex: 0 0 auto;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+:global(:root.dark) .ex-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.ex-list-pager :global(.el-pagination) {
+  --el-pagination-bg-color: transparent;
+}
+.ex-list-pager :global(.el-pagination button),
+.ex-list-pager :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.ex-list-pager :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #10b981) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #10b981) !important;
+}
+:global(:root.dark) .ex-list-pager :global(.el-pagination button),
+:global(:root.dark) .ex-list-pager :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(:root.dark) .ex-list-pager :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #10b981) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #10b981) !important;
+}
+.ex-list-pager :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+/* 睡眠质量文字色（sl-quality-1..5） */
+.sl-quality-1 { color:#ef4444; font-weight:600; }
+.sl-quality-2 { color:#f97316; font-weight:600; }
+.sl-quality-3 { color:#3b82f6; font-weight:600; }
+.sl-quality-4 { color:#10b981; font-weight:700; }
+.sl-quality-5 { color:#059669; font-weight:700; }
+
+/* 移动端 ≤768px：表单字段全宽 */
 @media (max-width: 768px) {
-  .ex-list {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
+  .stat-panel-actions { margin-left: 0; width: 100%; }
+  .stat-panel-actions .btn-add, .stat-panel-actions .btn-manage { flex: 1; text-align: center; }
+}
+
+/* ===== 记录列表弹框：Element Plus Table + 分页（85vw×85vh，与 Exercise 完全一致）—— 必须放在 .dialog 基础类之后覆盖 ===== */
+.list-dialog-overlay { z-index: 310; }
+.record-dialog-overlay { z-index: 320; }
+
+.dialog.list-dialog {
+  width: 85vw !important;
+  height: 85vh !important;
+  max-width: 1200px !important;
+  min-width: 560px;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  overflow-y: visible !important;
+}
+
+@media (max-width: 640px) {
+  .dialog.list-dialog { width: 94vw !important; min-width: 0 !important; height: 88vh !important; }
 }
 
 /* ===== 桌面端 ≥769px：面板根钉满 tab 内容区 ===== */

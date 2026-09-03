@@ -15,13 +15,10 @@ import {
   trendChartScale
 } from '@/composables/ledgerCore'
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
-import { useToast } from '@/composables/useToast'
 import type { LedgerCategory, LedgerEntry } from '@/types'
-import PanelPager from './PanelPager.vue'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchLedgerStore()
-const toast = useToast()
 
 // ===== 月份选择（顶部条，驱动全部统计/列表/占比重算）=====
 function currentMonth(): string {
@@ -157,7 +154,6 @@ function closeRecordsModal(): void {
   showRecordsModal.value = false
 }
 
-const recordsTotalPages = computed(() => Math.max(1, Math.ceil(viewEntries.value.length / RECORDS_PAGE_SIZE)))
 const recordsPageItems = computed<EntryView[]>(() => {
   const start = (recordsPage.value - 1) * RECORDS_PAGE_SIZE
   return viewEntries.value.slice(start, start + RECORDS_PAGE_SIZE)

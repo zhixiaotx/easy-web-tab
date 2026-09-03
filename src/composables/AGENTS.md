@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-33 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time.
+53 composable files for reusable business logic. One (`presetIcons.ts`) is auto-generated at build time. Includes the `student*Core.ts` pure-logic family (15 files, one per student store; diary reuses `diaryCore`) plus infra singletons `useCloudSync`/`useSnapshots`/`useHomeLayout`/`useHomeStats`/`useWeather`/`useBackup`/`useDeadLinkChecker`.
 
 ## STRUCTURE
 
@@ -24,7 +24,13 @@ composables/
 ├── useGames.ts             # Loads game list from /games/manifest.json (singleton)
 ├── useHelpModal.ts         # Singleton help modal state (same pattern as useToast)
 ├── useAppSettingsDialog.ts # AppSettingsDialog 逻辑（弹窗尺寸/工作台菜单 tab 状态）
-├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v5, 8 core stores (todos/notes/diary/countdowns/passwords/health/ledger/settings) + 3 aux stores (pomodoro/habits/snapshots); idbGet/idbPut/idbClear/idbExportAll/idbImportAll (备份 version 8，v1-v8 兼容导入，版本范围守卫 `<1 || >8` 拒绝；v8 起备份内嵌 passwordsSalt/passwordVerification，idbImportAll 在事务成功后经 useCrypto.adoptPasswordIdentity 成对接管加密身份（仅当身份完整且密码库非空）)
+├── useIdb.ts               # Zero-dep IndexedDB wrapper — DB `easy-web-tab` v12, out-of-line key 'items'; 9 core stores (todos/notes/diary/countdowns/passwords/health/ledger/settings/business) + 3 aux (pomodoro/habits/snapshots) + 1 icons (v11, 由 localStorage 迁移) + 16 student (student_settings/…/student_education/student_images); idbGet/idbPut/idbClear/idbExportAll/idbImportAll (工作台备份 `WORKBENCH_DATA_VERSION=9`，v1-v9 兼容导入，范围守卫 `<1 || >9` 拒绝，v1-v7 补 business 空数据) + exportStudent/importStudentData (student-backup 信封 `STUDENT_DATA_VERSION=1`，随云端 student.json，不随工作台备份)；v8 起备份内嵌 passwordsSalt/passwordVerification，idbImportAll 在事务成功后经 useCrypto.adoptPasswordIdentity 成对接管加密身份（仅当身份完整且密码库非空）
+├── useCloudSync.ts         # WebDAV 云同步单例（5 文件信封 nav/icons/workbench/business/student.json，经 /api/webdav-proxy）；冲突=本地脏+远端新+diff>500 → CloudSyncConflictModal 三选（remote/local/merge），mergeById 按 id 并集+updatedAt 新者胜、密码恒远端、设置恒本地；触发=visibilitychange+60s 轮询+手动；配置在 settingsStore（cloudSync* 5 字段不入备份）；旧 v9 backup.json 自动迁移 v10
+├── useSnapshots.ts         # 工作台快照（时光机）单例：captureSnapshot(force?) 捕获 IDB 全量到 store 'snapshots'，环形最多 10 份、同日去重；纯逻辑委托 snapshotCore
+├── snapshotCore.ts         # 快照纯函数：makeSnapshotId/normalizeSnapshotList/pushSnapshot/findSnapshot（零 vue/pinia）
+├── useHomeLayout.ts        # 主页卡片布局单例：3 容器 action4/overview10/tools2 卡片顺序/尺寸/HTML5 拖拽，持久化 settingsStore.homeCardLayout，重排 600ms 防抖 pushNow（动态 import useCloudSync）
+├── useHomeStats.ts         # 主页只读统计聚合：聚合 8 store 统计卡（visibleStatCards 按菜单开关/空数据隐藏、upcomingCountdowns/pendingTodos/habitWeekOf）
+├── useWeather.ts           # Open-Meteo（免 key）两段串行（geocoding→weather 4s/8s，失败静默 null）+ weatherEmoji/weatherDesc/formatTime 纯函数（WeatherCard/CalendarAnchorCard 消费）
 ├── useWeather.ts           # 天气数据获取（WorkbenchHome 天气卡 WeatherCard 消费）
 ├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData
 ├── ledgerCore.ts           # 记账纯逻辑引擎: 月统计(income/expense/balance/ratio/byCategory)/存款累计/自动复制计划(salary/mortgage)/近 6 月趋势序列(calcTrendSeries)/分组柱状图坐标(trendChartScale)/分类调色板(LEDGER_CATEGORY_COLORS)/金额格式化/敏感金额掩码 + normalizeLedgerData
@@ -40,7 +46,23 @@ composables/
 ├── workbenchMenuCore.ts    # 工作台菜单纯逻辑引擎: WORKBENCH_MENU_KEYS(10 键 home/todos/notes/diary/countdowns/pomodoro/habits/passwords/health/ledger)/WORKBENCH_MENU_DEFAULT_ORDER/MENU_DEFAULT_LABELS(主页/工作待办/个人便签/日记本/定时提醒/番茄钟/习惯打卡/密码管理/健康管理/记账，逐字一致)/MENU_ICONS(diary 图标键 → Icon.vue MDI notebook path) + normalizeWorkbenchMenu(home 恒 index 0、未知键剔除、去重首次优先、缺失按默认序补全恒 10 项、label trim 去空截断 12 code point)/normalizeWorkbenchMenuVisibility(仅已知键布尔，缺失=显示)/moveMenuItem(上移下移，{ok,reason:'locked'|'boundary'|'not-found'|'ok'})/renameMenuLabel({ok,reason:'empty'|'not-found'|'ok'})/resolveMenuItems(label 回退默认、icon 查表，可选第 3 参 visibility 过滤 false 键)
 ├── panelPagingCore.ts      # 工作台面板自适应分页纯逻辑引擎: calcRowsPerPage(行槽公式 Math.max(1, Math.floor((availH+gap)/(rowHeight+gap)))，availH≤0 → 1，gap 缺省 12，第 4 参 maxRows 上限经 clampMaxRows 归一后 Math.min)/clampMaxRows(行数上限归一: undefined/NaN/±Infinity → Infinity，否则 Math.max(1, Math.floor(maxRows)))/clampPage(钳制 [1,totalPages]，totalPages≤0 → 1、分数四舍五入)/slicePage(等分切片，pageSize≤0 → []、越界钳末页、不改入参) — 零 vue/pinia/DOM 依赖
 ├── usePanelPaging.ts       # 工作台面板自适应分页 composable: options { items: () => T[], rowHeight, gap?, maxRows?, containerRef, gridRef? } → 普通对象（非 reactive）{ isDesktop, rowsPerPage, colsPerRow, currentPage, totalPages, pageItems, fitsOnePage, next, prev, goto };ResizeObserver 测高 + getComputedStyle(grid).gridTemplateColumns 实测列数;matchMedia ≥769px 桌面检测;maxRows 行数上限（RO 回调传 calcRowsPerPage 第 4 参，兜底 FALLBACK 走 Math.min(6, clampMaxRows(...))）;≤768px/未测量/区域未渲染 → 分页惰性;多实例安全（便签双实例）
-├── useWorkbenchShortcuts.ts # 工作台快捷键: Alt+K(输入态跳过) 开浮层 / Ctrl+Alt+1..9(1-7 导航菜单、8 浮层、9 侧栏折叠) / Esc 关闭
+├── useWorkbenchShortcuts.ts # 工作台/业务快捷键 (/workbench + /business 共用): Alt+K 开 Spotlight(输入态跳过) / Ctrl+Alt+1..9 跳菜单项 / Esc 关 / g 切工作台↔业务 / [ ] 步进模块(单键需非输入焦点)
+├── studentMenuCore.ts      # 学生工作台菜单纯逻辑（学段 K/P/J 门控菜单键，15 键）
+├── studentStageCore.ts     # 学段纯逻辑（K/P/J 常量 + 归一化 + 默认内容模板）
+├── studentHabitsCore.ts    # 学生习惯打卡纯逻辑（学段默认习惯播种 K/P/J）
+├── studentHomeworkCore.ts  # 学生作业纯逻辑（学科筛选/状态排序）
+├── studentTimetableCore.ts # 学生课表纯逻辑
+├── studentPlanCore.ts      # 学生学习计划纯逻辑（周/月/学期类型筛选 + 目标进度）
+├── studentReviewCore.ts    # 学生复习纯逻辑（艾宾浩斯 1/2/4/7/15/30 天间隔复习状态机）
+├── studentMistakesCore.ts  # 学生错题本纯逻辑（学科/状态筛选）
+├── studentReadingCore.ts   # 学生阅读记录纯逻辑（家长签字 K 强制/P 可选/J 隐藏）
+├── studentExamCore.ts      # 学生考试倒计时纯逻辑（复用 countdownCore）
+├── studentEducationCore.ts # 学生教育经历纯逻辑（学位彩色徽章/排序）
+├── studentPomodoroCore.ts  # 学生番茄钟纯逻辑（学段推荐时长 K 15/5、P 25/5、J 50/10）
+├── studentAchievementCore.ts # 成就勋章解锁纯逻辑（聚合各 store 数据 recomputeUnlocks）
+├── studentRewardCore.ts    # 奖励积分纯逻辑（交易记录/半自动积分 earn/兑换/家长手动加分）
+├── studentParentTaskCore.ts # 家长每日任务纯逻辑（normalizeParentTasksData/sortParentTasks/parentTasksByDate/weekStats；复用 diaryCore.dateKeyOf）
+├── useAppSettingsDialog.ts # AppSettingsDialog 单例开/关状态（module-level shallowRef）
 └── presetIcons.ts          # AUTO-GENERATED — scanned from public/icons/ at build time (60 lines)
 ```
 
@@ -63,7 +85,7 @@ composables/
 | 邮件提醒发送 | `reminderEmail.ts` | `sendReminderEmail(cfg, params): Promise<boolean>` — EmailJS v4 `emailjs.send(serviceId, templateId, params, { publicKey })`（options 传公钥免全局 init），`res?.status===200` 判定；失败 console.warn 返回 false，不重试不 toast |
 | Game listing | `useGames.ts` | Singleton: loads once from manifest.json, caches result |
 | Help modal | `useHelpModal.ts` | Singleton: same module-level shallowRef pattern as useToast |
-| IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords/settings stores + workbench todos/notes/diary/health/ledger/pomodoro/habits; `idbImportAll` validates backup version (导出 version 8；接受 v1-v8，范围守卫 `version < 1 || version > 8` 拒绝——勿改回裸 `!== 6`，曾拒旧备份 T1 回归已修；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据（兜底在范围守卫通过后执行），notes 数组旧格式 → `{categories:[], notes:[...]}` 归一化包装，snapshots 缺键跳过不 put；v8 起备份内嵌 passwordsSalt/passwordVerification，idbImportAll 在事务成功后经 useCrypto.adoptPasswordIdentity 成对接管加密身份（仅当身份完整且密码库非空）) |
+| IndexedDB data layer | `useIdb.ts` | `idbGet`/`idbPut`/`idbClear`/`idbExportAll`/`idbImportAll` — used by countdowns/passwords/settings stores + workbench todos/notes/diary/health/ledger/pomodoro/habits; `idbImportAll` validates backup version (工作台备份 `WORKBENCH_DATA_VERSION=9`；接受 v1-v9，范围守卫 `version < 1 || version > 9` 拒绝——勿改回裸 `!== 6`，曾拒旧备份 T1 回归已修；v1 补 health/ledger 空数据，v1/v2/v3 补 settings 空数据，v1-v4 补 pomodoro/habits 空数据，v1-v5 补 diary 空数据，v1-v7 补 business 空数据（兜底在范围守卫通过后执行），notes 数组旧格式 → `{categories:[], notes:[...]}` 归一化包装，snapshots 缺键跳过不 put；v8 起备份内嵌 passwordsSalt/passwordVerification，idbImportAll 在事务成功后经 useCrypto.adoptPasswordIdentity 成对接管加密身份（仅当身份完整且密码库非空）)；另 exportStudent/importStudentData（student-backup 信封 `STUDENT_DATA_VERSION=1`，单事务全 16 student store，随云端 student.json，不随工作台备份） |
 | 健康纯逻辑 | `healthCore.ts` | `emptyHealthData`/`normalizeHealthData`/`calcExerciseAttainment`/`calcDailyAttainment`/`calcBmi`/`classifyBmi`/`weightTarget`/`dietCalories`/`sleepDurationHours`(跨天 +24h、相等=24h)/`weightChartScale`/`weekKeyOf` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 记账纯逻辑 | `ledgerCore.ts` | `emptyLedgerData`/`normalizeLedgerData`/`calcMonthlyStats`/`calcDepositTotal`/`monthKeyOf`/`prevMonthKeyOf`/`planAutoCopy`/`AUTO_COPY_CATEGORY_IDS`/`formatYuan`/`maskOrReveal` + `calcTrendSeries(entries, endMonthKey, categories, months=6): TrendMonth[]`（末月窗口恒 months 条升序、缺失月补 0、跨年走 prevMonthKeyOf、未知分类计支出、非法 endMonthKey → []、金额保留 2 位）/`trendChartScale(series, width, height, pad=24): TrendChartScale \| null`（全 0 → null、maxY {1,2,5}×10^k nice 天花板、5 网格线含 label、12 柱 `{monthKey,kind,x,y,height,value}`、monthLabels + barWidth）/`LEDGER_CATEGORY_COLORS`（8 色暗色安全 hex，[0]=`#10b981` emerald 等价应用主色）— 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
 | 便签纯逻辑 | `noteCore.ts` | `emptyNoteData`/`normalizeNoteData`(数组旧格式兼容，分类 showInTabs 仅布尔透传)/`normalizeNote`/`normalizeNotes`/`sortNotes`(置顶→updatedAt 降序)/`sortTimelineEntries`(datetime 升序→createdAt 升序)/`filterNotes`(type/categoryId/keyword，NoteFilter.type 接受 'all'=全部类型不过滤、categoryId='uncategorized' 匹配未分类)/`partitionNotesByType`(拆分过滤后便签为 {normal,timeline})/`findNoteCategory`/`tabCategoriesOf`(showInTabs!==false 过滤，返回新数组)/`isUncategorized` — 纯函数，无 store 依赖，`node --experimental-strip-types` 可测 |
@@ -84,6 +106,7 @@ composables/
 - `useGames` is also a singleton with a `loaded` guard flag
 - `presetIcons.ts` is auto-generated — never edit manually
 - `healthCore.ts` / `ledgerCore.ts` / `noteCore.ts` / `diaryCore.ts` / `panelPagingCore.ts` / `reminderCore.ts` are pure-logic engines — **禁止 import vue/pinia/DOM**（`node --experimental-strip-types` 测试运行器无法执行）；组件/面板只调用它们，禁止重算公式
+- **student*Core 扩展名解析 quirk**: 学生 cores 用无扩展名相对导入（`./countdownCore`、`./diaryCore`、`./habitCore`、`./studentMenuCore`）+ `@/` 别名；纯 `node --experimental-strip-types` 报 `ERR_MODULE_NOT_FOUND`/`ERR_UNSUPPORTED_DIR_IMPORT`，测试必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`（见 scripts/AGENTS.md 与 `npm run test:student`）
 - 便签分类 `showInTabs` 归一化规则：仅布尔值透传（false 隐藏 / true 显式显示），缺失不新增字段（undefined=默认显示）；`normalizeNoteCategory` + `tabCategoriesOf` 是标签页可见性唯一来源，组件禁止自造过滤公式
 - 记账金额掩码格式唯一来源 `ledgerCore` 的 `MASKED_TEXT`（'****'），组件不得自行硬编码掩码串
 - **工作台一屏布局规范**: 桌面 ≥769px 一屏布局（`.wb-content` flex 列 + 面板根 flex:1 min-height:0 钉满），长列表分页一律走 `usePanelPaging` composable，核心公式委托 `panelPagingCore` 纯函数（组件禁止内联重算）；rowHeight 常量唯一来源 `.omo/evidence/workbench-onescreen/row-heights.json` 实测 MAX+2px（todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 116/exercise 533/diet 537/sleep 563/weight 88/ledger 49，被测文件勿手改）；密码/运动/饮食/睡眠 4 面板为 6 列卡片网格（`repeat(6, minmax(0,1fr))` + gridRef 实测列数）且 `maxRows` 钳制每页行数（password maxRows:3=18 卡/页、exercise/diet/sleep maxRows:1=6 卡/页，行数经 clampMaxRows 归一）；筛选/排序/增删改/月份切换后 `goto(1)` 回页 1（items 变化仅 clampPage 钳制不自动回 1）；`fitsOnePage` = 一屏容纳 ≥1 整行（availH ≥ rowHeight+gap），false 时列表区回退 `overflow-y:auto` 区内滚动兜底（`*-scroll` 类，R7）；≤768px 移动端分页惰性（全量渲染、无切片、无 pager）；条件渲染列表（健康折叠/密码锁态/记账折叠）containerRef null → 分页惰性直到渲染（R8）

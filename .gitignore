@@ -49,3 +49,13 @@ site.md
 /playwright/.cache/
 /playwright/.auth/
 public/sites (1).md
+
+# 一次性临时修复脚本（历史 fopen/write 打补丁，已删除，勿再提交）
+scripts/fix-*.mjs
+scripts/fix-*.cjs
+scripts/_fix-unused.cjs
+/_copy_diary.cjs
+
+# Python cache
+__pycache__/
+*.pyc

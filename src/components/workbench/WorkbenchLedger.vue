@@ -345,7 +345,10 @@ onUnmounted(() => {
           {{ store.showAmount ? '隐藏金额' : '显示金额' }}
         </button>
         <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
-        <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增记录</button>
+        <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增</button>
+        <button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
+          查看（{{ monthEntries.length }}）
+        </button>
       </div>
     </div>
 
@@ -536,13 +539,6 @@ onUnmounted(() => {
         </div>
       </div>
       </div>
-    </div>
-
-    <!-- 操作栏：数量 + 管理分组 + 新增 -->
-    <div class="ld-headbar">
-      <button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
-        展开记录（{{ monthEntries.length }}）
-      </button>
     </div>
 
     <!-- 空月态 -->

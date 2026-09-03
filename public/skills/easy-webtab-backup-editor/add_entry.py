@@ -47,9 +47,16 @@ def make_id(prefix):
 
 
 def resolve_file(args):
-    """确定目标文件路径：--file 优先，否则按子命令路由到 --dir 下的对应文件"""
+    """确定目标文件路径：--file 优先，否则按子命令路由到 --dir 下的对应文件。
+    edit 子命令按 --target 顶层键推断目标文件。"""
     if args.file:
         return args.file
+    if args.cmd == "edit" and getattr(args, "target", None):
+        top = args.target.split(".")[0]
+        route = {"prefs": "nav.json", "business": "business.json",
+                 "student": "student.json"}
+        fname = route.get(top, "workbench.json")
+        return os.path.join(args.dir, fname)
     fname = CMD_TO_FILE.get(args.cmd)
     if not fname:
         raise SystemExit(f"子命令 '{args.cmd}' 无法自动路由文件，请用 --file 指定目标文件路径")
@@ -347,11 +354,80 @@ def h_generic(data, args):
     return args.target
 
 
+def find_list(data, target):
+    """根据 target 路径返回 (kind, container, key, arr)：
+    - kind="prefs"：prefs 里的值是 JSON 字符串，arr 为解析后的列表，key 为 prefs 键
+    - 其余：arr 为目标数组引用，container/key 为 None
+    """
+    parts = target.split(".")
+    if parts[0] == "prefs":
+        prefs = data.setdefault("prefs", {})
+        key = parts[1]
+        raw = prefs.get(key, "[]") or "[]"
+        arr = json.loads(raw) if raw.strip() else []
+        return ("prefs", prefs, key, arr)
+    if parts[0] == "business":
+        br = business_root(data)
+        cur = br
+        for p in parts[1:]:
+            cur = cur.setdefault(p, [])
+        return ("business", br, None, cur)
+    # 通用嵌套：todos / notes.notes / ledger.entries / health.records.exercise / habits.habits / countdowns ...
+    cur = data
+    for p in parts[:-1]:
+        cur = cur.setdefault(p, {})
+    arr = cur.setdefault(parts[-1], [])
+    return ("generic", cur, None, arr)
+
+
+def h_edit(data, args):
+    """按 id 定位已有条目，只更新 --set-json 中给出的字段（不改 id/createdAt/密码，不删除、不新增）"""
+    fields = json.loads(args.set_json)
+    if not isinstance(fields, dict):
+        raise SystemExit("--set-json 必须是 JSON 对象，如 {\"amount\":20}")
+
+    kind, container, key, arr = find_list(data, args.target)
+    if kind == "prefs":
+        entry = next((e for e in arr if e.get("url") == args.id), None)  # 网站用 url 当 id
+    else:
+        entry = next((e for e in arr if e.get("id") == args.id), None)
+    if entry is None:
+        raise SystemExit(f"未找到 id={args.id} 的条目（target={args.target}），已停止，未做任何改动")
+
+    # 受保护字段：不改 id、不改 createdAt
+    protected = {"id", "createdAt"}
+    changed = []
+    for k, v in fields.items():
+        if k in protected:
+            continue
+        entry[k] = v
+        changed.append(k)
+    # 刷新 updatedAt（若原条目有该字段）
+    if "updatedAt" in entry:
+        entry["updatedAt"] = ts()
+
+    # 特殊：收摊记录改了 items 则重算营业额
+    if args.target == "business.dailyRecords" and "items" in fields:
+        products = {p["id"]: p for p in business_root(data).get("products", [])}
+        entry["totalRevenue"] = sum(
+            (it["broughtOut"] - it["remaining"] - it["loss"]) *
+            products.get(it["productId"], {}).get("sellingPrice", 0)
+            for it in entry.get("items", [])
+        )
+
+    # 写回 prefs 字符串
+    if kind == "prefs":
+        container[key] = json.dumps(arr, ensure_ascii=False)
+        return f'prefs["{key}"] (改 {",".join(changed)})'
+    return f"{args.target} (改 {",".join(changed)})"
+
+
 HANDLERS = {
     "site": h_site, "todo": h_todo, "note": h_note, "countdown": h_countdown,
     "ledger": h_ledger, "exercise": h_exercise, "weight": h_weight,
     "habit": h_habit, "product": h_product, "purchase": h_purchase,
     "expense": h_expense, "daily-record": h_daily_record, "generic": h_generic,
+    "edit": h_edit,
 }
 
 
@@ -360,73 +436,81 @@ def add_common(p):
 
 
 def build_parser():
-    p = argparse.ArgumentParser(description="easy-web-tab 备份新增脚本（v2 五文件版）")
-    p.add_argument("--dir", default=DEFAULT_DIR, help=f"备份目录路径（默认 {DEFAULT_DIR}）")
-    p.add_argument("--file", default=None, help="直接指定文件路径（覆盖 --dir 自动路由）")
+    # --dir / --file 放到公共 parent，使子命令前后都能写
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--dir", default=DEFAULT_DIR, help=f"备份目录路径（默认 {DEFAULT_DIR}）")
+    common.add_argument("--file", default=None, help="直接指定文件路径（覆盖 --dir 自动路由）")
+
+    p = argparse.ArgumentParser(description="easy-web-tab 备份新增/修改脚本（v2 五文件版）", parents=[common])
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    ps = sub.add_parser("site", help="添加网站 → nav.json")
+    ps = sub.add_parser("site", parents=[common], help="添加网站 → nav.json")
     ps.add_argument("--name", required=True); ps.add_argument("--url", required=True)
     ps.add_argument("--category"); ps.add_argument("--tags", help="逗号分隔，如 购物,日常")
     ps.add_argument("--description")
 
-    pt = sub.add_parser("todo", help="新增待办 → workbench.json")
+    pt = sub.add_parser("todo", parents=[common], help="新增待办 → workbench.json")
     pt.add_argument("--title", required=True); pt.add_argument("--description")
     pt.add_argument("--priority", choices=["low", "medium", "high"])
     pt.add_argument("--due", help="YYYY-MM-DD"); pt.add_argument("--category")
     pt.add_argument("--color"); add_common(pt)
 
-    pn = sub.add_parser("note", help="新增便签 → workbench.json")
+    pn = sub.add_parser("note", parents=[common], help="新增便签 → workbench.json")
     pn.add_argument("--title", required=True); pn.add_argument("--content")
     pn.add_argument("--type", choices=["normal", "timeline"]); pn.add_argument("--category")
     add_common(pn)
 
-    pc = sub.add_parser("countdown", help="新增倒计时 → workbench.json")
+    pc = sub.add_parser("countdown", parents=[common], help="新增倒计时 → workbench.json")
     pc.add_argument("--name", required=True); pc.add_argument("--end", required=True, help="YYYY-MM-DDTHH:mm")
     pc.add_argument("--category"); pc.add_argument("--repeat", help='如 {"type":"yearly"} 或留空')
     pc.add_argument("--color"); add_common(pc)
 
-    pl = sub.add_parser("ledger", help="新增记账 → workbench.json")
+    pl = sub.add_parser("ledger", parents=[common], help="新增记账 → workbench.json")
     pl.add_argument("--date", required=True, help="YYYY-MM-DD"); pl.add_argument("--category", required=True)
     pl.add_argument("--amount", required=True, type=float); add_common(pl)
 
-    pe = sub.add_parser("exercise", help="新增运动记录 → workbench.json")
+    pe = sub.add_parser("exercise", parents=[common], help="新增运动记录 → workbench.json")
     pe.add_argument("--date", required=True); pe.add_argument("--type", required=True, help="运动类型")
     pe.add_argument("--duration", required=True, type=int, help="分钟")
     pe.add_argument("--calories", required=True, type=float); pe.add_argument("--distance", type=float)
     add_common(pe)
 
-    pw = sub.add_parser("weight", help="新增体重记录 → workbench.json")
+    pw = sub.add_parser("weight", parents=[common], help="新增体重记录 → workbench.json")
     pw.add_argument("--date", required=True); pw.add_argument("--kg", required=True, type=float)
     add_common(pw)
 
-    ph = sub.add_parser("habit", help="新增习惯 → workbench.json")
+    ph = sub.add_parser("habit", parents=[common], help="新增习惯 → workbench.json")
     ph.add_argument("--name", required=True); ph.add_argument("--frequency", type=int)
     ph.add_argument("--color")
 
-    pp = sub.add_parser("product", help="新增商品 → business.json")
+    pp = sub.add_parser("product", parents=[common], help="新增商品 → business.json")
     pp.add_argument("--name", required=True); pp.add_argument("--category")
     pp.add_argument("--unit"); pp.add_argument("--purchase", required=True, type=float)
     pp.add_argument("--selling", required=True, type=float)
 
-    ppu = sub.add_parser("purchase", help="新增进货 → business.json")
+    ppu = sub.add_parser("purchase", parents=[common], help="新增进货 → business.json")
     ppu.add_argument("--product", required=True, help="商品 id"); ppu.add_argument("--quantity", required=True, type=int)
     ppu.add_argument("--unit-price", required=True, type=float, dest="unit_price")
     ppu.add_argument("--date", required=True); add_common(ppu)
 
-    pex = sub.add_parser("expense", help="新增支出 → business.json")
+    pex = sub.add_parser("expense", parents=[common], help="新增支出 → business.json")
     pex.add_argument("--date", required=True); pex.add_argument("--category", required=True)
     pex.add_argument("--amount", required=True, type=float); add_common(pex)
 
-    pdr = sub.add_parser("daily-record", help="新增/追加收摊记录 → business.json")
+    pdr = sub.add_parser("daily-record", parents=[common], help="新增/追加收摊记录 → business.json")
     pdr.add_argument("--date", required=True)
     pdr.add_argument("--items-json", required=True, dest="items_json",
                      help='JSON 数组，如 [{"productId":"bp_1","broughtOut":30,"remaining":5,"loss":1}]')
     add_common(pdr)
 
-    pg = sub.add_parser("generic", help="通用：直接传 target 路径与 entry JSON（需 --file 指定文件）")
+    pg = sub.add_parser("generic", parents=[common], help="通用：直接传 target 路径与 entry JSON（需 --file 指定文件）")
     pg.add_argument("--target", required=True, help="如 ledger.entries / business.products / notes.notes / prefs.user-sites")
     pg.add_argument("--json", required=True, help="entry 的 JSON 字符串")
+
+    pe_ = sub.add_parser("edit", parents=[common], help="修改已有条目（按 id 定位，只更新指定字段，禁止删除）")
+    pe_.add_argument("--target", required=True, help="数组路径，如 todos / ledger.entries / business.products / prefs.user-sites / business.dailyRecords")
+    pe_.add_argument("--id", required=True, help="条目 id（网站用 url）")
+    pe_.add_argument("--set-json", required=True, dest="set_json", help='要更新的字段 JSON 对象，如 {"amount":20,"note":"改价"}')
 
     return p
 

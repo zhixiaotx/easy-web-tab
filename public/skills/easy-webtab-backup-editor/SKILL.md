@@ -1,13 +1,15 @@
 ﻿---
 name: "easy-webtab-backup-editor"
-description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份时触发。支持：添加网站、记待办、写便签、加倒计时、记一笔消费/收入、记录运动/体重、添加习惯、新增商品/进货/收摊/支出记录。禁止：删除已有数据。数据目录位于 C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\（5 个独立 JSON 文件：nav.json / icons.json / workbench.json / business.json / student.json）"
+description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 备份时触发。支持：新增网站、待办、便签、倒计时、记账、运动/体重、习惯、商品/进货/收摊/支出；修改上述已有条目（按 id 定位、只更新指定字段）。禁止：删除已有数据。数据目录位于 C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\（5 个独立 JSON 文件：nav.json / icons.json / workbench.json / business.json / student.json）"
 ---
 
 # easy-web-tab 备份数据编辑器
 
-**触发**：用户说"帮我新增 xxx 网站 / 加一条待办 / 记一笔消费 / 新增进货 / 记一笔支出"等，向备份数据中**新增**条目。
+**触发**：用户说"帮我新增 xxx 网站 / 加一条待办 / 记一笔消费 / 新增进货 / 记一笔支出 / 把 xx 的标题改成… / 把倒计时改到…"等，向备份数据中**新增或修改**条目。
 
-**禁止修改/删除**：本技能**只做新增**，不允许修改或删除已有条目。用户说"改一下 xxx 的标题/金额/日期"或"删掉这条记录"时，直接回复"本技能仅支持新增数据，不支持修改或删除操作"，不执行。
+**允许修改**：用户说"改一下 xxx 的标题/金额/日期/状态/完成度"→ 用 `edit` 子命令按 **id** 定位该条目，**只更新指定字段**（不动其他字段、不改 `createdAt`、不改密码字段、不删除）。定位需要 id：若你不知道某条记录的 id，先让我在对应 JSON 文件里查（例如"帮我找一下 xx 待办的 id"）。
+
+**禁止删除**：本技能**不支持删除**。用户说"删掉这条记录 / 移除 xxx / 清空某个列表"时，直接回复"本技能不支持删除操作，如需删除请在 easy-web-tab 应用内手动操作"，不执行。
 
 **禁止闲聊**：用户只是问"怎么用云同步/怎么导出"→ 直接回答，不编辑 JSON。
 
@@ -454,12 +456,17 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
 **成功时只输出一句**：
 
 ```
+# 新增
 已记录完成：<备份记录名>，数据写入 <模块名> 模块（<文件名>）。
+
+# 修改
+已修改完成：<备份记录名>，条目 <id> 的 <字段列表> 已更新，数据位于 <模块名> 模块（<文件名>）。
 ```
 
 - 备份记录名 = Step 1 备份的原文件副本名
 - 模块名 = 实际写入位置（如 `todos`、`ledger`、`health.records.exercise`、`prefs["user-sites"]`、`business.purchases` 等）
 - 文件名 = nav.json / workbench.json / business.json
+- 修改场景：`<字段列表>` 为本次 `--set-json` 中实际写入的键；若找不到 id，输出"未找到 id=xxx 的条目"并停止，不新增、不删除。
 
 **失败时**如实报告问题并请求用户输入。
 
@@ -467,7 +474,7 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
 
 ## 九、使用脚本 `add_entry.py`（推荐，免手写代码）
 
-本技能附带通用脚本 `add_entry.py`，已封装完整安全流程（自动路由文件 → 备份原文件 → 校验格式 → 生成 ID/时间戳 → push 新条目 → 写回 → 回验，并断言密码字段不被改动）。**优先用脚本，不要再临时写代码。**
+本技能附带通用脚本 `add_entry.py`，已封装完整安全流程（自动路由文件 → 备份原文件 → 校验格式 → 生成 ID/时间戳 → push 新条目或按 id 更新已有条目 → 写回 → 回验，并断言密码字段不被改动）。**优先用脚本，不要再临时写代码。** 新增用各业务子命令，修改用 `edit` 子命令，删除一律不支持。
 
 **位置**：`~/.workbuddy/skills/easy-webtab-backup-editor/add_entry.py`
 **运行**：`python add_entry.py <子命令> [--dir 目录路径] [字段...]`
@@ -492,6 +499,7 @@ description: "当用户要\"记录/新增/添加\"数据到 easy-web-tab 备份�
 | `expense` | business.json | business.expenses | `--date --category --amount` | `--note` |
 | `daily-record` | business.json | business.dailyRecords | `--date --items-json(数组)` | `--note`（同日期自动追加并重算营业额） |
 | `generic` | 需 `--file` 指定 | 任意（target 指定） | `--file <路径> --target(如 ledger.entries) --json(entry的JSON)` | — |
+| `edit` | 由 `--target` 决定 | 任意数组中的已有条目 | `--target(如 todos/ledger.entries/business.products/prefs.user-sites) --id <条目id> --set-json(更新字段的JSON对象)` | — |
 
 **示例（对应常见场景）**：
 ```bash
@@ -507,6 +515,24 @@ python add_entry.py purchase --product bp_xxx --quantity 50 --unit-price 3 --dat
 
 # 兜底：任意结构直接传 JSON（自动补 id/时间戳），需手动指定文件
 python add_entry.py generic --file C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\student.json --target homework --json "{\"title\":\"数学练习\",\"status\":\"pending\"}"
+
+# 修改：把某条待办标题改为「写周报(改)」并标记完成（id 从对应 JSON 查得）
+python add_entry.py edit --target todos --id td_20260823_120000_a1b2 --set-json "{\"title\":\"写周报(改)\",\"completed\":true}"
+
+# 修改：把某条记账金额改为 20、备注「改价」
+python add_entry.py edit --target ledger.entries --id ld_20260825_xxxx --set-json "{\"amount\":20,\"note\":\"改价\"}"
+
+# 修改：网站（prefs.user-sites 用 url 作为 id）
+python add_entry.py edit --target prefs.user-sites --id https://www.taobao.com --set-json "{\"name\":\"淘宝(改名)\"}"
+
+# 修改：收摊记录改了 items 会自动重算 totalRevenue
+python add_entry.py edit --target business.dailyRecords --id bd_20260825_xxxx --set-json "{\"items\":[{\"productId\":\"bp_1\",\"broughtOut\":30,\"remaining\":5,\"loss\":1}]}"
 ```
 
 **注意**：`daily-record` 的 `--items-json` 中 `productId` 必须已存在于 `business.products`，营业额按 `(broughtOut-remaining-loss) × sellingPrice` 自动计算；同日期已存在收摊记录时自动追加而非新建。
+
+**`edit` 使用要点**：
+- `--id` 必须能唯一定位一条已有记录；网站用 `url` 当 id，其余用条目自身的 `id`。不知道 id 时先让我在对应 JSON 文件里查。
+- `--set-json` 是**部分更新**：只写你要改的字段，其他字段（含 `createdAt`、密码字段）一律不动；`updatedAt` 会自动刷新为当前时间。
+- `business.dailyRecords` 若改了 `items`，`totalRevenue` 会按最新 items 重算；但 `business.products` 改售价**不会**级联重算历史收摊记录的营业额（避免误改），请以应用内数据为准。
+- 找不到 id → 脚本报错并停止，**绝不**新增或删除。

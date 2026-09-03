@@ -1076,11 +1076,67 @@ async function handleToggleNoteCatTab(cat: { id: string; showInTabs?: boolean })
   if (!ok) toast.error('分类更新失败')
 }
 
+// --- 记账分类（复用 workbenchLedger 的 addCategory/updateCategory/deleteCategory，内置8分组不可删） ---
+const ledgerCatDrafts = reactive<Record<string, string>>({})
+const ledgerCatEditType = reactive<Record<string, 'income' | 'expense'>>({})
+const ledgerCatEditingId = ref<string | null>(null)
+const newLedgerCatName = ref('')
+const newLedgerCatType = ref<'income' | 'expense'>('expense')
+
+const sortedLedgerCategories = computed(() => ledStore.sortedCategories)
+
+function initLedgerCats(): void {
+  for (const c of sortedLedgerCategories.value) {
+    if (!(c.id in ledgerCatDrafts)) ledgerCatDrafts[c.id] = c.name
+    if (!(c.id in ledgerCatEditType)) ledgerCatEditType[c.id] = c.type
+  }
+}
+
+async function ledgerCatStartEdit(c: { id: string; name: string; type: 'income' | 'expense' }): Promise<void> {
+  ledgerCatEditingId.value = c.id
+  ledgerCatDrafts[c.id] = c.name
+  ledgerCatEditType[c.id] = c.type
+}
+function ledgerCatCancelEdit(): void { ledgerCatEditingId.value = null }
+
+async function ledgerCatSave(id: string): Promise<void> {
+  if (ledgerCatEditingId.value !== id) return
+  const name = ledgerCatDrafts[id]?.trim() ?? ''
+  if (!name) { toast.error('分类名称不能为空'); return }
+  const type = ledgerCatEditType[id] ?? 'expense'
+  const ok = await ledStore.updateCategory(id, { name, type })
+  if (!ok) { toast.error('分类名称已存在'); return }
+  ledgerCatEditingId.value = null
+}
+
+async function handleAddLedgerCat(): Promise<void> {
+  const name = newLedgerCatName.value.trim()
+  if (!name) return
+  const ok = await ledStore.addCategory({ name, type: newLedgerCatType.value })
+  if (!ok) { toast.error('分类名称已存在'); return }
+  newLedgerCatName.value = ''
+}
+
+async function handleDeleteLedgerCat(id: string): Promise<void> {
+  const c = sortedLedgerCategories.value.find(x => x.id === id)
+  if (!c) return
+  if (!confirm(`确定要删除记账分类「${c.name}」吗？\n\n该分类被记账记录使用时将无法删除。`)) return
+  const res = await ledStore.deleteCategory(id)
+  if (!res.ok) {
+    if (res.reason === 'in-use') toast.error('该分类已被记账记录使用，无法删除')
+    else if (res.reason === 'builtin') toast.error('内置分类不可删除')
+    else toast.error('分类删除失败')
+    return
+  }
+  delete ledgerCatDrafts[id]
+  delete ledgerCatEditType[id]
+}
+
 // 订阅「去设置」打开事件（useAppSettingsDialog 单例）：打开时切到工作台设置 tab 并聚焦城市输入框；
 // 一次性消费打开标志（closeAppSettings），避免后续挂载重复触发
 let stopWatchSettings: (() => void) | undefined
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
   // 弹窗打开即加载快照列表（对话框 v-if 挂载，onMounted = 打开时刻）
   loadSnapshots()
@@ -1088,9 +1144,12 @@ onMounted(() => {
   initTodoCats()
   initCdCats()
   initNoteCats()
+  // 记账 store 可能还未随工作台挂载加载 → 防御性加载一次
+  try { await ledStore.loadLedger() } catch { /* ignore */ }
+  initLedgerCats()
   stopWatchSettings = watch(
     () => appSettings.showAppSettings.value,
-    (open) => {
+    async (open) => {
       if (open) {
         // WeatherCard 入口只在工作台页面有意义；如果来源页不含 wb（极端来源），仍然选首个可见 tab
         if (visibleTabs.value.includes('wb')) {
@@ -1098,6 +1157,9 @@ onMounted(() => {
         } else if (visibleTabs.value.length > 0 && !visibleTabs.value.includes(activeTab.value)) {
           activeTab.value = visibleTabs.value[0]
         }
+        // 每次打开设置弹窗，重新拉取记账分类（与工作台页面保持最新）
+        try { await ledStore.loadLedger() } catch { /* ignore */ }
+        initLedgerCats()
         nextTick(() => cityInput.value?.focus())
         appSettings.closeAppSettings()
       }
@@ -1109,7 +1171,11 @@ onMounted(() => {
 watch(
   () => activeTab.value,
   (tab) => {
-    if (tab === 'wb') loadSnapshots()
+    if (tab === 'wb') {
+      loadSnapshots()
+      // 切回工作台 tab 时也刷新记账分类（工作台页面可能刚改过）
+      initLedgerCats()
+    }
   }
 )
 
@@ -1674,6 +1740,80 @@ onUnmounted(() => {
               @keydown.enter="handleAddNoteCat"
             />
             <button type="button" class="wb-menu-btn" :disabled="newNoteCatName.trim() === ''" data-testid="wbcfg-note-add" @click="handleAddNoteCat">添加</button>
+          </div>
+        </div>
+
+        <!-- 记账分类管理（工作台设置 tab - 分类管理）：改名/类型切换/删除/新增；内置 8 分组不可删 -->
+        <div v-if="activeTab === 'wb' && activeSubTab === 'wb-cat'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">记账分类</h3>
+          </div>
+          <p class="wb-menu-hint">管理记账面板的分类列表；收入类分组（含内置「工资」）、支出类分组（含内置「房贷/车贷/早餐/午餐/晚餐/通勤/日常」共 7 个）共 8 个内置分组不可删除</p>
+          <div class="wb-menu-list">
+            <div v-for="c in sortedLedgerCategories" :key="c.id" class="wb-menu-row" :data-testid="`ldcfg-ledgercat-row-${c.id}`">
+              <template v-if="ledgerCatEditingId === c.id">
+                <input
+                  type="text"
+                  class="wb-menu-name-input"
+                  :value="ledgerCatDrafts[c.id] ?? c.name"
+                  @input="ledgerCatDrafts[c.id] = ($event.target as HTMLInputElement).value"
+                  @keydown.enter="ledgerCatSave(c.id)"
+                  @keydown.esc="ledgerCatCancelEdit()"
+                  :data-testid="`ldcfg-ledgercat-edit-name-${c.id}`"
+                />
+                <select
+                  class="wb-menu-name-input"
+                  style="max-width: 120px; flex: 0 0 120px;"
+                  :value="ledgerCatEditType[c.id] ?? c.type"
+                  @change="ledgerCatEditType[c.id] = ($event.target as HTMLSelectElement).value as 'income' | 'expense'"
+                  :data-testid="`ldcfg-ledgercat-edit-type-${c.id}`"
+                >
+                  <option value="income">收入</option>
+                  <option value="expense">支出</option>
+                </select>
+                <div class="wb-menu-actions">
+                  <button
+                    type="button"
+                    class="wb-menu-btn"
+                    :disabled="(ledgerCatDrafts[c.id] ?? c.name).trim() === ''"
+                    :data-testid="`ldcfg-ledgercat-save-${c.id}`"
+                    @click="ledgerCatSave(c.id)"
+                  >保存</button>
+                  <button type="button" class="wb-menu-btn" :data-testid="`ldcfg-ledgercat-cancel-${c.id}`" @click="ledgerCatCancelEdit()">取消</button>
+                </div>
+              </template>
+              <template v-else>
+                <span class="wb-menu-name-input" style="border:none;background:transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</span>
+                <span class="ld-cat-type-badge" :class="{ 'is-income': c.type === 'income' }" style="margin-right: 6px;">{{ c.type === 'income' ? '收入' : '支出' }}</span>
+                <span v-if="c.isBuiltIn" class="ld-builtin-tag">内置</span>
+                <template v-if="!c.isBuiltIn">
+                  <div style="flex: 1"></div>
+                  <button type="button" class="wb-menu-btn" :data-testid="`ldcfg-ledgercat-edit-${c.id}`" @click="ledgerCatStartEdit(c)">编辑</button>
+                  <button type="button" class="wb-menu-btn" :data-testid="`ldcfg-ledgercat-del-${c.id}`" @click="handleDeleteLedgerCat(c.id)">删除</button>
+                </template>
+                <template v-else><div style="flex: 1"></div></template>
+              </template>
+            </div>
+          </div>
+          <div class="wb-cat-add-row">
+            <input
+              v-model="newLedgerCatName"
+              type="text"
+              class="wb-menu-name-input"
+              placeholder="新记账分类名称"
+              data-testid="ldcfg-ledgercat-new-name"
+              @keydown.enter="handleAddLedgerCat"
+            />
+            <select
+              v-model="newLedgerCatType"
+              class="wb-menu-name-input"
+              style="max-width: 120px; flex: 0 0 120px;"
+              data-testid="ldcfg-ledgercat-new-type"
+            >
+              <option value="income">收入</option>
+              <option value="expense">支出</option>
+            </select>
+            <button type="button" class="wb-menu-btn" :disabled="newLedgerCatName.trim() === ''" data-testid="ldcfg-ledgercat-add" @click="handleAddLedgerCat">添加</button>
           </div>
         </div>
 
@@ -2918,6 +3058,45 @@ onUnmounted(() => {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* ===== 记账分类：类型徽标（支出蓝 / 收入绿）+ 内置徽标 ===== */
+.ld-cat-type-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
+}
+.ld-cat-type-badge.is-income {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+.ld-builtin-tag {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #9ca3af);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+:root.dark .ld-cat-type-badge {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+:root.dark .ld-cat-type-badge.is-income {
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+:root.dark .ld-builtin-tag {
+  color: #9ca3af;
+  border-color: #4b5563;
 }
 
 /* ===== 学生工作台 tab 专属样式 ===== */

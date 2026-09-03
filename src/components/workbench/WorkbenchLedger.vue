@@ -244,79 +244,12 @@ async function handleDelete(id: string): Promise<void> {
   }
 }
 
-// ===== 分组管理弹框 =====
-const showCatManager = ref(false)
-const editingCatId = ref<string | null>(null)
-const catEditName = ref('')
-const catEditType = ref<'income' | 'expense'>('expense')
-const newCatName = ref('')
-const newCatType = ref<'income' | 'expense'>('expense')
-
-function openCatManager(): void {
-  editingCatId.value = null
-  showCatManager.value = true
-}
-
-function closeCatManager(): void {
-  showCatManager.value = false
-  editingCatId.value = null
-}
-
-function startEditCat(cat: LedgerCategory): void {
-  editingCatId.value = cat.id
-  catEditName.value = cat.name
-  catEditType.value = cat.type
-}
-
-async function handleEditCatSave(): Promise<void> {
-  const id = editingCatId.value
-  if (!id) return
-  const name = catEditName.value.trim()
-  if (!name) return
-  const ok = await store.updateCategory(id, { name, type: catEditType.value })
-  if (!ok) {
-    toast.error('分组名称已存在')
-    return
-  }
-  editingCatId.value = null
-  paging.goto(1) // 分组变更 → 列表回第 1 页
-}
-
-async function handleAddCat(): Promise<void> {
-  const name = newCatName.value.trim()
-  if (!name) return
-  const ok = await store.addCategory({ name, type: newCatType.value })
-  if (!ok) {
-    toast.error('分组名称已存在')
-    return
-  }
-  newCatName.value = ''
-  paging.goto(1) // 分组变更 → 列表回第 1 页
-}
-
-async function handleDeleteCat(id: string): Promise<void> {
-  if (!confirm('确定要删除这个分组吗？')) return
-  const res = await store.deleteCategory(id)
-  if (!res.ok) {
-    if (res.reason === 'in-use') {
-      toast.error('该分组已被记账记录使用，无法删除')
-    } else {
-      toast.error('该分组无法删除')
-    }
-    return
-  }
-  paging.goto(1) // 分组变更 → 列表回第 1 页
-}
-
-// ESC 关闭弹框（先记录弹框，再分组管理）
+// ESC 关闭弹框
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
   if (showDialog.value) {
     event.preventDefault()
     cancelForm()
-  } else if (showCatManager.value) {
-    event.preventDefault()
-    closeCatManager()
   }
 }
 
@@ -344,7 +277,6 @@ onUnmounted(() => {
           <Icon :name="store.showAmount ? 'eye-off' : 'eye'" :size="15" />
           {{ store.showAmount ? '隐藏金额' : '显示金额' }}
         </button>
-        <button class="btn-manage" data-testid="ld-cat-manager" @click="openCatManager">管理分组</button>
         <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增</button>
         <button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
           查看（{{ monthEntries.length }}）
@@ -648,76 +580,6 @@ onUnmounted(() => {
           </div>
           <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
         </div>
-      </div>
-    </Transition>
-
-    <!-- 分组管理弹框 -->
-    <Transition name="dialog">
-      <div v-if="showCatManager" class="dialog-overlay" @click.self="closeCatManager">
-      <div class="dialog" data-testid="ld-cat-dialog">
-        <div class="dialog-header">
-          <h3>管理分组</h3>
-          <button class="close-btn" @click="closeCatManager"><Icon name="close" /></button>
-        </div>
-        <div class="dialog-body">
-          <div class="ld-cat-list">
-            <div v-for="c in store.sortedCategories" :key="c.id" class="ld-cat-row" :data-testid="`ld-catmgr-row-${c.id}`">
-              <template v-if="editingCatId === c.id">
-                <input
-                  v-model="catEditName"
-                  type="text"
-                  class="form-input"
-                  placeholder="分组名称"
-                  data-testid="ld-catmgr-edit-name"
-                />
-                <select v-model="catEditType" class="form-input" data-testid="ld-catmgr-edit-type">
-                  <option value="income">收入</option>
-                  <option value="expense">支出</option>
-                </select>
-                <div class="ld-cat-actions">
-                  <button
-                    class="btn-save"
-                    :disabled="catEditName.trim() === ''"
-                    :data-testid="`ld-catmgr-save-${c.id}`"
-                    @click="handleEditCatSave"
-                  >
-                    保存
-                  </button>
-                  <button class="btn-cancel" :data-testid="`ld-catmgr-cancel-${c.id}`" @click="editingCatId = null">取消</button>
-                </div>
-              </template>
-              <template v-else>
-                <span class="ld-cat-name">{{ c.name }}</span>
-                <span class="ld-cat-type-badge" :class="{ 'is-income': c.type === 'income' }">
-                  {{ c.type === 'income' ? '收入' : '支出' }}
-                </span>
-                <span v-if="c.isBuiltIn" class="ld-builtin-tag" :data-testid="`ld-catmgr-builtin-${c.id}`">内置</span>
-                <div v-else class="ld-cat-actions">
-                  <button class="btn-edit" :data-testid="`ld-catmgr-edit-${c.id}`" @click="startEditCat(c)">编辑</button>
-                  <button class="btn-delete" :data-testid="`ld-catmgr-del-${c.id}`" @click="handleDeleteCat(c.id)">删除</button>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <div class="ld-cat-add-form">
-            <input
-              v-model="newCatName"
-              type="text"
-              class="form-input"
-              placeholder="新分组名称"
-              data-testid="ld-catmgr-new-name"
-            />
-            <select v-model="newCatType" class="form-input" data-testid="ld-catmgr-new-type">
-              <option value="income">收入</option>
-              <option value="expense">支出</option>
-            </select>
-            <button class="btn-add" :disabled="newCatName.trim() === ''" data-testid="ld-catmgr-add" @click="handleAddCat">
-              添加
-            </button>
-          </div>
-        </div>
-      </div>
       </div>
     </Transition>
   </div>
@@ -1293,12 +1155,6 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   max-height: var(--dlg-h-wb-ledger, 85vh);
   overflow-y: auto;
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-/* 分组管理弹框（与表单弹框共享 .dialog，经 data-testid 区分独立尺寸变量） */
-.dialog[data-testid="ld-cat-dialog"] {
-  max-width: var(--dlg-w-wb-ledger-cat, 480px);
-  max-height: var(--dlg-h-wb-ledger-cat, 85vh);
 }
 
 /* 记录弹框（宽 90%，高 60%） */

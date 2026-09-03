@@ -140,20 +140,28 @@ const monthEntries = computed(() =>
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
 
-// ===== 记录弹框（点击「展开记录」弹出弹框，卡片网格每行 5 条）=====
+// ===== 记录弹框（点击「查看」弹出弹框，Element Plus Table + ElPagination，每页 10 条）=====
 const showRecordsModal = ref(false)
+const recordsPage = ref(1)
+const RECORDS_PAGE_SIZE = 10
 
 // ===== 图表区展开/折叠（默认展开）=====
 const chartsExpanded = ref(true)
 
 function openRecordsModal(): void {
+  recordsPage.value = 1
   showRecordsModal.value = true
-  paging.goto(1)
 }
 
 function closeRecordsModal(): void {
   showRecordsModal.value = false
 }
+
+const recordsTotalPages = computed(() => Math.max(1, Math.ceil(viewEntries.value.length / RECORDS_PAGE_SIZE)))
+const recordsPageItems = computed<EntryView[]>(() => {
+  const start = (recordsPage.value - 1) * RECORDS_PAGE_SIZE
+  return viewEntries.value.slice(start, start + RECORDS_PAGE_SIZE)
+})
 
 interface EntryView {
   entry: LedgerEntry
@@ -541,7 +549,7 @@ onUnmounted(() => {
       </div>
     </Transition>
 
-    <!-- 记录弹框（卡片网格，每行 5 条） -->
+    <!-- 记录弹框（Element Plus Table，列顺序：日期/分类/金额/备注/操作，每页 10 条） -->
     <Transition name="dialog">
       <div v-if="showRecordsModal" class="dialog-overlay" @click.self="closeRecordsModal">
         <div class="dialog ld-records-dialog" data-testid="ld-records-dialog">
@@ -549,36 +557,66 @@ onUnmounted(() => {
             <h3>本月记录（{{ monthEntries.length }} 条）</h3>
             <button class="close-btn" @click="closeRecordsModal"><Icon name="close" /></button>
           </div>
-          <div ref="listEl" class="ld-records-body" :class="{ 'ld-records-scroll': !paging.fitsOnePage }">
-            <TransitionGroup name="grid">
-              <div
-                v-for="v in paging.pageItems"
-                :key="v.entry.id"
-                class="ld-record-card"
-                :class="{ 'is-income': v.cat?.type === 'income' }"
-                :data-testid="`ld-item`"
-              >
-                <div class="ld-record-date">{{ v.entry.date }}</div>
-                <span
-                  class="ld-cat-badge"
-                  :class="{ 'is-income': v.cat?.type === 'income' }"
-                  :data-testid="`ld-cat-${v.entry.categoryId}`"
-                >
-                  {{ v.cat?.name ?? '未知' }}
-                </span>
-                <div v-if="v.entry.note" class="ld-record-note">{{ v.entry.note }}</div>
-                <div v-else class="ld-record-note ld-record-note-empty">—</div>
-                <div class="ld-record-amount" :class="{ 'is-income': v.cat?.type === 'income' }">
-                  {{ masked((v.cat?.type === 'income' ? '+' : '-') + formatYuan(v.entry.amount)) }}
-                </div>
-                <div class="ld-actions">
-                  <button class="btn-edit" :data-testid="`ld-edit-${v.entry.id}`" @click="startEdit(v)">编辑</button>
-                  <button class="btn-delete" :data-testid="`ld-delete-${v.entry.id}`" @click="handleDelete(v.entry.id)">删除</button>
-                </div>
-              </div>
-            </TransitionGroup>
+          <div class="ld-records-body">
+            <el-table
+              :data="recordsPageItems"
+              stripe
+              border
+              size="default"
+              style="width: 100%"
+              height="100%"
+              empty-text="本月暂无记录"
+            >
+              <el-table-column prop="entry.date" label="日期" width="130" align="center">
+                <template #default="{ row }: { row: EntryView }">
+                  {{ row.entry.date }}
+                </template>
+              </el-table-column>
+              <el-table-column label="分类" width="160" align="center">
+                <template #default="{ row }: { row: EntryView }">
+                  <span
+                    class="ld-cat-type-badge"
+                    :class="{ 'is-income': row.cat?.type === 'income' }"
+                    :data-testid="`ld-cat-${row.entry.categoryId}`"
+                  >
+                    {{ row.cat?.name ?? '未知' }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="金额" width="150" align="right">
+                <template #default="{ row }: { row: EntryView }">
+                  <span class="ld-record-amount" :class="{ 'is-income': row.cat?.type === 'income' }">
+                    {{ masked((row.cat?.type === 'income' ? '+' : '-') + formatYuan(row.entry.amount)) }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="备注" min-width="200" show-overflow-tooltip>
+                <template #default="{ row }: { row: EntryView }">
+                  <span v-if="row.entry.note">{{ row.entry.note }}</span>
+                  <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="150" align="center" fixed="right">
+                <template #default="{ row }: { row: EntryView }">
+                  <button class="btn-edit" :data-testid="`ld-edit-${row.entry.id}`" @click="startEdit(row)" style="margin-right: 6px;">编辑</button>
+                  <button class="btn-delete" :data-testid="`ld-delete-${row.entry.id}`" @click="handleDelete(row.entry.id)">删除</button>
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
-          <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
+          <div class="ld-records-pager">
+            <el-pagination
+              v-model:current-page="recordsPage"
+              :page-size="RECORDS_PAGE_SIZE"
+              :page-sizes="[RECORDS_PAGE_SIZE]"
+              layout="total, prev, pager, next, jumper"
+              :total="viewEntries.length"
+              background
+              small
+              prev-text="上一页"
+              next-text="下一页"
+            />
+          </div>
         </div>
       </div>
     </Transition>
@@ -1157,81 +1195,43 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
 
-/* 记录弹框（宽 90%，高 60%） */
+/* 查看记录弹框（合适的宽高：宽 85vw / 高 85vh，flex 纵向布局给 table + pagination） */
 .dialog[data-testid="ld-records-dialog"] {
-  max-width: 90vw;
-  max-height: 60vh;
+  width: 85vw;
+  height: 85vh;
+  max-width: 1200px;
+  min-width: 560px;
   display: flex;
   flex-direction: column;
 }
 
-/* 记录卡片网格容器：每行 6 个，maxRows 6 行 */
+/* el-table 容器：填满剩余空间，overflow 交给 el-table internal */
 .ld-records-body {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px 16px;
-  overflow-y: auto;
+  padding: 16px 20px 0 20px;
   flex: 1;
   min-height: 0;
-  align-content: start;
-}
-
-.ld-records-scroll {
-  overflow-y: auto;
-}
-
-/* 单条记录卡片 */
-.ld-record-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-left: 4px solid var(--color-primary, var(--color-primary));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
 }
 
-.ld-record-card.is-income {
-  border-left-color: var(--color-success, var(--color-success));
+/* el-pagination 位置：底部分页条 */
+.ld-records-pager {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: var(--color-surface-2, #fafafa);
+  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
 }
 
-.ld-record-card:hover {
-  border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 45%, var(--color-border, #e2e8f0));
-  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
-}
-
-.ld-record-date {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.ld-record-note {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ld-record-note-empty {
-  opacity: 0.4;
-}
-
+/* 表格内金额样式：沿用旧.ld-record-amount，确保 + 绿 / - 蓝 主题色 */
 .ld-record-amount {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text, var(--color-text));
   font-variant-numeric: tabular-nums;
 }
-
 .ld-record-amount.is-income {
   color: var(--color-success, var(--color-success));
 }

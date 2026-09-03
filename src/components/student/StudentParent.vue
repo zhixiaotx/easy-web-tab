@@ -360,6 +360,61 @@ async function handleResetRewards() {
   }
 }
 
+// ===== 分页：卡片网格每页 10 个，加分记录每页 5 条 =====
+const PAGE_SIZE_CARDS = 10   // 任务/勋章/奖励网格：每页 10 张卡片
+const PAGE_SIZE_TXNS = 5    // 加分记录（manual points）：每页 5 条
+
+/** 分页：当前页码（从 1 开始）；4 个列表独立分页互不影响 */
+const pageTasks   = ref(1)
+const pageBadges  = ref(1)
+const pageRewards = ref(1)
+const pageTxns    = ref(1)
+
+/** 分页：计算总页数（空 = 1 页，ceil 向上取整） */
+function totalPagesOf(len: number, size: number): number {
+  if (len <= 0 || size <= 0) return 1
+  return Math.max(1, Math.ceil(len / size))
+}
+/** 分页：钳制 page 到 [1, max]，边界越界修正 */
+function clampPage(p: number, max: number): number {
+  if (!Number.isFinite(max) || max <= 0) return 1
+  const v = Math.round(p)
+  if (v < 1) return 1
+  if (v > max) return max
+  return v
+}
+/** 分页：按当前页切片（page 1 => [0, size），page 2 => [size, 2*size）） */
+function slicePage<T>(items: readonly T[], page: number, size: number): T[] {
+  if (size <= 0) return []
+  const max = totalPagesOf(items.length, size)
+  const cur = clampPage(page, max)
+  const s = (cur - 1) * size
+  return items.slice(s, s + size)
+}
+
+// —— 分页 computed：每个列表独立 ——
+const tasksTotalPages   = computed(() => totalPagesOf(taskList.value.length, PAGE_SIZE_CARDS))
+const pagedTasks        = computed(() => slicePage(taskList.value, pageTasks.value, PAGE_SIZE_CARDS))
+
+const badgesTotalPages  = computed(() => totalPagesOf(badgeList.value.length, PAGE_SIZE_CARDS))
+const pagedBadges       = computed(() => slicePage(badgeList.value, pageBadges.value, PAGE_SIZE_CARDS))
+
+// 奖励配置：注意这里用 rewardsStore.allRewards() 直接取全量（保持跟 template 一致）
+const allRewards        = computed(() => rewardsStore.allRewards())
+const rewardsTotalPages = computed(() => totalPagesOf(allRewards.value.length, PAGE_SIZE_CARDS))
+const pagedRewards      = computed(() => slicePage(allRewards.value, pageRewards.value, PAGE_SIZE_CARDS))
+
+const txnsTotalPages    = computed(() => totalPagesOf(recentPointTxns.value.length, PAGE_SIZE_TXNS))
+const pagedPointTxns    = computed(() => slicePage(recentPointTxns.value, pageTxns.value, PAGE_SIZE_TXNS))
+
+// —— 列表长度变化时：如果超界则回退；切日期（任务）/切数据（其他）导致本页变空时自动回到第 1 页，避免白屏 ——
+watch([tasksTotalPages,   pageTasks],   ([m, p]) => { pageTasks.value   = clampPage(p, m) })
+watch([badgesTotalPages,  pageBadges],  ([m, p]) => { pageBadges.value  = clampPage(p, m) })
+watch([rewardsTotalPages, pageRewards], ([m, p]) => { pageRewards.value = clampPage(p, m) })
+watch([txnsTotalPages,    pageTxns],    ([m, p]) => { pageTxns.value    = clampPage(p, m) })
+// 日期一换：任务列表所属日期变了 → 回到第 1 页
+watch(toolbarDate, () => { pageTasks.value = 1 })
+
 onMounted(ensureAllLoaded)
 watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: true })
 </script>
@@ -473,7 +528,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           </div>
           <div v-else class="stp-task-grid">
             <article
-              v-for="t in taskList"
+              v-for="t in pagedTasks"
               :key="t.id"
               class="stp-task-card"
               :class="{ done: t.done }"
@@ -491,6 +546,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               </div>
             </article>
           </div>
+          <!-- 任务分页器（>1 页才显示） -->
+          <nav v-if="tasksTotalPages > 1" class="stp-pager" data-testid="stp-pager-tasks" role="navigation" aria-label="任务分页">
+            <button type="button" class="stp-pager-btn" data-testid="stp-pager-tasks-prev" :disabled="pageTasks <= 1" @click="pageTasks = clampPage(pageTasks - 1, tasksTotalPages)"><Icon name="chevron-left" /></button>
+            <span class="stp-pager-info" data-testid="stp-pager-tasks-info">第 {{ pageTasks }} / {{ tasksTotalPages }} 页 · 共 {{ taskList.length }} 条</span>
+            <button type="button" class="stp-pager-btn" data-testid="stp-pager-tasks-next" :disabled="pageTasks >= tasksTotalPages" @click="pageTasks = clampPage(pageTasks + 1, tasksTotalPages)"><Icon name="chevron-right" /></button>
+          </nav>
         </section>
 
         <!-- Tab 3: 孩子报告 -->
@@ -573,12 +634,18 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
             <h4 class="stp-report-subtitle">最近 10 条加分记录</h4>
             <div v-if="recentPointTxns.length === 0" class="stp-empty stp-empty-small">暂无加分记录</div>
             <ul v-else class="stp-txn-list">
-              <li v-for="t in recentPointTxns" :key="t.id" class="stp-txn-item">
+              <li v-for="t in pagedPointTxns" :key="t.id" class="stp-txn-item">
                 <span class="stp-txn-pts earn">{{ rewardsStore.txnPointsText(t) }}</span>
                 <span class="stp-txn-reason">{{ t.reason }}</span>
                 <span class="stp-txn-date">{{ rewardsStore.txnDateText(t.createdAt) }}</span>
               </li>
             </ul>
+            <!-- 加分记录分页器（>1 页才显示） -->
+            <nav v-if="txnsTotalPages > 1" class="stp-pager" data-testid="stp-pager-txns" role="navigation" aria-label="加分记录分页">
+              <button type="button" class="stp-pager-btn" data-testid="stp-pager-txns-prev" :disabled="pageTxns <= 1" @click="pageTxns = clampPage(pageTxns - 1, txnsTotalPages)"><Icon name="chevron-left" /></button>
+              <span class="stp-pager-info" data-testid="stp-pager-txns-info">第 {{ pageTxns }} / {{ txnsTotalPages }} 页 · 共 {{ recentPointTxns.length }} 条</span>
+              <button type="button" class="stp-pager-btn" data-testid="stp-pager-txns-next" :disabled="pageTxns >= txnsTotalPages" @click="pageTxns = clampPage(pageTxns + 1, txnsTotalPages)"><Icon name="chevron-right" /></button>
+            </nav>
           </div>
         </section>
 
@@ -593,7 +660,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           </div>
           <div class="stp-badge-grid">
             <div
-              v-for="b in badgeList"
+              v-for="b in pagedBadges"
               :key="b.id"
               class="stp-badge-card"
               :class="{ unlocked: achievementsStore.isUnlocked(b.id) }"
@@ -615,6 +682,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               >{{ badgeGrantingId === b.id ? '发放中…' : '手动发放' }}</button>
             </div>
           </div>
+          <!-- 勋章分页器（>1 页才显示） -->
+          <nav v-if="badgesTotalPages > 1" class="stp-pager" data-testid="stp-pager-badges" role="navigation" aria-label="勋章分页">
+            <button type="button" class="stp-pager-btn" data-testid="stp-pager-badges-prev" :disabled="pageBadges <= 1" @click="pageBadges = clampPage(pageBadges - 1, badgesTotalPages)"><Icon name="chevron-left" /></button>
+            <span class="stp-pager-info" data-testid="stp-pager-badges-info">第 {{ pageBadges }} / {{ badgesTotalPages }} 页 · 共 {{ badgeList.length }} 枚</span>
+            <button type="button" class="stp-pager-btn" data-testid="stp-pager-badges-next" :disabled="pageBadges >= badgesTotalPages" @click="pageBadges = clampPage(pageBadges + 1, badgesTotalPages)"><Icon name="chevron-right" /></button>
+          </nav>
           <div class="stp-report-block">
             <h4 class="stp-report-subtitle">最近解锁</h4>
             <div v-if="recentBadges.length === 0" class="stp-empty stp-empty-small">暂未解锁任何勋章</div>
@@ -634,12 +707,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
             <h3 class="stp-pane-title">🎁 奖励项管理</h3>
             <button type="button" class="stp-btn-primary" @click="openAddReward">＋ 新增奖励项</button>
           </div>
-          <div v-if="rewardsStore.allRewards().length === 0" class="stp-empty">
+          <div v-if="allRewards.length === 0" class="stp-empty">
             暂无奖励项。点击右上角「＋ 新增奖励项」来创建孩子可以用积分兑换的奖励吧～
           </div>
           <div v-else class="stp-reward-grid">
             <div
-              v-for="r in rewardsStore.allRewards()"
+              v-for="r in pagedRewards"
               :key="r.id"
               class="stp-reward-card"
               :class="{ 'out-of-stock': (r.stock ?? 1) === 0 }"
@@ -653,6 +726,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               </div>
             </div>
           </div>
+          <!-- 奖励分页器（>1 页才显示） -->
+          <nav v-if="rewardsTotalPages > 1" class="stp-pager" data-testid="stp-pager-rewards" role="navigation" aria-label="奖励分页">
+            <button type="button" class="stp-pager-btn" data-testid="stp-pager-rewards-prev" :disabled="pageRewards <= 1" @click="pageRewards = clampPage(pageRewards - 1, rewardsTotalPages)"><Icon name="chevron-left" /></button>
+            <span class="stp-pager-info" data-testid="stp-pager-rewards-info">第 {{ pageRewards }} / {{ rewardsTotalPages }} 页 · 共 {{ allRewards.length }} 项</span>
+            <button type="button" class="stp-pager-btn" data-testid="stp-pager-rewards-next" :disabled="pageRewards >= rewardsTotalPages" @click="pageRewards = clampPage(pageRewards + 1, rewardsTotalPages)"><Icon name="chevron-right" /></button>
+          </nav>
         </section>
       </div>
     </template>
@@ -899,6 +978,68 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-btn-primary:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
 .stp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .stp-btn-small { padding: 6px 12px; font-size: 12px; }
+
+/* 分页器：视觉参考工作台 PanelPager — 左右按钮居中，中间信息，圆角 8px 描边 */
+.stp-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--color-surface, #fff);
+  align-self: stretch;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+.stp-pager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #d1d5db);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.stp-pager-btn:hover:not(:disabled) {
+  background: var(--color-primary, #10b981);
+  border-color: var(--color-primary, #10b981);
+  color: #fff;
+}
+.stp-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.stp-pager-info {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+:root.dark .stp-pager {
+  background: #1f2937;
+  border-color: #374151;
+}
+:root.dark .stp-pager-btn {
+  background: #1f2937;
+  border-color: #374151;
+  color: #d1d5db;
+}
+:root.dark .stp-pager-btn:hover:not(:disabled) {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+:root.dark .stp-pager-info {
+  color: #d1d5db;
+}
 
 .stp-btn-ghost {
   background: transparent; color: var(--color-text-secondary, #6b7280);

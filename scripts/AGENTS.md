@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-3 helper scripts + 30 pure-function test runners (node --experimental-strip-types, 含 14 个学生 core 测试需 extensionless loader) + 28 Playwright UI QA scripts: build-time icon generation, production HTTP server, one-time utilities, pure-function test runners, chart/ledger/diary/home-workflow/business/student UI QA (injects IndexedDB data before asserting) + 定时提醒三通道/倒计时邮件开关 QA (injects IDB + mock emailjs/Notification) + 一屏布局行高测量 QA. CommonJS + PowerShell + TS (package is ESM — `.cjs` extension required; test scripts run via `node --experimental-strip-types`). **关键：学生 core 测试（test:student-*）必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`**（学生 cores 用无扩展名 `./countdownCore` 相对导入 + `@/` 别名，纯 node --experimental-strip-types 会 `ERR_MODULE_NOT_FOUND`/`ERR_UNSUPPORTED_DIR_IMPORT`）。
+3 helper scripts + 30 pure-function test runners (node --experimental-strip-types, 含 14 个学生 core 测试需 extensionless loader) + 35 Playwright UI QA scripts: build-time icon generation, production HTTP server, one-time utilities, pure-function test runners, chart/ledger/diary/home-workflow/business/student UI QA (injects IndexedDB data before asserting) + 学生工作台 EP 换皮 QA（qa-student-ep-*：14 面板 Element Plus 统一图源明暗截图 + DOM 断言 + 5 处原生控件深统一专项）+ 定时提醒三通道/倒计时邮件开关 QA (injects IDB + mock emailjs/Notification) + 一屏布局行高测量 QA. CommonJS + PowerShell + TS (package is ESM — `.cjs` extension required; test scripts run via `node --experimental-strip-types`). **关键：学生 core 测试（test:student-*）必须带 `--experimental-loader ./scripts/resolve-extensionless.mjs`**（学生 cores 用无扩展名 `./countdownCore` 相对导入 + `@/` 别名，纯 node --experimental-strip-types 会 `ERR_MODULE_NOT_FOUND`/`ERR_UNSUPPORTED_DIR_IMPORT`）。
 
 ## STRUCTURE
 
@@ -49,7 +49,14 @@ scripts/
 ├── qa-workbench-onescreen.mjs # Playwright UI QA：一屏布局脚手架+行高测量（后台/复用 vite dev 16718-16726 → /workbench；注入 IndexedDB easy-web-tab v6（`indexedDB.open('easy-web-tab', 6)`，out-of-line 键 'items'）7 store（todos 15 条/notes NoteData 12 普通+1 时光轴 20 条目/diary DiaryData 12 条唯一本地日期/countdowns 10 条 once 偏移≥6 天防 reminder-overlay/habits 15 条/health 四模块各 15 条/ledger 25 条跨月）+ 密码不注入 IDB 改走 UI 播种 12 条（crypto-js 加密 blob 需设备密钥，裸注入损坏）→ 双视口（1366x768/1920x1080）测各面板列表首条外层高度取 MAX+2px → 写 .omo/evidence/workbench-onescreen/row-heights.json（12 面板：todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 116/exercise 533/diet 537/sleep 563/weight 88/ledger 49）+ 10 面板明暗全页截图 40 张；主页 S1 断言轮播骨架 + 默认第 1 屏 active（home-carousel/home-carousel-dot-0）；node scripts/qa-workbench-onescreen.mjs）— 与其它 QA 脚本禁止并行（同端口域）
 ├── qa-student-ui.mjs        # Playwright UI QA：学生工作台 UI（后台/复用 vite dev 16718-16726 同端口域，禁与其它 QA 并行；npm run qa:student-ui）
 ├── qa-student-onescreen.mjs # Playwright UI QA：学生工作台一屏布局
-└── qa-student-reading-grid.mjs # Playwright UI QA：学生阅读面板网格布局
+├── qa-student-reading-grid.mjs # Playwright UI QA：学生阅读面板网格布局
+├── qa-student-ep-screenshot.mjs      # Playwright 图源批处理 A 组（StudentDiary + StudentExam）
+├── qa-student-ep-batch-b.mjs         # Playwright 图源批处理 B 组（StudentHabits + StudentHomework + StudentPlan）
+├── qa-student-ep-batch-e.mjs         # Playwright 图源批处理 E 组（StudentAchievements + StudentEducation + StudentParent）
+├── qa-student-ep-batch-e-verify.mjs  # Playwright batch-e 组 DOM 验证（17 断言）
+├── qa-student-ep-screenshots.mjs     # Playwright 图源 M3 剩余面板（复习/错题/阅读）
+├── qa-student-ep-dom.mjs             # Playwright M3 剩余面板 DOM 断言（⚠️ 已知 10 项失败系脚本断言设计/面板原状，HEAD 基线复现一致，非换皮回归）
+└── qa-student-ep-deep-unify.mjs      # Playwright 深统一专项 QA（5 处原生控件已换 el-*，17 断言全 PASS）
 ```
 
 ## WHERE TO LOOK
@@ -62,6 +69,7 @@ scripts/
 | 核心纯函数测试 | `test-*-core.ts` | `node --experimental-strip-types` 直跑，自研 assert 断言；被测核心（countdownCore/todoCore/healthCore/ledgerCore/workbenchMenuCore/noteMarkdown/diaryCore/panelPagingCore/reminderCore/businessCore/habitCore/pomodoroCore/spotlightCore/snapshotCore）禁止 import vue/pinia |
 | 学生 core 纯函数测试 | `test-student-*-core.ts` + `resolve-extensionless.mjs` | 14 个 test:student-*（menu/habits/homework/reward/plan/reading/review/mistakes/timetable/exam/stage/pomodoro/achievement/parenttask）— 每个都带 `--experimental-loader ./scripts/resolve-extensionless.mjs`（学生 cores 用无扩展名 `./countdownCore` 相对导入 + `@/` 别名）；`npm run test:student` 聚合全部 |
 | 学生工作台 UI QA | `qa-student-ui.mjs`（另有 qa-student-onescreen.mjs / qa-student-reading-grid.mjs） | Playwright chromium headless：学生工作台 UI；`npm run qa:student-ui`；与其它 QA 脚本禁止并行（同端口域） |
+| 学生工作台 EP 换皮 QA | `qa-student-ep-*.mjs`（7 个：screenshot/batch-b/batch-e/screenshots 图源批次 + batch-e-verify/dom/deep-unify DOM 断言） | Playwright chromium headless：14 面板 Element Plus 统一验证——图源批次注入 IDB（student_settings/habits/homework/plans/achievements/education/parent_tasks/rewards/review/mistakes/reading/exam/diary）→ /student 进面板明/暗截图存 `.omo/evidence/student-ep/`；DOM 断言（batch-e-verify 17 断言全 PASS / deep-unify 5 处原生控件已换 el-* 17 断言全 PASS）；dom 脚本已知 10 项失败系脚本断言设计/面板原状（HEAD 基线复现一致），非换皮回归勿当故障修；与其它 QA 脚本禁止并行（同端口域） |
 | 记账图表 UI QA | `qa-ledger-charts.mjs` | Playwright chromium headless：`page.evaluate` 直写 IndexedDB（easy-web-tab v6 / ledger / items，`indexedDB.open('easy-web-tab', 6)`）注入近 6 月流水再进面板断言图表契约（S1-S7）；S6 回归含展开列表自动收起图表（ld-charts-toggle + .ld-charts-row display:none）；后台 vite dev 16718-16726 自动上浮；证据存 `.omo/evidence/ledger-charts/`；运行 `node scripts/qa-ledger-charts.mjs` |
 | 主页轮播 UI QA | `qa-workbench-home.mjs` | Playwright chromium headless：主页 UI 播种 1 条待办后断言轮播契约（S1-S7）：轮播骨架（home-carousel/3 圆点/箭头/3 屏）/播种后统计卡与列表出现/手动切换（track translateX + 圆点 active）/6.5s 自动轮播/菜单开关联动（设置弹窗 wbmenu-switch-todos 关闭→菜单项+快捷添加+待办面板/统计卡隐藏，开启恢复）/移动端 375 无横向滚动/明暗截图；后台 vite dev 16718-16726 复用或自起（与其它 QA 脚本禁止并行）；证据存 `.omo/evidence/workbench-home/`；运行 `node scripts/qa-workbench-home.mjs` |
 | 日记本面板 UI QA | `qa-diary.mjs` | Playwright chromium headless：`page.evaluate` 直写 IndexedDB（easy-web-tab v6 / diary / items，值 = DiaryData `{entries}` 9 条含今天）再进面板断言契约（S1-S7）：空态 dj-empty/第 1 页恰好 8 卡 + 「第 1 / 2 页」/next 可用 prev 禁用/`dj-card-date-*` 含中文星期 周X/今天卡 `dj-card-today-*`/分页往返/保存+reload 持久化/空保存守卫（toast「内容为空，未保存」）/删除流；注入形状与 store.saveDiary 实际写入一致（T5 曾实证裸数组被 normalizeDiaryData 拒绝）；后台 vite dev 16718-16726 复用或自起（与其它 QA 脚本禁止并行）；证据存 `.omo/evidence/workbench-diary/`；运行 `node scripts/qa-diary.mjs` |
@@ -92,4 +100,4 @@ scripts/
 - `npm run serve` → custom server WITH game rewrites; `pm2 start` → `server.cjs` → `npx serve -s` (NO game rewrites) — divergent serving
 - SPA fallback: unknown paths serve `dist/index.html` (single-page routing for /display etc.)
 - Build pipeline: `node scripts/generate-preset-icons.cjs && vue-tsc -b && vite build` — icons must regenerate BEFORE type-check
-- `qa-diary.mjs` / `qa-ledger-charts.mjs` / `qa-workbench-home.mjs` / `qa-workbench-onescreen.mjs` / `qa-reminder-upgrade.mjs` / `qa-reminder-toggle.mjs` / `qa-business.mjs` / `qa-student-ui.mjs` / `qa-student-onescreen.mjs` / `qa-student-reading-grid.mjs` 共用 16718-16726 端口域 — 这些 QA 脚本禁止相互并行（同端口域抢占 dev server / 端口冲突）
+- `qa-diary.mjs` / `qa-ledger-charts.mjs` / `qa-workbench-home.mjs` / `qa-workbench-onescreen.mjs` / `qa-reminder-upgrade.mjs` / `qa-reminder-toggle.mjs` / `qa-business.mjs` / `qa-student-ui.mjs` / `qa-student-onescreen.mjs` / `qa-student-reading-grid.mjs` / `qa-student-ep-*.mjs`（7 个）共用 16718-16726 端口域 — 这些 QA 脚本禁止相互并行（同端口域抢占 dev server / 端口冲突）

@@ -532,16 +532,16 @@ onMounted(async () => {
 .shw-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #111827);
 }
-:global(:root.dark) .shw-list > :global(.el-table) {
+:global(html.dark) .shw-list > :global(.el-table) {
   --el-table-border-color: var(--color-border, #374151);
   --el-table-header-bg-color: var(--color-bg-hover, #111827);
   --el-table-tr-bg-color: transparent;
 }
-:global(:root.dark) .shw-list > :global(.el-table th.el-table__cell) {
+:global(html.dark) .shw-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
   color: var(--color-text-secondary, #d1d5db);
 }
-:global(:root.dark) .shw-list > :global(.el-table td.el-table__cell) {
+:global(html.dark) .shw-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #f9fafb);
 }
 .shw-list > :global(.el-table .el-table__body-wrapper .cell),
@@ -576,7 +576,7 @@ onMounted(async () => {
   justify-content: center;
   align-items: center;
 }
-:global(:root.dark) .shw-pager {
+:global(html.dark) .shw-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
 }
@@ -594,13 +594,13 @@ onMounted(async () => {
   color: #fff !important;
   border-color: var(--color-primary, #3b82f6) !important;
 }
-:global(:root.dark) .shw-pager > :global(.el-pagination button),
-:global(:root.dark) .shw-pager > :global(.el-pagination .el-pager li) {
+:global(html.dark) .shw-pager > :global(.el-pagination button),
+:global(html.dark) .shw-pager > :global(.el-pagination .el-pager li) {
   background-color: var(--color-bg-card, #1f2937) !important;
   border-color: var(--color-border, #374151) !important;
   color: var(--color-text-secondary, #d1d5db) !important;
 }
-:global(:root.dark) .shw-pager > :global(.el-pagination .el-pager li.is-active) {
+:global(html.dark) .shw-pager > :global(.el-pagination .el-pager li.is-active) {
   background-color: var(--color-primary, #3b82f6) !important;
   color: #fff !important;
   border-color: var(--color-primary, #3b82f6) !important;
@@ -622,7 +622,7 @@ onMounted(async () => {
   white-space: nowrap;
   line-height: 1.6;
 }
-:global(:root.dark) .shw-subject-badge {
+:global(html.dark) .shw-subject-badge {
   background: rgba(59, 130, 246, 0.22);
 }
 
@@ -746,7 +746,7 @@ onMounted(async () => {
   border-radius: 2px;
   background: var(--color-primary, #3b82f6);
 }
-:global(:root.dark) .dialog-header {
+:global(html.dark) .dialog-header {
   background: var(--color-bg-hover, #111827);
 }
 .dialog-close {

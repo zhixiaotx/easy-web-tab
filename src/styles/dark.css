@@ -1,7 +1,7 @@
 /* 暗色模式样式 */
 
 /* 基础变量覆盖 - 增强对比度 */
-:root.dark {
+html.dark {
   --color-bg: #111827;
   --color-bg-card: #1f2937;
   --color-text: #f9fafb;
@@ -43,421 +43,421 @@
 }
 
 /* 全局暗色样式 */
-:root.dark {
+html.dark {
   color-scheme: dark;
 }
 
-:root.dark body {
+html.dark body {
   background-color: var(--color-bg);
   color: var(--color-text);
 }
 
 /* 全局字体优化 */
-:root.dark {
+html.dark {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* 通用组件 */
-:root.dark .container {
+html.dark .container {
   background-color: var(--color-bg);
 }
 
 /* 有背景时，container 不需要单独设置背景色（由 background.css 处理） */
 
-:root.dark .header {
+html.dark .header {
   background-color: var(--color-bg);
 }
 
 /* 分类标签容器 */
-:root.dark .category-tabs,
-:root.dark .category-container {
+html.dark .category-tabs,
+html.dark .category-container {
   background-color: var(--color-bg);
 }
 
-:root.dark .category-tabs .tabs-wrapper,
-:root.dark .category-wrapper {
+html.dark .category-tabs .tabs-wrapper,
+html.dark .category-wrapper {
   background-color: var(--color-bg);
 }
 
 /* 按钮 */
-:root.dark .btn-action {
+html.dark .btn-action {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .btn-action:hover {
+html.dark .btn-action:hover {
   background-color: var(--color-bg-hover);
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
 
-:root.dark .btn-add {
+html.dark .btn-add {
   background-color: var(--color-primary);
 }
 
-:root.dark .btn-add:hover:not(:disabled) {
+html.dark .btn-add:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
 }
 
-:root.dark .btn-submit {
+html.dark .btn-submit {
   background-color: var(--color-primary);
 }
 
-:root.dark .btn-fetch {
+html.dark .btn-fetch {
   background-color: var(--color-success);
 }
 
-:root.dark .btn-cancel {
+html.dark .btn-cancel {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
 }
 
 /* 输入框 - 修复白色问题 */
-:root.dark input,
-:root.dark textarea,
-:root.dark select {
+html.dark input,
+html.dark textarea,
+html.dark select {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
-:root.dark input:focus,
-:root.dark textarea:focus,
-:root.dark select:focus {
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
   border-color: var(--color-primary) !important;
   background-color: var(--color-bg-input) !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
-:root.dark input::placeholder,
-:root.dark textarea::placeholder {
+html.dark input::placeholder,
+html.dark textarea::placeholder {
   color: var(--color-text-muted) !important;
 }
 
 /* 网站卡片 - 修复白色问题 */
-:root.dark .site-card {
+html.dark .site-card {
   background-color: var(--color-bg-card);
   border-color: var(--color-border);
 }
 
-:root.dark .site-card:hover {
+html.dark .site-card:hover {
   border-color: var(--color-primary);
   box-shadow: 0 8px 24px var(--color-shadow);
 }
 
-:root.dark .site-name {
+html.dark .site-name {
   color: var(--color-text);
 }
 
-:root.dark .site-desc {
+html.dark .site-desc {
   color: var(--color-text-secondary);
 }
 
-:root.dark .favicon {
+html.dark .favicon {
   background-color: var(--color-bg-hover);
 }
 
-:root.dark .action-btn {
+html.dark .action-btn {
   color: var(--color-text-secondary);
 }
 
-:root.dark .action-btn:hover {
+html.dark .action-btn:hover {
   color: var(--color-text);
 }
 
 /* 分类标签 */
-:root.dark .category-tab {
+html.dark .category-tab {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .category-tab:hover,
-:root.dark .category-tab.active {
+html.dark .category-tab:hover,
+html.dark .category-tab.active {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
 }
 
-:root.dark .category-count {
+html.dark .category-count {
   color: var(--color-text-secondary);
 }
 
 /* 标签筛选 */
-:root.dark .tag {
+html.dark .tag {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .tag:hover,
-:root.dark .tag.active {
+html.dark .tag:hover,
+html.dark .tag.active {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
 }
 
 /* 模态框 - 修复白色问题 */
-:root.dark .modal-overlay {
+html.dark .modal-overlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
 
-:root.dark .modal {
+html.dark .modal {
   background-color: var(--color-bg-card);
 }
 
-:root.dark .modal-header {
+html.dark .modal-header {
   background-color: var(--color-bg-card);
   border-bottom-color: var(--color-border);
 }
 
-:root.dark .modal-header h2 {
+html.dark .modal-header h2 {
   color: var(--color-text);
 }
 
-:root.dark .modal-body {
+html.dark .modal-body {
   background-color: var(--color-bg-card);
 }
 
-:root.dark .modal-footer {
+html.dark .modal-footer {
   background-color: var(--color-bg-card);
   border-top-color: var(--color-border);
 }
 
-:root.dark .form-group label {
+html.dark .form-group label {
   color: var(--color-text);
 }
 
-:root.dark .form-group input,
-:root.dark .form-group textarea,
-:root.dark .form-group select {
+html.dark .form-group input,
+html.dark .form-group textarea,
+html.dark .form-group select {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
 /* 搜索引擎选择器 */
-:root.dark .engine-select {
+html.dark .engine-select {
   background-color: var(--color-bg-input);
   border-color: var(--color-border);
   color: var(--color-text);
 }
 
-:root.dark .search-input {
+html.dark .search-input {
   background-color: var(--color-bg-card);
   color: var(--color-text);
 }
 
-:root.dark .global-search {
+html.dark .global-search {
   background-color: var(--color-bg-card);
   box-shadow: 0 4px 12px var(--color-shadow);
 }
 
 /* 分页 */
-:root.dark .pagination-btn {
+html.dark .pagination-btn {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .pagination-btn:hover:not(:disabled) {
+html.dark .pagination-btn:hover:not(:disabled) {
   background-color: var(--color-primary);
   color: white;
 }
 
-:root.dark .pagination-btn.active {
+html.dark .pagination-btn.active {
   background-color: var(--color-primary);
   color: white;
 }
 
-:root.dark .pagination-btn:disabled {
+html.dark .pagination-btn:disabled {
   opacity: 0.5;
 }
 
 /* 主题切换按钮 */
-:root.dark .theme-toggle {
+html.dark .theme-toggle {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .theme-toggle:hover {
+html.dark .theme-toggle:hover {
   background-color: var(--color-bg-hover);
   color: var(--color-warning);
 }
 
 /* 空状态 */
-:root.dark .empty-state {
+html.dark .empty-state {
   color: var(--color-text-muted);
 }
 
-:root.dark .empty-state p {
+html.dark .empty-state p {
   color: var(--color-text-muted);
 }
 
 /* 设置按钮 */
-:root.dark .settings-btn {
+html.dark .settings-btn {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .settings-btn:hover {
+html.dark .settings-btn:hover {
   background-color: var(--color-bg-hover);
   color: var(--color-primary);
 }
 
 /* 分类管理 */
-:root.dark .category-item {
+html.dark .category-item {
   background-color: var(--color-bg);
   border-color: var(--color-border);
 }
 
-:root.dark .category-name {
+html.dark .category-name {
   color: var(--color-text);
 }
 
 /* 工具提示 */
-:root.dark .form-hint {
+html.dark .form-hint {
   color: var(--color-text-muted);
 }
 
-:root.dark .error-msg {
+html.dark .error-msg {
   color: var(--color-error);
 }
 
 /* 搜索建议 */
-:root.dark .tag-suggestions {
+html.dark .tag-suggestions {
   background-color: var(--color-bg-card);
   border-color: var(--color-border);
 }
 
-:root.dark .tag-suggestion {
+html.dark .tag-suggestion {
   background-color: var(--color-bg);
   color: var(--color-text-secondary);
 }
 
-:root.dark .tag-suggestion:hover {
+html.dark .tag-suggestion:hover {
   background-color: var(--color-primary);
   color: white;
 }
 
 /* 滚动条 */
-:root.dark ::-webkit-scrollbar {
+html.dark ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-:root.dark ::-webkit-scrollbar-track {
+html.dark ::-webkit-scrollbar-track {
   background: var(--color-bg);
 }
 
-:root.dark ::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 4px;
 }
 
-:root.dark ::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
 }
 
 /* 焦点样式 */
-:root.dark *:focus-visible {
+html.dark *:focus-visible {
   outline-color: var(--color-primary);
 }
 
 /* 图标颜色 */
-:root.dark .icon-img {
+html.dark .icon-img {
   opacity: 0.9;
 }
 
 /* 管理后台入口按钮 */
-:root.dark .btn-admin {
+html.dark .btn-admin {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .btn-admin:hover {
+html.dark .btn-admin:hover {
   background-color: var(--color-bg-hover);
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
 
 /* 右上角帮助按钮 */
-:root.dark .btn-help {
+html.dark .btn-help {
   background-color: var(--color-bg-card);
   color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-:root.dark .btn-help:hover {
+html.dark .btn-help:hover {
   background-color: var(--color-bg-hover);
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
 
 /* 分类管理面板 */
-:root.dark .category-manager-overlay {
+html.dark .category-manager-overlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
 
-:root.dark .category-manager {
+html.dark .category-manager {
   background-color: var(--color-bg-card);
 }
 
-:root.dark .category-manager-header {
+html.dark .category-manager-header {
   background-color: var(--color-bg-card);
   border-bottom-color: var(--color-border);
 }
 
-:root.dark .category-manager-body {
+html.dark .category-manager-body {
   background-color: var(--color-bg-card);
 }
 
 /* 标签输入样式 */
-:root.dark .tag-group .tag-input-wrapper input {
+html.dark .tag-group .tag-input-wrapper input {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
 /* URL输入组 */
-:root.dark .url-input-group input {
+html.dark .url-input-group input {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
 /* 分类选择器 */
-:root.dark .category-select {
+html.dark .category-select {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
 /* 编辑输入框 */
-:root.dark .edit-input {
+html.dark .edit-input {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
 /* 动作按钮行 */
-:root.dark .actions-row {
+html.dark .actions-row {
   background-color: var(--color-bg);
 }
 
 /* 搜索区域 */
-:root.dark .search-section {
+html.dark .search-section {
   background-color: var(--color-bg);
 }
 
 /* 网站网格 */
-:root.dark .sites-grid {
+html.dark .sites-grid {
   background-color: var(--color-bg);
 }
 
@@ -466,165 +466,165 @@
    ======================================== */
 
 /* 分类管理容器 */
-:root.dark .manager-overlay {
+html.dark .manager-overlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
 
-:root.dark .manager {
+html.dark .manager {
   background-color: var(--color-bg-card);
 }
 
-:root.dark .manager-header {
+html.dark .manager-header {
   background-color: var(--color-bg-card);
   border-bottom-color: var(--color-border);
 }
 
-:root.dark .manager-header h2 {
+html.dark .manager-header h2 {
   color: var(--color-text);
 }
 
-:root.dark .manager-body {
+html.dark .manager-body {
   background-color: var(--color-bg-card);
 }
 
 /* 添加表单 */
-:root.dark .add-form {
+html.dark .add-form {
   background-color: var(--color-bg-card);
   border-bottom-color: var(--color-border);
 }
 
-:root.dark .add-form h3 {
+html.dark .add-form h3 {
   color: var(--color-text-secondary);
 }
 
 /* 图标按钮 */
-:root.dark .icon-btn {
+html.dark .icon-btn {
   background-color: var(--color-bg);
   border-color: var(--color-border);
   color: var(--color-text-secondary);
 }
 
-:root.dark .icon-btn:hover {
+html.dark .icon-btn:hover {
   background-color: var(--color-bg-hover);
 }
 
-:root.dark .icon-btn.active {
+html.dark .icon-btn.active {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
 }
 
-:root.dark .icon-label {
+html.dark .icon-label {
   color: var(--color-text-muted);
 }
 
 /* 分类列表 */
-:root.dark .category-list h3 {
+html.dark .category-list h3 {
   color: var(--color-text-secondary);
 }
 
-:root.dark .section-title {
+html.dark .section-title {
   color: var(--color-text-muted);
 }
 
 /* 分类项 - 修复白色问题 */
-:root.dark .category-item {
+html.dark .category-item {
   background-color: var(--color-bg);
   border-color: var(--color-border);
 }
 
-:root.dark .category-item.built-in {
+html.dark .category-item.built-in {
   background-color: #422006;
   border-color: #b45309;
   opacity: 1;
 }
 
-:root.dark .category-item.custom {
+html.dark .category-item.custom {
   background-color: var(--color-bg);
   border-color: var(--color-border);
 }
 
-:root.dark .category-icon {
+html.dark .category-icon {
   color: inherit;
 }
 
-:root.dark .category-name {
+html.dark .category-name {
   color: var(--color-text);
 }
 
-:root.dark .site-count {
+html.dark .site-count {
   color: var(--color-text-muted);
 }
 
-:root.dark .sort-hint {
+html.dark .sort-hint {
   color: var(--color-text-muted);
 }
 
 /* 编辑输入框 */
-:root.dark .edit-input {
+html.dark .edit-input {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
-:root.dark .edit-icon-suggestions {
+html.dark .edit-icon-suggestions {
   background-color: var(--color-bg);
   border-color: var(--color-border);
 }
 
-:root.dark .icon-btn-small {
+html.dark .icon-btn-small {
   background-color: var(--color-bg-card);
   border-color: var(--color-border);
   color: var(--color-text-secondary);
 }
 
-:root.dark .icon-btn-small:hover {
+html.dark .icon-btn-small:hover {
   background-color: var(--color-bg-hover);
 }
 
-:root.dark .icon-btn-small.active {
+html.dark .icon-btn-small.active {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
 }
 
 /* 动作按钮 */
-:root.dark .btn-icon {
+html.dark .btn-icon {
   color: var(--color-text-muted);
 }
 
-:root.dark .btn-icon:hover {
+html.dark .btn-icon:hover {
   color: var(--color-text);
 }
 
-:root.dark .btn-icon.delete:hover {
+html.dark .btn-icon.delete:hover {
   color: var(--color-error);
 }
 
 /* 空状态 */
-:root.dark .empty-custom {
+html.dark .empty-custom {
   color: var(--color-text-muted);
 }
 
 /* 关闭按钮 */
-:root.dark .close-btn {
+html.dark .close-btn {
   color: var(--color-text-muted);
 }
 
-:root.dark .close-btn:hover {
+html.dark .close-btn:hover {
   color: var(--color-text);
 }
 
 /* 添加按钮 */
-:root.dark .btn-add {
+html.dark .btn-add {
   background-color: var(--color-primary);
 }
 
-:root.dark .btn-add:hover:not(:disabled) {
+html.dark .btn-add:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
 }
 
-:root.dark .btn-add:disabled {
+html.dark .btn-add:disabled {
   background-color: var(--color-text-muted);
 }
 
@@ -633,65 +633,65 @@
    ======================================== */
 
 /* 引擎区域 */
-:root.dark .engine-section {
+html.dark .engine-section {
   background-color: var(--color-bg-card);
 }
 
-:root.dark .engine-section h3 {
+html.dark .engine-section h3 {
   color: var(--color-text-secondary);
 }
 
-:root.dark .engine-item {
+html.dark .engine-item {
   background-color: var(--color-bg);
   border-color: var(--color-border);
 }
 
-:root.dark .engine-item.is-default {
+html.dark .engine-item.is-default {
   background-color: #422006;
   border-color: #b45309;
 }
 
-:root.dark .engine-name {
+html.dark .engine-name {
   color: var(--color-text);
 }
 
-:root.dark .engine-url {
+html.dark .engine-url {
   color: var(--color-text-muted);
 }
 
-:root.dark .lock-icon {
+html.dark .lock-icon {
   color: var(--color-text-muted);
 }
 
-:root.dark .default-tag {
+html.dark .default-tag {
   background-color: #b45309;
   color: white;
 }
 
 /* 搜索建议 */
-:root.dark .tag-suggestions {
+html.dark .tag-suggestions {
   background-color: var(--color-bg-card);
   border-color: var(--color-border);
 }
 
-:root.dark .tag-suggestion {
+html.dark .tag-suggestion {
   background-color: var(--color-bg);
   color: var(--color-text-secondary);
 }
 
-:root.dark .tag-suggestion:hover {
+html.dark .tag-suggestion:hover {
   background-color: var(--color-primary);
   color: white;
 }
 
 /* 排序控件 */
-:root.dark .btn-sort {
+html.dark .btn-sort {
   background-color: var(--color-bg);
   border-color: var(--color-border);
   color: var(--color-text-muted);
 }
 
-:root.dark .btn-sort:hover:not(:disabled) {
+html.dark .btn-sort:hover:not(:disabled) {
   background-color: var(--color-bg-hover);
   color: var(--color-primary);
 }
@@ -701,25 +701,25 @@
    ======================================== */
 
 /* 确保所有 scoped 组件中的输入框也是暗色 */
-:root.dark input,
-:root.dark textarea,
-:root.dark select {
+html.dark input,
+html.dark textarea,
+html.dark select {
   background-color: var(--color-bg-input) !important;
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }
 
 /* 输入框聚焦 */
-:root.dark input:focus,
-:root.dark textarea:focus,
-:root.dark select:focus {
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
   border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* 占位符 */
-:root.dark input::placeholder,
-:root.dark textarea::placeholder {
+html.dark input::placeholder,
+html.dark textarea::placeholder {
   color: var(--color-text-muted) !important;
 }
 
@@ -727,37 +727,37 @@
    骨架屏暗色模式
    ======================================== */
 
-:root.dark .skeleton {
+html.dark .skeleton {
   background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
   background-size: 200% 100%;
   border-color: #4b5563;
 }
 
-:root.dark .skeleton-name,
-:root.dark .skeleton-desc {
+html.dark .skeleton-name,
+html.dark .skeleton-desc {
   background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
   background-size: 200% 100%;
   border-color: #4b5563;
 }
 
-:root.dark .skeleton-icon {
+html.dark .skeleton-icon {
   background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
   background-size: 200% 100%;
   border-color: #4b5563;
 }
 
 /* 搜索框暗色阴影 */
-:root.dark .global-search {
+html.dark .global-search {
   box-shadow: var(--shadow-md);
 }
 
 /* 卡片悬浮阴影暗色 */
-:root.dark .site-card:hover {
+html.dark .site-card:hover {
   box-shadow: var(--shadow-card-hover);
 }
 
 /* 分类标签阴影暗色 */
-:root.dark .category-tabs {
+html.dark .category-tabs {
   box-shadow: var(--shadow-sm);
 }
 
@@ -765,7 +765,7 @@
    CategoryTabs 容器暗色
    ======================================== */
 
-:root.dark .category-tabs-wrapper {
+html.dark .category-tabs-wrapper {
   background-color: var(--color-bg-card, #1f2937);
 }
 
@@ -773,15 +773,15 @@
    SiteCard SVG 图标暗色
    ======================================== */
 
-:root.dark .action-btn.edit {
+html.dark .action-btn.edit {
   color: #60a5fa;
 }
 
-:root.dark .action-btn.edit:hover {
+html.dark .action-btn.edit:hover {
   background-color: #1e3a5f;
 }
 
-:root.dark .action-btn.delete:hover {
+html.dark .action-btn.delete:hover {
   color: #f87171;
   background-color: #3f1414;
 }
@@ -790,19 +790,19 @@
    GlobalSearch 建议下拉暗色
    ======================================== */
 
-:root.dark .history-icon {
+html.dark .history-icon {
   stroke: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .history-text {
+html.dark .history-text {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .history-item:hover {
+html.dark .history-item:hover {
   background: var(--color-bg-hover, #374151);
 }
 
-:root.dark .history-item .history-text {
+html.dark .history-item .history-text {
   color: var(--color-text, #f9fafb);
 }
 
@@ -810,11 +810,11 @@
    滚动条美化暗色
    ======================================== */
 
-:root.dark ::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: var(--color-border, #374151);
 }
 
-:root.dark ::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover, #4b5563);
 }
 
@@ -822,84 +822,84 @@
    图标选择器暗色模式
    ======================================== */
 
-:root.dark .btn-icon-action {
+html.dark .btn-icon-action {
   background: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-icon-action:hover:not(:disabled) {
+html.dark .btn-icon-action:hover:not(:disabled) {
   border-color: var(--color-primary, #3b82f6);
   color: var(--color-primary, #3b82f6);
   background: #1e3a5f;
 }
 
-:root.dark .btn-icon-clear {
+html.dark .btn-icon-clear {
   background: transparent;
   border-color: transparent;
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .btn-icon-clear:hover {
+html.dark .btn-icon-clear:hover {
   color: var(--color-error, #ef4444);
   background: #3f1414;
 }
 
-:root.dark .btn-suggestion {
+html.dark .btn-suggestion {
   background: #1e3a5f;
   border-color: var(--color-primary, #3b82f6);
   color: #60a5fa;
 }
 
-:root.dark .btn-suggestion:hover {
+html.dark .btn-suggestion:hover {
   background: var(--color-primary, #3b82f6);
   color: white;
 }
 
-:root.dark .icon-picker-panel {
+html.dark .icon-picker-panel {
   background: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .icon-category-tab {
+html.dark .icon-category-tab {
   background: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .icon-search-input,
-:root.dark .icon-url-input {
+html.dark .icon-search-input,
+html.dark .icon-url-input {
   background: var(--color-bg-input, #374151);
   border-color: var(--color-border, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .icon-search-input:focus,
-:root.dark .icon-url-input:focus {
+html.dark .icon-search-input:focus,
+html.dark .icon-url-input:focus {
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .icon-grid-item {
+html.dark .icon-grid-item {
   background: var(--color-bg, #111827);
   border-color: transparent;
 }
 
-:root.dark .icon-grid-item:hover {
+html.dark .icon-grid-item:hover {
   border-color: var(--color-primary, #3b82f6);
   background: #1e3a5f;
 }
 
-:root.dark .icon-grid-item.active {
+html.dark .icon-grid-item.active {
   border-color: var(--color-primary, #3b82f6);
   background: #1e3a5f;
 }
 
-:root.dark .icon-preview {
+html.dark .icon-preview {
   background: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .icon-preview-empty {
+html.dark .icon-preview-empty {
   background: var(--color-bg-card, #1f2937);
   color: var(--color-text-muted, #9ca3af);
 }
@@ -909,36 +909,36 @@
    ======================================== */
 
 /* TagFilter 只看无效按钮 */
-:root.dark .invalid-toggle {
+html.dark .invalid-toggle {
   background-color: #451a03;
   border-color: #f59e0b;
   color: #fbbf24;
 }
 
-:root.dark .invalid-toggle:hover {
+html.dark .invalid-toggle:hover {
   background-color: #78350f;
   border-color: #f59e0b;
 }
 
-:root.dark .invalid-toggle.active {
+html.dark .invalid-toggle.active {
   background-color: #f59e0b;
   border-color: #f59e0b;
   color: white;
 }
 
 /* SiteCard 无效警告标记 */
-:root.dark .invalid-badge {
+html.dark .invalid-badge {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 /* HomeView 检测按钮 */
-:root.dark .btn-action:has(.invalid-count) {
+html.dark .btn-action:has(.invalid-count) {
   background-color: #fffbeb;
   color: #d97706;
   border-color: #f59e0b;
 }
 
-:root.dark .btn-checking {
+html.dark .btn-checking {
   background-color: var(--color-bg-card) !important;
   color: var(--color-text-secondary) !important;
   border-color: var(--color-border) !important;
@@ -946,21 +946,21 @@
 }
 
 /* 空状态暗色 */
-:root.dark .empty-state {
+html.dark .empty-state {
   color: var(--color-text-muted);
 }
 
-:root.dark .empty-state p {
+html.dark .empty-state p {
   color: var(--color-text-muted);
 }
 
 /* 拖拽排序 */
-:root.dark .site-card.is-drag-over {
+html.dark .site-card.is-drag-over {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
-:root.dark .site-card.is-dragging {
+html.dark .site-card.is-dragging {
   opacity: 0.5;
 }
 
@@ -968,28 +968,28 @@
    分页条数选择器暗色
    ======================================== */
 
-:root.dark .pagination-wrapper {
+html.dark .pagination-wrapper {
   background-color: transparent;
 }
 
-:root.dark .page-size-select {
+html.dark .page-size-select {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
   color: var(--color-text-secondary, #d1d5db);
   cursor: pointer;
 }
 
-:root.dark .page-size-select:hover {
+html.dark .page-size-select:hover {
   border-color: var(--color-primary, #3b82f6);
   color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .page-size-select:focus {
+html.dark .page-size-select:focus {
   border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
-:root.dark .page-size-select option {
+html.dark .page-size-select option {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text, #f9fafb);
 }
@@ -998,219 +998,219 @@
    帮助弹框暗色模式
    ======================================== */
 
-:root.dark .help-modal {
+html.dark .help-modal {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .modal-header {
+html.dark .modal-header {
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .modal-header h2 {
+html.dark .modal-header h2 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .close-btn {
+html.dark .close-btn {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .close-btn:hover {
+html.dark .close-btn:hover {
   color: var(--color-text, #f9fafb);
   background-color: var(--color-bg-hover, #374151);
 }
 
-:root.dark .modal-body {
+html.dark .modal-body {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .section-title {
+html.dark .section-title {
   color: #60a5fa;
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .feature-item {
+html.dark .feature-item {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .feature-content h4 {
+html.dark .feature-content h4 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .feature-content p {
+html.dark .feature-content p {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .shortcut-item {
+html.dark .shortcut-item {
   background-color: var(--color-bg, #111827);
 }
 
-:root.dark .shortcut-key {
+html.dark .shortcut-key {
   background-color: var(--color-bg-hover, #374151);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .shortcut-action {
+html.dark .shortcut-action {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .mode-item {
+html.dark .mode-item {
   background-color: var(--color-bg, #111827);
 }
 
-:root.dark .mode-item p {
+html.dark .mode-item p {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .mode-item code {
+html.dark .mode-item code {
   background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
 
-:root.dark .storage-list li {
+html.dark .storage-list li {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .storage-list strong {
+html.dark .storage-list strong {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .storage-list code {
+html.dark .storage-list code {
   background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
 
-:root.dark .modal-footer {
+html.dark .modal-footer {
   border-top-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-primary {
+html.dark .btn-primary {
   background-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .btn-primary:hover {
+html.dark .btn-primary:hover {
   background-color: var(--color-primary-hover, #2563eb);
 }
 
 /* ===== 帮助弹窗：标签页暗色模式 ===== */
-:root.dark .help-tabs {
+html.dark .help-tabs {
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .help-tab {
+html.dark .help-tab {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .help-tab:hover,
-:root.dark .help-tab.active {
+html.dark .help-tab:hover,
+html.dark .help-tab.active {
   color: #60a5fa;
 }
 
-:root.dark .help-tab.active {
+html.dark .help-tab.active {
   border-bottom-color: #60a5fa;
 }
 
 /* ===== 帮助弹窗：模块说明暗色模式 ===== */
-:root.dark .panel-intro {
+html.dark .panel-intro {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .panel-intro code {
+html.dark .panel-intro code {
   background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
 
-:root.dark .panel-item {
+html.dark .panel-item {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .panel-head h4 {
+html.dark .panel-head h4 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .panel-desc {
+html.dark .panel-desc {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .panel-tips {
+html.dark .panel-tips {
   color: var(--color-text-muted, #9ca3af);
   border-top-color: var(--color-border, #374151);
 }
 
 /* ===== 帮助弹窗：公式 / 流程暗色模式 ===== */
-:root.dark .formula-item {
+html.dark .formula-item {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .formula-label {
+html.dark .formula-label {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .formula-expr {
+html.dark .formula-expr {
   background-color: #1e3a5f;
   color: #93c5fd;
 }
 
-:root.dark .formula-note {
+html.dark .formula-note {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .flow-list li {
+html.dark .flow-list li {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .flow-text {
+html.dark .flow-text {
   color: var(--color-text-secondary, #d1d5db);
 }
 
 /* 帮助弹窗：技能说明暗色模式 */
-:root.dark .sub-title {
+html.dark .sub-title {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .sub-desc {
+html.dark .sub-desc {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .skill-prompt {
+html.dark .skill-prompt {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .skill-prompt-label {
+html.dark .skill-prompt-label {
   color: #60a5fa;
 }
 
-:root.dark .skill-note {
+html.dark .skill-note {
   background-color: rgba(96, 165, 250, 0.08);
   border-color: #1e40af;
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .skill-note :deep(svg) {
+html.dark .skill-note :deep(svg) {
   color: #60a5fa;
 }
 
 /* 示例数据下载暗色模式 */
-:root.dark .download-card {
+html.dark .download-card {
   background: linear-gradient(135deg, #1e3a5f 0%, #1a2e1a 100%);
   border-color: #2563eb;
 }
 
-:root.dark .download-info h4 {
+html.dark .download-info h4 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .download-info p {
+html.dark .download-info p {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .download-info code {
+html.dark .download-info code {
   background-color: var(--color-bg-hover, #374151);
   color: #60a5fa;
 }
@@ -1219,29 +1219,29 @@
    SiteCard 悬停描述弹框暗色模式
    ======================================== */
 
-:root.dark .tooltip-content {
+html.dark .tooltip-content {
   background-color: var(--color-bg-card, #1f2937);
   border: 1px solid var(--color-border, #374151);
 }
 
-:root.dark .tooltip-arrow {
+html.dark .tooltip-arrow {
   border-top-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .tooltip-name {
+html.dark .tooltip-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .tooltip-desc {
+html.dark .tooltip-desc {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .action-btn {
+html.dark .action-btn {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .favicon {
+html.dark .favicon {
   background-color: var(--color-bg, #111827);
 }
 
@@ -1249,80 +1249,80 @@
    IconManager 暗色模式
    ======================================== */
 
-:root.dark .icon-manager-grid {
+html.dark .icon-manager-grid {
   background-color: transparent;
 }
 
-:root.dark .icon-manager-item {
+html.dark .icon-manager-item {
   background-color: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .icon-manager-item.built-in {
+html.dark .icon-manager-item.built-in {
   background-color: #422006;
   border-color: #b45309;
   opacity: 0.8;
 }
 
-:root.dark .icon-manager-item.custom {
+html.dark .icon-manager-item.custom {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .icon-manager-item:hover {
+html.dark .icon-manager-item:hover {
   border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-:root.dark .icon-manager-preview {
+html.dark .icon-manager-preview {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .icon-manager-label {
+html.dark .icon-manager-label {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .icon-manager-category {
+html.dark .icon-manager-category {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .icon-manager-size {
+html.dark .icon-manager-size {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .icon-manager-actions {
+html.dark .icon-manager-actions {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .add-form-row {
+html.dark .add-form-row {
   background-color: transparent;
 }
 
-:root.dark .upload-hint {
+html.dark .upload-hint {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .filter-bar {
+html.dark .filter-bar {
   background-color: transparent;
 }
 
-:root.dark .btn-secondary {
+html.dark .btn-secondary {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-secondary:hover {
+html.dark .btn-secondary:hover {
   background-color: var(--color-bg-hover, #374151);
   border-color: var(--color-border-hover, #4b5563);
 }
 
-:root.dark .import-export-bar {
+html.dark .import-export-bar {
   border-top-color: var(--color-border, #374151);
 }
 
-:root.dark .import-export-hint {
+html.dark .import-export-hint {
   color: var(--color-text-muted, #9ca3af);
 }
 

@@ -476,66 +476,66 @@ async function handleSyncNowClick(): Promise<void> {
 }
 
 /* 暗色模式覆盖（模式参考 DisplayView.vue:199-215 与 dark.css:4-44） */
-:root.dark .wb-shell {
+html.dark .wb-shell {
   background-color: var(--color-bg, #111827);
 }
 
-:root.dark .wb-header {
+html.dark .wb-header {
   background-color: var(--color-bg-card, #1f2937);
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .wb-header-left h1 {
+html.dark .wb-header-left h1 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .wb-btn {
+html.dark .wb-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .wb-btn:hover {
+html.dark .wb-btn:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .wb-menu {
+html.dark .wb-menu {
   background-color: var(--color-bg-card, #1f2937);
   border-right-color: var(--color-border, #374151);
 }
 
-:root.dark .wb-sidebar-toggle {
+html.dark .wb-sidebar-toggle {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .wb-sidebar-toggle:hover {
+html.dark .wb-sidebar-toggle:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .wb-menu-item {
+html.dark .wb-menu-item {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .wb-menu-item:hover {
+html.dark .wb-menu-item:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .wb-menu-item.active {
+html.dark .wb-menu-item.active {
   background-color: #1e3a5f;
   color: #60a5fa;
 }
 
-:root.dark .wb-content {
+html.dark .wb-content {
   background-color: var(--color-bg, #111827);
 }
 
 /* 移动端菜单底边框沿用亮色 token，暗色下需覆盖 */
 @media (max-width: 768px) {
-  :root.dark .wb-menu {
+  html.dark .wb-menu {
     border-bottom-color: var(--color-border, #374151);
   }
 }

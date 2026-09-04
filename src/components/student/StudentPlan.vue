@@ -577,16 +577,16 @@ onMounted(() => {
 .sp-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #111827);
 }
-:global(:root.dark) .sp-list > :global(.el-table) {
+:global(html.dark) .sp-list > :global(.el-table) {
   --el-table-border-color: var(--color-border, #374151);
   --el-table-header-bg-color: var(--color-bg-hover, #111827);
   --el-table-tr-bg-color: transparent;
 }
-:global(:root.dark) .sp-list > :global(.el-table th.el-table__cell) {
+:global(html.dark) .sp-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
   color: var(--color-text-secondary, #d1d5db);
 }
-:global(:root.dark) .sp-list > :global(.el-table td.el-table__cell) {
+:global(html.dark) .sp-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #f9fafb);
 }
 .sp-list > :global(.el-table .el-table__body-wrapper .cell),
@@ -606,7 +606,7 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
 }
-:global(:root.dark) .sp-list-pager {
+:global(html.dark) .sp-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
 }
@@ -624,13 +624,13 @@ onMounted(() => {
   color: #fff !important;
   border-color: var(--color-primary, #3b82f6) !important;
 }
-:global(:root.dark) .sp-list-pager > :global(.el-pagination button),
-:global(:root.dark) .sp-list-pager > :global(.el-pagination .el-pager li) {
+:global(html.dark) .sp-list-pager > :global(.el-pagination button),
+:global(html.dark) .sp-list-pager > :global(.el-pagination .el-pager li) {
   background-color: var(--color-bg-card, #1f2937) !important;
   border-color: var(--color-border, #374151) !important;
   color: var(--color-text-secondary, #d1d5db) !important;
 }
-:global(:root.dark) .sp-list-pager > :global(.el-pagination .el-pager li.is-active) {
+:global(html.dark) .sp-list-pager > :global(.el-pagination .el-pager li.is-active) {
   background-color: var(--color-primary, #3b82f6) !important;
   color: #fff !important;
   border-color: var(--color-primary, #3b82f6) !important;

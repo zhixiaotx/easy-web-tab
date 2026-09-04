@@ -553,42 +553,42 @@ const handlePageChange = () => {
 }
 
 /* 暗色模式 */
-:root.dark .bottom-pagination {
+html.dark .bottom-pagination {
   background-color: rgba(31, 41, 55, 0.95);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-:root.dark .app-bar {
+html.dark .app-bar {
   background-color: rgba(31, 41, 55, 0.82);
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-front {
+html.dark .btn-front {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .btn-front:hover {
+html.dark .btn-front:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #374151);
 }
 
 /* 左上角入口按钮（暗色，与全局 .btn-help 暗色一致） */
-:root.dark .app-bar .btn-help {
+html.dark .app-bar .btn-help {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .app-bar .btn-help:hover {
+html.dark .app-bar .btn-help:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .app-bar-right :deep(.theme-toggle) {
+html.dark .app-bar-right :deep(.theme-toggle) {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .app-bar-right :deep(.theme-toggle:hover) {
+html.dark .app-bar-right :deep(.theme-toggle:hover) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #374151);

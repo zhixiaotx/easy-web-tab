@@ -1056,132 +1056,132 @@ onUnmounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .td-search {
+html.dark .td-search {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .td-card {
+html.dark .td-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog {
+html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog-header {
+html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .td-title {
+html.dark .td-title {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .td-title.is-done {
+html.dark .td-title.is-done {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .td-desc {
+html.dark .td-desc {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .td-date {
+html.dark .td-date {
   color: var(--color-text-secondary, #d1d5db);
 }
 
 /* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .btn-save:disabled {
+html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .color-reset {
+html.dark .color-reset {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .search-reset-btn,
-:root.dark .btn-cancel,
-:root.dark .btn-edit,
-:root.dark .btn-delete {
+html.dark .search-reset-btn,
+html.dark .btn-cancel,
+html.dark .btn-edit,
+html.dark .btn-delete {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .prio-high {
+html.dark .prio-high {
   color: #fca5a5;
   background: rgba(185, 28, 28, 0.35);
   border-color: #991b1b;
 }
 
-:root.dark .prio-medium {
+html.dark .prio-medium {
   color: #fbbf24;
   background: rgba(180, 83, 9, 0.35);
   border-color: #92400e;
 }
 
-:root.dark .prio-low {
+html.dark .prio-low {
   color: #cbd5e1;
   background: rgba(71, 85, 105, 0.35);
   border-color: #475569;
 }
 
-:root.dark .td-normal {
+html.dark .td-normal {
   color: #4ade80;
 }
 
-:root.dark .td-today {
+html.dark .td-today {
   color: #fbbf24;
 }
 
-:root.dark .td-overdue {
+html.dark .td-overdue {
   color: #f87171;
 }
 
-:root.dark .td-done {
+html.dark .td-done {
   color: #9ca3af;
 }
 
-:root.dark .td-cat-tab {
+html.dark .td-cat-tab {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .td-cat-tab:hover {
+html.dark .td-cat-tab:hover {
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-/* 显式覆盖，避免 :root.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
-:root.dark .td-cat-tab.active {
+/* 显式覆盖，避免 html.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
+html.dark .td-cat-tab.active {
   color: #fff;
   background: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .td-cat-badge {
+html.dark .td-cat-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .btn-add:disabled {
+html.dark .btn-add:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }

@@ -890,16 +890,16 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   font-weight: 600;
 }
 /* 暗色模式（视觉对齐健康管理 WorkbenchHealth.vue:91-105） */
-:root.dark .stp-tab {
+html.dark .stp-tab {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
-:root.dark .stp-tab:hover {
+html.dark .stp-tab:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
-:root.dark .stp-tab.active {
+html.dark .stp-tab.active {
   background-color: #1e3a5f;
   color: #60a5fa;
 }
@@ -934,12 +934,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   border: 1px solid var(--color-border, #e5e7eb);
 }
 .stp-pane-sub-hint { opacity: 0.9; }
-:root.dark .stp-pane-toolbar-sub {
+html.dark .stp-pane-toolbar-sub {
   background: #1f2937;
   border-color: #374151;
   color: #9ca3af;
 }
-:root.dark .stp-date-chip {
+html.dark .stp-date-chip {
   background: #111827;
   border-color: #374151;
   color: #f9fafb;
@@ -1000,21 +1000,21 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
   padding: 0 6px;
   white-space: nowrap;
 }
-:root.dark .stp-pager {
+html.dark .stp-pager {
   background: #1f2937;
   border-color: #374151;
 }
-:root.dark .stp-pager-btn {
+html.dark .stp-pager-btn {
   background: #1f2937;
   border-color: #374151;
   color: #d1d5db;
 }
-:root.dark .stp-pager-btn:hover:not(:disabled) {
+html.dark .stp-pager-btn:hover:not(:disabled) {
   background: #3b82f6;
   border-color: #3b82f6;
   color: #fff;
 }
-:root.dark .stp-pager-info {
+html.dark .stp-pager-info {
   color: #d1d5db;
 }
 

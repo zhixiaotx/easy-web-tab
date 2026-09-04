@@ -68,20 +68,20 @@ defineEmits<{ prev: []; next: [] }>()
 }
 
 /* 暗色模式覆盖：--color-* 仅定义于 style.css :root（亮色），dark.css 只覆写 legacy --bg-/--text-/--border-/--accent- 家族，
-   故沿用 WorkbenchView :root.dark .wb-btn 的既有约定（legacy theme-aware token + hex 兜底）。 */
-:root.dark .pp-btn {
+   故沿用 WorkbenchView html.dark .wb-btn 的既有约定（legacy theme-aware token + hex 兜底）。 */
+html.dark .pp-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .pp-btn:hover:not(:disabled) {
+html.dark .pp-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .pp-info {
+html.dark .pp-info {
   color: var(--color-text-secondary, #d1d5db);
 }
 </style>

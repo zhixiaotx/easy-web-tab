@@ -1628,159 +1628,159 @@ onUnmounted(() => {
 
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .note-yellow {
+html.dark .note-yellow {
   background: rgba(234, 179, 8, 0.18);
   border-color: #a16207;
   color: #fde047;
 }
 
-:root.dark .note-blue {
+html.dark .note-blue {
   background: rgba(59, 130, 246, 0.18);
   border-color: #1d4ed8;
   color: #93c5fd;
 }
 
-:root.dark .note-green {
+html.dark .note-green {
   background: rgba(34, 197, 94, 0.16);
   border-color: #047857;
   color: #6ee7b7;
 }
 
-:root.dark .note-pink {
+html.dark .note-pink {
   background: rgba(236, 72, 153, 0.16);
   border-color: #be185d;
   color: #f9a8d4;
 }
 
-:root.dark .note-red {
+html.dark .note-red {
   background: rgba(239, 68, 68, 0.16);
   border-color: #b91c1c;
   color: #fca5a5;
 }
 
-:root.dark .note-orange {
+html.dark .note-orange {
   background: rgba(249, 115, 22, 0.16);
   border-color: #c2410c;
   color: #fdba74;
 }
 
-:root.dark .note-cyan {
+html.dark .note-cyan {
   background: rgba(6, 182, 212, 0.16);
   border-color: #0e7490;
   color: #67e8f9;
 }
 
-:root.dark .note-purple {
+html.dark .note-purple {
   background: rgba(168, 85, 247, 0.16);
   border-color: #7e22ce;
   color: #d8b4fe;
 }
 
-:root.dark .pin-badge {
+html.dark .pin-badge {
   background: rgba(0, 0, 0, 0.35);
 }
 
-:root.dark .note-overlay {
+html.dark .note-overlay {
   background: rgba(0, 0, 0, 0.7);
 }
 
-:root.dark .note-form {
+html.dark .note-form {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .timeline-expand-panel {
+html.dark .timeline-expand-panel {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
 /* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .btn-save:disabled {
+html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .btn-add:disabled {
+html.dark .btn-add:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .nt-search {
+html.dark .nt-search {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .nt-search .form-input {
+html.dark .nt-search .form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .nt-cat-tab {
+html.dark .nt-cat-tab {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .nt-cat-tab:hover {
+html.dark .nt-cat-tab:hover {
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-/* 显式覆盖，避免 :root.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
-:root.dark .nt-cat-tab.active {
+/* 显式覆盖，避免 html.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
+html.dark .nt-cat-tab.active {
   color: #fff;
   background: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .nt-btn-reset {
+html.dark .nt-btn-reset {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .nt-btn-reset:hover {
+html.dark .nt-btn-reset:hover {
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .note-cat-badge {
+html.dark .note-cat-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .type-radio-option {
+html.dark .type-radio-option {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .type-radio-option:hover {
+html.dark .type-radio-option:hover {
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .type-radio-option.active {
+html.dark .type-radio-option.active {
   color: #fff;
   background: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .note-cat-select {
+html.dark .note-cat-select {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .timeline-item-time {
+html.dark .timeline-item-time {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .timeline-item::before {
+html.dark .timeline-item::before {
   background: var(--color-border, #374151);
 }
 

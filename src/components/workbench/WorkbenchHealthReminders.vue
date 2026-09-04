@@ -137,22 +137,22 @@ onMounted(async () => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .health-reminders {
+html.dark .health-reminders {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .hr-title,
-:root.dark .hr-repeat {
+html.dark .hr-title,
+html.dark .hr-repeat {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .hr-name,
-:root.dark .hr-time {
+html.dark .hr-name,
+html.dark .hr-time {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .hr-item {
+html.dark .hr-item {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }

@@ -319,23 +319,23 @@ function handleAdd(): void {
 }
 
 /* 暗色模式 */
-:root.dark .bizcat-dialog {
+html.dark .bizcat-dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .bizcat-name {
+html.dark .bizcat-name {
   color: var(--color-text, #f9fafb);
   background-color: var(--color-bg-input, #374151);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .bizcat-btn {
+html.dark .bizcat-btn {
   color: var(--color-text-secondary, #d1d5db);
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .bizcat-hint {
+html.dark .bizcat-hint {
   color: var(--color-text-muted, #9ca3af);
 }
 </style>

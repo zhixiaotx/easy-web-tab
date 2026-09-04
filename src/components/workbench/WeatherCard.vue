@@ -194,32 +194,32 @@ watch(
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .weather-card {
+html.dark .weather-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .wx-placeholder-text,
-:root.dark .wx-row-2,
-:root.dark .wx-loading {
+html.dark .wx-placeholder-text,
+html.dark .wx-row-2,
+html.dark .wx-loading {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .wx-city,
-:root.dark .wx-temp,
-:root.dark .wx-desc {
+html.dark .wx-city,
+html.dark .wx-temp,
+html.dark .wx-desc {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .wx-feels {
+html.dark .wx-feels {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .wx-divider {
+html.dark .wx-divider {
   background: #374151;
 }
 
-:root.dark .wx-setup-btn {
+html.dark .wx-setup-btn {
   background-color: #1e3a5f;
   color: #60a5fa;
 }

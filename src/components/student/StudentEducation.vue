@@ -400,16 +400,16 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #111827);
 }
-:global(:root.dark) .edu-list > :global(.el-table) {
+:global(html.dark) .edu-list > :global(.el-table) {
   --el-table-border-color: var(--color-border, #374151);
   --el-table-header-bg-color: var(--color-bg-hover, #111827);
   --el-table-tr-bg-color: transparent;
 }
-:global(:root.dark) .edu-list > :global(.el-table th.el-table__cell) {
+:global(html.dark) .edu-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
   color: var(--color-text-secondary, #d1d5db);
 }
-:global(:root.dark) .edu-list > :global(.el-table td.el-table__cell) {
+:global(html.dark) .edu-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #f9fafb);
 }
 /* 每个 cell 最小内容宽兜底：避免 11 列时只剩学校+操作 */
@@ -430,7 +430,7 @@ const degreeOptions = DEGREE_OPTIONS
   justify-content: center;
   align-items: center;
 }
-:global(:root.dark) .edu-list-pager {
+:global(html.dark) .edu-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
 }
@@ -448,13 +448,13 @@ const degreeOptions = DEGREE_OPTIONS
   color: #fff !important;
   border-color: var(--color-primary, #10b981) !important;
 }
-:global(:root.dark) .edu-list-pager > :global(.el-pagination button),
-:global(:root.dark) .edu-list-pager > :global(.el-pagination .el-pager li) {
+:global(html.dark) .edu-list-pager > :global(.el-pagination button),
+:global(html.dark) .edu-list-pager > :global(.el-pagination .el-pager li) {
   background-color: var(--color-bg-card, #1f2937) !important;
   border-color: var(--color-border, #374151) !important;
   color: var(--color-text-secondary, #d1d5db) !important;
 }
-:global(:root.dark) .edu-list-pager > :global(.el-pagination .el-pager li.is-active) {
+:global(html.dark) .edu-list-pager > :global(.el-pagination .el-pager li.is-active) {
   background-color: var(--color-primary, #10b981) !important;
   color: #fff !important;
   border-color: var(--color-primary, #10b981) !important;
@@ -531,15 +531,15 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-degree-bachelor     { background: #dcfce7; color: #15803d; } /* 本科   - 深绿 */
 .edu-degree-master       { background: #cffafe; color: #0891b2; } /* 硕士   - 青 */
 .edu-degree-doctor       { background: #fee2e2; color: #b91c1c; } /* 博士   - 深红 */
-:global(:root.dark) .edu-degree-kindergarten { background: rgba(219, 39, 119, 0.22); }
-:global(:root.dark) .edu-degree-primary      { background: rgba(5, 150, 105, 0.2); }
-:global(:root.dark) .edu-degree-junior       { background: rgba(37, 99, 235, 0.22); }
-:global(:root.dark) .edu-degree-high         { background: rgba(124, 58, 237, 0.25); }
-:global(:root.dark) .edu-degree-vocational   { background: rgba(234, 88, 12, 0.2); }
-:global(:root.dark) .edu-degree-college      { background: rgba(202, 138, 4, 0.2); }
-:global(:root.dark) .edu-degree-bachelor     { background: rgba(21, 128, 61, 0.22); }
-:global(:root.dark) .edu-degree-master       { background: rgba(8, 145, 178, 0.22); }
-:global(:root.dark) .edu-degree-doctor       { background: rgba(185, 28, 28, 0.28); }
+:global(html.dark) .edu-degree-kindergarten { background: rgba(219, 39, 119, 0.22); }
+:global(html.dark) .edu-degree-primary      { background: rgba(5, 150, 105, 0.2); }
+:global(html.dark) .edu-degree-junior       { background: rgba(37, 99, 235, 0.22); }
+:global(html.dark) .edu-degree-high         { background: rgba(124, 58, 237, 0.25); }
+:global(html.dark) .edu-degree-vocational   { background: rgba(234, 88, 12, 0.2); }
+:global(html.dark) .edu-degree-college      { background: rgba(202, 138, 4, 0.2); }
+:global(html.dark) .edu-degree-bachelor     { background: rgba(21, 128, 61, 0.22); }
+:global(html.dark) .edu-degree-master       { background: rgba(8, 145, 178, 0.22); }
+:global(html.dark) .edu-degree-doctor       { background: rgba(185, 28, 28, 0.28); }
 
 /* ===== 弹框（白色背景，与习惯打卡一致） ===== */
 .edu-dialog-overlay {

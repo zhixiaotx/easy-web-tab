@@ -368,50 +368,50 @@ watch(query, () => {
 }
 
 /* 暗色模式覆盖（跟随 WorkbenchView dark 变量模式） */
-:root.dark .sp-overlay {
+html.dark .sp-overlay {
   background-color: rgba(2, 6, 23, 0.6);
 }
 
-:root.dark .sp-panel {
+html.dark .sp-panel {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
 
-:root.dark .sp-search {
+html.dark .sp-search {
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .sp-search-icon,
-:root.dark .sp-input::placeholder {
+html.dark .sp-search-icon,
+html.dark .sp-input::placeholder {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .sp-input {
+html.dark .sp-input {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .sp-close-btn:hover {
+html.dark .sp-close-btn:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .sp-hint,
-:root.dark .sp-empty,
-:root.dark .sp-group,
-:root.dark .sp-result-sub {
+html.dark .sp-hint,
+html.dark .sp-empty,
+html.dark .sp-group,
+html.dark .sp-result-sub {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .sp-result:hover {
+html.dark .sp-result:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 
-:root.dark .sp-result.active {
+html.dark .sp-result.active {
   background-color: #1e3a5f;
 }
 
-:root.dark .sp-result-title {
+html.dark .sp-result-title {
   color: var(--color-text, #f9fafb);
 }
 </style>

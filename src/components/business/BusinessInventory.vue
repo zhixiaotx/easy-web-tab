@@ -515,48 +515,48 @@ function closeTraceModal(): void {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-:root.dark .bizinv-alert,
-:root.dark .bizinv-card {
+html.dark .bizinv-alert,
+html.dark .bizinv-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizinv-low-card {
+html.dark .bizinv-low-card {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .bizinv-name {
+html.dark .bizinv-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bizinv-low-stock {
+html.dark .bizinv-low-stock {
   color: #f87171;
 }
 
 /* 暗色模式：三色适配 */
-:root.dark .bizinv-num.num-purchase b {
+html.dark .bizinv-num.num-purchase b {
   color: #60a5fa;
 }
 
-:root.dark .bizinv-num.num-brought b {
+html.dark .bizinv-num.num-brought b {
   color: #fbbf24;
 }
 
-:root.dark .bizinv-num.num-stock b {
+html.dark .bizinv-num.num-stock b {
   color: #4ade80;
 }
 
 /* 暗色模式：溯源弹框 */
-:root.dark .bizinv-trace-modal {
+html.dark .bizinv-trace-modal {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-:root.dark .bizinv-source-row:hover {
+html.dark .bizinv-source-row:hover {
   background: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .biz-input {
+html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);

@@ -1447,133 +1447,133 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .ld-month-bar {
+html.dark .ld-month-bar {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .stat-card,
-:root.dark .ld-ratio-block,
-:root.dark .ld-card {
+html.dark .stat-card,
+html.dark .ld-ratio-block,
+html.dark .ld-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .ld-list {
+html.dark .ld-list {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .ld-item:hover {
+html.dark .ld-item:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog {
+html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog-header {
+html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .ld-date {
+html.dark .ld-date {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .ld-note,
-:root.dark .ld-ratio-val {
+html.dark .ld-note,
+html.dark .ld-ratio-val {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .ld-amount {
+html.dark .ld-amount {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .ld-amount.is-income {
+html.dark .ld-amount.is-income {
   color: #4ade80;
 }
 
-:root.dark .stat-value.is-income {
+html.dark .stat-value.is-income {
   color: #4ade80;
 }
 
-:root.dark .stat-value.is-expense,
-:root.dark .stat-value.is-negative {
+html.dark .stat-value.is-expense,
+html.dark .stat-value.is-negative {
   color: #f87171;
 }
 
-:root.dark .ld-cat-badge {
+html.dark .ld-cat-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .ld-cat-badge.is-income,
-:root.dark .ld-cat-type-badge.is-income {
+html.dark .ld-cat-badge.is-income,
+html.dark .ld-cat-type-badge.is-income {
   color: #4ade80;
   background: rgba(34, 197, 94, 0.2);
   border-color: rgba(34, 197, 94, 0.45);
 }
 
-:root.dark .ld-cat-type-badge {
+html.dark .ld-cat-type-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .ld-donut-track {
+html.dark .ld-donut-track {
   stroke: var(--color-bg-input, #374151);
 }
 
-:root.dark .ld-cat-row {
+html.dark .ld-cat-row {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .ld-cat-name {
+html.dark .ld-cat-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .btn-manage,
-:root.dark .btn-cancel,
-:root.dark .btn-edit,
-:root.dark .btn-delete,
-:root.dark .month-btn,
-:root.dark .ld-charts-toggle {
+html.dark .btn-manage,
+html.dark .btn-cancel,
+html.dark .btn-edit,
+html.dark .btn-delete,
+html.dark .month-btn,
+html.dark .ld-charts-toggle {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .month-btn:hover {
+html.dark .month-btn:hover {
   background: var(--color-primary, var(--color-primary));
   border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
-:root.dark .today-btn {
+html.dark .today-btn {
   color: #fff;
   background: var(--color-primary, var(--color-primary));
   border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .btn-save:disabled {
+html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .btn-add:disabled {
+html.dark .btn-add:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);

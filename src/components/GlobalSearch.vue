@@ -500,64 +500,64 @@ function openSite(url: string) {
 }
 
 /* 暗色模式 */
-:root.dark .global-search {
+html.dark .global-search {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .engine-select {
+html.dark .engine-select {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text, #f9fafb);
   border-right-color: var(--color-border, #374151);
 }
 
-:root.dark .search-input {
+html.dark .search-input {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .search-input::placeholder {
+html.dark .search-input::placeholder {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .history-dropdown {
+html.dark .history-dropdown {
   background: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .history-header {
+html.dark .history-header {
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .history-title {
+html.dark .history-title {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .clear-history {
+html.dark .clear-history {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .clear-history:hover {
+html.dark .clear-history:hover {
   background: var(--color-bg-hover, #374151);
   color: #ef4444;
 }
 
-:root.dark .history-item:hover {
+html.dark .history-item:hover {
   background: var(--color-bg-hover, #374151);
 }
 
-:root.dark .history-text {
+html.dark .history-text {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .local-search-item:hover {
+html.dark .local-search-item:hover {
   background: var(--color-bg-hover, #374151);
 }
 
-:root.dark .site-icon,
-:root.dark .site-icon-placeholder {
+html.dark .site-icon,
+html.dark .site-icon-placeholder {
   background: var(--color-bg-hover, #374151);
 }
 
-:root.dark .site-category {
+html.dark .site-category {
   color: var(--color-text-muted, #9ca3af);
 }
 

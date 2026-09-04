@@ -805,7 +805,7 @@ onUnmounted(() => {
   border: 1px solid #22c55e;
 }
 
-:root.dark .reminded-badge {
+html.dark .reminded-badge {
   color: #4ade80;
   border-color: #22c55e;
   background: rgba(34, 197, 94, 0.18);
@@ -1411,117 +1411,117 @@ onUnmounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .cd-search {
+html.dark .cd-search {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .cd-card {
+html.dark .cd-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog {
+html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog-header {
+html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
 }
 
 /* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .btn-save:disabled {
+html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .weekday-check,
-:root.dark .workdays-btn,
-:root.dark .color-reset {
+html.dark .weekday-check,
+html.dark .workdays-btn,
+html.dark .color-reset {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .weekday-check.active {
+html.dark .weekday-check.active {
   color: #60a5fa;
   border-color: #60a5fa;
 }
 
-:root.dark .cat-work {
+html.dark .cat-work {
   color: #60a5fa;
   border-color: #3b82f6;
 }
 
-:root.dark .cat-life {
+html.dark .cat-life {
   color: #4ade80;
   border-color: #22c55e;
 }
 
-:root.dark .cat-study {
+html.dark .cat-study {
   color: #c084fc;
   border-color: #a855f7;
 }
 
-:root.dark .cat-exercise {
+html.dark .cat-exercise {
   color: #fdba74;
   border-color: #fb923c;
   background: rgba(249, 115, 22, 0.18);
 }
 
-:root.dark .cat-diet {
+html.dark .cat-diet {
   color: #fcd34d;
   border-color: #fbbf24;
   background: rgba(245, 158, 11, 0.18);
 }
 
-:root.dark .cat-sleep {
+html.dark .cat-sleep {
   color: #67e8f9;
   border-color: #22d3ee;
   background: rgba(6, 182, 212, 0.18);
 }
 
-:root.dark .sort-dir-btn,
-:root.dark .btn-cancel,
-:root.dark .btn-edit,
-:root.dark .btn-delete,
-:root.dark .btn-move {
+html.dark .sort-dir-btn,
+html.dark .btn-cancel,
+html.dark .btn-edit,
+html.dark .btn-delete,
+html.dark .btn-move {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .status-normal {
+html.dark .status-normal {
   color: #4ade80;
 }
 
-:root.dark .status-urgent {
+html.dark .status-urgent {
   color: #fbbf24;
 }
 
-:root.dark .status-critical {
+html.dark .status-critical {
   color: #f87171;
 }
 
-:root.dark .cat-default {
+html.dark .cat-default {
   color: #9ca3af;
   border-color: #6b7280;
   background: rgba(107, 114, 128, 0.15);
 }
 
-:root.dark .cd-cat-tab {
+html.dark .cd-cat-tab {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);

@@ -1102,111 +1102,111 @@ async function handleQuickNote(): Promise<void> {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .bento-card {
+html.dark .bento-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bento-greeting {
+html.dark .bento-greeting {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 12%, transparent), transparent),
     var(--color-bg-card, #1f2937);
 }
 
-:root.dark .greeting-title,
-:root.dark .stat-value,
-:root.dark .panel-header h3,
-:root.dark .home-list-title {
+html.dark .greeting-title,
+html.dark .stat-value,
+html.dark .panel-header h3,
+html.dark .home-list-title {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .greeting-time {
+html.dark .greeting-time {
   color: #60a5fa;
 }
 
-:root.dark .greeting-sub,
-:root.dark .stat-label,
-:root.dark .stat-sub,
-:root.dark .ring-text {
+html.dark .greeting-sub,
+html.dark .stat-label,
+html.dark .stat-sub,
+html.dark .ring-text {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .home-list-item {
+html.dark .home-list-item {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .quick-add-input {
+html.dark .quick-add-input {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .nav-btn {
+html.dark .nav-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .nav-btn:hover {
+html.dark .nav-btn:hover {
   background-color: var(--color-primary, #3b82f6);
   color: #fff;
 }
 
-:root.dark .home-empty {
+html.dark .home-empty {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .habit-detail {
+html.dark .habit-detail {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
-:root.dark .habit-detail-name {
+html.dark .habit-detail-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .habit-detail-bar {
+html.dark .habit-detail-bar {
   background-color: #374151;
 }
 
-:root.dark .home-carousel-arrow {
+html.dark .home-carousel-arrow {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .home-carousel-dot {
+html.dark .home-carousel-dot {
   background-color: var(--color-border, #4b5563);
 }
 
-:root.dark .prio-high {
+html.dark .prio-high {
   color: #fca5a5;
   background: rgba(185, 28, 28, 0.35);
   border-color: #991b1b;
 }
 
-:root.dark .prio-medium {
+html.dark .prio-medium {
   color: #fbbf24;
   background: rgba(180, 83, 9, 0.35);
   border-color: #92400e;
 }
 
-:root.dark .prio-low {
+html.dark .prio-low {
   color: #cbd5e1;
   background: rgba(71, 85, 105, 0.35);
   border-color: #475569;
 }
 
-:root.dark .cd-normal {
+html.dark .cd-normal {
   color: #4ade80;
 }
 
-:root.dark .cd-urgent {
+html.dark .cd-urgent {
   color: #fbbf24;
 }
 
-:root.dark .cd-critical {
+html.dark .cd-critical {
   color: #f87171;
 }
 

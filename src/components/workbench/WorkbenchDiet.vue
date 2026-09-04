@@ -518,12 +518,12 @@ onUnmounted(() => {
   color: var(--color-primary, #10b981);
   border-color: var(--color-primary, #10b981);
 }
-:global(:root.dark) .stat-panel-actions .btn-manage {
+:global(html.dark) .stat-panel-actions .btn-manage {
   background: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
   color: var(--color-text-secondary, #d1d5db);
 }
-:global(:root.dark) .stat-panel-actions .btn-manage:hover {
+:global(html.dark) .stat-panel-actions .btn-manage:hover {
   color: var(--color-primary, #10b981);
   border-color: var(--color-primary, #10b981);
 }
@@ -907,88 +907,88 @@ onUnmounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .stat-card {
+html.dark .stat-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .dt-item {
+html.dark .dt-item {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog {
+html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog-header {
+html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dt-date {
+html.dark .dt-date {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .dt-meta,
-:root.dark .dt-note {
+html.dark .dt-meta,
+html.dark .dt-note {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .dt-meal-lunch {
+html.dark .dt-meal-lunch {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .dt-meal-breakfast {
+html.dark .dt-meal-breakfast {
   color: #fbbf24;
   background: rgba(217, 119, 6, 0.2);
   border-color: rgba(217, 119, 6, 0.45);
 }
 
-:root.dark .dt-meal-dinner {
+html.dark .dt-meal-dinner {
   color: #c4b5fd;
   background: rgba(124, 58, 237, 0.2);
   border-color: rgba(124, 58, 237, 0.45);
 }
 
-:root.dark .dt-meal-snack {
+html.dark .dt-meal-snack {
   color: #6ee7b7;
   background: rgba(5, 150, 105, 0.2);
   border-color: rgba(5, 150, 105, 0.45);
 }
 
-:root.dark .dt-progress {
+html.dark .dt-progress {
   background-color: var(--color-bg-input, #374151);
 }
 
-:root.dark .btn-clear {
+html.dark .btn-clear {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .btn-save:disabled {
+html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-toggle-list,
-:root.dark .btn-cancel,
-:root.dark .btn-edit,
-:root.dark .btn-delete {
+html.dark .btn-toggle-list,
+html.dark .btn-cancel,
+html.dark .btn-edit,
+html.dark .btn-delete {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
@@ -1034,16 +1034,16 @@ onUnmounted(() => {
 .dt-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #111827);
 }
-:global(:root.dark) .dt-list > :global(.el-table) {
+:global(html.dark) .dt-list > :global(.el-table) {
   --el-table-border-color: var(--color-border, #374151);
   --el-table-header-bg-color: var(--color-bg-hover, #111827);
   --el-table-tr-bg-color: transparent;
 }
-:global(:root.dark) .dt-list > :global(.el-table th.el-table__cell) {
+:global(html.dark) .dt-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;
   color: var(--color-text-secondary, #d1d5db);
 }
-:global(:root.dark) .dt-list > :global(.el-table td.el-table__cell) {
+:global(html.dark) .dt-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #f9fafb);
 }
 /* 强制每个非 fixed 列 cell 最小内容宽，防止只剩日期+操作 */
@@ -1063,7 +1063,7 @@ onUnmounted(() => {
   justify-content: center;
   align-items: center;
 }
-:global(:root.dark) .dt-list-pager {
+:global(html.dark) .dt-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
 }
@@ -1081,13 +1081,13 @@ onUnmounted(() => {
   color: #fff !important;
   border-color: var(--color-primary, #10b981) !important;
 }
-:global(:root.dark) .dt-list-pager :global(.el-pagination button),
-:global(:root.dark) .dt-list-pager :global(.el-pagination .el-pager li) {
+:global(html.dark) .dt-list-pager :global(.el-pagination button),
+:global(html.dark) .dt-list-pager :global(.el-pagination .el-pager li) {
   background-color: var(--color-bg-card, #1f2937) !important;
   border-color: var(--color-border, #374151) !important;
   color: var(--color-text-secondary, #d1d5db) !important;
 }
-:global(:root.dark) .dt-list-pager :global(.el-pagination .el-pager li.is-active) {
+:global(html.dark) .dt-list-pager :global(.el-pagination .el-pager li.is-active) {
   background-color: var(--color-primary, #10b981) !important;
   color: #fff !important;
   border-color: var(--color-primary, #10b981) !important;

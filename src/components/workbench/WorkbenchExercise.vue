@@ -662,7 +662,7 @@ onUnmounted(() => {
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
-:global(:root.dark) .ld-cat-type-badge {
+:global(html.dark) .ld-cat-type-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
@@ -959,77 +959,77 @@ onUnmounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .stat-card {
+html.dark .stat-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .ex-item {
+html.dark .ex-item {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog {
+html.dark .dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog-header {
+html.dark .dialog-header {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .ex-date {
+html.dark .ex-date {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .ex-meta,
-:root.dark .ex-note {
+html.dark .ex-meta,
+html.dark .ex-note {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .ex-type-badge {
+html.dark .ex-type-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:root.dark .ex-progress {
+html.dark .ex-progress {
   background-color: var(--color-bg-input, #374151);
 }
 
-:root.dark .btn-clear {
+html.dark .btn-clear {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
 /* 禁用态保存按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .btn-save:disabled {
+html.dark .btn-save:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
 /* 暗色适配：ld-cat-type-badge 暗色（:global 穿透 scoped）*/
-:global(:root.dark) .ld-cat-type-badge {
+:global(html.dark) .ld-cat-type-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
 
-:global(:root.dark) .btn-cancel,
-:global(:root.dark) .btn-edit,
-:global(:root.dark) .btn-delete,
-:global(:root.dark) .stat-panel-actions .btn-manage {
+:global(html.dark) .btn-cancel,
+:global(html.dark) .btn-edit,
+:global(html.dark) .btn-delete,
+:global(html.dark) .stat-panel-actions .btn-manage {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);

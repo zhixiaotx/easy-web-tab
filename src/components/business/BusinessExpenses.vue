@@ -609,33 +609,33 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-:root.dark .bizexp-card,
-:root.dark .biz-dialog {
+html.dark .bizexp-card,
+html.dark .biz-dialog {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizexp-date {
+html.dark .bizexp-date {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bizexp-total,
-:root.dark .bizexp-preview strong {
+html.dark .bizexp-total,
+html.dark .bizexp-preview strong {
   color: #f87171;
 }
 
-:root.dark .bizexp-row {
+html.dark .bizexp-row {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .bizexp-btn,
-:root.dark .bizexp-cat-btn {
+html.dark .bizexp-btn,
+html.dark .bizexp-cat-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .biz-input {
+html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);

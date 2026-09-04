@@ -2476,7 +2476,7 @@ onUnmounted(() => {
   border-color: var(--color-primary, var(--color-primary)) !important;
   box-shadow: 0 0 0 1px var(--color-primary, var(--color-primary)) inset;
 }
-:root.dark .sub-tab-btn.active {
+html.dark .sub-tab-btn.active {
   border-color: #60a5fa !important;
   box-shadow: 0 0 0 1px #60a5fa inset;
 }
@@ -2503,18 +2503,18 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-:root.dark .tab-btn {
+html.dark .tab-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .tab-btn:hover {
+html.dark .tab-btn:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .tab-btn.active {
+html.dark .tab-btn.active {
   background-color: #1e3a5f;
   color: #60a5fa;
 }
@@ -2830,12 +2830,12 @@ onUnmounted(() => {
   width: 72px;
 }
 
-:root.dark .switch-btn {
+html.dark .switch-btn {
   background-color: var(--color-bg-input, #374151);
   border-color: var(--color-border, #4b5563);
 }
 
-:root.dark .switch-btn.on {
+html.dark .switch-btn.on {
   background-color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
@@ -2921,39 +2921,39 @@ onUnmounted(() => {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
-/* 暗色模式：沿用文件现有 :root.dark 变量覆盖惯例，确保区块文字可读 */
-:root.dark .wb-menu-config,
-:root.dark .wb-city-config {
+/* 暗色模式：沿用文件现有 html.dark 变量覆盖惯例，确保区块文字可读 */
+html.dark .wb-menu-config,
+html.dark .wb-city-config {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .wb-menu-title {
+html.dark .wb-menu-title {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .wb-menu-hint {
+html.dark .wb-menu-hint {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .wb-menu-name-input {
+html.dark .wb-menu-name-input {
   color: var(--color-text, #f9fafb);
   background-color: var(--color-bg-input, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .wb-menu-btn {
+html.dark .wb-menu-btn {
   color: var(--color-text-secondary, #d1d5db);
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .wb-snapshot-time {
+html.dark .wb-snapshot-time {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .wb-snapshot-source,
-:root.dark .wb-snapshot-empty {
+html.dark .wb-snapshot-source,
+html.dark .wb-snapshot-empty {
   color: var(--color-text-muted, #9ca3af);
 }
 
@@ -2981,7 +2981,7 @@ onUnmounted(() => {
   margin-top: 12px;
 }
 
-:root.dark .remind-label {
+html.dark .remind-label {
   color: var(--color-text, #f9fafb);
 }
 
@@ -3011,7 +3011,7 @@ onUnmounted(() => {
 
 /* ========================================
    站点管理（导航设置 tab）：原管理页工具栏九动作按钮网格。
-   风格沿用管理页原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 :root.dark 变量惯例
+   风格沿用管理页原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 html.dark 变量惯例
    ======================================== */
 .site-actions-grid {
   display: flex;
@@ -3048,13 +3048,13 @@ onUnmounted(() => {
 }
 
 /* 站点管理暗色模式 */
-:root.dark .site-action-btn {
+html.dark .site-action-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .site-action-btn:hover:not(:disabled) {
+html.dark .site-action-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
@@ -3084,17 +3084,17 @@ onUnmounted(() => {
   border-radius: 999px;
   padding: 2px 10px;
 }
-:root.dark .ld-cat-type-badge {
+html.dark .ld-cat-type-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
 }
-:root.dark .ld-cat-type-badge.is-income {
+html.dark .ld-cat-type-badge.is-income {
   color: #4ade80;
   background: rgba(34, 197, 94, 0.2);
   border-color: rgba(34, 197, 94, 0.45);
 }
-:root.dark .ld-builtin-tag {
+html.dark .ld-builtin-tag {
   color: #9ca3af;
   border-color: #4b5563;
 }

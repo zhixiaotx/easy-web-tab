@@ -424,45 +424,45 @@ onUnmounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .stat-card {
+html.dark .stat-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .pm-ring-track {
+html.dark .pm-ring-track {
   stroke: var(--color-bg-input, #374151);
 }
 
-:root.dark .pm-ring-fg {
+html.dark .pm-ring-fg {
   stroke: #60a5fa;
 }
 
-:root.dark .pm-ring-fg.phase-break {
+html.dark .pm-ring-fg.phase-break {
   stroke: #34d399;
 }
 
-:root.dark .pm-ring-fg.phase-longBreak {
+html.dark .pm-ring-fg.phase-longBreak {
   stroke: #a78bfa;
 }
 
-:root.dark .pm-time {
+html.dark .pm-time {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .btn-secondary {
+html.dark .btn-secondary {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-primary:disabled {
+html.dark .btn-primary:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);

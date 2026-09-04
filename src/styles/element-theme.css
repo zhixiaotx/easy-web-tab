@@ -1,0 +1,27 @@
+/* ============================================================
+ * Element Plus 绿色主题覆盖
+ * 全局将 Element Plus 主色调为项目主色 #10b981（与品牌一致）。
+ * 必须在 element-plus/dist/index.css 之后、dark css-vars 之后引入方覆盖生效。
+ * 亮/暗共用同一主色调色板（light-3..9 / dark-2 由 EP 主色推导）。
+ * ============================================================ */
+
+:root,
+html.dark {
+  /* Element Plus 主色 → 项目绿 #10b981 */
+  --el-color-primary: #10b981;
+  --el-color-primary-light-3: #34d399; /* hover / 次级 */
+  --el-color-primary-light-5: #6ee7b7; /* 选中底 */
+  --el-color-primary-light-7: #a7f3d0; /* 悬停底 */
+  --el-color-primary-light-8: #d1fae5; /* 激活底 */
+  --el-color-primary-light-9: #ecfdf5; /* 最浅底 */
+  --el-color-primary-dark-2: #059669; /* 按下 */
+
+  /* success 统一到品牌绿，避免双绿不一致 */
+  --el-color-success: #10b981;
+  --el-color-success-light-3: #34d399;
+  --el-color-success-light-5: #6ee7b7;
+  --el-color-success-light-7: #a7f3d0;
+  --el-color-success-light-8: #d1fae5;
+  --el-color-success-light-9: #ecfdf5;
+  --el-color-success-dark-2: #059669;
+}

@@ -88,18 +88,18 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
 }
 
 /* 暗色模式覆盖（模式参考 WorkbenchView.vue:414-426） */
-:root.dark .hd-tab {
+html.dark .hd-tab {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .hd-tab:hover {
+html.dark .hd-tab:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .hd-tab.active {
+html.dark .hd-tab.active {
   background-color: #1e3a5f;
   color: #60a5fa;
 }

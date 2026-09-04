@@ -224,11 +224,11 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
   100% { transform: translateX(100%); }
 }
 
-:root.dark .sk-line {
+html.dark .sk-line {
   background: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .sk-block::after {
+html.dark .sk-block::after {
   background: linear-gradient(
     90deg,
     transparent,
@@ -589,43 +589,43 @@ function maxProductRevenue(node: { products: { revenue: number }[] }): number {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
-:root.dark .stat-card,
-:root.dark .bizhome-card,
-:root.dark .bizhome-hero-card {
+html.dark .stat-card,
+html.dark .bizhome-card,
+html.dark .bizhome-hero-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizhome-hero-card {
+html.dark .bizhome-hero-card {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #3b82f6) 14%, transparent), transparent),
     var(--color-bg-card, #1f2937);
 }
 
-:root.dark .hero-value {
+html.dark .hero-value {
   color: #34d399;
 }
 
-:root.dark .hero-value.negative {
+html.dark .hero-value.negative {
   color: #f87171;
 }
 
-:root.dark .stat-card:hover,
-:root.dark .bizhome-card:hover,
-:root.dark .bizhome-hero-card:hover {
+html.dark .stat-card:hover,
+html.dark .bizhome-card:hover,
+html.dark .bizhome-hero-card:hover {
   box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.4));
 }
 
-:root.dark .bizhome-low-item {
+html.dark .bizhome-low-item {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .stat-value {
+html.dark .stat-value {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .stat-value.negative {
+html.dark .stat-value.negative {
   color: #f87171;
 }
 

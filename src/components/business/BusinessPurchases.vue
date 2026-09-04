@@ -603,47 +603,47 @@ async function handleDelete(id: string): Promise<void> {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-:root.dark .bizpur-list,
-:root.dark .biz-dialog {
+html.dark .bizpur-list,
+html.dark .biz-dialog {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizpur-card {
+html.dark .bizpur-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizpur-tab {
+html.dark .bizpur-tab {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .bizpur-tab.active {
+html.dark .bizpur-tab.active {
   background-color: var(--color-primary, var(--color-primary));
   border-color: var(--color-primary, var(--color-primary));
   color: #fff;
 }
 
-:root.dark .bizpur-cat {
+html.dark .bizpur-cat {
   color: var(--color-primary, var(--color-primary));
   background: color-mix(in srgb, var(--color-primary, var(--color-primary)) 16%, transparent);
   border-color: color-mix(in srgb, var(--color-primary, var(--color-primary)) 35%, transparent);
 }
 
-:root.dark .bizpur-date,
-:root.dark .bizpur-product {
+html.dark .bizpur-date,
+html.dark .bizpur-product {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bizpur-btn {
+html.dark .bizpur-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .biz-input {
+html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);

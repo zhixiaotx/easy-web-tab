@@ -816,66 +816,66 @@ onMounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .hb-card {
+html.dark .hb-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .hb-badge-streak,
-:root.dark .hb-badge-week {
+html.dark .hb-badge-streak,
+html.dark .hb-badge-week {
   background-color: var(--color-bg-input, #374151);
 }
 
-:root.dark .hb-week-bar {
+html.dark .hb-week-bar {
   background-color: #374151;
 }
 
-:root.dark .hb-card.is-checked .hb-card-name {
+html.dark .hb-card.is-checked .hb-card-name {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .hb-color-option.active {
+html.dark .hb-color-option.active {
   border-color: var(--color-text, #f9fafb);
 }
 
-:root.dark .btn-primary:disabled {
+html.dark .btn-primary:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .btn-secondary,
-:root.dark .btn-text {
+html.dark .btn-secondary,
+html.dark .btn-text {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .form-input,
-:root.dark select.form-input,
-:root.dark input.form-input {
+html.dark .form-input,
+html.dark select.form-input,
+html.dark input.form-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .empty-state {
+html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .hb-dialog {
+html.dark .hb-dialog {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .dialog-header,
-:root.dark .dialog-title {
+html.dark .dialog-header,
+html.dark .dialog-title {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .hb-rec-item {
+html.dark .hb-rec-item {
   background-color: var(--color-bg-input, #374151);
 }
 
-:root.dark .hb-rec-value {
+html.dark .hb-rec-value {
   color: var(--color-primary, #60a5fa);
 }
 

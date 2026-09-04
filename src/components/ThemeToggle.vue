@@ -34,13 +34,13 @@ const shouldShow = computed(() => themeStore.backgroundType !== 'image')
   border-color: #f59e0b;
 }
 
-:root.dark .theme-toggle {
+html.dark .theme-toggle {
   background-color: #1e293b;
   color: #94a3b8;
   border-color: #334155;
 }
 
-:root.dark .theme-toggle:hover {
+html.dark .theme-toggle:hover {
   background-color: #334155;
   color: #f59e0b;
   border-color: #f59e0b;

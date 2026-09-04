@@ -136,27 +136,27 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
 }
 
 /* 暗色模式覆盖（同工作台浮层模式，见 WorkbenchNotes.vue:645-651） */
-:root.dark .reminder-overlay {
+html.dark .reminder-overlay {
   background: rgba(0, 0, 0, 0.7);
 }
 
-:root.dark .reminder-card {
+html.dark .reminder-card {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .reminder-title {
+html.dark .reminder-title {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .reminder-item {
+html.dark .reminder-item {
   background-color: var(--color-bg-input, #374151);
 }
 
-:root.dark .reminder-name {
+html.dark .reminder-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .reminder-label {
+html.dark .reminder-label {
   color: #60a5fa;
 }
 
@@ -213,12 +213,12 @@ async function toggleEmailReminder(item: CountdownReminderItem) {
   background-color: #fff;
 }
 
-:root.dark .cd-email-switch {
+html.dark .cd-email-switch {
   background-color: var(--color-bg-input, #374151);
   border-color: var(--color-border, #4b5563);
 }
 
-:root.dark .cd-email-switch:checked {
+html.dark .cd-email-switch:checked {
   background-color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }

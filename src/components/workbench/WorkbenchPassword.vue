@@ -1082,80 +1082,80 @@ watch(
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .pwd-auth-card,
-:root.dark .pwd-item,
-:root.dark .pwd-empty {
+html.dark .pwd-auth-card,
+html.dark .pwd-item,
+html.dark .pwd-empty {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .pwd-modal {
+html.dark .pwd-modal {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .pwd-item {
+html.dark .pwd-item {
   box-shadow: none;
 }
 
-:root.dark .pwd-auth-card h3,
-:root.dark .pwd-modal-header h3 {
+html.dark .pwd-auth-card h3,
+html.dark .pwd-modal-header h3 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .pwd-auth-hint {
+html.dark .pwd-auth-hint {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .pwd-auth-card .form-input,
-:root.dark .pwd-modal-body .form-input,
-:root.dark .pwd-search {
+html.dark .pwd-auth-card .form-input,
+html.dark .pwd-modal-body .form-input,
+html.dark .pwd-search {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .pwd-btn-lock,
-:root.dark .pwd-btn-cancel {
+html.dark .pwd-btn-lock,
+html.dark .pwd-btn-cancel {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .pwd-icon-btn:hover,
-:root.dark .pwd-modal-close:hover {
+html.dark .pwd-icon-btn:hover,
+html.dark .pwd-modal-close:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 
-:root.dark .pwd-site-name {
+html.dark .pwd-site-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .pwd-details {
+html.dark .pwd-details {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .pwd-site-dropdown {
+html.dark .pwd-site-dropdown {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .pwd-site-option {
+html.dark .pwd-site-option {
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .pwd-site-option:hover {
+html.dark .pwd-site-option:hover {
   background-color: var(--color-bg-hover, #374151);
 }
 
-:root.dark .pwd-site-option-name {
+html.dark .pwd-site-option-name {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .pwd-site-option-url {
+html.dark .pwd-site-option-url {
   color: var(--color-text-secondary, #d1d5db);
 }
 
 /* 禁用态主按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-:root.dark .pwd-btn-primary:disabled {
+html.dark .pwd-btn-primary:disabled {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text-muted, #9ca3af);
 }

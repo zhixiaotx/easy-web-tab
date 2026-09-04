@@ -761,31 +761,31 @@ async function handleDelete(id: string): Promise<void> {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-:root.dark .bizday-card,
-:root.dark .biz-dialog {
+html.dark .bizday-card,
+html.dark .biz-dialog {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizday-date {
+html.dark .bizday-date {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bizday-revenue {
+html.dark .bizday-revenue {
   color: #4ade80;
 }
 
-:root.dark .bizday-row {
+html.dark .bizday-row {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .bizday-btn {
+html.dark .bizday-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .biz-input {
+html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);

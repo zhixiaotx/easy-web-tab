@@ -198,22 +198,22 @@ const handlePageChange = () => {
 }
 
 /* 暗色模式 */
-:root.dark .bottom-pagination {
+html.dark .bottom-pagination {
   background-color: var(--color-bg-card, rgba(31, 41, 55, 0.95));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-:root.dark .btn-admin,
-:root.dark .btn-help,
-:root.dark .btn-countdown {
+html.dark .btn-admin,
+html.dark .btn-help,
+html.dark .btn-countdown {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .btn-admin:hover,
-:root.dark .btn-help:hover,
-:root.dark .btn-countdown:hover {
+html.dark .btn-admin:hover,
+html.dark .btn-help:hover,
+html.dark .btn-countdown:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);

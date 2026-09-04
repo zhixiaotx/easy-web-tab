@@ -71,8 +71,8 @@ body.app-has-background.image .container {
    ======================================== */
 
 /* 暗色模式 - 纯色/渐变背景时，添加全屏遮罩 */
-:root.dark body.app-has-background:not(.image)::before,
-:root.dark html.app-has-background:not(.image)::before {
+html.dark body.app-has-background:not(.image)::before,
+html.dark html.app-has-background:not(.image)::before {
   content: '';
   position: fixed;
   top: 0;
@@ -85,22 +85,22 @@ body.app-has-background.image .container {
 }
 
 /* 确保内容在遮罩层之上 - 不改变 position */
-:root.dark body.app-has-background .container {
+html.dark body.app-has-background .container {
   position: relative;
   z-index: 1;
 }
 
 /* 工具栏保持 fixed 定位，只提升 z-index */
-:root.dark body.app-has-background .top-right-toolbar {
+html.dark body.app-has-background .top-right-toolbar {
   z-index: 101 !important;
 }
 
-:root.dark body.app-has-background .container {
+html.dark body.app-has-background .container {
   background: transparent !important;
 }
 
 /* 暗色模式 - 图片背景时，container 完全透明 */
-:root.dark body.app-has-background.image .container {
+html.dark body.app-has-background.image .container {
   background: transparent !important;
   backdrop-filter: none;
 }
@@ -115,8 +115,8 @@ body.app-has-background.image .container {
 .bs-shell {
   background-color: var(--color-bg, #f8fafc) !important;
 }
-:root.dark .wb-shell,
-:root.dark .bs-shell {
+html.dark .wb-shell,
+html.dark .bs-shell {
   background-color: var(--color-bg, #111827) !important;
 }
 
@@ -216,24 +216,24 @@ body.app-has-background.image .container {
 }
 
 /* 暗色模式下的背景管理弹窗 */
-:root.dark .background-manager {
+html.dark .background-manager {
   background: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .background-option {
+html.dark .background-option {
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .background-preview {
+html.dark .background-preview {
   border-color: var(--color-border, #374151);
 }
 
 /* 暗色模式下的内容透明度设置区块 */
-:root.dark .opacity-section {
+html.dark .opacity-section {
   background: var(--color-bg, #111827);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .opacity-hint {
+html.dark .opacity-hint {
   color: var(--color-text-muted, #9ca3af);
 }

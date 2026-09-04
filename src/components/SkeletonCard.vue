@@ -48,12 +48,12 @@ defineProps<{
   }
 }
 
-:root.dark .skeleton-card {
+html.dark .skeleton-card {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .skeleton-icon,
-:root.dark .skeleton-name {
+html.dark .skeleton-icon,
+html.dark .skeleton-name {
   background: linear-gradient(90deg, #2d3748 25%, #374151 50%, #2d3748 75%);
   background-size: 200% 100%;
 }

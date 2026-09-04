@@ -144,19 +144,19 @@ onUnmounted(() => {
 }
 
 /* Dark mode */
-:root.dark .toast {
+html.dark .toast {
   background: var(--color-bg-card, #1f2937);
 }
 
-:root.dark .toast-message {
+html.dark .toast-message {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .toast-close {
+html.dark .toast-close {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .toast-close:hover {
+html.dark .toast-close:hover {
   color: var(--color-text, #f9fafb);
 }
 </style>

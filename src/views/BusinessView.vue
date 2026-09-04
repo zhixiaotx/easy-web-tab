@@ -376,64 +376,64 @@ onMounted(() => {
 }
 
 /* 暗色模式覆盖（模式参考 WorkbenchView） */
-:root.dark .bs-shell {
+html.dark .bs-shell {
   background-color: var(--color-bg, #111827);
 }
 
-:root.dark .bs-header {
+html.dark .bs-header {
   background-color: var(--color-bg-card, #1f2937);
   border-bottom-color: var(--color-border, #374151);
 }
 
-:root.dark .bs-header-left h1 {
+html.dark .bs-header-left h1 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bs-btn {
+html.dark .bs-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .bs-btn:hover {
+html.dark .bs-btn:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
 }
 
-:root.dark .bs-menu {
+html.dark .bs-menu {
   background-color: var(--color-bg-card, #1f2937);
   border-right-color: var(--color-border, #374151);
 }
 
-:root.dark .bs-sidebar-toggle {
+html.dark .bs-sidebar-toggle {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .bs-sidebar-toggle:hover {
+html.dark .bs-sidebar-toggle:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bs-menu-item {
+html.dark .bs-menu-item {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .bs-menu-item:hover {
+html.dark .bs-menu-item:hover {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .bs-menu-item.active {
+html.dark .bs-menu-item.active {
   background-color: #1e3a5f;
   color: #60a5fa;
 }
 
-:root.dark .bs-content {
+html.dark .bs-content {
   background-color: var(--color-bg, #111827);
 }
 
-:root.dark .bs-stall-name {
+html.dark .bs-stall-name {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);

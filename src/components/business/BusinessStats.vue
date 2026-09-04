@@ -489,38 +489,38 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
-:root.dark .bizstats-card {
+html.dark .bizstats-card {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-:root.dark .bizstats-btn {
+html.dark .bizstats-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .bizstats-bar.cost {
+html.dark .bizstats-bar.cost {
   fill: #fbbf24;
 }
 
-:root.dark .bizstats-bar.profit {
+html.dark .bizstats-bar.profit {
   fill: #4ade80;
 }
 
-:root.dark .bizstats-bar.loss {
+html.dark .bizstats-bar.loss {
   fill: #f87171;
 }
 
-:root.dark .dot.loss {
+html.dark .dot.loss {
   background: #f87171;
 }
 
-:root.dark .bizstats-expense-line {
+html.dark .bizstats-expense-line {
   stroke: #f87171;
 }
 
-:root.dark .dot.expense {
+html.dark .dot.expense {
   background: #f87171;
 }
 

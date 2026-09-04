@@ -293,45 +293,45 @@ function toggleHabit(habitId: string, date: string): void {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-:root.dark .hw-page-title h2 {
+html.dark .hw-page-title h2 {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .hw-page-icon {
+html.dark .hw-page-icon {
   background-color: #1e3a5f;
   color: #60a5fa;
 }
 
-:root.dark .week-nav-btn {
+html.dark .week-nav-btn {
   background-color: var(--color-bg-card, #1f2937);
   color: #60a5fa;
   border-color: var(--color-border, #374151);
 }
 
-:root.dark .week-nav-range {
+html.dark .week-nav-range {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .week-col-head {
+html.dark .week-col-head {
   border-bottom-color: #374151;
   color: var(--color-text-secondary, #d1d5db);
 }
 
-:root.dark .week-col-head .week-col-day {
+html.dark .week-col-head .week-col-day {
   color: var(--color-text-muted, #9ca3af);
 }
 
-:root.dark .week-row-head {
+html.dark .week-row-head {
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .week-cell {
+html.dark .week-cell {
   background-color: var(--color-bg-card, #1f2937);
   border-color: #374151;
   color: var(--color-text, #f9fafb);
 }
 
-:root.dark .hw-empty {
+html.dark .hw-empty {
   color: var(--color-text-secondary, #d1d5db);
 }
 </style>

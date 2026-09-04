@@ -490,7 +490,6 @@ onMounted(() => {
   flex: 1 1 auto;
   min-height: 240px;
   width: 100%;
-  padding: 0 16px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -540,7 +539,7 @@ onMounted(() => {
   border-top: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-input, #f9fafb);
   border-radius: 0 0 14px 14px;
-  margin: 0 16px 8px;
+  margin: 0 0 8px;
   display: flex;
   justify-content: center;
   align-items: center;

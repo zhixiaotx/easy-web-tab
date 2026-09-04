@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-23 Vue 3 SFCs in the root plus 18 workbench SFCs (13 panels + PanelPager 共享分页条 + WorkbenchHealth tabs container + WorkbenchHealthReminders 只读提醒区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡) under `workbench/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
+24 Vue 3 SFCs in the root plus 20 workbench + 19 student + 8 business SFCs (学生 14 面板已 Element Plus 全统一、4 手写保留) under `workbench/`/`student/`/`business/`, all using `<script setup lang="ts">` with scoped CSS, CSS custom properties, and class-based dark mode.
 
 ## STRUCTURE
 
@@ -38,7 +38,7 @@ components/
 ├── SkeletonCard.vue      # Loading skeleton (card)
 ├── SkeletonGrid.vue      # Loading skeleton (grid)
 ├── Toast.vue             # Notification toast (receives `toasts` array as prop)
-└── workbench/            # 个人工作台 18 SFC: 13 面板 + PanelPager 共享分页条 + 健康管理 tabs 容器 + 定时提醒只读区块 + WeatherCard/CalendarAnchorCard 主页内嵌卡 (data persisted to IndexedDB via `useIdb.ts`)
+├── workbench/            # 个人工作台 20 SFC: 13 面板 + PanelPager 共享分页条 + 健康管理 tabs 容器 + 定时提醒只读区块 + WeatherCard/CalendarAnchorCard/HomeLayoutCard 主页内嵌卡 + WorkbenchHabitWeek 习惯周视图 (data persisted to IndexedDB via `useIdb.ts`)
     ├── WorkbenchHome.vue        # 工作台首页（问候条 + 三屏轮播 home-carousel：行动台 home-slide-action（即将到期提醒 + 未完成待办）/数据概览 home-slide-overview（9 张统计卡，home-stats-* testid 保留）/工具 home-slide-tools（快捷添加 + 天气 + 日历锚点）；6s 自动轮播 AUTOPLAY_MS、hover 暂停（pauseCarousel/resumeCarousel）、箭头 home-carousel-prev/next + 圆点 home-carousel-dot-<i> 手动切换、track transform translateX；卡按 visibleStatCards computed 纯占位隐藏且随菜单开关联动（menuOn = settingsStore.workbenchMenuEnabled，关闭的功能其面板/快捷添加/统计卡全隐藏）；全空概览屏显 home-overview-empty、行动屏双关显 home-action-empty；统计卡视觉瘦身（.bento-stat padding 12px 14px、.stat-value 20px、.nav-btn 12px 等保留）；home-greeting/home-quick-add-* 静态 testid 全保留，旧 home-overview-toggle/chevron 折叠区已由轮播取代）
     ├── WorkbenchTodo.vue        # 待办面板（增删改查 + 优先级/搜索/筛选 + 分类筛选 tabs + ⚙️分类管理弹框（标签页显示勾选/改名/上移下移/删除/新增，失败走 useToast）+ 表单分类下拉 + 卡片分类徽标 + 自适应分页 usePanelPaging（rowHeight 214）+ PanelPager（筛选/分类/增删改/改名/标签页切换 goto(1) 回页 1），data-testid 前缀 td-）
     ├── WorkbenchNotes.vue       # 便签面板（顶部工具栏：左=新增便签/分类管理，右=搜索表单 关键词+分类下拉+类型下拉（全部类型默认 'all'/普通便签/时光轴便签）+查询/重置；'all' 双段渲染（普通网格+时光轴网格，经 partitionNotesByType 拆分，仅含数据的段才渲染）；操作栏下方分类筛选 tabs（仅勾选分类）+ 分类管理弹窗（标签页显示勾选 + 改名/上移下移/删除）+ 时光轴卡片竖排时间轴/快速追加/条目内联编辑删除 + 普通/时光轴双实例 usePanelPaging（rowHeight 287/2343）+ 双 PanelPager（类型/筛选/分类切换双实例 goto(1)，timeline 超高卡内滚动），content 与时光轴条目经 noteMarkdown.renderMarkdown 渲染为 Markdown（v-html + :deep() 排版，链接 target=_blank、@click 锚点拦截不触发卡片编辑），data-testid 前缀 nt-）
@@ -54,6 +54,26 @@ components/
     ├── WorkbenchLedger.vue      # 记账面板（月份切换 + 六指标统计含存款累计 + 图表区可折叠（ld-charts-toggle + ld-charts-chevron，chartsExpanded 默认展开；toggleList 展开记录 → 自动收起图表、收起记录 → 恢复，防图表压塌列表区只剩 2-91px/0-1 行）+ 近 6 月收支趋势柱状图（ld-trend-*，内联 SVG，坐标全走 trendChartScale）+ 支出分类占比环形图（ld-donut-*，R=90 周长不变量）+ 行式记录列表可折叠 + 分组管理 + 自适应分页 usePanelPaging（rowHeight 49）+ PanelPager（月份切换/本月/新增/编辑/删除/分组管理/展开收起 goto(1)，折叠未挂载时分页惰性），前缀 ld-）
     ├── WorkbenchHabits.vue     # 习惯打卡面板（左栏 .hb-side=本周统计卡 + 新增/编辑表单；右栏 .hb-main=习惯卡片网格 .hb-list（repeat(auto-fill, minmax(250px,1fr)) 多列并排，gridRef=listEl 实测列数）+ PanelPager；≥1200px 双栏 grid（minmax(280px,340px) 1fr），其余单列；自适应分页 usePanelPaging（rowHeight 82，每页=rowsPerPage×colsPerRow）；testid hb-* 全保留）
     └── PanelPager.vue          # 工作台共享分页条（纯展示：props page/total，emit prev/next，无默认值/校验/业务逻辑；← 第 X / Y 页 →，testid panel-pager/panel-pager-prev/panel-pager-info/panel-pager-next，total≤1 不渲染、page≤1 上一页 disabled、page≥total 下一页 disabled；.panel-pager 置面板 flex 列底部 flex-shrink:0、面板自管上下间距，亮暗双主题 --color-* token + legacy 家族兜底；消费方绑 usePanelPaging 返回值 <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />）
+└── student/             # 学生工作台 19 SFC：14 面板已 Element Plus 全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*，data-testid 全保）+ 4 手写保留（Home/Onboarding/Placeholder/PinDialog）+ StudentToolbar 共享工具栏；testid 前缀：sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid；家长协同 PIN 锁（4-8 位、5 次错锁 5 分钟）；学段 K/P/J 由 studentSettings/studentStageCore（StudentOnboarding 强制）
+    ├── StudentHome.vue            # 手写保留首页（问候 + 概览，testid 前缀 student-）
+    ├── StudentOnboarding.vue      # 手写保留学段引导（K/P/J 强制，testid 前缀 stg-）
+    ├── StudentPanelPlaceholder.vue # 手写保留占位面板（无 testid）
+    ├── StudentParentPinDialog.vue  # 手写保留家长 PIN 锁弹框（4-8 位、5 次错锁 5 分钟，无 testid）
+    ├── StudentHabits.vue          # 习惯打卡面板（EP 全统一；新增/编辑弹框 el-color-picker `sh-form-color`；testid 前缀 sh-）
+    ├── StudentHomework.vue        # 作业面板（EP 全统一；testid 前缀 shw-）
+    ├── StudentTimetable.vue       # 课程表面板（EP 全统一；周视图 el-dialog 弹框 + 单元格弹框编辑、`stt-custom-toggle` el-checkbox 自定义学科；无 testid）
+    ├── StudentPlan.vue            # 计划面板（EP 全统一；el-table expand 行内目标：`sp-goal-toggle-*` el-checkbox + `sp-goal-range-*` el-slider 进度；testid 前缀 sp-）
+    ├── StudentReview.vue          # 复习面板（EP 全统一；testid 前缀 sr-）
+    ├── StudentMistakes.vue        # 错题面板（EP 全统一；testid 前缀 sm-）
+    ├── StudentReading.vue         # 阅读面板（EP 全统一；testid 前缀 sr-）
+    ├── StudentExam.vue            # 考试面板（EP 全统一；testid 前缀 se-）
+    ├── StudentEducation.vue       # 教育经历面板（EP 全统一；el-table + el-pagination；testid 前缀 edu-）
+    ├── StudentDiary.vue           # 日记面板（EP 全统一；testid 前缀 dj-）
+    ├── StudentPomodoro.vue        # 番茄钟面板（EP 全统一；testid 前缀 spm-）
+    ├── StudentAchievements.vue    # 勋章面板（EP 全统一；testid 前缀 sa-）
+    ├── StudentReward.vue          # 奖励面板（EP 全统一；testid 前缀 sr-）
+    ├── StudentParent.vue          # 家长协同面板（EP 全统一 6-tab：统计/每日任务/孩子报告/手动加分/发放勋章/配置奖励；`stp-tab-<key>` tabs + `stp-task-check` el-checkbox + `stp-pager-*`；testid 前缀 stp-）
+    └── StudentToolbar.vue         # 共享工具栏（非面板，无 testid）
 ```
 
 ## WHERE TO LOOK
@@ -81,6 +101,7 @@ components/
 | 工作台左菜单渲染 | `src/views/WorkbenchView.vue` | 菜单渲染自 `settingsStore.workbenchMenuItems`（computed 由 `workbenchMenuCore.resolveMenuItems` 解析，顺序/改名/显示开关（false 键剔除）经设置弹窗调整后在此直接生效，视图禁止内联重算）；每项按钮 `data-testid="wb-menu-<key>"` + `:title="item.label"` 全名；label 溢出省略作用于内部 `.wb-menu-label` span（min-width:0 + overflow:hidden + text-overflow:ellipsis + white-space:nowrap，对按钮本身设 ellipsis 不截断子 span 文本）；`navigateTo` 白名单 + `isWorkbenchMenuEnabled` 开关双守卫；watch menuItems 键列表 → 当前激活区被关时回退首个可见项（home 恒可见）；`SECTION_KEYS`/内容 switch 仍 key 驱动不动 |
 | 工作台一屏布局/共享分页条 | `workbench/PanelPager.vue` + `src/composables/usePanelPaging.ts` + `src/composables/panelPagingCore.ts` | 桌面 ≥769px：`.wb-content` flex 列 + 面板根 `flex:1; min-height:0` 钉满（健康 tabs 容器经 `:global(.wb-health)` 补 flex 列）；长列表经 PanelPager 翻页（page/total props + prev/next emit，testid `panel-pager`/`panel-pager-prev`/`panel-pager-info`/`panel-pager-next`，total≤1 不渲染、边界禁用）；11 面板接入，rowHeight 常量（todo 214/notes 287/timeline 2343/diary 192/countdown 158/habits 82/password 116/exercise 533/diet 537/sleep 563/weight 88/ledger 49）与公式唯一来源 `usePanelPaging`/`panelPagingCore`（组件禁止自造）；密码/运动/饮食/睡眠 4 面板为 6 列卡片网格（`repeat(6, minmax(0,1fr))` + gridRef 实测列数）+ `maxRows` 钳制每页行数（password 3 行=18 卡/页、exercise/diet/sleep 1 行=6 卡/页，行数经 clampMaxRows 归一）；`!fitsOnePage` 时列表区回退 overflow-y:auto 区内滚动兜底（`*-scroll` 类）；≤768px 移动端分页惰性 |
 | 销售记账页面 | `src/views/BusinessView.vue` + `business/*.vue` | 左树 7 项固定（bs-menu-<key>，emoji 图标）+ 右内容 switch；支出 tabs 受控（expenseTab 存视图，change emit）；⚙️ 设置按钮打开 AppSettingsDialog；桌面一屏契约复刻 WorkbenchView（.bs-content/.bs-menu ≥769px flex 钉满、≤768px 横排）；BusinessHome 经 @navigate 跳转（视图白名单收窄）；数据经 useWorkbenchBusinessStore（IDB 'business'）自加载 |
+| 学生工作台面板 | `src/views/StudentView.vue` + `student/*.vue` | 左菜单由 studentMenuCore 驱动；14 面板已 Element Plus 全统一（表单/弹框/表格/radio/checkbox/color-picker/slider/分页全 el-*）+ 4 手写保留（StudentHome/StudentOnboarding/StudentPanelPlaceholder/StudentParentPinDialog）+ StudentToolbar 共享工具栏；家长协同=StudentParent.vue 6-tab（统计/每日任务/孩子报告/手动加分/发放勋章/配置奖励）+ PIN 锁态（StudentParentPinDialog，4-8 位、5 次错锁 5 分钟），session 守卫在 StudentView；学段 K/P/J 由 studentSettings/studentStageCore（StudentOnboarding 强制）；testid 前缀 sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid |
 
 ## CONVENTIONS
 
@@ -97,6 +118,7 @@ components/
 - **WorkbenchCountdown.vue testid 约定**：邮件提醒复选框 `cd-form-email`（默认关；startAdd 复位 false；startEdit 回填 `item.emailReminder === true`；handleSave 透传 emailReminder，opt-in 缺省不发邮件）
 - **CountdownModal.vue testid 约定**：卡片底部邮件提醒开关 `cd-email-toggle`（label.countdown-email-toggle，内含 span「📧 邮件提醒」+ checkbox `cd-email-switch`）；`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB；开启 toast「已开启邮件提醒，需在设置-提醒设置中配置邮箱后生效」、关闭 toast「已关闭邮件提醒」；缺省（无 emailReminder 字段）= 不发邮件
 - **PanelPager.vue testid 约定**：容器 `panel-pager`（仅 total>1 渲染）、上一页 `panel-pager-prev`（page≤1 disabled）、信息 `panel-pager-info`（「第 X / Y 页」）、下一页 `panel-pager-next`（page≥total disabled）；纯展示组件（props page/total、emit prev/next，无默认值/校验/业务逻辑），Wave-3 QA 脚本断言 testid 勿改名；消费方绑 `usePanelPaging` 返回值（`reactive(...)` 包裹或解构顶层 ref 自动解包）
+- **student/*.vue testid 约定**：前缀 sa/dj/edu/se/sh/student/shw/sm/stg/stp/sp/spm/sr（Reading/Review/Reward 共用 sr），Timetable 无 testid（经 `.stt-*` class 定位）；14 面板全部 Element Plus 组件化（el-dialog/el-table/el-pagination/el-checkbox/el-slider/el-color-picker 等，全量导入无需逐组件 import），`data-testid` 全保——QA 脚本 `qa-student-ep-*` 断言 el-* 存在且无原生 input/select/textarea 残留，勿改名 testid 或回退原生控件；4 手写保留面板（StudentHome/StudentOnboarding/StudentPanelPlaceholder/StudentParentPinDialog）勿 EP 化；Timetable 单元格弹框经 `.stt-body-cell` 点击打开（真实鼠标 click，DOM click() 不触发 el-table expand icon）
 
 ## ANTI-PATTERNS
 

@@ -12,6 +12,7 @@ import { useToast } from '@/composables/useToast'
 import { weekdayLabel } from '@/composables/studentTimetableCore'
 import type { StudentTimetableCell } from '@/types'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentTimetableStore()
 const settingsStore = useStudentSettingsStore()
@@ -177,23 +178,18 @@ onMounted(async () => {
 
 <template>
   <div class="stt-shell">
-    <div class="stt-toolbar">
-      <div class="stt-title-row">
-        <h2 class="stt-title">课程表</h2>
-        <span class="stt-meta">共 {{ store.data.weeks }} 周 · 每日 {{ store.data.periodsPerDay }} 节</span>
-      </div>
-      <div class="stt-actions">
-        <button class="btn-ghost" @click="exportToExcel">
-          <Icon name="download" :size="14" /> 导出Excel
-        </button>
-        <button class="btn-ghost" @click="openConfigDialog">
-          <Icon name="countdowns" :size="14" /> 配置
-        </button>
-        <button class="btn-danger-ghost" @click="clearAllCells">
-          <Icon name="close" :size="14" /> 清空
-        </button>
-      </div>
-    </div>
+    <StudentToolbar title="课程表">
+      <span class="stt-meta">共 {{ store.data.weeks }} 周 · 每日 {{ store.data.periodsPerDay }} 节</span>
+      <el-button size="small" @click="exportToExcel">
+        <Icon name="download" :size="14" /> 导出Excel
+      </el-button>
+      <el-button size="small" @click="openConfigDialog">
+        <Icon name="countdowns" :size="14" /> 配置
+      </el-button>
+      <el-button size="small" type="danger" plain @click="clearAllCells">
+        <Icon name="close" :size="14" /> 清空
+      </el-button>
+    </StudentToolbar>
 
     <div class="stt-grid-wrap">
       <div class="stt-grid" :style="{ gridTemplateColumns: `48px repeat(7, minmax(0, 1fr))` }">
@@ -231,94 +227,77 @@ onMounted(async () => {
     </div>
 
     <!-- 配置弹框 -->
-    <Teleport to="body">
-      <div v-if="showConfigDialog" class="dialog-overlay" @click.self="showConfigDialog = false">
-        <div class="dialog st-dialog">
-          <div class="dialog-header">
-            <h3>课程表配置</h3>
-            <button class="dialog-close" @click="showConfigDialog = false"><Icon name="close" :size="18" /></button>
-          </div>
-          <div class="dialog-body">
-            <div class="form-field">
-              <label>学周数（1-52）</label>
-              <input v-model.number="configWeeks" type="number" min="1" max="52" class="form-input" />
-            </div>
-            <div class="form-field">
-              <label>每日节数（1-12）</label>
-              <input v-model.number="configPeriods" type="number" min="1" max="12" class="form-input" />
-            </div>
-            <div class="form-field">
-              <label>教室/班级（可选）</label>
-              <input v-model="configClassroom" type="text" class="form-input" maxlength="30" placeholder="如：三年二班 / 301" />
-            </div>
-            <p class="stt-tip">提示：节数减少后，超出范围的课程会保留但不在表格中显示。</p>
-          </div>
-          <div class="dialog-footer">
-            <div class="dialog-footer-right">
-              <button class="btn-ghost" @click="showConfigDialog = false">取消</button>
-              <button class="btn-primary" @click="saveConfig">保存</button>
-            </div>
-          </div>
+    <el-dialog v-model="showConfigDialog" title="课程表配置" width="460px" append-to-body>
+      <div class="dialog-body">
+        <div class="form-field">
+          <label>学周数（1-52）</label>
+          <el-input v-model.number="configWeeks" type="number" min="1" max="52" />
         </div>
+        <div class="form-field">
+          <label>每日节数（1-12）</label>
+          <el-input v-model.number="configPeriods" type="number" min="1" max="12" />
+        </div>
+        <div class="form-field">
+          <label>教室/班级（可选）</label>
+          <el-input v-model="configClassroom" type="text" maxlength="30" placeholder="如：三年二班 / 301" />
+        </div>
+        <p class="stt-tip">提示：节数减少后，超出范围的课程会保留但不在表格中显示。</p>
       </div>
-    </Teleport>
+      <template #footer>
+        <el-button @click="showConfigDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveConfig">保存</el-button>
+      </template>
+    </el-dialog>
 
     <!-- cell 编辑弹框 -->
-    <Teleport to="body">
-      <div v-if="showCellDialog" class="dialog-overlay" @click.self="closeCellDialog">
-        <div class="dialog st-dialog">
-          <div class="dialog-header">
-            <h3>{{ getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程' }}</h3>
-            <button class="dialog-close" @click="closeCellDialog"><Icon name="close" :size="18" /></button>
+    <el-dialog v-model="showCellDialog" :title="getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程'" width="460px" append-to-body>
+      <div class="dialog-body">
+        <div class="stt-dialog-meta">
+          {{ weekdayLabel(editingDay) }} · 第 {{ editingPeriod }} 节
+        </div>
+        <div class="form-field">
+          <label>学科</label>
+          <el-select v-if="!dialogSubjectCustom" v-model="dialogSubject" class="stt-subject-select">
+            <el-option v-for="s in settingsStore.subjects" :key="s" :value="s" :label="s" />
+          </el-select>
+          <el-input
+            v-else
+            v-model="dialogSubject"
+            type="text"
+            placeholder="输入学科名称"
+            maxlength="10"
+          />
+          <label class="stt-custom-toggle">
+            <input type="checkbox" v-model="dialogSubjectCustom" /> 自定义学科
+          </label>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>开始时间</label>
+            <el-input v-model="dialogStart" type="time" />
           </div>
-          <div class="dialog-body">
-            <div class="stt-dialog-meta">
-              {{ weekdayLabel(editingDay) }} · 第 {{ editingPeriod }} 节
-            </div>
-            <div class="form-field">
-              <label>学科</label>
-              <select v-if="!dialogSubjectCustom" v-model="dialogSubject" class="form-input">
-                <option v-for="s in settingsStore.subjects" :key="s" :value="s">{{ s }}</option>
-              </select>
-              <input
-                v-else
-                v-model="dialogSubject"
-                type="text"
-                class="form-input"
-                placeholder="输入学科名称"
-                maxlength="10"
-              />
-              <label class="stt-custom-toggle">
-                <input type="checkbox" v-model="dialogSubjectCustom" /> 自定义学科
-              </label>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>开始时间</label>
-                <input v-model="dialogStart" type="time" class="form-input" />
-              </div>
-              <div class="form-field">
-                <label>结束时间</label>
-                <input v-model="dialogEnd" type="time" class="form-input" />
-              </div>
-            </div>
-            <div class="form-field">
-              <label>老师（可选）</label>
-              <input v-model="dialogTeacher" type="text" class="form-input" maxlength="20" placeholder="如：王老师" />
-            </div>
-          </div>
-          <div class="dialog-footer">
-            <button v-if="getCell(editingDay, editingPeriod)" class="btn-danger" @click="removeCell">
-              删除
-            </button>
-            <div class="dialog-footer-right">
-              <button class="btn-ghost" @click="closeCellDialog">取消</button>
-              <button class="btn-primary" @click="saveCell">保存</button>
-            </div>
+          <div class="form-field">
+            <label>结束时间</label>
+            <el-input v-model="dialogEnd" type="time" />
           </div>
         </div>
+        <div class="form-field">
+          <label>老师（可选）</label>
+          <el-input v-model="dialogTeacher" type="text" maxlength="20" placeholder="如：王老师" />
+        </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <div class="stt-dialog-footer">
+          <el-button v-if="getCell(editingDay, editingPeriod)" type="danger" @click="removeCell">
+            删除
+          </el-button>
+          <div class="dialog-footer-right">
+            <el-button @click="closeCellDialog">取消</el-button>
+            <el-button type="primary" @click="saveCell">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -332,30 +311,9 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.stt-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.stt-title-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.stt-title {
-   font-size: 20px; 
-  font-weight: 600;
-  margin: 0;
-}
 .stt-meta {
-   font-size: 14px; 
+  font-size: 14px;
   color: var(--color-text-muted, #6b7280);
-}
-.stt-actions {
-  display: flex;
-  gap: 8px;
 }
 
 .stt-grid-wrap {
@@ -375,7 +333,7 @@ onMounted(async () => {
   justify-content: center;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
-   font-size: 16px; 
+  font-size: 16px;
   background: var(--color-surface, #fff);
   overflow: hidden;
 }
@@ -383,7 +341,7 @@ onMounted(async () => {
   background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
-   font-size: 15px; 
+  font-size: 15px;
   min-height: 32px;
 }
 .stt-period-cell {
@@ -411,7 +369,7 @@ onMounted(async () => {
   font-weight: 700;
 }
 .stt-subject {
-   font-size: 15px; 
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-text, #1f2937);
   white-space: nowrap;
@@ -420,12 +378,12 @@ onMounted(async () => {
   max-width: 100%;
 }
 .stt-time {
-   font-size: 14px; 
+  font-size: 14px;
   color: var(--color-primary, #3b82f6);
   font-weight: 500;
 }
 .stt-info {
-   font-size: 14px; 
+  font-size: 14px;
   color: var(--color-text-muted, #9ca3af);
   white-space: nowrap;
   overflow: hidden;
@@ -433,52 +391,19 @@ onMounted(async () => {
   max-width: 100%;
 }
 .stt-add-mark {
-   font-size: 22px; 
+  font-size: 22px;
   color: var(--color-text-muted, #d1d5db);
   font-weight: 300;
 }
 
 .stt-tip {
   margin: 0;
-   font-size: 14px; 
+  font-size: 14px;
   color: var(--color-text-muted, #6b7280);
 }
 
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.st-dialog {
-  width: 460px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface, #fff);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.dialog-header h3 { margin: 0;  font-size: 18px;  }
-.dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
-}
 .dialog-body {
-  padding: 20px;
+  padding: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -490,16 +415,8 @@ onMounted(async () => {
   gap: 6px;
 }
 .form-field label {
-   font-size: 15px; 
+  font-size: 15px;
   font-weight: 500;
-}
-.form-input {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-   font-size: 16px; 
 }
 .form-row {
   display: flex;
@@ -507,7 +424,7 @@ onMounted(async () => {
 }
 .form-row .form-field { flex: 1; }
 .stt-dialog-meta {
-   font-size: 15px; 
+  font-size: 15px;
   color: var(--color-text-muted, #6b7280);
   padding: 6px 10px;
   background: var(--color-hover, #f3f4f6);
@@ -517,68 +434,25 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-   font-size: 15px; 
+  font-size: 15px;
   font-weight: 400;
   color: var(--color-text-muted, #6b7280);
   cursor: pointer;
-}
-.dialog-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
 }
 .dialog-footer-right {
   display: flex;
   gap: 8px;
   margin-left: auto;
 }
-
-.btn-primary {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  cursor: pointer;
-   font-size: 15px; 
-}
-.btn-primary:hover { filter: brightness(0.95); }
-.btn-ghost {
-  display: inline-flex;
+.stt-dialog-footer {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
-  padding: 8px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-   font-size: 15px; 
+  width: 100%;
 }
-.btn-danger {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: #ef4444;
-  color: #fff;
-  cursor: pointer;
-   font-size: 15px; 
+.stt-subject-select {
+  width: 100%;
 }
-.btn-danger-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 14px;
-  border: 1px solid #fca5a5;
-  border-radius: 6px;
-  background: transparent;
-  color: #ef4444;
-  cursor: pointer;
-   font-size: 15px; 
-}
-.btn-danger-ghost:hover { background: rgba(239, 68, 68, 0.08); }
 
 @media (max-width: 768px) {
   .stt-shell { padding: 12px; }

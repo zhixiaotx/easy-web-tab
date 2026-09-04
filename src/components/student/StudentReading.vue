@@ -10,7 +10,7 @@ import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import type { StudentReadingEntry } from '@/types'
-import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentReadingStore()
 const settingsStore = useStudentSettingsStore()
@@ -141,15 +141,12 @@ onMounted(async () => {
 
 <template>
   <div class="sr-shell">
-    <div class="sr-toolbar">
-      <h2 class="sr-title">阅读记录</h2>
-      <div class="sr-toolbar-right">
-        <div class="sr-count">共 {{ viewEntries.length }} 条</div>
-        <button class="btn-add sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
-          <span>＋ 新增记录</span>
-        </button>
-      </div>
-    </div>
+    <StudentToolbar title="阅读记录">
+      <span class="sr-count">共 {{ viewEntries.length }} 条</span>
+      <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
+        ＋ 新增记录
+      </el-button>
+    </StudentToolbar>
 
     <div class="sr-stats">
       <div class="sr-stat-card">
@@ -214,8 +211,19 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="操作" width="140" align="center" fixed="right">
             <template #default="{ row }">
-              <button class="btn-edit" :data-testid="`sr-edit-${row.id}`" @click="openEditDialog(row.id)" style="margin-right:6px;">编辑</button>
-              <button class="btn-delete" :data-testid="`sr-delete-${row.id}`" @click="handleDelete(row.id)">删除</button>
+              <el-button
+                size="small"
+                class="sr-edit-btn"
+                :data-testid="`sr-edit-${row.id}`"
+                @click="openEditDialog(row.id)"
+                style="margin-right:6px;"
+              >编辑</el-button>
+              <el-button
+                size="small"
+                class="sr-delete-btn"
+                :data-testid="`sr-delete-${row.id}`"
+                @click="handleDelete(row.id)"
+              >删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -237,69 +245,86 @@ onMounted(async () => {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="showEditDialog" class="dialog-overlay" @click.self="closeEditDialog">
-        <div class="dialog st-dialog">
-          <div class="dialog-header">
-            <h3>{{ editingId ? '编辑阅读记录' : '新增阅读记录' }}</h3>
-            <button class="dialog-close" @click="closeEditDialog"><Icon name="close" :size="18" /></button>
+    <!-- 新增/编辑弹框 -->
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId ? '编辑阅读记录' : '新增阅读记录'"
+      width="480px"
+      @close="closeEditDialog"
+    >
+      <div class="dialog-body">
+        <div class="form-field">
+          <label>书名</label>
+          <el-input
+            v-model="dialogBookTitle"
+            placeholder="如：小王子"
+            :maxlength="50"
+            data-testid="sr-form-book"
+            @keyup.enter="saveEditDialog"
+          />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>页数（1-999）</label>
+            <el-input-number
+              v-model="dialogPages"
+              :min="1"
+              :max="999"
+              controls-position="right"
+              class="sr-form-number"
+              data-testid="sr-form-pages"
+            />
           </div>
-          <div class="dialog-body">
-            <div class="form-field">
-              <label>书名</label>
-              <input
-                v-model="dialogBookTitle"
-                type="text"
-                class="form-input"
-                placeholder="如：小王子"
-                maxlength="50"
-                data-testid="sr-form-book"
-                @keyup.enter="saveEditDialog"
-              />
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>页数（1-999）</label>
-                <input v-model.number="dialogPages" type="number" min="1" max="999" class="form-input" data-testid="sr-form-pages" />
-              </div>
-              <div class="form-field">
-                <label>时长（分钟，1-480）</label>
-                <input v-model.number="dialogDurationMin" type="number" min="1" max="480" class="form-input" data-testid="sr-form-duration" />
-              </div>
-            </div>
-            <div class="form-field">
-              <label>阅读日期</label>
-              <input v-model="dialogDate" type="date" class="form-input" data-testid="sr-form-date" />
-            </div>
-            <div class="form-field">
-              <label>读后感（可选）</label>
-              <textarea
-                v-model="dialogImpression"
-                class="form-input form-textarea"
-                placeholder="写下你的感悟..."
-                rows="3"
-                data-testid="sr-form-impression"
-              ></textarea>
-            </div>
-            <div class="form-field" v-if="parentSignVisible">
-              <label class="sr-sign-toggle" :class="{ 'is-locked': parentSignForced }">
-                <input type="checkbox" v-model="dialogParentSigned" :disabled="parentSignForced" />
-                <span>家长签字{{ parentSignForced ? '（K 段必签）' : '' }}</span>
-              </label>
-            </div>
-          </div>
-          <div class="dialog-footer">
-            <button v-if="editingId" class="btn-danger" data-testid="sr-form-delete" @click="handleDelete(editingId)">
-              删除
-            </button>
-            <div class="dialog-footer-right">
-              <button class="btn-ghost" @click="closeEditDialog">取消</button>
-              <button class="btn-primary" data-testid="sr-form-save" @click="saveEditDialog">保存</button>
-            </div>
+          <div class="form-field">
+            <label>时长（分钟，1-480）</label>
+            <el-input-number
+              v-model="dialogDurationMin"
+              :min="1"
+              :max="480"
+              controls-position="right"
+              class="sr-form-number"
+              data-testid="sr-form-duration"
+            />
           </div>
         </div>
+        <div class="form-field">
+          <label>阅读日期</label>
+          <el-input v-model="dialogDate" type="date" data-testid="sr-form-date" />
+        </div>
+        <div class="form-field">
+          <label>读后感（可选）</label>
+          <el-input
+            v-model="dialogImpression"
+            type="textarea"
+            placeholder="写下你的感悟..."
+            :rows="3"
+            data-testid="sr-form-impression"
+          />
+        </div>
+        <div class="form-field" v-if="parentSignVisible">
+          <el-checkbox
+            v-model="dialogParentSigned"
+            :disabled="parentSignForced"
+            class="sr-sign-toggle"
+            :class="{ 'is-locked': parentSignForced }"
+          >家长签字{{ parentSignForced ? '（K 段必签）' : '' }}</el-checkbox>
+        </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button
+            v-if="editingId"
+            type="danger"
+            data-testid="sr-form-delete"
+            @click="handleDelete(editingId)"
+          >删除</el-button>
+          <div class="dialog-footer-right">
+            <el-button @click="closeEditDialog">取消</el-button>
+            <el-button type="primary" data-testid="sr-form-save" @click="saveEditDialog">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -313,43 +338,11 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.sr-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-.sr-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-.sr-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 .sr-count {
   font-size: 13px;
   color: var(--color-text-muted, #6b7280);
   white-space: nowrap;
 }
-
-/* ===== 新增按钮（与教育经历同款 .btn-add） ===== */
-.btn-add {
-  padding: 8px 16px;
-  background: var(--color-primary, #10b981);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.18);
-  white-space: nowrap;
-}
-.btn-add:hover { opacity: 0.92; transform: translateY(-1px); }
 
 .sr-stats {
   display: grid;
@@ -400,7 +393,7 @@ onMounted(async () => {
   --el-table-border-color: var(--color-border, #e5e7eb);
   --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
   --el-table-tr-bg-color: transparent;
-  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.06);
   font-size: 13px;
   border-radius: 10px;
   overflow: hidden;
@@ -457,9 +450,9 @@ onMounted(async () => {
   color: var(--color-text-secondary, #6b7280) !important;
 }
 .sr-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
+  background-color: var(--color-primary, #10b981) !important;
   color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
+  border-color: var(--color-primary, #10b981) !important;
 }
 :global(html.dark) .sr-list-pager > :global(.el-pagination button),
 :global(html.dark) .sr-list-pager > :global(.el-pagination .el-pager li) {
@@ -468,9 +461,9 @@ onMounted(async () => {
   color: var(--color-text-secondary, #d1d5db) !important;
 }
 :global(html.dark) .sr-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
+  background-color: var(--color-primary, #10b981) !important;
   color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
+  border-color: var(--color-primary, #10b981) !important;
 }
 .sr-list-pager > :global(.el-pagination__total) {
   color: var(--color-text-secondary, #6b7280);
@@ -486,11 +479,11 @@ onMounted(async () => {
   border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
 }
 :global(html.dark) .sr-duration-badge {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(16, 185, 129, 0.2);
 }
 .sr-signed-badge {
   display: inline-flex;
@@ -507,74 +500,16 @@ onMounted(async () => {
   color: var(--color-text-muted, #9ca3af);
 }
 
-/* ===== 编辑/删除按钮 ===== */
-.btn-edit, .btn-delete {
-  padding: 5px 12px;
-  font-size: 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all var(--transition-fast, 0.15s ease);
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.btn-edit {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
+/* ===== 表格内编辑/删除按钮 ===== */
+.sr-edit-btn {
   color: var(--color-link, #3b82f6);
 }
-.btn-edit:hover {
-  background: rgba(59, 130, 246, 0.18);
-  transform: translateY(-1px);
-}
-.btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
+.sr-delete-btn {
   color: #ef4444;
-}
-.btn-delete:hover {
-  background: rgba(239, 68, 68, 0.18);
-  transform: translateY(-1px);
 }
 
 /* ===== 弹框 ===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.st-dialog {
-  width: 480px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface, #fff);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.dialog-header h3 { margin: 0; font-size: 16px; }
-.dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
-}
 .dialog-body {
-  padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -588,71 +523,27 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 500;
 }
-.form-input {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 14px;
-}
-.form-textarea {
-  resize: vertical;
-  min-height: 60px;
-  font-family: inherit;
-}
 .form-row { display: flex; gap: 12px; }
 .form-row .form-field { flex: 1; }
+.sr-form-number {
+  width: 100%;
+}
 .sr-sign-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
   font-weight: 400;
 }
-.sr-sign-toggle.is-locked { color: var(--color-text-muted, #6b7280); }
+.sr-sign-toggle.is-locked {
+  color: var(--color-text-muted, #6b7280);
+}
 .dialog-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
+  width: 100%;
 }
 .dialog-footer-right {
   display: flex;
   gap: 8px;
   margin-left: auto;
-}
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-primary:hover { filter: brightness(0.95); }
-.btn-ghost {
-  padding: 8px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-danger {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: #ef4444;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
 }
 
 @media (max-width: 768px) {

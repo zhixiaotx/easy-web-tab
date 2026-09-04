@@ -9,6 +9,7 @@ import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import type { StudentPlan, StudentPlanType } from '@/types'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentPlanStore()
 const toast = useToast()
@@ -205,26 +206,21 @@ onMounted(() => {
 
 <template>
   <div class="sp-shell">
-    <div class="sp-toolbar">
-      <h2 class="sp-title">学习计划</h2>
-      <div class="sp-toolbar-right">
-        <div class="sp-count">共 {{ viewEntries.length }} 个</div>
-        <button class="btn-add sp-add-btn" data-testid="sp-add-btn" @click="openAddDialog">
-          <span>＋ 新增计划</span>
-        </button>
-      </div>
-    </div>
+    <StudentToolbar title="学习计划">
+      <div class="sp-count">共 {{ viewEntries.length }} 个</div>
+      <el-button type="primary" size="small" class="sp-add-btn" data-testid="sp-add-btn" @click="openAddDialog">
+        ＋ 新增计划
+      </el-button>
+    </StudentToolbar>
 
-    <div class="sp-tabs">
-      <button
+    <el-radio-group v-model="activeTypeTab" class="sp-tabs" size="small">
+      <el-radio-button
         v-for="tab in TYPE_TABS"
         :key="tab.key"
-        class="sp-tab"
-        :class="{ active: activeTypeTab === tab.key }"
+        :value="tab.key"
         :data-testid="`sp-tab-${tab.key}`"
-        @click="activeTypeTab = tab.key"
-      >{{ tab.label }}</button>
-    </div>
+      >{{ tab.label }}</el-radio-button>
+    </el-radio-group>
 
     <div class="sp-stats">
       <div class="sp-stat-card">
@@ -360,86 +356,90 @@ onMounted(() => {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <div v-if="showEditDialog" class="sp-dialog-mask" @click.self="closeEditDialog">
-      <div class="sp-dialog">
-        <div class="sp-dialog-head">
-          <h3>{{ editingId !== null ? '编辑计划' : '新增计划' }}</h3>
-          <button class="sp-dialog-close" @click="closeEditDialog"><Icon name="close" /></button>
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId !== null ? '编辑计划' : '新增计划'"
+      width="480px"
+      @close="closeEditDialog"
+    >
+      <div class="dialog-body">
+        <div class="sp-field">
+          <label>类型</label>
+          <el-select
+            :model-value="dialogType"
+            @change="(val: string | number | boolean | object) => onTypeChange({ target: { value: String(val) } } as unknown as Event)"
+          >
+            <el-option value="weekly" label="周计划" />
+            <el-option value="monthly" label="月计划" />
+            <el-option value="term" label="学期计划" />
+          </el-select>
         </div>
-        <div class="sp-dialog-body">
+        <div class="sp-field">
+          <label>标题</label>
+          <el-input
+            v-model="dialogTitle"
+            maxlength="50"
+            placeholder="例：本周语文复习计划"
+            data-testid="sp-form-title"
+          />
+        </div>
+        <div class="sp-field-row">
           <div class="sp-field">
-            <label>类型</label>
-            <select :value="dialogType" @change="onTypeChange">
-              <option value="weekly">周计划</option>
-              <option value="monthly">月计划</option>
-              <option value="term">学期计划</option>
-            </select>
+            <label>开始日期</label>
+            <el-input v-model="dialogStartDate" type="date" data-testid="sp-form-start" />
           </div>
           <div class="sp-field">
-            <label>标题</label>
-            <input
-              type="text"
-              v-model="dialogTitle"
-              maxlength="50"
-              placeholder="例：本周语文复习计划"
-              data-testid="sp-form-title"
-            />
-          </div>
-          <div class="sp-field-row">
-            <div class="sp-field">
-              <label>开始日期</label>
-              <input type="date" v-model="dialogStartDate" data-testid="sp-form-start" />
-            </div>
-            <div class="sp-field">
-              <label>结束日期</label>
-              <input type="date" v-model="dialogEndDate" data-testid="sp-form-end" />
-            </div>
-          </div>
-          <div class="sp-field">
-            <label>学习目标</label>
-            <div class="sp-goals-edit">
-              <div
-                v-for="(_, idx) in dialogGoalInputs"
-                :key="idx"
-                class="sp-goal-edit-row"
-              >
-                <input
-                  type="text"
-                  v-model="dialogGoalInputs[idx]"
-                  maxlength="100"
-                  :placeholder="`目标 ${idx + 1}`"
-                />
-                <button
-                  v-if="dialogGoalInputs.length > 1"
-                  class="sp-goal-remove"
-                  @click="removeGoalInput(idx)"
-                  title="移除"
-                ><Icon name="close" :size="14" /></button>
-              </div>
-              <button class="sp-goal-add" @click="addGoalInput" data-testid="sp-form-add-goal">
-                + 添加目标
-              </button>
-            </div>
-          </div>
-          <div class="sp-field">
-            <label>复盘（可选）</label>
-            <textarea
-              v-model="dialogReview"
-              maxlength="5000"
-              rows="3"
-              placeholder="Markdown 复盘笔记…"
-              data-testid="sp-form-review"
-            ></textarea>
+            <label>结束日期</label>
+            <el-input v-model="dialogEndDate" type="date" data-testid="sp-form-end" />
           </div>
         </div>
-        <div class="sp-dialog-foot">
-          <button class="btn-secondary" @click="closeEditDialog">取消</button>
-          <button class="btn-primary" @click="saveEditDialog" data-testid="sp-form-save">
-            {{ editingId !== null ? '保存' : '新增' }}
-          </button>
+        <div class="sp-field">
+          <label>学习目标</label>
+          <div class="sp-goals-edit">
+            <div
+              v-for="(_, idx) in dialogGoalInputs"
+              :key="idx"
+              class="sp-goal-edit-row"
+            >
+              <el-input
+                v-model="dialogGoalInputs[idx]"
+                maxlength="100"
+                :placeholder="`目标 ${idx + 1}`"
+              />
+              <el-button
+                v-if="dialogGoalInputs.length > 1"
+                class="sp-goal-remove"
+                @click="removeGoalInput(idx)"
+                title="移除"
+                text
+              ><Icon name="close" :size="14" /></el-button>
+            </div>
+            <el-button class="sp-goal-add" data-testid="sp-form-add-goal" @click="addGoalInput">
+              + 添加目标
+            </el-button>
+          </div>
+        </div>
+        <div class="sp-field">
+          <label>复盘（可选）</label>
+          <el-input
+            v-model="dialogReview"
+            type="textarea"
+            :rows="3"
+            maxlength="5000"
+            placeholder="Markdown 复盘笔记…"
+            data-testid="sp-form-review"
+          />
         </div>
       </div>
-    </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button type="primary" data-testid="sp-form-save" @click="saveEditDialog">
+            {{ editingId !== null ? '保存' : '新增' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -453,65 +453,17 @@ onMounted(() => {
   padding: 16px;
 }
 
-.sp-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 4px;
-  flex-shrink: 0;
-}
-.sp-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-.sp-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 .sp-count {
   font-size: 13px;
   color: var(--color-text-muted, #6b7280);
   white-space: nowrap;
 }
 
-/* ===== 新增按钮（与教育经历同款 .btn-add） ===== */
-.btn-add {
-  padding: 8px 16px;
-  background: var(--color-primary, #10b981);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.18);
-  white-space: nowrap;
-}
-.btn-add:hover { opacity: 0.92; transform: translateY(-1px); }
-
 .sp-tabs {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-wrap: wrap;
   padding: 0 4px;
   flex-shrink: 0;
-}
-.sp-tab {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 16px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-}
-.sp-tab.active {
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  border-color: var(--color-primary, #3b82f6);
 }
 
 .sp-stats {
@@ -770,43 +722,8 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
-/* ===== 弹框 ===== */
-.sp-dialog-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-.sp-dialog {
-  background: var(--color-surface, #fff);
-  border-radius: 8px;
-  width: 480px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-.sp-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.sp-dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
-}
-.sp-dialog-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+/* ===== 弹框表单 ===== */
+.dialog-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -819,17 +736,6 @@ onMounted(() => {
 .sp-field label {
   font-size: 13px;
   color: var(--color-text-secondary, #6b7280);
-}
-.sp-field input,
-.sp-field select,
-.sp-field textarea {
-  padding: 6px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
-  font-family: inherit;
 }
 .sp-field-row {
   display: flex;
@@ -844,62 +750,26 @@ onMounted(() => {
 .sp-goal-edit-row {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
-.sp-goal-edit-row input {
+.sp-goal-edit-row :deep(.el-input) {
   flex: 1;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
 }
 .sp-goal-remove {
-  border: none;
-  background: transparent;
-  cursor: pointer;
   color: var(--color-text-secondary, #6b7280);
   padding: 4px 8px;
 }
 .sp-goal-add {
   align-self: flex-start;
-  padding: 4px 10px;
-  border: 1px dashed var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: transparent;
+  border-style: dashed;
   color: var(--color-primary, #3b82f6);
-  cursor: pointer;
   font-size: 12px;
 }
-.sp-dialog-foot {
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-primary:hover { filter: brightness(0.95); }
-.btn-secondary {
-  padding: 8px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
+  width: 100%;
 }
 
 @media (max-width: 768px) {

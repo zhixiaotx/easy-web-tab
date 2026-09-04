@@ -12,6 +12,7 @@ import { useToast } from '@/composables/useToast'
 import type { StudentMistake, StudentMistakeStatus } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import Icon from '@/components/Icon.vue'
 
 const store = useStudentMistakesStore()
@@ -188,41 +189,40 @@ onMounted(() => {
 
 <template>
   <div class="sm-shell">
-    <div class="sm-toolbar">
-      <h2 class="sm-title">错题本</h2>
-      <button class="btn-primary sm-add-btn" data-testid="sm-add-btn" @click="openAddDialog">
+    <StudentToolbar title="错题本">
+      <el-button type="primary" size="small" class="sm-add-btn" data-testid="sm-add-btn" @click="openAddDialog">
         <Icon name="plus" :size="16" /> 新增错题
-      </button>
-    </div>
+      </el-button>
+    </StudentToolbar>
 
     <div class="sm-tabs">
-      <button
-        v-for="tab in subjectTabs"
-        :key="tab.key"
-        class="sm-tab"
-        :class="{ active: activeSubject === tab.key }"
-        :data-testid="`sm-subject-${tab.key}`"
-        @click="activeSubject = tab.key"
-      >{{ tab.label }}</button>
+      <el-radio-group v-model="activeSubject" size="small">
+        <el-radio-button
+          v-for="tab in subjectTabs"
+          :key="tab.key"
+          :value="tab.key"
+          :data-testid="`sm-subject-${tab.key}`"
+        >{{ tab.label }}</el-radio-button>
+      </el-radio-group>
       <span class="sm-count">{{ viewEntries.length }} 条</span>
     </div>
 
     <div class="sm-filter-bar">
       <div class="sm-status-tabs">
-        <button
-          v-for="tab in STATUS_TABS"
-          :key="tab.key"
-          class="sm-status-tab"
-          :class="{ active: activeStatusTab === tab.key }"
-          :data-testid="`sm-status-${tab.key}`"
-          @click="activeStatusTab = tab.key"
-        >{{ tab.label }}</button>
+        <el-radio-group v-model="activeStatusTab" size="small">
+          <el-radio-button
+            v-for="tab in STATUS_TABS"
+            :key="tab.key"
+            :value="tab.key"
+            :data-testid="`sm-status-${tab.key}`"
+          >{{ tab.label }}</el-radio-button>
+        </el-radio-group>
       </div>
-      <input
+      <el-input
         v-model="keyword"
-        type="text"
         class="sm-search"
         placeholder="搜索题干/答案/解析/标签..."
+        clearable
         data-testid="sm-search"
       />
     </div>
@@ -275,14 +275,16 @@ onMounted(() => {
             <span class="sm-subject-badge">{{ item.subject }}</span>
             <span v-if="item.title" class="sm-card-title" :title="item.title">{{ item.title }}</span>
             <span class="sm-status-badge" :class="statusClass(item.status)">{{ store.statusText(item.status) }}</span>
-            <button
+            <el-button
               class="sm-del-btn"
               :data-testid="`sm-del-${item.id}`"
               title="删除"
+              text
+              size="small"
               @click.stop="handleDelete(item.id)"
             >
               <Icon name="close" :size="14" />
-            </button>
+            </el-button>
           </div>
           <div class="sm-card-body">
             <div class="sm-q-block">
@@ -302,23 +304,26 @@ onMounted(() => {
             <span v-for="t in item.tags" :key="t" class="sm-tag">{{ t }}</span>
           </div>
           <div class="sm-card-foot">
-            <button
+            <el-button
               v-if="item.status !== 'mastered'"
-              class="sm-action-btn sm-advance-btn"
+              size="small"
+              class="sm-advance-btn"
               :data-testid="`sm-advance-${item.id}`"
               @click.stop="handleAdvance(item.id)"
-            >{{ item.status === 'new' ? '标记复习中' : '标记已掌握' }}</button>
-            <button
+            >{{ item.status === 'new' ? '标记复习中' : '标记已掌握' }}</el-button>
+            <el-button
               v-if="item.status !== 'new'"
-              class="sm-action-btn sm-reset-btn"
+              size="small"
+              class="sm-reset-btn"
               :data-testid="`sm-reset-${item.id}`"
               @click.stop="handleReset(item.id)"
-            >重置未复习</button>
-            <button
+            >重置未复习</el-button>
+            <el-button
+              size="small"
               class="sm-edit-btn"
               :data-testid="`sm-edit-${item.id}`"
               @click.stop="openEditDialog(item.id)"
-            >编辑</button>
+            >编辑</el-button>
           </div>
         </div>
       </div>
@@ -333,79 +338,73 @@ onMounted(() => {
     />
 
     <!-- 编辑弹框 -->
-    <div v-if="showEditDialog" class="sm-dialog-overlay" @click.self="closeEditDialog">
-      <div class="sm-dialog" data-testid="sm-dialog">
-        <div class="sm-dialog-head">
-          <h3>{{ editingId !== null ? '编辑错题' : '新增错题' }}</h3>
-          <button class="sm-dialog-close" @click="closeEditDialog" title="关闭">
-            <Icon name="close" :size="18" />
-          </button>
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId !== null ? '编辑错题' : '新增错题'"
+      width="560px"
+      data-testid="sm-dialog"
+      @close="closeEditDialog"
+    >
+      <div class="sm-dialog-body">
+        <div class="sm-form-row">
+          <label class="sm-form-label">学科 <span class="sm-required">*</span></label>
+          <el-select v-model="dialogSubject" data-testid="sm-form-subject">
+            <el-option v-for="s in settingsStore.subjects" :key="s" :value="s" :label="s" />
+          </el-select>
         </div>
-        <div class="sm-dialog-body">
-          <div class="sm-form-row">
-            <label class="sm-form-label">学科 <span class="sm-required">*</span></label>
-            <select v-model="dialogSubject" class="sm-form-select" data-testid="sm-form-subject">
-              <option v-for="s in settingsStore.subjects" :key="s" :value="s">{{ s }}</option>
-            </select>
-          </div>
-          <div class="sm-form-row">
-            <label class="sm-form-label">题目标题</label>
-            <input
-              v-model="dialogTitle"
-              type="text"
-              class="sm-form-input"
-              maxlength="100"
-              placeholder="选填，简短描述题目标题"
-              data-testid="sm-form-title"
-            />
-          </div>
-          <div class="sm-form-row">
-            <label class="sm-form-label">题干 <span class="sm-required">*</span></label>
-            <textarea
-              v-model="dialogQuestion"
-              class="sm-form-textarea"
-              rows="4"
-              placeholder="题目内容（纯文字，最多 5000 字符）"
-              data-testid="sm-form-question"
-            ></textarea>
-          </div>
-          <div class="sm-form-row">
-            <label class="sm-form-label">答案 <span class="sm-required">*</span></label>
-            <textarea
-              v-model="dialogAnswer"
-              class="sm-form-textarea"
-              rows="3"
-              placeholder="正确答案（纯文字，最多 5000 字符）"
-              data-testid="sm-form-answer"
-            ></textarea>
-          </div>
-          <div class="sm-form-row">
-            <label class="sm-form-label">解析</label>
-            <textarea
-              v-model="dialogAnalysis"
-              class="sm-form-textarea"
-              rows="3"
-              placeholder="选填，解题思路/易错点（最多 5000 字符）"
-              data-testid="sm-form-analysis"
-            ></textarea>
-          </div>
-          <div class="sm-form-row">
-            <label class="sm-form-label">标签</label>
-            <input
-              v-model="dialogTagsInput"
-              type="text"
-              class="sm-form-input"
-              placeholder="逗号分隔，最多 10 个，每个 1-20 字符"
-              data-testid="sm-form-tags"
-            />
-          </div>
+        <div class="sm-form-row">
+          <label class="sm-form-label">题目标题</label>
+          <el-input
+            v-model="dialogTitle"
+            :maxlength="100"
+            placeholder="选填，简短描述题目标题"
+            data-testid="sm-form-title"
+          />
         </div>
-        <div class="sm-dialog-foot">
-          <button class="sm-btn-cancel" @click="closeEditDialog">取消</button>
-          <button class="btn-primary" data-testid="sm-form-save" @click="saveEditDialog">保存</button>
+        <div class="sm-form-row">
+          <label class="sm-form-label">题干 <span class="sm-required">*</span></label>
+          <el-input
+            v-model="dialogQuestion"
+            type="textarea"
+            :rows="4"
+            placeholder="题目内容（纯文字，最多 5000 字符）"
+            data-testid="sm-form-question"
+          />
+        </div>
+        <div class="sm-form-row">
+          <label class="sm-form-label">答案 <span class="sm-required">*</span></label>
+          <el-input
+            v-model="dialogAnswer"
+            type="textarea"
+            :rows="3"
+            placeholder="正确答案（纯文字，最多 5000 字符）"
+            data-testid="sm-form-answer"
+          />
+        </div>
+        <div class="sm-form-row">
+          <label class="sm-form-label">解析</label>
+          <el-input
+            v-model="dialogAnalysis"
+            type="textarea"
+            :rows="3"
+            placeholder="选填，解题思路/易错点（最多 5000 字符）"
+            data-testid="sm-form-analysis"
+          />
+        </div>
+        <div class="sm-form-row">
+          <label class="sm-form-label">标签</label>
+          <el-input
+            v-model="dialogTagsInput"
+            placeholder="逗号分隔，最多 10 个，每个 1-20 字符"
+            data-testid="sm-form-tags"
+          />
         </div>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="closeEditDialog">取消</el-button>
+        <el-button type="primary" data-testid="sm-form-save" @click="saveEditDialog">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -418,46 +417,12 @@ onMounted(() => {
   gap: 10px;
 }
 
-.sm-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-.sm-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-.sm-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
 .sm-tabs {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
   flex-shrink: 0;
-}
-.sm-tab {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: transparent;
-  color: inherit;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-.sm-tab.active {
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  border-color: var(--color-primary, #3b82f6);
 }
 .sm-count {
   margin-left: auto;
@@ -475,29 +440,9 @@ onMounted(() => {
   display: flex;
   gap: 4px;
 }
-.sm-status-tab {
-  padding: 3px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: transparent;
-  color: inherit;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s;
-}
-.sm-status-tab.active {
-  background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  border-color: var(--color-primary, #3b82f6);
-}
 .sm-search {
   flex: 1;
   min-width: 120px;
-  padding: 5px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
 }
 
 .sm-stats {
@@ -617,20 +562,10 @@ onMounted(() => {
   color: #10b981;
 }
 .sm-del-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-soft, #6b7280);
-  cursor: pointer;
-  border-radius: 4px;
   flex-shrink: 0;
+  color: var(--color-text-soft, #6b7280);
 }
 .sm-del-btn:hover {
-  background: rgba(239, 68, 68, 0.12);
   color: #ef4444;
 }
 
@@ -681,78 +616,25 @@ onMounted(() => {
   justify-content: flex-end;
   margin-top: 2px;
 }
-.sm-action-btn, .sm-edit-btn {
-  padding: 3px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: transparent;
-  color: inherit;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s;
-}
-.sm-action-btn:hover, .sm-edit-btn:hover {
-  background: var(--color-hover, #f3f4f6);
-}
 .sm-advance-btn {
-  border-color: #10b981;
   color: #10b981;
+  border-color: #10b981;
 }
 .sm-advance-btn:hover {
   background: rgba(16, 185, 129, 0.12);
 }
 .sm-reset-btn {
-  border-color: #f59e0b;
   color: #f59e0b;
+  border-color: #f59e0b;
 }
 .sm-reset-btn:hover {
   background: rgba(245, 158, 11, 0.12);
 }
-
-.sm-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.sm-dialog {
-  background: var(--color-surface, #fff);
-  border-radius: 8px;
-  width: 90%;
-  max-width: 560px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-.sm-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.sm-dialog-head h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.sm-dialog-close {
-  border: none;
-  background: transparent;
+.sm-edit-btn {
   color: var(--color-text-soft, #6b7280);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
 }
-.sm-dialog-close:hover {
-  background: var(--color-hover, #f3f4f6);
-}
+
 .sm-dialog-body {
-  padding: 16px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -768,43 +650,6 @@ onMounted(() => {
 }
 .sm-required {
   color: #ef4444;
-}
-.sm-form-select, .sm-form-input {
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
-}
-.sm-form-textarea {
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
-  resize: vertical;
-  font-family: inherit;
-}
-.sm-dialog-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-}
-.sm-btn-cancel {
-  padding: 6px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: transparent;
-  color: inherit;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
-.sm-btn-cancel:hover {
-  background: var(--color-hover, #f3f4f6);
 }
 
 @media (max-width: 768px) {

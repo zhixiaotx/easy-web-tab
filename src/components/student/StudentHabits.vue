@@ -25,6 +25,7 @@ import { STUDENT_HABIT_BUILTIN_CATEGORIES } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentHabitsStore()
 const settingsStore = useStudentSettingsStore()
@@ -208,23 +209,20 @@ onMounted(async () => {
 
 <template>
   <div class="st-habits">
-    <div class="sh-toolbar">
-      <h2 class="sh-title">习惯打卡</h2>
-      <button class="btn-primary sh-add-btn" data-testid="sh-add-btn" @click="openAddDialog">
+    <StudentToolbar title="习惯打卡">
+      <el-button type="primary" size="small" class="sh-add-btn" data-testid="sh-add-btn" @click="openAddDialog">
         <Icon name="plus" :size="16" /> 新增习惯
-      </button>
-    </div>
+      </el-button>
+    </StudentToolbar>
 
-    <div class="sh-cat-tabs">
-      <button
+    <el-radio-group v-model="activeCategory" class="sh-cat-tabs" size="small">
+      <el-radio-button
         v-for="tab in categoryTabs"
         :key="tab.key"
-        class="sh-cat-tab"
-        :class="{ active: activeCategory === tab.key }"
+        :value="tab.key"
         :data-testid="`sh-cat-${tab.key}`"
-        @click="activeCategory = tab.key"
-      >{{ tab.label }}</button>
-    </div>
+      >{{ tab.label }}</el-radio-button>
+    </el-radio-group>
 
     <div ref="mainEl" class="sh-main">
       <div v-if="store.habits.length === 0" class="empty-state" data-testid="sh-empty">
@@ -293,56 +291,53 @@ onMounted(async () => {
       @next="next"
     />
 
-    <Teleport to="body">
-      <div v-if="showEditDialog" class="dialog-overlay" @click.self="closeEditDialog">
-        <div class="dialog st-dialog">
-          <div class="dialog-header">
-            <h3>{{ editingId ? '编辑习惯' : '新增习惯' }}</h3>
-            <button class="dialog-close" @click="closeEditDialog"><Icon name="close" :size="18" /></button>
-          </div>
-          <div class="dialog-body">
-            <div class="form-field">
-              <label>习惯名称</label>
-              <input
-                v-model="dialogName"
-                type="text"
-                class="form-input"
-                placeholder="如：刷牙、写作业"
-                maxlength="15"
-                data-testid="sh-form-name"
-                @keyup.enter="saveEditDialog"
-              />
-            </div>
-            <div class="form-field">
-              <label>分类</label>
-              <select v-model="dialogCategory" class="form-input" data-testid="sh-form-category">
-                <option v-for="c in STUDENT_HABIT_BUILTIN_CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
-                <option value="">未分类</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>打卡频率</label>
-              <select v-model="dialogFrequency" class="form-input" data-testid="sh-form-frequency">
-                <option v-for="f in FREQUENCY_OPTIONS" :key="f.value" :value="f.value">{{ f.label }}</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>颜色</label>
-              <input v-model="dialogColor" type="color" class="form-color" data-testid="sh-form-color" />
-            </div>
-          </div>
-          <div class="dialog-footer">
-            <button v-if="editingId" class="btn-danger" data-testid="sh-form-delete" @click="handleDelete(editingId)">
-              删除
-            </button>
-            <div class="dialog-footer-right">
-              <button class="btn-ghost" @click="closeEditDialog">取消</button>
-              <button class="btn-primary" data-testid="sh-form-save" @click="saveEditDialog">保存</button>
-            </div>
-          </div>
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId ? '编辑习惯' : '新增习惯'"
+      width="480px"
+      @close="closeEditDialog"
+    >
+      <div class="dialog-body">
+        <div class="form-field">
+          <label>习惯名称</label>
+          <el-input
+            v-model="dialogName"
+            placeholder="如：刷牙、写作业"
+            maxlength="15"
+            data-testid="sh-form-name"
+            @keyup.enter="saveEditDialog"
+          />
+        </div>
+        <div class="form-field">
+          <label>分类</label>
+          <el-select v-model="dialogCategory" data-testid="sh-form-category">
+            <el-option v-for="c in STUDENT_HABIT_BUILTIN_CATEGORIES" :key="c" :value="c" :label="categoryLabel(c)" />
+            <el-option value="" label="未分类" />
+          </el-select>
+        </div>
+        <div class="form-field">
+          <label>打卡频率</label>
+          <el-select v-model="dialogFrequency" data-testid="sh-form-frequency">
+            <el-option v-for="f in FREQUENCY_OPTIONS" :key="f.value" :value="f.value" :label="f.label" />
+          </el-select>
+        </div>
+        <div class="form-field">
+          <label>颜色</label>
+          <input v-model="dialogColor" type="color" class="form-color" data-testid="sh-form-color" />
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button v-if="editingId" type="danger" data-testid="sh-form-delete" @click="handleDelete(editingId)">
+            删除
+          </el-button>
+          <div class="dialog-footer-right">
+            <el-button @click="closeEditDialog">取消</el-button>
+            <el-button type="primary" data-testid="sh-form-save" @click="saveEditDialog">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -356,39 +351,9 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.sh-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.sh-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
 .sh-cat-tabs {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
-}
-.sh-cat-tab {
-  padding: 6px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 16px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-.sh-cat-tab:hover {
-  background: var(--color-hover, #f3f4f6);
-}
-.sh-cat-tab.active {
-  background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
 }
 
 .sh-main {
@@ -523,45 +488,7 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.st-dialog {
-  width: 480px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface, #fff);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-}
-.dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
-}
 .dialog-body {
-  padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -575,14 +502,6 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 500;
 }
-.form-input {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 14px;
-}
 .form-color {
   width: 60px;
   height: 36px;
@@ -595,47 +514,12 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
+  width: 100%;
 }
 .dialog-footer-right {
   display: flex;
   gap: 8px;
   margin-left: auto;
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-primary:hover {
-  filter: brightness(0.95);
-}
-.btn-ghost {
-  padding: 8px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-danger {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: #ef4444;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
 }
 
 .grid-enter-active, .grid-leave-active {

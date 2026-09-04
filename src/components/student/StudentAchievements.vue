@@ -32,6 +32,7 @@ import { localToday } from '@/composables/todoCore'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentAchievementsStore()
 const habitsStore = useStudentHabitsStore()
@@ -143,10 +144,9 @@ onMounted(async () => {
 
 <template>
   <div class="sa-shell">
-    <div class="sa-toolbar">
-      <h2 class="sa-title">成就勋章墙</h2>
+    <StudentToolbar title="成就勋章墙">
       <span class="sa-trophy" title="解锁进度">🏆</span>
-    </div>
+    </StudentToolbar>
 
     <div class="sa-stats-row">
       <div class="sa-stat-card sa-stat-main">
@@ -167,14 +167,14 @@ onMounted(async () => {
     </div>
 
     <div class="sa-tabs">
-      <button
-        v-for="tab in CATEGORY_TABS"
-        :key="tab.key"
-        class="sa-tab"
-        :class="{ active: activeCategory === tab.key }"
-        :data-testid="`sa-cat-${tab.key}`"
-        @click="activeCategory = tab.key"
-      >{{ tab.label }}</button>
+      <el-radio-group v-model="activeCategory" size="small">
+        <el-radio-button
+          v-for="tab in CATEGORY_TABS"
+          :key="tab.key"
+          :value="tab.key"
+          :data-testid="`sa-cat-${tab.key}`"
+        >{{ tab.label }}</el-radio-button>
+      </el-radio-group>
       <span class="sa-count">{{ viewDefs.length }} 枚</span>
     </div>
 
@@ -214,44 +214,49 @@ onMounted(async () => {
     />
 
     <!-- 详情弹框 -->
-    <div v-if="showDetailDialog && detailDef" class="sa-dialog-overlay" @click.self="closeDetail">
-      <div class="sa-dialog" data-testid="sa-dialog">
-        <div class="sa-dialog-head">
+    <el-dialog
+      v-model="showDetailDialog"
+      width="420px"
+      :show-close="false"
+      @close="closeDetail"
+    >
+      <template #header>
+        <div v-if="detailDef" class="sa-dialog-head" data-testid="sa-dialog">
           <span class="sa-dialog-emoji">{{ detailDef.emoji }}</span>
           <h3 class="sa-dialog-name">{{ detailDef.name }}</h3>
           <button class="sa-dialog-close" @click="closeDetail" title="关闭">
             <Icon name="close" :size="18" />
           </button>
         </div>
-        <div class="sa-dialog-body">
-          <p class="sa-dialog-desc">{{ detailDef.description }}</p>
+      </template>
+      <div v-if="detailDef" class="sa-dialog-body">
+        <p class="sa-dialog-desc">{{ detailDef.description }}</p>
 
-          <div v-if="detailUnlocked" class="sa-dialog-unlocked">
-            <div class="sa-dialog-unlocked-badge">✅ 已解锁</div>
-            <div class="sa-dialog-unlocked-time">解锁时间：{{ detailUnlockTime }}</div>
+        <div v-if="detailUnlocked" class="sa-dialog-unlocked">
+          <div class="sa-dialog-unlocked-badge">✅ 已解锁</div>
+          <div class="sa-dialog-unlocked-time">解锁时间：{{ detailUnlockTime }}</div>
+        </div>
+
+        <div v-else class="sa-dialog-locked">
+          <div class="sa-dialog-progress-row">
+            <span class="sa-dialog-progress-label">进度</span>
+            <span class="sa-dialog-progress-value">{{ metricCurrentOf(detailDef) }} / {{ detailDef.target }}</span>
           </div>
-
-          <div v-else class="sa-dialog-locked">
-            <div class="sa-dialog-progress-row">
-              <span class="sa-dialog-progress-label">进度</span>
-              <span class="sa-dialog-progress-value">{{ metricCurrentOf(detailDef) }} / {{ detailDef.target }}</span>
-            </div>
-            <div class="sa-dialog-progress-bar">
-              <div class="sa-dialog-progress-fill" :style="{ width: `${detailProgress}%` }"></div>
-            </div>
-            <div class="sa-dialog-progress-percent">{{ detailProgress }}%</div>
-            <div class="sa-dialog-howto">
-              <Icon name="countdowns" :size="14" />
-              <span>{{ detailDef.description }}</span>
-            </div>
+          <div class="sa-dialog-progress-bar">
+            <div class="sa-dialog-progress-fill" :style="{ width: `${detailProgress}%` }"></div>
           </div>
-
-          <div class="sa-dialog-meta">
-            <span class="sa-dialog-meta-item">分类：{{ store.categoryText(detailDef.category) }}</span>
+          <div class="sa-dialog-progress-percent">{{ detailProgress }}%</div>
+          <div class="sa-dialog-howto">
+            <Icon name="countdowns" :size="14" />
+            <span>{{ detailDef.description }}</span>
           </div>
         </div>
+
+        <div class="sa-dialog-meta">
+          <span class="sa-dialog-meta-item">分类：{{ store.categoryText(detailDef.category) }}</span>
+        </div>
       </div>
-    </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -264,17 +269,6 @@ onMounted(async () => {
   gap: 10px;
 }
 
-.sa-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-.sa-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
 .sa-trophy {
   font-size: 20px;
 }
@@ -333,20 +327,12 @@ onMounted(async () => {
   flex-wrap: wrap;
   flex-shrink: 0;
 }
-.sa-tab {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: transparent;
-  color: inherit;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s;
+.sa-tabs :deep(.el-radio-group) {
+  flex-wrap: wrap;
 }
-.sa-tab.active {
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  border-color: var(--color-primary, #3b82f6);
+.sa-tabs :deep(.el-radio-button__inner) {
+  font-size: 13px;
+  padding: 8px 14px;
 }
 .sa-count {
   margin-left: auto;
@@ -450,32 +436,11 @@ onMounted(async () => {
 }
 
 /* 详情弹框 */
-.sa-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.sa-dialog {
-  width: 420px;
-  max-width: calc(100vw - 32px);
-  background: var(--color-surface, #fff);
-  border-radius: 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 .sa-dialog-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  padding: 0;
 }
 .sa-dialog-emoji {
   font-size: 32px;
@@ -498,6 +463,17 @@ onMounted(async () => {
 }
 .sa-dialog-close:hover {
   opacity: 1;
+}
+.sa-shell :deep(.el-dialog) {
+  border-radius: 12px;
+}
+.sa-shell :deep(.el-dialog__header) {
+  padding: 12px 16px;
+  margin-right: 0;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+.sa-shell :deep(.el-dialog__body) {
+  padding: 16px;
 }
 .sa-dialog-body {
   padding: 16px;

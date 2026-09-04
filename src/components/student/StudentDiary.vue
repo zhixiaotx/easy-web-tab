@@ -102,31 +102,32 @@ async function handleDelete(): Promise<void> {
     <!-- 工具栏：日期输入 + 今日/保存/删除 + 编辑/预览切换 + 字数 -->
     <div class="dj-toolbar">
       <div class="dj-toolbar-left">
-        <input
-          :value="selectedDate"
+        <el-input
+          :model-value="selectedDate"
           type="date"
-          class="form-input dj-date-input"
+          class="dj-date-input"
           data-testid="dj-date-input"
           @change="handleDateInput"
         />
-        <button type="button" class="dj-btn-secondary" data-testid="dj-today-btn" @click="handleToday">今日</button>
-        <button type="button" class="dj-btn-primary" data-testid="dj-save-btn" @click="handleSave">保存</button>
-        <button
+        <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
+        <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
+        <el-button
           v-if="selectedEntry"
-          type="button"
-          class="dj-btn-danger"
+          type="danger"
+          plain
+          size="small"
           data-testid="dj-delete-btn"
           @click="handleDelete"
-        >删除</button>
+        >删除</el-button>
       </div>
       <div class="dj-toolbar-right">
-        <button
-          type="button"
-          class="dj-btn-toggle"
-          :class="{ active: previewMode }"
+        <el-button
+          size="small"
+          :type="previewMode ? 'primary' : 'default'"
+          plain
           data-testid="dj-preview-toggle"
           @click="previewMode = !previewMode"
-        >{{ previewMode ? '编辑' : '预览' }}</button>
+        >{{ previewMode ? '编辑' : '预览' }}</el-button>
         <span class="dj-char-count" data-testid="dj-char-count">{{ charCount }} 字</span>
       </div>
     </div>
@@ -135,13 +136,15 @@ async function handleDelete(): Promise<void> {
     <div class="dj-main">
       <!-- 编辑器 / Markdown 预览（切换保留草稿） -->
       <div class="dj-editor">
-        <textarea
+        <el-input
           v-if="!previewMode"
           v-model="draft"
-          class="form-input dj-content-input"
+          type="textarea"
+          class="dj-content-input"
           data-testid="dj-content-input"
           placeholder="写下今天的心情…"
-        ></textarea>
+          resize="vertical"
+        />
         <div
           v-else
           class="dj-preview"
@@ -236,84 +239,12 @@ async function handleDelete(): Promise<void> {
   flex-shrink: 0;
 }
 
-/* 表单输入（本组件自包含，与其它面板 .form-input 同构） */
-.form-input {
-  padding: 9px 12px;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  transition: border-color var(--transition-fast, 0.15s ease);
+/* 工具栏按钮（el-button 统一尺寸，与其它学生面板一致） */
+.dj-toolbar :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-/* 保存（实心主色，仿 .nt-btn-query） */
-.dj-btn-primary {
-  padding: 9px 16px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.dj-btn-primary:hover {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-/* 今日 / 预览切换（次级描边，仿 .nt-btn-reset） */
-.dj-btn-secondary,
-.dj-btn-toggle {
-  padding: 9px 14px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.dj-btn-secondary:hover,
-.dj-btn-toggle:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.dj-btn-toggle.active {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-/* 删除（危险描边，仿 .btn-delete） */
-.dj-btn-danger {
-  padding: 9px 16px;
-  font-size: 14px;
-  white-space: nowrap;
-  cursor: pointer;
-  color: var(--color-error, var(--color-error));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-error, var(--color-error));
-  border-radius: var(--radius-md, 8px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.dj-btn-danger:hover {
-  background: var(--color-error, var(--color-error));
-  color: #fff;
-}
-
+/* 字数统计 */
 .dj-char-count {
   font-size: 14px;
   color: var(--color-text-secondary, var(--color-text-secondary));
@@ -323,7 +254,10 @@ async function handleDelete(): Promise<void> {
 /* ===== 编辑器 / 预览 ===== */
 .dj-content-input {
   min-height: 260px;
-  resize: vertical;
+}
+
+.dj-content-input :deep(.el-textarea__inner) {
+  min-height: 260px;
   line-height: 1.6;
 }
 
@@ -648,6 +582,11 @@ async function handleDelete(): Promise<void> {
   /* 编辑器列填满：textarea/preview 高度 100%（覆盖单列 min-height: 260px 规则，R9） */
   .dj-main .dj-content-input,
   .dj-main .dj-preview {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .dj-main .dj-content-input :deep(.el-textarea__inner) {
     height: 100%;
     min-height: 0;
   }

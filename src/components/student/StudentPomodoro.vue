@@ -12,6 +12,7 @@ import { formatRemaining, sessionPhase, stageDefaultPomodoroSettings } from '@/c
 import type { PomodoroPhase } from '@/composables/studentPomodoroCore'
 import { localToday } from '@/composables/todoCore'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentPomodoroStore()
 const settingsStore = useStudentSettingsStore()
@@ -187,12 +188,11 @@ onUnmounted(() => {
 
 <template>
   <div class="spm-shell">
-    <div class="spm-toolbar">
-      <h2 class="spm-title">番茄钟</h2>
-      <button class="btn-primary spm-settings-btn" data-testid="spm-settings-btn" @click="openSettingsDialog">
+    <StudentToolbar title="番茄钟">
+      <el-button size="small" type="primary" class="spm-settings-btn" data-testid="spm-settings-btn" @click="openSettingsDialog">
         <Icon name="cog" :size="16" /> 时长设置
-      </button>
-    </div>
+      </el-button>
+    </StudentToolbar>
 
     <!-- 学段推荐提示 -->
     <div class="spm-stage-hint">
@@ -225,79 +225,67 @@ onUnmounted(() => {
       </div>
 
       <div class="spm-controls">
-        <button class="btn-primary" data-testid="spm-start" :disabled="running" @click="start">开始</button>
-        <button class="btn-secondary" data-testid="spm-pause" :disabled="!running" @click="pause">暂停</button>
-        <button class="btn-secondary" data-testid="spm-reset" @click="reset">重置</button>
+        <el-button type="primary" data-testid="spm-start" :disabled="running" @click="start">开始</el-button>
+        <el-button data-testid="spm-pause" :disabled="!running" @click="pause">暂停</el-button>
+        <el-button data-testid="spm-reset" @click="reset">重置</el-button>
       </div>
 
       <div class="spm-today" data-testid="spm-today-count">今日完成 {{ todayCount }} 个番茄</div>
     </div>
 
     <!-- 设置弹框 -->
-    <div v-if="showSettingsDialog" class="spm-dialog-overlay" @click.self="closeSettingsDialog">
-      <div class="spm-dialog" data-testid="spm-settings-dialog">
-        <div class="spm-dialog-head">
-          <h3>时长设置</h3>
-          <button class="spm-dialog-close" @click="closeSettingsDialog" title="关闭">
-            <Icon name="close" :size="18" />
-          </button>
+    <el-dialog v-model="showSettingsDialog" title="时长设置" width="420px" append-to-body data-testid="spm-settings-dialog">
+      <div class="spm-dialog-body">
+        <div class="spm-stage-recommend">
+          <span>{{ settingsStore.stageLabelName }}推荐：专注 {{ stageRecommended.workMinutes }} 分钟 / 短休 {{ stageRecommended.breakMinutes }} 分钟 / 长休 {{ stageRecommended.longBreakMinutes }} 分钟</span>
+          <el-button size="small" data-testid="spm-apply-stage" @click="applyStageRecommended">应用学段推荐</el-button>
         </div>
-        <div class="spm-dialog-body">
-          <div class="spm-stage-recommend">
-            <span>{{ settingsStore.stageLabelName }}推荐：专注 {{ stageRecommended.workMinutes }} 分钟 / 短休 {{ stageRecommended.breakMinutes }} 分钟 / 长休 {{ stageRecommended.longBreakMinutes }} 分钟</span>
-            <button class="spm-apply-btn" data-testid="spm-apply-stage" @click="applyStageRecommended">应用学段推荐</button>
-          </div>
-          <div class="spm-form-row">
-            <label class="spm-form-label">专注（分钟）</label>
-            <input
-              v-model="formWork"
-              type="number"
-              min="1"
-              step="1"
-              class="spm-form-input"
-              data-testid="spm-form-work"
-            />
-          </div>
-          <div class="spm-form-row">
-            <label class="spm-form-label">短休（分钟）</label>
-            <input
-              v-model="formBreak"
-              type="number"
-              min="1"
-              step="1"
-              class="spm-form-input"
-              data-testid="spm-form-break"
-            />
-          </div>
-          <div class="spm-form-row">
-            <label class="spm-form-label">长休（分钟）</label>
-            <input
-              v-model="formLongBreak"
-              type="number"
-              min="1"
-              step="1"
-              class="spm-form-input"
-              data-testid="spm-form-long-break"
-            />
-          </div>
-          <div class="spm-form-row">
-            <label class="spm-form-label">每几个专注一次长休</label>
-            <input
-              v-model="formSessions"
-              type="number"
-              min="1"
-              step="1"
-              class="spm-form-input"
-              data-testid="spm-form-sessions"
-            />
-          </div>
+        <div class="spm-form-row">
+          <label class="spm-form-label">专注（分钟）</label>
+          <el-input
+            v-model="formWork"
+            type="number"
+            min="1"
+            step="1"
+            data-testid="spm-form-work"
+          />
         </div>
-        <div class="spm-dialog-foot">
-          <button class="spm-btn-cancel" @click="closeSettingsDialog">取消</button>
-          <button class="btn-primary" data-testid="spm-form-save" @click="commitSettings().then(closeSettingsDialog)">保存</button>
+        <div class="spm-form-row">
+          <label class="spm-form-label">短休（分钟）</label>
+          <el-input
+            v-model="formBreak"
+            type="number"
+            min="1"
+            step="1"
+            data-testid="spm-form-break"
+          />
+        </div>
+        <div class="spm-form-row">
+          <label class="spm-form-label">长休（分钟）</label>
+          <el-input
+            v-model="formLongBreak"
+            type="number"
+            min="1"
+            step="1"
+            data-testid="spm-form-long-break"
+          />
+        </div>
+        <div class="spm-form-row">
+          <label class="spm-form-label">每几个专注一次长休</label>
+          <el-input
+            v-model="formSessions"
+            type="number"
+            min="1"
+            step="1"
+            data-testid="spm-form-sessions"
+          />
         </div>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="closeSettingsDialog">取消</el-button>
+        <el-button type="primary" data-testid="spm-form-save" @click="commitSettings().then(closeSettingsDialog)">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -311,24 +299,10 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.spm-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  flex-shrink: 0;
-}
-.spm-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
 .spm-settings-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  font-size: 13px;
 }
 
 .spm-stage-hint {
@@ -431,49 +405,8 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.spm-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.spm-dialog {
-  background: var(--color-surface, #fff);
-  border-radius: 8px;
-  width: 90%;
-  max-width: 420px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-.spm-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.spm-dialog-head h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.spm-dialog-close {
-  border: none;
-  background: transparent;
-  color: var(--color-text-soft, #6b7280);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-}
-.spm-dialog-close:hover {
-  background: var(--color-hover, #f3f4f6);
-}
 .spm-dialog-body {
-  padding: 16px;
+  padding: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -489,19 +422,6 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--color-text-soft, #6b7280);
 }
-.spm-apply-btn {
-  align-self: flex-start;
-  padding: 4px 10px;
-  border: 1px solid var(--color-primary, #3b82f6);
-  background: transparent;
-  color: var(--color-primary, #3b82f6);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-.spm-apply-btn:hover {
-  background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-}
 .spm-form-row {
   display: flex;
   flex-direction: column;
@@ -510,32 +430,5 @@ onUnmounted(() => {
 .spm-form-label {
   font-size: 13px;
   font-weight: 600;
-}
-.spm-form-input {
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
-}
-.spm-dialog-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-}
-.spm-btn-cancel {
-  padding: 6px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: transparent;
-  color: inherit;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
-.spm-btn-cancel:hover {
-  background: var(--color-hover, #f3f4f6);
 }
 </style>

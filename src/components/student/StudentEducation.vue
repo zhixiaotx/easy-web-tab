@@ -156,9 +156,7 @@ const degreeOptions = DEGREE_OPTIONS
   <section class="edu-panel">
     <!-- 顶部工具条 -->
     <div class="edu-toolbar">
-      <button class="btn-add" data-testid="edu-add" @click="openAdd">
-        <span>＋ 新增</span>
-      </button>
+      <el-button type="primary" data-testid="edu-add" @click="openAdd">＋ 新增</el-button>
       <div class="edu-count">共 {{ store.totalCount }} 条记录</div>
     </div>
 
@@ -230,8 +228,8 @@ const degreeOptions = DEGREE_OPTIONS
         </el-table-column>
         <el-table-column label="操作" width="140" align="center" fixed="right">
           <template #default="{ row }">
-            <button class="btn-edit" :data-testid="`edu-edit-${row.id}`" @click="openEdit(row)" style="margin-right:6px;">编辑</button>
-            <button class="btn-delete" :data-testid="`edu-delete-${row.id}`" @click="askDelete(row)">删除</button>
+            <el-button size="small" type="primary" link :data-testid="`edu-edit-${row.id}`" @click="openEdit(row)" style="margin-right:6px;">编辑</el-button>
+            <el-button size="small" type="danger" link :data-testid="`edu-delete-${row.id}`" @click="askDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -253,89 +251,82 @@ const degreeOptions = DEGREE_OPTIONS
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <div v-if="dialogVisible" class="edu-dialog-overlay" @click.self="closeDialog">
-      <div class="edu-dialog">
-        <div class="edu-dialog-header">
-          <span>{{ editingId ? '编辑教育经历' : '新增教育经历' }}</span>
-          <button class="edu-dialog-close" @click="closeDialog">✕</button>
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editingId ? '编辑教育经历' : '新增教育经历'"
+      width="480px"
+      @close="closeDialog"
+    >
+      <div class="edu-dialog-body">
+        <div class="edu-form-row">
+          <label class="edu-label"><span class="edu-req">*</span>学校名称</label>
+          <el-input v-model="form.schoolName" placeholder="请输入学校名称" maxlength="50" />
         </div>
-        <div class="edu-dialog-body">
-          <div class="edu-form-row">
-            <label class="edu-label"><span class="edu-req">*</span>学校名称</label>
-            <input v-model="form.schoolName" class="edu-input" placeholder="请输入学校名称" maxlength="50" />
+        <div class="edu-form-row">
+          <label class="edu-label"><span class="edu-req">*</span>学段/学历</label>
+          <el-select v-model="form.degree" style="width: 100%">
+            <el-option v-for="d in degreeOptions" :key="d" :value="d" :label="d" />
+          </el-select>
+        </div>
+        <div class="edu-form-row">
+          <label class="edu-label">专业</label>
+          <el-input v-model="form.major" placeholder="选填" />
+        </div>
+        <div class="edu-form-row edu-form-row-2col">
+          <div>
+            <label class="edu-label"><span class="edu-req">*</span>入学日期</label>
+            <el-input v-model="form.startDate" type="date" />
           </div>
-          <div class="edu-form-row">
-            <label class="edu-label"><span class="edu-req">*</span>学段/学历</label>
-            <select v-model="form.degree" class="edu-select">
-              <option v-for="d in degreeOptions" :key="d" :value="d">{{ d }}</option>
-            </select>
-          </div>
-          <div class="edu-form-row">
-            <label class="edu-label">专业</label>
-            <input v-model="form.major" class="edu-input" placeholder="选填" />
-          </div>
-          <div class="edu-form-row edu-form-row-2col">
-            <div>
-              <label class="edu-label"><span class="edu-req">*</span>入学日期</label>
-              <input v-model="form.startDate" type="date" class="edu-input" />
-            </div>
-            <div>
-              <label class="edu-label">毕业日期</label>
-              <input v-model="form.endDate" type="date" class="edu-input" :disabled="form.isActive" />
-            </div>
-          </div>
-          <div class="edu-form-row">
-            <label class="edu-label">是否在读</label>
-            <label class="edu-switch">
-              <input type="checkbox" v-model="form.isActive" />
-              <span class="edu-switch-slider"></span>
-            </label>
-          </div>
-          <div class="edu-form-row edu-form-row-2col">
-            <div>
-              <label class="edu-label">班主任</label>
-              <input v-model="form.classTeacher" class="edu-input" placeholder="选填" />
-            </div>
-            <div>
-              <label class="edu-label">课老师</label>
-              <input v-model="form.courseTeacher" class="edu-input" placeholder="选填" />
-            </div>
-          </div>
-          <div class="edu-form-row">
-            <label class="edu-label">电话号码</label>
-            <input v-model="form.phone" class="edu-input" placeholder="选填" />
-          </div>
-          <div class="edu-form-row">
-            <label class="edu-label">备注</label>
-            <textarea v-model="form.note" class="edu-textarea" placeholder="选填" rows="2"></textarea>
-          </div>
-          <div v-if="formErrors.length > 0" class="edu-form-errors">
-            <div v-for="err in formErrors" :key="err" class="edu-form-error">{{ err }}</div>
+          <div>
+            <label class="edu-label">毕业日期</label>
+            <el-input v-model="form.endDate" type="date" :disabled="form.isActive" />
           </div>
         </div>
-        <div class="edu-dialog-footer">
-          <button class="edu-btn edu-btn-cancel" @click="closeDialog">取消</button>
-          <button class="edu-btn edu-btn-ok" @click="submitForm">确定</button>
+        <div class="edu-form-row">
+          <label class="edu-label">是否在读</label>
+          <el-switch v-model="form.isActive" />
+        </div>
+        <div class="edu-form-row edu-form-row-2col">
+          <div>
+            <label class="edu-label">班主任</label>
+            <el-input v-model="form.classTeacher" placeholder="选填" />
+          </div>
+          <div>
+            <label class="edu-label">课老师</label>
+            <el-input v-model="form.courseTeacher" placeholder="选填" />
+          </div>
+        </div>
+        <div class="edu-form-row">
+          <label class="edu-label">电话号码</label>
+          <el-input v-model="form.phone" placeholder="选填" />
+        </div>
+        <div class="edu-form-row">
+          <label class="edu-label">备注</label>
+          <el-input v-model="form.note" type="textarea" :rows="2" placeholder="选填" />
+        </div>
+        <div v-if="formErrors.length > 0" class="edu-form-errors">
+          <div v-for="err in formErrors" :key="err" class="edu-form-error">{{ err }}</div>
         </div>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="closeDialog">取消</el-button>
+        <el-button type="primary" @click="submitForm">确定</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 删除确认 -->
-    <div v-if="deleteConfirmVisible" class="edu-dialog-overlay" @click.self="deleteConfirmVisible = false">
-      <div class="edu-dialog edu-dialog-sm">
-        <div class="edu-dialog-header">
-          <span>确认删除</span>
-          <button class="edu-dialog-close" @click="deleteConfirmVisible = false">✕</button>
-        </div>
-        <div class="edu-dialog-body">
-          <p class="edu-confirm-text">确定要删除这条教育经历吗？此操作不可撤销。</p>
-        </div>
-        <div class="edu-dialog-footer">
-          <button class="edu-btn edu-btn-cancel" @click="deleteConfirmVisible = false">取消</button>
-          <button class="edu-btn edu-btn-del" @click="confirmDelete">删除</button>
-        </div>
-      </div>
-    </div>
+    <el-dialog
+      v-model="deleteConfirmVisible"
+      title="确认删除"
+      width="340px"
+      @close="deleteConfirmVisible = false"
+    >
+      <p class="edu-confirm-text">确定要删除这条教育经历吗？此操作不可撤销。</p>
+      <template #footer>
+        <el-button @click="deleteConfirmVisible = false">取消</el-button>
+        <el-button type="danger" @click="confirmDelete">删除</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -353,21 +344,6 @@ const degreeOptions = DEGREE_OPTIONS
   padding: 0 12px 8px;
   flex-shrink: 0;
 }
-/* ===== 新增按钮（与健康面板同款 .btn-add） ===== */
-.btn-add {
-  padding: 8px 16px;
-  background: var(--color-primary, #10b981);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.18);
-  white-space: nowrap;
-}
-.btn-add:hover { opacity: 0.92; transform: translateY(-1px); }
 
 /* ===== 列表容器（学生工作台无强制一屏：直接 flex 列撑满即可） ===== */
 .edu-list {
@@ -464,37 +440,6 @@ const degreeOptions = DEGREE_OPTIONS
   font-size: 13px;
 }
 
-/* ===== 按钮：编辑 / 删除（与健康面板同款 .btn-edit / .btn-delete） ===== */
-.btn-edit, .btn-delete {
-  padding: 5px 12px;
-  font-size: 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all var(--transition-fast, 0.15s ease);
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.btn-edit {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-link, #3b82f6);
-}
-.btn-edit:hover {
-  background: rgba(59, 130, 246, 0.18);
-  transform: translateY(-1px);
-}
-.btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-.btn-delete:hover {
-  background: rgba(239, 68, 68, 0.18);
-  transform: translateY(-1px);
-}
-
 /* ===== 状态徽章：在读（蓝）/ 已毕（绿） ===== */
 .edu-badge {
   padding: 3px 10px;
@@ -541,52 +486,12 @@ const degreeOptions = DEGREE_OPTIONS
 :global(html.dark) .edu-degree-master       { background: rgba(8, 145, 178, 0.22); }
 :global(html.dark) .edu-degree-doctor       { background: rgba(185, 28, 28, 0.28); }
 
-/* ===== 弹框（白色背景，与习惯打卡一致） ===== */
-.edu-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.edu-dialog {
-  background: var(--color-surface, #fff);
-  border-radius: 8px;
-  width: 480px;
-  max-width: 92vw;
-  max-height: 86vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-}
-.edu-dialog-sm { width: 340px; }
-.edu-dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #ebeef5);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, #303133);
-}
-.edu-dialog-close {
-  background: none;
-  border: none;
-  color: var(--color-text-secondary, #909399);
-  cursor: pointer;
-  font-size: 16px;
-}
-.edu-dialog-close:hover { color: var(--color-text, #303133); }
+/* ===== 弹框（Element Plus el-dialog 对齐绿色主题） ===== */
 .edu-dialog-body {
-  padding: 16px;
-  overflow-y: auto;
-  flex: 1;
+  padding: 4px 2px;
 }
 .edu-form-row {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .edu-form-row-2col {
   display: flex;
@@ -595,66 +500,11 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-form-row-2col > div { flex: 1; }
 .edu-label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   font-size: 12px;
   color: var(--color-text-secondary, #606266);
 }
 .edu-req { color: #f56c6c; margin-right: 2px; }
-.edu-input, .edu-select, .edu-textarea {
-  width: 100%;
-  padding: 6px 8px;
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #dcdfe6);
-  border-radius: 4px;
-  color: var(--color-text, #303133);
-  font-size: 13px;
-  box-sizing: border-box;
-}
-.edu-textarea { resize: vertical; }
-.edu-input:focus, .edu-select:focus, .edu-textarea:focus {
-  outline: none;
-  border-color: #409eff;
-}
-.edu-input:disabled {
-  background: #f5f7fa;
-  color: #c0c4cc;
-  cursor: not-allowed;
-}
-.edu-input::placeholder, .edu-textarea::placeholder {
-  color: #c0c4cc;
-}
-.edu-switch {
-  position: relative;
-  display: inline-block;
-  width: 40px;
-  height: 22px;
-  cursor: pointer;
-}
-.edu-switch input { opacity: 0; width: 0; height: 0; }
-.edu-switch-slider {
-  position: absolute;
-  inset: 0;
-  background: #dcdfe6;
-  border-radius: 11px;
-  transition: 0.2s;
-}
-.edu-switch-slider::before {
-  content: '';
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  left: 3px;
-  top: 3px;
-  background: #fff;
-  border-radius: 50%;
-  transition: 0.2s;
-}
-.edu-switch input:checked + .edu-switch-slider {
-  background: #409eff;
-}
-.edu-switch input:checked + .edu-switch-slider::before {
-  transform: translateX(18px);
-}
 .edu-form-errors {
   margin-top: 4px;
   padding: 8px;
@@ -666,40 +516,33 @@ const degreeOptions = DEGREE_OPTIONS
   font-size: 12px;
   line-height: 1.6;
 }
-.edu-dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #ebeef5);
-}
-.edu-btn {
-  padding: 6px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.edu-btn-cancel {
-  background: #fff;
-  border: 1px solid #dcdfe6;
-  color: #606266;
-}
-.edu-btn-cancel:hover { color: #409eff; border-color: #c6e2ff; background: #ecf5ff; }
-.edu-btn-ok {
-  background: #409eff;
-  color: #fff;
-}
-.edu-btn-ok:hover { background: #66b1ff; }
-.edu-btn-del {
-  background: #f56c6c;
-  color: #fff;
-}
-.edu-btn-del:hover { background: #f78989; }
 .edu-confirm-text {
   font-size: 13px;
   color: var(--color-text, #606266);
   text-align: center;
   margin: 0;
+}
+/* el-dialog 圆角/阴影对齐项目卡片风格 */
+.edu-panel :deep(.el-dialog) {
+  border-radius: 12px;
+}
+.edu-panel :deep(.el-dialog__title) {
+  font-size: 15px;
+  font-weight: 600;
+}
+.edu-panel :deep(.el-dialog__body) {
+  padding-top: 16px;
+}
+.edu-panel :deep(.el-dialog__footer) {
+  padding-top: 12px;
+}
+/* el-input/el-select 宽度撑满 */
+.edu-panel :deep(.el-input),
+.edu-panel :deep(.el-select) {
+  width: 100%;
+}
+/* el-switch 与 label 垂直对齐 */
+.edu-panel :deep(.el-switch) {
+  margin-top: 2px;
 }
 </style>

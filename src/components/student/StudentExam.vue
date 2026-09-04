@@ -19,6 +19,7 @@ import { COUNTDOWN_COLOR_PRESETS, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentExamStore()
 const settingsStore = useStudentSettingsStore()
@@ -202,22 +203,21 @@ onMounted(async () => {
 
 <template>
   <div class="se-shell">
-    <div class="se-toolbar">
-      <h2 class="se-title">考试倒计时</h2>
-      <button class="btn-primary se-add-btn" data-testid="se-add-btn" @click="openAddDialog">
+    <StudentToolbar title="考试倒计时">
+      <el-button type="primary" size="small" class="se-add-btn" data-testid="se-add-btn" @click="openAddDialog">
         <Icon name="plus" :size="16" /> 新增考试
-      </button>
-    </div>
+      </el-button>
+    </StudentToolbar>
 
     <div class="se-tabs">
-      <button
-        v-for="tab in typeTabs"
-        :key="tab"
-        class="se-tab"
-        :class="{ active: (tab === '全部' ? '' : tab) === activeCategoryTab }"
-        :data-testid="`se-tab-${tab}`"
-        @click="selectCategoryTab(tab)"
-      >{{ tab }}</button>
+      <el-radio-group v-model="activeCategoryTab" size="small" @change="selectCategoryTab">
+        <el-radio-button
+          v-for="tab in typeTabs"
+          :key="tab"
+          :value="tab"
+          :data-testid="`se-tab-${tab}`"
+        >{{ tab }}</el-radio-button>
+      </el-radio-group>
       <span class="se-count">{{ filteredItems.length }} 场</span>
     </div>
 
@@ -286,78 +286,77 @@ onMounted(async () => {
       @next="next"
     />
 
-    <Teleport to="body">
-      <div v-if="showEditDialog" class="dialog-overlay" @click.self="closeEditDialog">
-        <div class="dialog se-dialog">
-          <div class="dialog-header">
-            <h3>{{ editingId ? '编辑考试' : '新增考试' }}</h3>
-            <button class="dialog-close" @click="closeEditDialog"><Icon name="close" :size="18" /></button>
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId ? '编辑考试' : '新增考试'"
+      width="480px"
+      class="se-dialog"
+      append-to-body
+      @close="closeEditDialog"
+    >
+      <div class="dialog-body">
+        <div class="form-field">
+          <label>考试名称</label>
+          <el-input
+            v-model="formName"
+            type="text"
+            placeholder="如：期中考试-数学"
+            maxlength="30"
+            data-testid="se-form-name"
+            @keyup.enter="saveEditDialog"
+          />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>考试日期</label>
+            <el-input v-model="formDate" type="date" data-testid="se-form-date" />
           </div>
-          <div class="dialog-body">
-            <div class="form-field">
-              <label>考试名称</label>
-              <input
-                v-model="formName"
-                type="text"
-                class="form-input"
-                placeholder="如：期中考试-数学"
-                maxlength="30"
-                data-testid="se-form-name"
-                @keyup.enter="saveEditDialog"
-              />
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>考试日期</label>
-                <input v-model="formDate" type="date" class="form-input" data-testid="se-form-date" />
-              </div>
-              <div class="form-field">
-                <label>考试时间</label>
-                <input v-model="formTime" type="time" class="form-input" data-testid="se-form-time" />
-              </div>
-            </div>
-            <div class="form-field">
-              <label>考试题型</label>
-              <select v-model="formCategory" class="form-input" data-testid="se-form-type">
-                <option value="" disabled>请选择题型</option>
-                <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>重复</label>
-              <select v-model="formRepeatType" class="form-input" data-testid="se-form-repeat">
-                <option value="once">一次性</option>
-                <option value="yearly">每年（如年度统考）</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>卡片颜色</label>
-              <div class="se-color-picker" data-testid="se-form-color">
-                <button
-                  v-for="c in COUNTDOWN_COLOR_PRESETS"
-                  :key="c"
-                  type="button"
-                  class="se-color-dot"
-                  :class="{ active: formColor === c }"
-                  :style="{ backgroundColor: c }"
-                  :title="c"
-                  @click="formColor = c"
-                ></button>
-              </div>
-            </div>
+          <div class="form-field">
+            <label>考试时间</label>
+            <el-input v-model="formTime" type="time" data-testid="se-form-time" />
           </div>
-          <div class="dialog-footer">
-            <button v-if="editingId" class="btn-danger" data-testid="se-form-delete" @click="handleDelete(editingId)">
-              删除
-            </button>
-            <div class="dialog-footer-right">
-              <button class="btn-ghost" @click="closeEditDialog">取消</button>
-              <button class="btn-primary" data-testid="se-form-save" @click="saveEditDialog">保存</button>
-            </div>
+        </div>
+        <div class="form-field">
+          <label>考试题型</label>
+          <el-select v-model="formCategory" placeholder="请选择题型" data-testid="se-form-type">
+            <el-option v-for="t in typeOptions" :key="t" :value="t" :label="t" />
+          </el-select>
+        </div>
+        <div class="form-field">
+          <label>重复</label>
+          <el-select v-model="formRepeatType" data-testid="se-form-repeat">
+            <el-option value="once" label="一次性" />
+            <el-option value="yearly" label="每年（如年度统考）" />
+          </el-select>
+        </div>
+        <div class="form-field">
+          <label>卡片颜色</label>
+          <div class="se-color-picker" data-testid="se-form-color">
+            <button
+              v-for="c in COUNTDOWN_COLOR_PRESETS"
+              :key="c"
+              type="button"
+              class="se-color-dot"
+              :class="{ active: formColor === c }"
+              :style="{ backgroundColor: c }"
+              :title="c"
+              @click="formColor = c"
+            ></button>
           </div>
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button v-if="editingId" type="danger" data-testid="se-form-delete" @click="handleDelete(editingId)">
+            删除
+          </el-button>
+          <div class="dialog-footer-right">
+            <el-button @click="closeEditDialog">取消</el-button>
+            <el-button type="primary" data-testid="se-form-save" @click="saveEditDialog">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -371,39 +370,45 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.se-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.se-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
+/* ===== 题型筛选 tabs（el-radio-group 药丸，保持过滤逻辑与激活态绑定 activeCategoryTab） ===== */
 .se-tabs {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.se-tab {
-  padding: 4px 12px;
+
+.se-tabs :deep(.el-radio-group) {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.se-tabs :deep(.el-radio-button + .el-radio-button) {
+  margin-left: 0;
+}
+
+.se-tabs :deep(.el-radio-button__inner) {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 14px;
   background: transparent;
   color: var(--color-text-muted, #6b7280);
-  cursor: pointer;
   font-size: 12px;
+  padding: 4px 12px;
+  box-shadow: none;
   transition: all 0.15s;
 }
-.se-tab:hover { background: var(--color-hover, #f3f4f6); }
-.se-tab.active {
-  border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
-  background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+
+.se-tabs :deep(.el-radio-button__inner:hover) {
+  color: var(--color-primary, #10b981);
 }
+
+.se-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  border-color: var(--color-primary, #10b981);
+  color: var(--color-primary, #10b981);
+  background: color-mix(in srgb, var(--color-primary, #10b981) 8%, transparent);
+  box-shadow: none;
+}
+
 .se-count {
   margin-left: auto;
   font-size: 12px;
@@ -559,46 +564,26 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.se-dialog {
-  width: 480px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface, #fff);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* ===== 编辑弹框（el-dialog） ===== */
+.se-dialog :deep(.el-dialog__header) {
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
+  margin-right: 0;
 }
-.dialog-header h3 { margin: 0; font-size: 16px; }
-.dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
-}
-.dialog-body {
+
+.se-dialog :deep(.el-dialog__body) {
   padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
+
+.se-dialog :deep(.el-dialog__footer) {
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
@@ -608,13 +593,8 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 500;
 }
-.form-input {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 14px;
+.form-field :deep(.el-select) {
+  width: 100%;
 }
 .form-row { display: flex; gap: 12px; }
 .form-row .form-field { flex: 1; }
@@ -643,45 +623,12 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
+  width: 100%;
 }
 .dialog-footer-right {
   display: flex;
   gap: 8px;
   margin-left: auto;
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-primary:hover { filter: brightness(0.95); }
-.btn-ghost {
-  padding: 8px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-danger {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: #ef4444;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
 }
 
 @media (max-width: 768px) {

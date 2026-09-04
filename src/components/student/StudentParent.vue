@@ -11,6 +11,7 @@ import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentAchievementsStore } from '@/stores/studentAchievements'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import type { StudentParentTask } from '@/types'
 import { dateKeyOf } from '@/composables/diaryCore'
 
@@ -415,17 +416,13 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         <div class="stp-lock-icon"><Icon name="passwords" /></div>
         <h3 class="stp-lock-title">🔒 家长模式未解锁</h3>
         <p class="stp-lock-desc">家长控制台包含加分、发放勋章、删除记录等敏感操作，需要输入家长 PIN 验证后再使用。</p>
-        <button class="stp-lock-btn" type="button" @click="emit('open-pin')">输入家长 PIN 解锁</button>
+        <el-button type="primary" size="large" @click="emit('open-pin')">输入家长 PIN 解锁</el-button>
       </div>
     </div>
 
     <template v-else>
       <!-- 工具条 -->
-      <header class="stp-toolbar">
-        <div class="stp-title-group">
-          <h2 class="stp-title">👨‍👩‍👧 家长协同控制台</h2>
-        </div>
-      </header>
+      <StudentToolbar title="👨‍👩‍👧 家长协同控制台" />
 
       <!-- Tabs 标签栏（样式参考健康管理 WorkbenchHealth.vue 的 hd-tabs/hd-tab） -->
       <nav class="hd-tabs stp-tabs" role="tablist" data-testid="stp-tabs">
@@ -479,18 +476,18 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               <span class="stp-reset-desc">以下操作会将对应数据恢复到初始化状态，不可撤销，请谨慎使用。</span>
             </div>
             <div class="stp-reset-actions">
-              <button
-                type="button"
-                class="stp-btn-reset"
+              <el-button
+                type="danger"
+                plain
                 :disabled="resettingAchievements"
                 @click="handleResetAchievements"
-              >{{ resettingAchievements ? '重置中…' : '🏅 重置成就勋章' }}</button>
-              <button
-                type="button"
-                class="stp-btn-reset"
+              >{{ resettingAchievements ? '重置中…' : '🏅 重置成就勋章' }}</el-button>
+              <el-button
+                type="danger"
+                plain
                 :disabled="resettingRewards"
                 @click="handleResetRewards"
-              >{{ resettingRewards ? '重置中…' : '🎁 重置奖励积分' }}</button>
+              >{{ resettingRewards ? '重置中…' : '🎁 重置奖励积分' }}</el-button>
             </div>
           </div>
         </section>
@@ -502,9 +499,9 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
             <div class="stp-pane-actions">
               <label class="stp-date-label">
                 <span>日期</span>
-                <input type="date" class="stp-date-input" v-model="toolbarDate" />
+                <el-input v-model="toolbarDate" type="date" size="small" style="width: 150px" />
               </label>
-              <button type="button" class="stp-btn-primary" @click="openAddTask">＋ 新增当日任务</button>
+              <el-button type="primary" @click="openAddTask">＋ 新增当日任务</el-button>
             </div>
           </div>
           <div class="stp-pane-toolbar-sub">
@@ -529,8 +526,8 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
                 <div class="stp-task-date">{{ t.date }}</div>
               </div>
               <div class="stp-task-actions">
-                <button class="stp-btn-ghost" type="button" @click="openEditTask(t)">编辑</button>
-                <button class="stp-btn-danger" type="button" @click="removeTask(t)">删除</button>
+                <el-button size="small" type="primary" link @click="openEditTask(t)">编辑</el-button>
+                <el-button size="small" type="danger" link @click="removeTask(t)">删除</el-button>
               </div>
             </article>
           </div>
@@ -610,13 +607,13 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           <div class="stp-points-form">
             <label class="stp-field">
               <span class="stp-field-label">积分</span>
-              <input type="number" min="1" max="9999" step="1" class="stp-field-input" placeholder="1-9999 的整数" v-model.number="pointAmount" />
+              <el-input type="number" min="1" max="9999" step="1" placeholder="1-9999 的整数" v-model.number="pointAmount" />
             </label>
             <label class="stp-field stp-field-flex">
               <span class="stp-field-label">原因</span>
-              <input type="text" class="stp-field-input" placeholder="如：今日表现优秀、按时完成作业、帮忙做家务等" v-model="pointReason" />
+              <el-input type="text" placeholder="如：今日表现优秀、按时完成作业、帮忙做家务等" v-model="pointReason" />
             </label>
-            <button type="button" class="stp-btn-primary" @click="submitManualPoints">提交加分</button>
+            <el-button type="primary" @click="submitManualPoints">提交加分</el-button>
           </div>
           <div class="stp-report-block">
             <h4 class="stp-report-subtitle">最近 10 条加分记录</h4>
@@ -643,7 +640,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
             <h3 class="stp-pane-title">🏅 发放特殊勋章</h3>
             <label class="stp-field stp-field-inline">
               <span class="stp-field-label">备注</span>
-              <input type="text" class="stp-field-input" placeholder="发放理由（可选）" v-model="badgeNote" />
+              <el-input type="text" placeholder="发放理由（可选）" v-model="badgeNote" style="width: 260px" />
             </label>
           </div>
           <div class="stp-badge-grid">
@@ -662,12 +659,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
                 </template>
                 <template v-else>未解锁</template>
               </div>
-              <button
-                type="button"
-                class="stp-btn-primary stp-btn-small"
+              <el-button
+                type="primary"
+                size="small"
                 :disabled="achievementsStore.isUnlocked(b.id) || badgeGrantingId === b.id"
                 @click="grantBadge(b.id)"
-              >{{ badgeGrantingId === b.id ? '发放中…' : '手动发放' }}</button>
+              >{{ badgeGrantingId === b.id ? '发放中…' : '手动发放' }}</el-button>
             </div>
           </div>
           <!-- 勋章分页器（>1 页才显示） -->
@@ -682,7 +679,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
         <section v-else-if="activeTab === 'rewards'" class="stp-tab-pane">
           <div class="stp-pane-toolbar">
             <h3 class="stp-pane-title">🎁 奖励项管理</h3>
-            <button type="button" class="stp-btn-primary" @click="openAddReward">＋ 新增奖励项</button>
+            <el-button type="primary" @click="openAddReward">＋ 新增奖励项</el-button>
           </div>
           <div v-if="allRewards.length === 0" class="stp-empty">
             暂无奖励项。点击右上角「＋ 新增奖励项」来创建孩子可以用积分兑换的奖励吧～
@@ -698,8 +695,8 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               <div class="stp-reward-cost">{{ r.cost }} 积分</div>
               <div class="stp-reward-stock">库存：{{ r.stock === undefined ? '不限' : r.stock }}</div>
               <div class="stp-reward-actions">
-                <button class="stp-btn-ghost" type="button" @click="openEditReward(r.id)">编辑</button>
-                <button class="stp-btn-danger" type="button" @click="deleteReward(r.id)">删除</button>
+                <el-button size="small" type="primary" link @click="openEditReward(r.id)">编辑</el-button>
+                <el-button size="small" type="danger" link @click="deleteReward(r.id)">删除</el-button>
               </div>
             </div>
           </div>
@@ -714,56 +711,54 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
     </template>
 
     <!-- 任务表单弹框 -->
-    <div v-if="taskFormVisible" class="stp-modal-mask" @click.self="taskFormVisible = false">
-      <div class="stp-modal-dialog">
-        <header class="stp-modal-header">
-          <h3>{{ taskFormMode === 'add' ? '新增任务' : '编辑任务' }}</h3>
-          <button class="stp-close-btn" type="button" @click="taskFormVisible = false"><Icon name="close" /></button>
-        </header>
-        <div class="stp-modal-body">
-          <label class="stp-field">
-            <span class="stp-field-label">任务标题</span>
-            <input type="text" class="stp-field-input" maxlength="100" v-model="taskFormTitle" />
-          </label>
-          <label class="stp-field">
-            <span class="stp-field-label">日期</span>
-            <input type="date" class="stp-field-input" v-model="taskFormDate" />
-          </label>
-        </div>
-        <footer class="stp-modal-footer">
-          <button class="stp-btn-ghost" type="button" @click="taskFormVisible = false">取消</button>
-          <button class="stp-btn-primary" type="button" @click="submitTaskForm">保存</button>
-        </footer>
+    <el-dialog
+      v-model="taskFormVisible"
+      :title="taskFormMode === 'add' ? '新增任务' : '编辑任务'"
+      width="440px"
+      @close="taskFormVisible = false"
+    >
+      <div class="stp-modal-body">
+        <label class="stp-field">
+          <span class="stp-field-label">任务标题</span>
+          <el-input type="text" maxlength="100" v-model="taskFormTitle" />
+        </label>
+        <label class="stp-field">
+          <span class="stp-field-label">日期</span>
+          <el-input type="date" v-model="taskFormDate" />
+        </label>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="taskFormVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitTaskForm">保存</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 奖励表单弹框 -->
-    <div v-if="rewardFormVisible" class="stp-modal-mask" @click.self="rewardFormVisible = false">
-      <div class="stp-modal-dialog">
-        <header class="stp-modal-header">
-          <h3>{{ rewardFormMode === 'add' ? '新增奖励项' : '编辑奖励项' }}</h3>
-          <button class="stp-close-btn" type="button" @click="rewardFormVisible = false"><Icon name="close" /></button>
-        </header>
-        <div class="stp-modal-body">
-          <label class="stp-field">
-            <span class="stp-field-label">名称</span>
-            <input type="text" class="stp-field-input" maxlength="50" v-model="rewardFormName" />
-          </label>
-          <label class="stp-field">
-            <span class="stp-field-label">所需积分</span>
-            <input type="number" min="1" max="9999" step="1" class="stp-field-input" v-model.number="rewardFormCost" />
-          </label>
-          <label class="stp-field">
-            <span class="stp-field-label">库存（留空=不限）</span>
-            <input type="number" min="0" step="1" class="stp-field-input" v-model.number="rewardFormStock" />
-          </label>
-        </div>
-        <footer class="stp-modal-footer">
-          <button class="stp-btn-ghost" type="button" @click="rewardFormVisible = false">取消</button>
-          <button class="stp-btn-primary" type="button" @click="submitRewardForm">保存</button>
-        </footer>
+    <el-dialog
+      v-model="rewardFormVisible"
+      :title="rewardFormMode === 'add' ? '新增奖励项' : '编辑奖励项'"
+      width="440px"
+      @close="rewardFormVisible = false"
+    >
+      <div class="stp-modal-body">
+        <label class="stp-field">
+          <span class="stp-field-label">名称</span>
+          <el-input type="text" maxlength="50" v-model="rewardFormName" />
+        </label>
+        <label class="stp-field">
+          <span class="stp-field-label">所需积分</span>
+          <el-input type="number" min="1" max="9999" step="1" v-model.number="rewardFormCost" />
+        </label>
+        <label class="stp-field">
+          <span class="stp-field-label">库存（留空=不限）</span>
+          <el-input type="number" min="0" step="1" v-model.number="rewardFormStock" />
+        </label>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="rewardFormVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitRewardForm">保存</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -791,27 +786,6 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-lock-icon { font-size: 40px; color: #f59e0b; margin-bottom: 12px; display: flex; justify-content: center; }
 .stp-lock-title { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
 .stp-lock-desc { margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: var(--color-text-secondary, #6b7280); }
-.stp-lock-btn {
-  padding: 10px 20px;
-  background: var(--color-primary, #10b981);
-  color: #fff; border: 0; border-radius: 10px;
-  font-size: 15px; font-weight: 500; cursor: pointer;
-  transition: all 0.15s;
-}
-.stp-lock-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
-
-.stp-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.stp-title-group { display: flex; align-items: baseline; gap: 12px; }
-.stp-title { margin: 0; font-size: 20px; font-weight: 700; }
-.stp-toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.stp-date-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text-secondary, #6b7280); }
-.stp-date-input {
-  border: 1px solid var(--color-border, #d1d5db);
-  border-radius: 8px; padding: 6px 10px;
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #1f2937);
-  font-size: 13px;
-}
 
 .stp-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .stp-stat-card {
@@ -843,15 +817,6 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
 .stp-reset-title { font-size: 14px; font-weight: 600; color: #dc2626; }
 .stp-reset-desc { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .stp-reset-actions { display: flex; gap: 10px; flex-shrink: 0; }
-.stp-btn-reset {
-  background: transparent; color: #dc2626;
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  padding: 8px 16px; border-radius: 8px;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  transition: all 0.12s; white-space: nowrap;
-}
-.stp-btn-reset:hover:not(:disabled) { background: rgba(220, 38, 38, 0.08); }
-.stp-btn-reset:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ============================================================
    Tabs：复用健康管理 WorkbenchHealth.vue 的 hd-tabs/hd-tab 样式。
@@ -946,16 +911,6 @@ html.dark .stp-date-chip {
 }
 .stp-pane-title { margin: 0; font-size: 16px; font-weight: 600; }
 
-.stp-btn-primary {
-  background: var(--color-primary, #10b981); color: #fff; border: 0;
-  padding: 8px 16px; border-radius: 8px;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  transition: all 0.12s;
-}
-.stp-btn-primary:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
-.stp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.stp-btn-small { padding: 6px 12px; font-size: 12px; }
-
 /* 分页器：视觉参考工作台 PanelPager — 左右按钮居中，中间信息，圆角 8px 描边 */
 .stp-pager {
   display: flex;
@@ -1017,20 +972,6 @@ html.dark .stp-pager-btn:hover:not(:disabled) {
 html.dark .stp-pager-info {
   color: #d1d5db;
 }
-
-.stp-btn-ghost {
-  background: transparent; color: var(--color-text-secondary, #6b7280);
-  border: 1px solid var(--color-border, #d1d5db);
-  padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
-}
-.stp-btn-ghost:hover { background: var(--color-surface-2, #f3f4f6); color: var(--color-text, #1f2937); }
-
-.stp-btn-danger {
-  background: transparent; color: #dc2626;
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
-}
-.stp-btn-danger:hover { background: rgba(220, 38, 38, 0.08); }
 
 .stp-empty {
   padding: 28px 16px;
@@ -1101,15 +1042,6 @@ html.dark .stp-pager-info {
 .stp-field-flex { min-width: 0; }
 .stp-field-inline { flex-direction: row; align-items: center; gap: 8px; }
 .stp-field-label { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
-.stp-field-input {
-  padding: 7px 10px;
-  border: 1px solid var(--color-border, #d1d5db);
-  border-radius: 8px;
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #1f2937);
-  font-size: 13px;
-}
-.stp-field-input:focus { outline: 2px solid var(--color-primary, #10b981); outline-offset: -1px; }
 
 .stp-txn-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .stp-txn-item {
@@ -1144,8 +1076,6 @@ html.dark .stp-pager-info {
   min-height: calc(11px * 1.35 * 2); /* 稳占 2 行高度，避免卡片忽高忽低 */
 }
 .stp-badge-status { font-size: 11px; color: var(--color-text-secondary, #6b7280); line-height: 1.2; }
-/* 勋章卡上的"手动发放"按钮再紧凑一点（原 stp-btn-small 6/12 变 5/10） */
-.stp-badge-card .stp-btn-small { padding: 4px 10px; font-size: 11px; margin-top: 2px; }
 
 .stp-reward-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .stp-reward-card {
@@ -1160,41 +1090,23 @@ html.dark .stp-pager-info {
 .stp-reward-stock { font-size: 12px; color: var(--color-text-secondary, #6b7280); }
 .stp-reward-actions { display: flex; gap: 6px; width: 100%; }
 
-.stp-modal-mask {
-  position: fixed; inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
-  z-index: 2500;
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-}
-.stp-modal-dialog {
-  width: 100%; max-width: 440px;
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #1f2937);
+.stp-modal-body { display: flex; flex-direction: column; gap: 14px; }
+/* el-dialog 对齐项目卡片风格 */
+.st-parent-panel :deep(.el-dialog) {
   border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
-  border: 1px solid var(--color-border, #e5e7eb);
-  overflow: hidden;
 }
-.stp-modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
+.st-parent-panel :deep(.el-dialog__title) {
+  font-size: 16px;
+  font-weight: 600;
 }
-.stp-modal-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
-.stp-close-btn {
-  border: 0; background: transparent; color: var(--color-text-secondary, #6b7280);
-  padding: 4px; border-radius: 6px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+.st-parent-panel :deep(.el-dialog__body) {
+  padding-top: 16px;
 }
-.stp-close-btn:hover { background: var(--color-surface-2, #f3f4f6); color: var(--color-text, #1f2937); }
-.stp-modal-body { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-.stp-modal-footer {
-  padding: 12px 18px;
-  display: flex; justify-content: flex-end; gap: 8px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-surface-2, #fafafa);
+.st-parent-panel :deep(.el-dialog__footer) {
+  padding-top: 12px;
+}
+.st-parent-panel :deep(.el-input) {
+  width: 100%;
 }
 
 @media (max-width: 1100px) {
@@ -1203,7 +1115,7 @@ html.dark .stp-pager-info {
   .stp-task-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stp-reward-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stp-points-form { grid-template-columns: 160px 1fr; }
-  .stp-points-form .stp-btn-primary { grid-column: 1 / -1; }
+  .stp-points-form :deep(.el-button) { grid-column: 1 / -1; }
 }
 @media (max-width: 768px) {
   .st-parent-panel { padding: 12px; }
@@ -1211,7 +1123,6 @@ html.dark .stp-pager-info {
   .stp-stat-value { font-size: 22px; }
   .stp-task-grid, .stp-reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stp-reset-actions { flex-direction: column; width: 100%; }
-  .stp-btn-reset { text-align: center; }
   .stp-badge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stp-tab { padding: 8px 10px; font-size: 12px; }
   .stp-summary-grid { grid-template-columns: 1fr 1fr; }
@@ -1220,7 +1131,7 @@ html.dark .stp-pager-info {
   .stp-txn-date { grid-column: 1 / -1; text-align: right; }
   .stp-pane-actions { width: 100%; }
   .stp-pane-actions .stp-date-label { flex: 1; min-width: 0; }
-  .stp-pane-actions .stp-date-label .stp-date-input { flex: 1; min-width: 0; }
+  .stp-pane-actions .stp-date-label :deep(.el-input) { flex: 1; min-width: 0; }
 }
 @media (max-width: 480px) {
   .stp-stats-grid { grid-template-columns: 1fr; }

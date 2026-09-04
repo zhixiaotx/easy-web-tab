@@ -20,6 +20,7 @@ import type {
   StudentHomeworkStatus
 } from '@/types'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentHomeworkStore()
 const settingsStore = useStudentSettingsStore()
@@ -215,37 +216,30 @@ onMounted(async () => {
 
 <template>
   <div class="shw-shell">
-    <div class="shw-toolbar">
-      <h2 class="shw-title">作业管理</h2>
-      <div class="shw-toolbar-right">
-        <div class="shw-count">共 {{ viewEntries.length }} 条</div>
-        <button class="btn-add shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
-          <span>＋ 新增作业</span>
-        </button>
-      </div>
-    </div>
+    <StudentToolbar title="作业管理">
+      <div class="shw-count">共 {{ viewEntries.length }} 条</div>
+      <el-button type="primary" size="small" class="shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
+        ＋ 新增作业
+      </el-button>
+    </StudentToolbar>
 
     <div class="shw-filters">
-      <div class="shw-subject-tabs">
-        <button
+      <el-radio-group v-model="activeSubject" class="shw-subject-tabs" size="small">
+        <el-radio-button
           v-for="tab in subjectTabs"
           :key="tab.key"
-          class="shw-tab"
-          :class="{ active: activeSubject === tab.key }"
+          :value="tab.key"
           :data-testid="`shw-subject-${tab.key}`"
-          @click="activeSubject = tab.key"
-        >{{ tab.label }}</button>
-      </div>
-      <div class="shw-status-tabs">
-        <button
+        >{{ tab.label }}</el-radio-button>
+      </el-radio-group>
+      <el-radio-group v-model="activeStatus" class="shw-status-tabs" size="small">
+        <el-radio-button
           v-for="tab in STATUS_FILTERS"
           :key="tab.key"
-          class="shw-tab shw-status-tab"
-          :class="{ active: activeStatus === tab.key }"
+          :value="tab.key"
           :data-testid="`shw-status-${tab.key}`"
-          @click="activeStatus = tab.key"
-        >{{ tab.label }}</button>
-      </div>
+        >{{ tab.label }}</el-radio-button>
+      </el-radio-group>
     </div>
 
     <div class="shw-main">
@@ -339,79 +333,72 @@ onMounted(async () => {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="showEditDialog" class="dialog-overlay" @click.self="closeEditDialog">
-        <div class="dialog st-dialog">
-          <div class="dialog-header">
-            <h3>{{ editingId ? '编辑作业' : '新增作业' }}</h3>
-            <button class="dialog-close" @click="closeEditDialog"><Icon name="close" :size="18" /></button>
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId ? '编辑作业' : '新增作业'"
+      width="480px"
+      @close="closeEditDialog"
+    >
+      <div class="dialog-body">
+        <div class="form-field">
+          <label>学科</label>
+          <el-select v-if="!dialogSubjectCustom" v-model="dialogSubject" data-testid="shw-form-subject">
+            <el-option v-for="s in settingsStore.subjects" :key="s" :value="s" :label="s" />
+          </el-select>
+          <el-input
+            v-else
+            v-model="dialogSubject"
+            placeholder="输入学科名称"
+            maxlength="10"
+            data-testid="shw-form-subject-custom"
+          />
+          <el-checkbox v-model="dialogSubjectCustom" class="shw-custom-toggle">自定义学科</el-checkbox>
+        </div>
+        <div class="form-field">
+          <label>作业标题</label>
+          <el-input
+            v-model="dialogTitle"
+            placeholder="如：第3课课后练习"
+            maxlength="50"
+            data-testid="shw-form-title"
+            @keyup.enter="saveEditDialog"
+          />
+        </div>
+        <div class="form-field">
+          <label>详细描述（可选）</label>
+          <el-input
+            v-model="dialogContent"
+            type="textarea"
+            :rows="3"
+            placeholder="作业要求、页码范围等"
+            data-testid="shw-form-content"
+          />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>截止日期</label>
+            <el-input v-model="dialogDueDate" type="date" data-testid="shw-form-due" />
           </div>
-          <div class="dialog-body">
-            <div class="form-field">
-              <label>学科</label>
-              <select v-if="!dialogSubjectCustom" v-model="dialogSubject" class="form-input" data-testid="shw-form-subject">
-                <option v-for="s in settingsStore.subjects" :key="s" :value="s">{{ s }}</option>
-              </select>
-              <input
-                v-else
-                v-model="dialogSubject"
-                type="text"
-                class="form-input"
-                placeholder="输入学科名称"
-                maxlength="10"
-                data-testid="shw-form-subject-custom"
-              />
-              <label class="shw-custom-toggle">
-                <input type="checkbox" v-model="dialogSubjectCustom" /> 自定义学科
-              </label>
-            </div>
-            <div class="form-field">
-              <label>作业标题</label>
-              <input
-                v-model="dialogTitle"
-                type="text"
-                class="form-input"
-                placeholder="如：第3课课后练习"
-                maxlength="50"
-                data-testid="shw-form-title"
-                @keyup.enter="saveEditDialog"
-              />
-            </div>
-            <div class="form-field">
-              <label>详细描述（可选）</label>
-              <textarea
-                v-model="dialogContent"
-                class="form-input form-textarea"
-                placeholder="作业要求、页码范围等"
-                rows="3"
-                data-testid="shw-form-content"
-              ></textarea>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>截止日期</label>
-                <input v-model="dialogDueDate" type="date" class="form-input" data-testid="shw-form-due" />
-              </div>
-              <div class="form-field">
-                <label>优先级</label>
-                <select v-model="dialogPriority" class="form-input" data-testid="shw-form-priority">
-                  <option v-for="p in PRIORITY_OPTIONS" :key="p.value" :value="p.value">{{ p.label }}</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="dialog-footer">
-            <button v-if="editingId" class="btn-danger" data-testid="shw-form-delete" @click="handleDelete(editingId)">
-              删除
-            </button>
-            <div class="dialog-footer-right">
-              <button class="btn-ghost" @click="closeEditDialog">取消</button>
-              <button class="btn-primary" data-testid="shw-form-save" @click="saveEditDialog">保存</button>
-            </div>
+          <div class="form-field">
+            <label>优先级</label>
+            <el-select v-model="dialogPriority" data-testid="shw-form-priority">
+              <el-option v-for="p in PRIORITY_OPTIONS" :key="p.value" :value="p.value" :label="p.label" />
+            </el-select>
           </div>
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button v-if="editingId" type="danger" data-testid="shw-form-delete" @click="handleDelete(editingId)">
+            删除
+          </el-button>
+          <div class="dialog-footer-right">
+            <el-button @click="closeEditDialog">取消</el-button>
+            <el-button type="primary" data-testid="shw-form-save" @click="saveEditDialog">保存</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -425,43 +412,11 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.shw-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 12px 8px;
-  flex-shrink: 0;
-}
-.shw-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-.shw-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 .shw-count {
   font-size: 13px;
   color: var(--color-text-muted, #6b7280);
   white-space: nowrap;
 }
-/* ===== 新增按钮（与教育经历面板同款 .btn-add 翠绿胶囊） ===== */
-.btn-add {
-  padding: 8px 16px;
-  background: var(--color-primary, #10b981);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.18);
-  white-space: nowrap;
-}
-.btn-add:hover { opacity: 0.92; transform: translateY(-1px); }
 
 .shw-filters {
   display: flex;
@@ -471,26 +426,7 @@ onMounted(async () => {
 .shw-subject-tabs,
 .shw-status-tabs {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
-}
-.shw-tab {
-  padding: 5px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 14px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s;
-}
-.shw-tab:hover {
-  background: var(--color-hover, #f3f4f6);
-}
-.shw-tab.active {
-  background: var(--color-primary-soft, rgba(59, 130, 246, 0.12));
-  border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
 }
 
 .shw-main {
@@ -706,59 +642,7 @@ onMounted(async () => {
   font-size: 11px;
 }
 
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.st-dialog {
-  width: 480px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface, #fff);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-bg-soft, #f9fafb);
-}
-.dialog-header h3 {
-  margin: 0;
-  font-size: 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.dialog-header h3::before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  border-radius: 2px;
-  background: var(--color-primary, #3b82f6);
-}
-:global(html.dark) .dialog-header {
-  background: var(--color-bg-hover, #111827);
-}
-.dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
-}
 .dialog-body {
-  padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -772,86 +656,27 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 500;
 }
-.form-input {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 14px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-.form-textarea {
-  resize: vertical;
-  min-height: 60px;
-  font-family: inherit;
-}
 .form-row {
   display: flex;
   gap: 12px;
 }
 .form-row .form-field { flex: 1; }
 .shw-custom-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   font-size: 12px;
   font-weight: 400;
   color: var(--color-text-muted, #6b7280);
-  cursor: pointer;
 }
 .dialog-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
+  width: 100%;
 }
 .dialog-footer-right {
   display: flex;
   gap: 8px;
   margin-left: auto;
 }
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-primary:hover { filter: brightness(0.95); }
-.btn-ghost {
-  padding: 8px 14px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-danger {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: #ef4444;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.list-enter-active, .list-leave-active { transition: all 0.25s ease; }
-.list-enter-from, .list-leave-to { opacity: 0; transform: translateX(-8px); }
 
 @media (max-width: 768px) {
   .shw-shell { padding: 12px; }

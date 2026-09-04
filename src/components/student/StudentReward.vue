@@ -12,6 +12,7 @@ import { useToast } from '@/composables/useToast'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import type { StudentRewardItem, StudentRewardTxn } from '@/types'
 
 const store = useStudentRewardsStore()
@@ -92,15 +93,12 @@ onMounted(async () => {
 
 <template>
   <div class="sr-shell">
-    <div class="sr-toolbar">
-      <h2 class="sr-title">奖励积分</h2>
-      <div class="sr-actions">
-        <button class="sr-btn sr-btn-secondary" @click="showRulesDialog = true" title="积分规则" data-testid="sr-rules-btn">
-          <Icon name="countdowns" :size="16" />
-          <span>规则</span>
-        </button>
-      </div>
-    </div>
+    <StudentToolbar title="奖励积分">
+      <el-button size="small" data-testid="sr-rules-btn" @click="showRulesDialog = true" title="积分规则">
+        <Icon name="countdowns" :size="16" />
+        <span>规则</span>
+      </el-button>
+    </StudentToolbar>
 
     <div class="sr-stats-row">
       <div class="sr-stat-card sr-stat-main">
@@ -125,20 +123,10 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="sr-tabs">
-      <button
-        class="sr-tab"
-        :class="{ active: activeView === 'rewards' }"
-        data-testid="sr-tab-rewards"
-        @click="activeView = 'rewards'"
-      >奖励项</button>
-      <button
-        class="sr-tab"
-        :class="{ active: activeView === 'history' }"
-        data-testid="sr-tab-history"
-        @click="activeView = 'history'"
-      >交易记录 <span class="sr-tab-count">({{ stats.txnCount }})</span></button>
-    </div>
+    <el-radio-group v-model="activeView" class="sr-tabs">
+      <el-radio-button value="rewards" data-testid="sr-tab-rewards">奖励项</el-radio-button>
+      <el-radio-button value="history" data-testid="sr-tab-history">交易记录 <span class="sr-tab-count">({{ stats.txnCount }})</span></el-radio-button>
+    </el-radio-group>
 
     <!-- 奖励项视图 -->
     <div v-if="activeView === 'rewards'" ref="mainEl" class="sr-main">
@@ -210,31 +198,23 @@ onMounted(async () => {
     </div>
 
     <!-- 积分规则弹框 -->
-    <div v-if="showRulesDialog" class="sr-dialog-overlay" @click.self="showRulesDialog = false">
-      <div class="sr-dialog" data-testid="sr-rules-dialog">
-        <div class="sr-dialog-head">
-          <h3>积分规则</h3>
-          <button class="sr-dialog-close" @click="showRulesDialog = false" title="关闭">
-            <Icon name="close" :size="18" />
-          </button>
-        </div>
-        <div class="sr-dialog-body">
-          <ul class="sr-rules-list">
-            <li v-for="(rule, idx) in rules" :key="idx" class="sr-rules-item">
-              <span class="sr-rules-action">{{ rule.action }}</span>
-              <span class="sr-rules-points">
-                <template v-if="rule.points > 0">+{{ rule.points }} 分</template>
-                <template v-else>自定义</template>
-              </span>
-            </li>
-          </ul>
-          <p class="sr-hint">完成习惯/作业/阅读自动加分，每条只加一次（幂等）；同一行为不会重复加分。如需新增奖励项或手工加分，请到「家长协同」面板使用。</p>
-        </div>
-        <div class="sr-dialog-foot">
-          <button class="sr-btn sr-btn-primary" @click="showRulesDialog = false">知道了</button>
-        </div>
+    <el-dialog v-model="showRulesDialog" title="积分规则" width="420px" append-to-body data-testid="sr-rules-dialog">
+      <div class="sr-dialog-body">
+        <ul class="sr-rules-list">
+          <li v-for="(rule, idx) in rules" :key="idx" class="sr-rules-item">
+            <span class="sr-rules-action">{{ rule.action }}</span>
+            <span class="sr-rules-points">
+              <template v-if="rule.points > 0">+{{ rule.points }} 分</template>
+              <template v-else>自定义</template>
+            </span>
+          </li>
+        </ul>
+        <p class="sr-hint">完成习惯/作业/阅读自动加分，每条只加一次（幂等）；同一行为不会重复加分。如需新增奖励项或手工加分，请到「家长协同」面板使用。</p>
       </div>
-    </div>
+      <template #footer>
+        <el-button type="primary" @click="showRulesDialog = false">知道了</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -245,48 +225,6 @@ onMounted(async () => {
   height: 100%;
   min-height: 0;
   gap: 10px;
-}
-
-.sr-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-.sr-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-.sr-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.sr-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #1f2937);
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.sr-btn:hover { background: var(--color-surface-hover, #f9fafb); }
-.sr-btn-primary {
-  background: #3b82f6;
-  color: #fff;
-  border-color: transparent;
-}
-.sr-btn-primary:hover { background: #2563eb; }
-.sr-btn-secondary { /* 默认样式 */ }
-.sr-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .sr-stats-row {
@@ -323,24 +261,9 @@ onMounted(async () => {
 .sr-stat-value.muted { color: #9ca3af; }
 
 .sr-tabs {
-  display: flex;
-  gap: 4px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.sr-tab {
-  padding: 6px 14px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-soft, #6b7280);
-  font-size: 13px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-}
-.sr-tab.active {
-  color: var(--color-text, #1f2937);
-  border-bottom-color: #3b82f6;
-  font-weight: 600;
+  padding-bottom: 2px;
 }
 .sr-tab-count {
   font-size: 11px;
@@ -573,78 +496,12 @@ onMounted(async () => {
 }
 
 /* ===== 弹框 ===== */
-.sr-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-.sr-dialog {
-  background: var(--color-surface, #fff);
-  border-radius: 8px;
-  width: 420px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-.sr-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-.sr-dialog-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.sr-dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: var(--color-text-soft, #6b7280);
-  padding: 4px;
-  border-radius: 4px;
-}
-.sr-dialog-close:hover { background: var(--color-surface-hover, #f3f4f6); }
 .sr-dialog-body {
-  padding: 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-}
-.sr-dialog-foot {
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.sr-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.sr-label {
-  font-size: 12px;
-  color: var(--color-text-soft, #6b7280);
-}
-.sr-input {
-  padding: 6px 8px;
-  border: 1px solid var(--color-border, #d1d5db);
-  border-radius: 4px;
-  font-size: 14px;
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #1f2937);
-}
-.sr-input:focus {
-  outline: none;
-  border-color: #3b82f6;
 }
 .sr-hint {
   font-size: 12px;

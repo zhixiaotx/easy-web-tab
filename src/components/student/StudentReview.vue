@@ -13,6 +13,7 @@ import { localToday } from '@/composables/todoCore'
 import type { StudentReviewItem } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
+import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import Icon from '@/components/Icon.vue'
 
 const store = useStudentReviewStore()
@@ -157,22 +158,21 @@ function daysClass(days: number): string {
 
 <template>
   <div class="sr-shell">
-    <div class="sr-toolbar">
-      <h2 class="sr-title">复习计划</h2>
-      <button class="btn-primary sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
+    <StudentToolbar title="复习计划">
+      <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
         <Icon name="plus" :size="16" /> 新增复习
-      </button>
-    </div>
+      </el-button>
+    </StudentToolbar>
 
     <div class="sr-tabs">
-      <button
-        v-for="tab in subjectTabs"
-        :key="tab.key"
-        class="sr-tab"
-        :class="{ active: activeSubject === tab.key }"
-        :data-testid="`sr-tab-${tab.key}`"
-        @click="activeSubject = tab.key"
-      >{{ tab.label }}</button>
+      <el-radio-group v-model="activeSubject" size="small">
+        <el-radio-button
+          v-for="tab in subjectTabs"
+          :key="tab.key"
+          :value="tab.key"
+          :data-testid="`sr-tab-${tab.key}`"
+        >{{ tab.label }}</el-radio-button>
+      </el-radio-group>
       <span class="sr-count">{{ viewEntries.length }} 条</span>
     </div>
 
@@ -220,14 +220,16 @@ function daysClass(days: number): string {
             <span class="sr-subject-badge">{{ item.subject }}</span>
             <span class="sr-knowledge" :title="item.knowledge">{{ item.knowledge }}</span>
             <span v-if="item.source" class="sr-source" :title="item.source">{{ item.source }}</span>
-            <button
+            <el-button
               class="sr-del-btn"
               :data-testid="`sr-del-${item.id}`"
               title="删除"
+              text
+              size="small"
               @click.stop="handleDelete(item.id)"
             >
               <Icon name="close" :size="14" />
-            </button>
+            </el-button>
           </div>
           <div class="sr-card-meta">
             <span class="sr-stage">{{ store.stageText(item.stage) }}</span>
@@ -240,23 +242,26 @@ function daysClass(days: number): string {
             <span class="sr-learn-date">初学 {{ item.learnDate }}</span>
           </div>
           <div class="sr-card-foot">
-            <button
+            <el-button
               v-if="!item.mastered"
-              class="sr-action-btn sr-advance-btn"
+              size="small"
+              class="sr-advance-btn"
               :data-testid="`sr-advance-${item.id}`"
               @click="handleAdvance(item.id)"
-            >已掌握，下一阶段</button>
-            <button
+            >已掌握，下一阶段</el-button>
+            <el-button
               v-if="item.stage > 1 || item.mastered"
-              class="sr-action-btn sr-reset-btn"
+              size="small"
+              class="sr-reset-btn"
               :data-testid="`sr-reset-${item.id}`"
               @click="handleReset(item.id)"
-            >未掌握，重置</button>
-            <button
+            >未掌握，重置</el-button>
+            <el-button
+              size="small"
               class="sr-edit-btn"
               :data-testid="`sr-edit-${item.id}`"
               @click="openEditDialog(item.id)"
-            >编辑</button>
+            >编辑</el-button>
           </div>
         </div>
       </div>
@@ -271,59 +276,61 @@ function daysClass(days: number): string {
     />
 
     <!-- 新增/编辑弹框 -->
-    <div v-if="showEditDialog" class="sr-dialog-mask" @click.self="closeEditDialog">
-      <div class="sr-dialog">
-        <div class="sr-dialog-head">
-          <h3>{{ editingId !== null ? '编辑复习条目' : '新增复习条目' }}</h3>
-          <button class="sr-dialog-close" @click="closeEditDialog"><Icon name="close" /></button>
+    <el-dialog
+      v-model="showEditDialog"
+      :title="editingId !== null ? '编辑复习条目' : '新增复习条目'"
+      width="480px"
+      @close="closeEditDialog"
+    >
+      <div class="sr-dialog-body">
+        <div class="sr-field">
+          <label>学科</label>
+          <el-select
+            v-model="dialogSubject"
+            filterable
+            allow-create
+            placeholder="例：数学"
+            data-testid="sr-form-subject"
+          >
+            <el-option v-for="s in settingsStore.subjects" :key="s" :value="s" :label="s" />
+          </el-select>
         </div>
-        <div class="sr-dialog-body">
-          <div class="sr-field">
-            <label>学科</label>
-            <input
-              type="text"
-              v-model="dialogSubject"
-              list="sr-subject-list"
-              placeholder="例：数学"
-              data-testid="sr-form-subject"
-            />
-            <datalist id="sr-subject-list">
-              <option v-for="s in settingsStore.subjects" :key="s" :value="s" />
-            </datalist>
-          </div>
-          <div class="sr-field">
-            <label>知识点（最长 200 字符）</label>
-            <textarea
-              v-model="dialogKnowledge"
-              maxlength="200"
-              rows="3"
-              placeholder="例：一元二次方程的求根公式"
-              data-testid="sr-form-knowledge"
-            ></textarea>
-          </div>
-          <div class="sr-field">
-            <label>来源（可选）</label>
-            <input
-              type="text"
-              v-model="dialogSource"
-              maxlength="50"
-              placeholder="例：教材 P45 / 错题本"
-              data-testid="sr-form-source"
-            />
-          </div>
-          <div class="sr-field">
-            <label>初学日期</label>
-            <input type="date" v-model="dialogLearnDate" data-testid="sr-form-learn-date" />
-          </div>
+        <div class="sr-field">
+          <label>知识点（最长 200 字符）</label>
+          <el-input
+            v-model="dialogKnowledge"
+            type="textarea"
+            :maxlength="200"
+            :rows="3"
+            placeholder="例：一元二次方程的求根公式"
+            data-testid="sr-form-knowledge"
+          />
         </div>
-        <div class="sr-dialog-foot">
-          <button class="btn-secondary" @click="closeEditDialog">取消</button>
-          <button class="btn-primary" @click="saveEditDialog" data-testid="sr-form-save">
-            {{ editingId !== null ? '保存' : '新增' }}
-          </button>
+        <div class="sr-field">
+          <label>来源（可选）</label>
+          <el-input
+            v-model="dialogSource"
+            :maxlength="50"
+            placeholder="例：教材 P45 / 错题本"
+            data-testid="sr-form-source"
+          />
+        </div>
+        <div class="sr-field">
+          <label>初学日期</label>
+          <el-input
+            v-model="dialogLearnDate"
+            type="date"
+            data-testid="sr-form-learn-date"
+          />
         </div>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="closeEditDialog">取消</el-button>
+        <el-button type="primary" data-testid="sr-form-save" @click="saveEditDialog">
+          {{ editingId !== null ? '保存' : '新增' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -336,46 +343,11 @@ function daysClass(days: number): string {
   gap: 12px;
 }
 
-.sr-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 4px;
-}
-
-.sr-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.sr-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-}
-
 .sr-tabs {
   display: flex;
   gap: 8px;
   align-items: center;
   padding: 0 4px;
-}
-
-.sr-tab {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 16px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 13px;
-}
-.sr-tab.active {
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
-  border-color: var(--color-primary, #3b82f6);
 }
 
 .sr-count {
@@ -488,15 +460,10 @@ function daysClass(days: number): string {
 }
 
 .sr-del-btn {
-  border: none;
-  background: transparent;
+  flex-shrink: 0;
   color: var(--color-text-secondary, #6b7280);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
 }
 .sr-del-btn:hover {
-  background: rgba(239, 68, 68, 0.12);
   color: #ef4444;
 }
 
@@ -535,76 +502,30 @@ function daysClass(days: number): string {
   justify-content: flex-end;
 }
 
-.sr-action-btn,
-.sr-edit-btn {
-  padding: 4px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 12px;
-}
-
 .sr-advance-btn {
-  border-color: #10b981;
   color: #10b981;
+  border-color: #10b981;
 }
 .sr-advance-btn:hover {
   background: rgba(16, 185, 129, 0.12);
 }
 
 .sr-reset-btn {
-  border-color: #f59e0b;
   color: #f59e0b;
+  border-color: #f59e0b;
 }
 .sr-reset-btn:hover {
   background: rgba(245, 158, 11, 0.12);
 }
 
-.sr-dialog-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.sr-dialog {
-  background: var(--color-surface, #fff);
-  border-radius: 8px;
-  width: 480px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.sr-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border, #e5e7eb);
-}
-
-.sr-dialog-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
-  padding: 4px;
+.sr-edit-btn {
+  color: var(--color-text-secondary, #6b7280);
 }
 
 .sr-dialog-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .sr-field {
@@ -616,25 +537,6 @@ function daysClass(days: number): string {
 .sr-field label {
   font-size: 13px;
   color: var(--color-text-secondary, #6b7280);
-}
-
-.sr-field input,
-.sr-field textarea {
-  padding: 6px 10px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--color-surface, #fff);
-  color: inherit;
-  font-size: 13px;
-  font-family: inherit;
-}
-
-.sr-dialog-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
 .empty-state {

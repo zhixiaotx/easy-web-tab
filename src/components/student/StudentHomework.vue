@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // 学生工作台作业管理面板（M2）
-// 布局：顶部工具条 + 学科筛选 tabs + 状态筛选 tabs + 行式卡片列表 + 分页
+// 布局：顶部工具条 + 学科筛选 tabs + 状态筛选 tabs + el-table 表格列表 + el-pagination 分页
 // 数据：useStudentHomeworkStore（独立 IDB store 'student_homework'，严格隔离成人数据）
 // 学科下拉来自 studentSettings.subjects（学段默认或用户自定义）
-// 行高 80px（M2 估值，待 row-heights.json 实测后校准）
 
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
@@ -20,8 +19,6 @@ import type {
   StudentHomeworkPriority,
   StudentHomeworkStatus
 } from '@/types'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 
 const store = useStudentHomeworkStore()
@@ -63,18 +60,18 @@ const viewEntries = computed(() => {
   return store.sortEntries(list)
 })
 
-// ===== 自适应分页（4 列卡片网格，行高 152px，参考学习计划 150 + 2）=====
-const mainEl = ref<HTMLElement | null>(null)
-const listEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => viewEntries.value,
-  rowHeight: 152,
-  containerRef: mainEl,
-  gridRef: listEl
+// ===== 分页：Element Plus el-pagination，固定 10 条/页 =====
+const LIST_PAGE_SIZE = 10
+const listPage = ref(1)
+const listPageItems = computed<StudentHomework[]>(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return viewEntries.value.slice(start, start + LIST_PAGE_SIZE)
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
 watch([activeSubject, activeStatus], () => goto(1))
+function goto(page: number): void {
+  listPage.value = page
+}
 
 // ===== 优先级选项 =====
 const PRIORITY_OPTIONS: { value: StudentHomeworkPriority; label: string }[] = [
@@ -202,6 +199,11 @@ function statusBadgeClass(status: StudentHomeworkStatus): string {
   return `shw-status-${status}`
 }
 
+// el-table 行内联类（按状态着色左边框/底色）
+function shwRowClass({ row }: { row: StudentHomework }): string {
+  return `shw-row-${row.status}`
+}
+
 function nextStatusLabel(status: StudentHomeworkStatus): string {
   return statusLabel(nextStatus(status))
 }
@@ -215,9 +217,12 @@ onMounted(async () => {
   <div class="shw-shell">
     <div class="shw-toolbar">
       <h2 class="shw-title">作业管理</h2>
-      <button class="btn-primary shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
-        <Icon name="plus" :size="16" /> 新增作业
-      </button>
+      <div class="shw-toolbar-right">
+        <div class="shw-count">共 {{ viewEntries.length }} 条</div>
+        <button class="btn-add shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
+          <span>＋ 新增作业</span>
+        </button>
+      </div>
     </div>
 
     <div class="shw-filters">
@@ -243,68 +248,96 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div ref="mainEl" class="shw-main">
-      <div v-if="viewEntries.length === 0" class="empty-state" data-testid="shw-empty">
-        <p>还没有作业，点上方「新增作业」开始吧</p>
-      </div>
-
-      <div v-else ref="listEl" class="shw-list" :class="{ 'shw-list-scroll': !fitsOnePage }">
-        <TransitionGroup name="list">
-          <div
-            v-for="e in pageItems"
-            :key="e.id"
-            class="shw-card"
-            :class="statusBadgeClass(e.status)"
-            :data-testid="`shw-card-${e.id}`"
-            @click="openEditDialog(e.id)"
-          >
-            <div class="shw-card-left">
-              <span class="shw-subject-badge">{{ e.subject }}</span>
-            </div>
-            <div class="shw-card-main">
-              <div class="shw-card-title" :title="e.title">{{ e.title }}</div>
-              <span class="shw-priority" :class="`shw-priority-${e.priority}`" :data-testid="`shw-priority-${e.id}`">
-                优先级 {{ priorityLabel(e.priority) }}
+    <div class="shw-main">
+      <!-- 表格区（Element Plus Table） -->
+      <div class="shw-list">
+        <el-table
+          :data="listPageItems"
+          stripe
+          border
+          size="default"
+          style="width: 100%"
+          height="100%"
+          :row-class-name="shwRowClass"
+          empty-text="还没有作业，点上方「新增作业」开始吧"
+        >
+          <el-table-column label="学科" width="100" align="center">
+            <template #default="{ row }">
+              <span class="shw-subject-badge">{{ row.subject }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="标题" min-width="160" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span style="font-weight: 600;">{{ row.title }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="内容" min-width="200" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.content">{{ row.content }}</span>
+              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="优先级" width="90" align="center">
+            <template #default="{ row }">
+              <span class="shw-priority" :class="`shw-priority-${row.priority}`" :data-testid="`shw-priority-${row.id}`">
+                {{ priorityLabel(row.priority) }}
               </span>
-              <div class="shw-card-sub" v-if="e.content">{{ e.content }}</div>
-            </div>
-            <div class="shw-card-info">
-              <span class="shw-due" :class="{ overdue: dueInfo(e.dueDate, e.status).isOverdue, today: dueInfo(e.dueDate, e.status).isToday, tomorrow: dueInfo(e.dueDate, e.status).isTomorrow }">
-                {{ dueInfo(e.dueDate, e.status).text }}
+            </template>
+          </el-table-column>
+          <el-table-column label="截止日期" width="150" align="center">
+            <template #default="{ row }">
+              <span class="shw-due" :class="{ overdue: dueInfo(row.dueDate, row.status).isOverdue, today: dueInfo(row.dueDate, row.status).isToday, tomorrow: dueInfo(row.dueDate, row.status).isTomorrow }">
+                {{ row.dueDate }}
               </span>
-              <span class="shw-date">截止 {{ e.dueDate }}</span>
-              <span class="shw-status" :class="statusBadgeClass(e.status)" :data-testid="`shw-status-${e.id}`">
-                {{ statusLabel(e.status) }}
+              <div class="shw-due-text">{{ dueInfo(row.dueDate, row.status).text }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <span class="shw-status" :class="statusBadgeClass(row.status)" :data-testid="`shw-status-${row.id}`">
+                {{ statusLabel(row.status) }}
               </span>
-            </div>
-            <div class="shw-card-actions">
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="170" align="center" fixed="right">
+            <template #default="{ row }">
+              <button class="shw-edit-btn" :data-testid="`shw-edit-${row.id}`" @click="openEditDialog(row.id)">
+                编辑
+              </button>
               <button
-                v-if="e.status !== 'done'"
+                v-if="row.status !== 'done'"
                 class="shw-advance-btn"
-                :class="statusBadgeClass(e.status)"
-                :data-testid="`shw-advance-${e.id}`"
-                :title="`推进到「${nextStatusLabel(e.status)}」`"
-                @click.stop="handleAdvanceStatus(e.id)"
+                :class="statusBadgeClass(row.status)"
+                :data-testid="`shw-advance-${row.id}`"
+                :title="`推进到「${nextStatusLabel(row.status)}」`"
+                @click="handleAdvanceStatus(row.id)"
               >
                 <Icon name="check" :size="14" />
-                <span>{{ nextStatusLabel(e.status) }}</span>
+                <span>{{ nextStatusLabel(row.status) }}</span>
               </button>
-              <span v-else class="shw-done-mark" :data-testid="`shw-done-${e.id}`">
+              <span v-else class="shw-done-mark" :data-testid="`shw-done-${row.id}`">
                 <Icon name="check" :size="14" /> 已完成
               </span>
-            </div>
-          </div>
-        </TransitionGroup>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 分页条（Element Plus Pagination） -->
+      <div v-if="viewEntries.length > 0" class="shw-pager">
+        <el-pagination
+          v-model:current-page="listPage"
+          :page-size="LIST_PAGE_SIZE"
+          :page-sizes="[LIST_PAGE_SIZE]"
+          layout="total, prev, pager, next, jumper"
+          :total="viewEntries.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+        />
       </div>
     </div>
-
-    <PanelPager
-      v-if="totalPages > 1"
-      :page="currentPage"
-      :total="totalPages"
-      @prev="prev"
-      @next="next"
-    />
 
     <Teleport to="body">
       <div v-if="showEditDialog" class="dialog-overlay" @click.self="closeEditDialog">
@@ -396,12 +429,39 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 12px 8px;
+  flex-shrink: 0;
 }
 .shw-title {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
 }
+.shw-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.shw-count {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b7280);
+  white-space: nowrap;
+}
+/* ===== 新增按钮（与教育经历面板同款 .btn-add 翠绿胶囊） ===== */
+.btn-add {
+  padding: 8px 16px;
+  background: var(--color-primary, #10b981);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.18);
+  white-space: nowrap;
+}
+.btn-add:hover { opacity: 0.92; transform: translateY(-1px); }
 
 .shw-filters {
   display: flex;
@@ -436,132 +496,198 @@ onMounted(async () => {
 .shw-main {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-}
-.shw-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  align-content: start;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.shw-list-scroll {
-  overflow-y: auto;
-}
-
-.shw-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  height: 150px;
-  min-height: 150px;
-  padding: 6px 10px;
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-left: 3px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  cursor: pointer;
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s;
 }
-.shw-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.shw-card.shw-status-pending { border-left-color: #6b7280; }
-.shw-card.shw-status-doing { border-left-color: #3b82f6; background: var(--color-primary-soft, rgba(59, 130, 246, 0.04)); }
-.shw-card.shw-status-overdue { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.04); }
-.shw-card.shw-status-done { border-left-color: #10b981; opacity: 0.75; }
 
-.shw-card-left {
+/* ===== 表格容器 ===== */
+.shw-list {
+  flex: 1 1 auto;
+  min-height: 240px;
+  width: 100%;
+  padding: 0 16px;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  flex-direction: column;
+  box-sizing: border-box;
 }
+.shw-list > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.shw-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.shw-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(:root.dark) .shw-list > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(:root.dark) .shw-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(:root.dark) .shw-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.shw-list > :global(.el-table .el-table__body-wrapper .cell),
+.shw-list > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+}
+
+/* ===== 行状态着色（左边框/底色，仿旧卡片） ===== */
+.shw-list > :global(.el-table .el-table__row.shw-row-pending td.el-table__cell) {
+  border-left: 3px solid #6b7280;
+}
+.shw-list > :global(.el-table .el-table__row.shw-row-doing td.el-table__cell) {
+  border-left: 3px solid #3b82f6;
+}
+.shw-list > :global(.el-table .el-table__row.shw-row-overdue td.el-table__cell) {
+  border-left: 3px solid #ef4444;
+}
+.shw-list > :global(.el-table .el-table__row.shw-row-done td.el-table__cell) {
+  border-left: 3px solid #10b981;
+  opacity: 0.75;
+}
+
+/* ===== 分页条 ===== */
+.shw-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 16px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+:global(:root.dark) .shw-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.shw-pager > :global(.el-pagination) {
+  --el-pagination-bg-color: transparent;
+}
+.shw-pager > :global(.el-pagination button),
+.shw-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.shw-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(:root.dark) .shw-pager > :global(.el-pagination button),
+:global(:root.dark) .shw-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(:root.dark) .shw-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.shw-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
 .shw-subject-badge {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
-  border-radius: 6px;
-  background: var(--color-hover, #f3f4f6);
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
   font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text, #1f2937);
-}
-
-.shw-card-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.shw-card-title {
-  font-size: 13px;
   font-weight: 600;
+  color: var(--color-link, #3b82f6);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.6;
 }
-.shw-card-sub {
-  font-size: 11px;
-  color: var(--color-text-muted, #6b7280);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+:global(:root.dark) .shw-subject-badge {
+  background: rgba(59, 130, 246, 0.22);
 }
 
-.shw-card-info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--color-text-muted, #6b7280);
-}
 .shw-due { font-weight: 500; }
 .shw-due.overdue { color: #ef4444; }
 .shw-due.today { color: #f59e0b; }
 .shw-due.tomorrow { color: #3b82f6; }
-.shw-date { font-size: 10px; opacity: 0.7; }
-.shw-priority {
-  align-self: flex-start;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: var(--color-hover, #f3f4f6);
+.shw-due-text {
   font-size: 10px;
+  margin-top: 2px;
+  color: var(--color-text-muted, #6b7280);
 }
-.shw-priority-high { color: #ef4444; }
-.shw-priority-normal { color: #6b7280; }
-.shw-priority-low { color: #9ca3af; }
-.shw-status {
-  padding: 0 4px;
-  border-radius: 3px;
+.shw-due-text:empty { display: none; }
+.shw-priority {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 500;
-  font-size: 10px;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.shw-priority-high { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.shw-priority-normal { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+.shw-priority-low { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+.shw-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 11px;
+  white-space: nowrap;
 }
 .shw-status.shw-status-pending { background: #f3f4f6; color: #6b7280; }
 .shw-status.shw-status-doing { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
 .shw-status.shw-status-overdue { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 .shw-status.shw-status-done { background: rgba(16, 185, 129, 0.12); color: #10b981; }
 
-.shw-card-actions {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-end;
+.shw-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #6b7280);
+  cursor: pointer;
+  font-size: 12px;
+  margin-right: 6px;
+  transition: all 0.15s;
+}
+.shw-edit-btn:hover {
+  background: var(--color-hover, #f3f4f6);
+  color: var(--color-link, #3b82f6);
+  border-color: rgba(59, 130, 246, 0.4);
 }
 .shw-advance-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text-secondary, #6b7280);
   cursor: pointer;
   font-size: 11px;
   transition: all 0.15s;
@@ -569,25 +695,15 @@ onMounted(async () => {
 .shw-advance-btn:hover {
   background: var(--color-hover, #f3f4f6);
 }
-.shw-advance-btn.shw-status-pending { border-color: #3b82f6; color: #3b82f6; }
-.shw-advance-btn.shw-status-doing { border-color: #10b981; color: #10b981; }
-.shw-advance-btn.shw-status-overdue { border-color: #3b82f6; color: #3b82f6; }
+.shw-advance-btn.shw-status-pending { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.shw-advance-btn.shw-status-doing { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.shw-advance-btn.shw-status-overdue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .shw-done-mark {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: #10b981;
   font-size: 11px;
-}
-
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 200px;
-  color: var(--color-text-muted, #6b7280);
-  font-size: 14px;
 }
 
 .dialog-overlay {
@@ -614,8 +730,25 @@ onMounted(async () => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-soft, #f9fafb);
 }
-.dialog-header h3 { margin: 0; font-size: 16px; }
+.dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dialog-header h3::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--color-primary, #3b82f6);
+}
+:global(:root.dark) .dialog-header {
+  background: var(--color-bg-hover, #111827);
+}
 .dialog-close {
   border: none;
   background: transparent;
@@ -642,10 +775,16 @@ onMounted(async () => {
 .form-input {
   padding: 8px 12px;
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--color-surface, #fff);
   color: inherit;
   font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 .form-textarea {
   resize: vertical;
@@ -716,7 +855,5 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .shw-shell { padding: 12px; }
-  .shw-card { height: 150px; min-height: 150px; }
-  .shw-card-info { align-items: flex-start; }
 }
 </style>

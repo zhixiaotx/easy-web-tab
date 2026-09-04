@@ -181,7 +181,7 @@ const degreeOptions = DEGREE_OPTIONS
             <span class="edu-degree-badge" :class="DEGREE_BADGE_CLASS[row.degree as EducationDegree]">{{ row.degree }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="专业" min-width="180" align="left" show-overflow-tooltip>
+        <el-table-column label="专业" width="110" align="left" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.major">{{ row.major }}</span>
             <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>

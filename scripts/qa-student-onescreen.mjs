@@ -212,7 +212,7 @@ function buildCountdownsExam() {
 
 const MEASURE_PANELS = [
   { key: 'habits',         menuIdx: 1,  item: '[data-testid^="sh-card-"]' },
-  { key: 'homework',       menuIdx: 2,  item: '[data-testid^="shw-card-"]' },
+  { key: 'homework',       menuIdx: 2,  item: '[data-testid^="shw-status-"]', measure: 'row' },
   { key: 'plan',           menuIdx: 4,  item: '[data-testid^="sp-card-"]' },
   { key: 'review',         menuIdx: 5,  item: '[data-testid^="sr-card-"]' },
   { key: 'mistakes',       menuIdx: 6,  item: '[data-testid^="sm-card-"]' },
@@ -226,7 +226,7 @@ const MEASURE_PANELS = [
 const SCREENSHOT_PANELS = [
   { key: 'home',         menuIdx: 0,  wait: '.student-home' },
   { key: 'habits',       menuIdx: 1,  wait: '[data-testid^="sh-card-"]' },
-  { key: 'homework',     menuIdx: 2,  wait: '[data-testid^="shw-card-"]' },
+  { key: 'homework',     menuIdx: 2,  wait: '[data-testid^="shw-status-"]' },
   { key: 'timetable',    menuIdx: 3,  wait: '.stt-grid' },
   { key: 'plan',         menuIdx: 4,  wait: '[data-testid^="sp-card-"]' },
   { key: 'review',       menuIdx: 5,  wait: '[data-testid^="sr-card-"]' },
@@ -297,7 +297,9 @@ async function measurePanels(page, heights) {
     if (panel.tabSel) { await page.click(panel.tabSel); await page.waitForTimeout(150) }
     const loc = page.locator(panel.item).first()
     await loc.waitFor({ state: 'visible', timeout: 12000 })
-    const h = await loc.evaluate((el) => el.getBoundingClientRect().height)
+    const h = panel.measure === 'row'
+      ? await loc.evaluate((el) => { const tr = el.closest('tr'); return (tr ? tr : el).getBoundingClientRect().height })
+      : await loc.evaluate((el) => el.getBoundingClientRect().height)
     heights[panel.key] = Math.max(heights[panel.key] ?? 0, h)
   }
 }
@@ -331,7 +333,7 @@ async function runContractAssertions(page) {
   }
   const S2_PANELS = [
     { key: 'habits',   menuIdx: 1, item: '[data-testid^="sh-card-"]' },
-    { key: 'homework', menuIdx: 2, item: '[data-testid^="shw-card-"]' },
+    { key: 'homework', menuIdx: 2, item: '[data-testid^="shw-status-"]' },
     { key: 'plan',     menuIdx: 4, item: '[data-testid^="sp-card-"]' },
     { key: 'mistakes', menuIdx: 6, item: '[data-testid^="sm-card-"]' },
     { key: 'rewards',  menuIdx: 12, item: '[data-testid^="sr-reward-"]', tabSel: '[data-testid="sr-tab-rewards"]' }
@@ -365,7 +367,7 @@ async function runContractAssertions(page) {
   }
   await guard(`S3 homework 学科筛选切换回第1页`, async () => {
     await navMenuIdx(page, 2)
-    await page.waitForSelector('[data-testid^="shw-card-"]', { state: 'visible', timeout: 12000 })
+    await page.waitForSelector('[data-testid^="shw-status-"]', { state: 'visible', timeout: 12000 })
     const p0 = await getPagerState(page)
     if (p0 && p0.total > 1 && p0.page === 1) { await page.click('[data-testid="panel-pager-next"]'); await page.waitForTimeout(150) }
     const yuwen = page.locator('[data-testid="shw-subject-语文"]').first()

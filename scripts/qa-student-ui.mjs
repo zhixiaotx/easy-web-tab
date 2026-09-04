@@ -365,16 +365,21 @@ async function runS2(page) {
 // ============ S3 作业（5 条） ============
 async function runS3(page) {
   await navMenuIdx(page, 2)
-  await page.waitForSelector('[data-testid^="shw-card-"]', { state: 'visible', timeout: 15000 })
+  await page.waitForSelector('[data-testid^="shw-status-"]', { state: 'visible', timeout: 15000 })
   await page.waitForTimeout(150)
+  // 作业列表为 el-table：每行恰好一个状态徽标 shw-status-<id>，用作行计数锚点
+  const HW_ROWS = '[data-testid^="shw-status-"]'
+  const hwRowCount = () => page.locator(HW_ROWS).count()
+  // 某标题是否出现在任意一行（向上找 tr 取整行文本）
+  const hwTextHas = (t) => page.evaluate((q) => Array.from(document.querySelectorAll('[data-testid^="shw-status-"]')).some(n => ((n.closest('tr') && n.closest('tr').textContent) || '').includes(q)), t).catch(() => false)
   await guard('S3-1 新增：title 为空 → 拒存', async () => {
-    const before = await page.locator('[data-testid^="shw-card-"]').count()
+    const before = await hwRowCount()
     await page.locator('[data-testid="shw-add-btn"]').click({ force: true, timeout: 5000 })
     await page.waitForSelector('[data-testid="shw-form-title"]', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="shw-form-title"]').fill('')
     try { await page.locator('[data-testid="shw-form-save"]').click({ force: true, timeout: 5000 }) } catch {}; await page.evaluate(() => { const b = document.querySelector('[data-testid="shw-form-save"]'); if (b) b.click() }); await page.waitForTimeout(200)
     await page.waitForTimeout(300)
-    const after = await page.locator('[data-testid^="shw-card-"]').count()
+    const after = await hwRowCount()
     await page.keyboard.press('Escape')
     record('S3-1 空 title 拒存（计数不变）', before === after, { before, after })
   }, { page })
@@ -413,18 +418,18 @@ async function runS3(page) {
       return { count: items ? items.length : 0, hasTitle: !!has }
     })
     const domPagerCount = await page.locator('[data-testid="panel-pager"]').count()
-    let domTitleFound = await page.evaluate((t) => Array.from(document.querySelectorAll('[data-testid^="shw-card-"]')).some(n => (n.textContent || '').includes(t)), title).catch(() => false)
+    let domTitleFound = await hwTextHas(title)
     if (!domTitleFound && domPagerCount > 0) {
       // 翻一页再找
       try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(250) } catch {}
-      domTitleFound = await page.evaluate((t) => Array.from(document.querySelectorAll('[data-testid^="shw-card-"]')).some(n => (n.textContent || '').includes(t)), title).catch(() => false)
+      domTitleFound = await hwTextHas(title)
     }
     if (!domTitleFound) {
       try { await page.locator('[data-testid="shw-subject-语文"]').click({ timeout: 1500 }); await page.waitForTimeout(220) } catch {}
-      domTitleFound = await page.evaluate((t) => Array.from(document.querySelectorAll('[data-testid^="shw-card-"]')).some(n => (n.textContent || '').includes(t)), title).catch(() => false)
+      domTitleFound = await hwTextHas(title)
       if (!domTitleFound && (await page.locator('[data-testid="panel-pager"]').count()) > 0) {
         try { await page.locator('[data-testid="panel-pager-next"]').click({ timeout: 1500 }); await page.waitForTimeout(250) } catch {}
-        domTitleFound = await page.evaluate((t) => Array.from(document.querySelectorAll('[data-testid^="shw-card-"]')).some(n => (n.textContent || '').includes(t)), title).catch(() => false)
+        domTitleFound = await hwTextHas(title)
       }
     }
     const storeOk = added && storeAfterInfo.count === storeBefore + 1 && storeAfterInfo.hasTitle
@@ -487,8 +492,9 @@ async function runS3(page) {
           if (/已完成|完成|done/i.test(text)) return true
         }
         if (await page.locator('[data-testid="shw-done-hw_q1"]').count() > 0) return true
-        return await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="shw-card-"]')).some(el => {
-          const txt = el.textContent || ''
+        return await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid^="shw-status-"]')).some(el => {
+          const row = el.closest('tr')
+          const txt = row ? (row.textContent || '') : ''
           return txt.includes('hw_q1') && (/已完成|完成/.test(txt) || txt.includes('status: done'))
         })).catch(() => false)
       }
@@ -502,28 +508,28 @@ async function runS3(page) {
     }, { page })
   await guard('S3-4 语文 tab 筛选 → 计数≥1（种子 hw_q1 + 新添加的语文 2 篇）', async () => {
     await page.locator('[data-testid="shw-subject-语文"]').click({ force: true, timeout: 5000 }); await page.waitForTimeout(220)
-    const n = await page.locator('[data-testid^="shw-card-"]').count()
+    const n = await hwRowCount()
     record('S3-4 语文 tab → 列表≥1', n >= 1, { yuwenCount: n })
   }, { page })
   await guard('S3-5 删除 hw_q3 生效 → 计数-1 或 hw_q3 不在页面', async () => {
     try { await page.locator('[data-testid="shw-subject-全部"]').click({ timeout: 2000 }); await page.waitForTimeout(150) } catch {}
-    const before = await page.locator('[data-testid^="shw-card-"]').count()
-    const hasQ3 = await page.locator('[data-testid="shw-card-hw_q3"]').count()
+    const before = await hwRowCount()
+    const hasQ3 = await page.locator('[data-testid="shw-status-hw_q3"]').count()
     if (hasQ3 === 0) { record('S3-5 跳过：hw_q3 不在当前视图', true, { skipped: true, count: hasQ3 }) }
     else {
       try {
-        await page.evaluate(() => {
-          const card = document.querySelector('[data-testid="shw-card-hw_q3"]')
-          if (!card) return
-          const editBtns = card.querySelectorAll('button')
-          for (const b of editBtns) { if ((b.textContent || '').includes('编辑')) { b.click(); return } }
+        const editBtn = page.locator('[data-testid="shw-edit-hw_q3"]')
+        if (await editBtn.count() > 0) await editBtn.click({ force: true, timeout: 3000 })
+        else await page.evaluate(() => {
+          const b = document.querySelector('[data-testid="shw-edit-hw_q3"]')
+          if (b) b.click()
         })
         await page.waitForTimeout(300)
         const del = page.locator('[data-testid="shw-form-delete"]')
         if ((await del.count()) > 0) {
           await del.click(); await page.waitForTimeout(400)
-          const after = await page.locator('[data-testid^="shw-card-"]').count()
-          const q3Gone = (await page.locator('[data-testid="shw-card-hw_q3"]').count()) === 0
+          const after = await hwRowCount()
+          const q3Gone = (await page.locator('[data-testid="shw-status-hw_q3"]').count()) === 0
           record('S3-5 删除生效 → 列表减少且 hw_q3 不在视图', q3Gone || after <= before - 1, { before, after, q3Gone })
         } else { await page.keyboard.press('Escape'); record('S3-5 删除失败：无删除按钮', false, { reason: 'btn missing' }) }
       } catch (e) { record('S3-5 删除异常', false, { error: e.message }) }

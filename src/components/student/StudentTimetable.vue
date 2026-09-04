@@ -267,9 +267,7 @@ onMounted(async () => {
             placeholder="输入学科名称"
             maxlength="10"
           />
-          <label class="stt-custom-toggle">
-            <input type="checkbox" v-model="dialogSubjectCustom" /> 自定义学科
-          </label>
+          <el-checkbox class="stt-custom-toggle" v-model="dialogSubjectCustom">自定义学科</el-checkbox>
         </div>
         <div class="form-row">
           <div class="form-field">

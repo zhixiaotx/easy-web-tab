@@ -323,7 +323,7 @@ onMounted(async () => {
         </div>
         <div class="form-field">
           <label>颜色</label>
-          <input v-model="dialogColor" type="color" class="form-color" data-testid="sh-form-color" />
+          <el-color-picker v-model="dialogColor" class="form-color" data-testid="sh-form-color" />
         </div>
       </div>
       <template #footer>
@@ -503,12 +503,7 @@ onMounted(async () => {
   font-weight: 500;
 }
 .form-color {
-  width: 60px;
-  height: 36px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  padding: 2px;
-  cursor: pointer;
+  width: 36px;
 }
 .dialog-footer {
   display: flex;

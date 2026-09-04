@@ -268,24 +268,11 @@ onMounted(() => {
                   class="sp-goal"
                   :class="{ done: goal.done }"
                 >
-                  <label class="sp-goal-check" :data-testid="`sp-goal-toggle-${goal.id}`">
-                    <input
-                      type="checkbox"
-                      :checked="goal.done"
-                      @change="handleToggleGoal(row.id, goal.id)"
-                    />
+                  <el-checkbox class="sp-goal-check" :data-testid="`sp-goal-toggle-${goal.id}`" :model-value="goal.done" @change="handleToggleGoal(row.id, goal.id)">
                     <span class="sp-goal-content">{{ goal.content }}</span>
-                  </label>
+                  </el-checkbox>
                   <div class="sp-goal-progress">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      :value="goal.progress"
-                      :data-testid="`sp-goal-range-${goal.id}`"
-                      @input="handleProgressInput(row.id, goal.id, Number(($event.target as HTMLInputElement).value))"
-                    />
+                    <el-slider class="sp-goal-range" size="small" :model-value="goal.progress" :min="0" :max="100" :step="1" :show-tooltip="false" :data-testid="`sp-goal-range-${goal.id}`" @input="(v: number | number[]) => handleProgressInput(row.id, goal.id, Number(Array.isArray(v) ? v[0] : v))" />
                     <span class="sp-goal-percent">{{ goal.progress }}%</span>
                   </div>
                 </div>
@@ -668,6 +655,11 @@ onMounted(() => {
 .sp-goal-check input {
   flex-shrink: 0;
 }
+.sp-goal-check :deep(.el-checkbox__label) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
 .sp-goal-content {
   flex: 1;
   font-size: 13px;
@@ -681,8 +673,9 @@ onMounted(() => {
   gap: 6px;
   flex-shrink: 0;
 }
-.sp-goal-progress input[type='range'] {
-  width: 100px;
+.sp-goal-progress .el-slider {
+  flex: 1;
+  min-width: 60px;
 }
 .sp-goal-percent {
   font-size: 12px;

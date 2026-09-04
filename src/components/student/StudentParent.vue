@@ -518,9 +518,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
               class="stp-task-card"
               :class="{ done: t.done }"
             >
-              <label class="stp-task-check">
-                <input type="checkbox" :checked="t.done" @change="toggleTaskDone(t)" />
-              </label>
+              <el-checkbox class="stp-task-check" :model-value="t.done" @change="toggleTaskDone(t)" />
               <div class="stp-task-body">
                 <div class="stp-task-title">{{ t.title }}</div>
                 <div class="stp-task-date">{{ t.date }}</div>

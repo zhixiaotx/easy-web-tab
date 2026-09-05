@@ -221,69 +221,64 @@ onUnmounted(() => {
       <div class="td-search-fields">
         <label class="td-field td-field-grow">
           <span class="td-field-label">标题</span>
-          <input
+          <el-input
             v-model="searchTitle"
-            type="text"
-            class="form-input td-field-title"
+            class="td-field-title"
             placeholder="按标题查询…"
             data-testid="td-search-title"
+            size="small"
             @keyup.enter="applySearch"
           />
         </label>
         <label class="td-field td-field-grow">
           <span class="td-field-label">描述</span>
-          <input
+          <el-input
             v-model="searchDescription"
-            type="text"
-            class="form-input td-field-desc"
+            class="td-field-desc"
             placeholder="按描述查询…"
             data-testid="td-search-desc"
+            size="small"
             @keyup.enter="applySearch"
           />
         </label>
         <label class="td-field">
           <span class="td-field-label">优先级</span>
-          <select v-model="searchPriority" class="form-input search-select" data-testid="td-search-priority">
-            <option value="">全部优先级</option>
-            <option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
+          <el-select v-model="searchPriority" class="search-select" data-testid="td-search-priority" size="small">
+            <el-option value="" label="全部优先级" />
+            <el-option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value" :label="opt.label" />
+          </el-select>
         </label>
         <label class="td-field">
           <span class="td-field-label">状态</span>
-          <select v-model="searchStatus" class="form-input search-select" data-testid="td-search-status">
-            <option value="">全部状态</option>
-            <option value="active">待办</option>
-            <option value="completed">已完成</option>
-          </select>
+          <el-select v-model="searchStatus" class="search-select" data-testid="td-search-status" size="small">
+            <el-option value="" label="全部状态" />
+            <el-option value="active" label="待办" />
+            <el-option value="completed" label="已完成" />
+          </el-select>
         </label>
       </div>
       <div class="td-search-actions">
-        <button class="search-btn" data-testid="td-search-btn" @click="applySearch">查询</button>
-        <button class="search-reset-btn" data-testid="td-search-reset" @click="resetSearch">重置</button>
+        <el-button type="primary" size="small" data-testid="td-search-btn" @click="applySearch">查询</el-button>
+        <el-button size="small" data-testid="td-search-reset" @click="resetSearch">重置</el-button>
       </div>
     </div>
 
     <!-- 分类筛选标签页（全部 + 可见分类，点击即时过滤）+ 新增待办按钮靠右 -->
     <div class="td-cat-tabs">
-      <button
-        class="td-cat-tab"
-        :class="{ active: activeCategoryId === '' }"
-        data-testid="td-cat-all"
-        @click="selectCategoryTab('')"
-      >全部</button>
-      <button
-        v-for="cat in store.tabCategories"
-        :key="cat"
-        class="td-cat-tab"
-        :class="{ active: activeCategoryId === cat }"
-        :data-testid="`td-cat-${cat}`"
-        @click="selectCategoryTab(cat)"
-      >{{ cat }}</button>
+      <el-radio-group v-model="activeCategoryId" class="td-cat-tabs-group" size="small" @update:model-value="selectCategoryTab">
+        <el-radio-button value="" data-testid="td-cat-all">全部</el-radio-button>
+        <el-radio-button
+          v-for="cat in store.tabCategories"
+          :key="cat"
+          :value="cat"
+          :data-testid="`td-cat-${cat}`"
+        >{{ cat }}</el-radio-button>
+      </el-radio-group>
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
         <template v-else>共 {{ store.sortedTodos.length }} 个待办</template>
       </span>
-      <button class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</button>
+      <el-button type="primary" size="small" class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</el-button>
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -342,15 +337,13 @@ onUnmounted(() => {
         </div>
 
         <div class="td-actions" @click.stop>
-          <label class="td-toggle" :title="v.todo.completed ? '标记为未完成' : '标记为已完成'">
-            <input
-              type="checkbox"
-              :checked="v.todo.completed"
-              :data-testid="`td-toggle-${v.todo.id}`"
-              @change="handleToggle(v.todo)"
-            />
-          </label>
-          <button class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</button>
+          <el-checkbox
+            :model-value="v.todo.completed"
+            :data-testid="`td-toggle-${v.todo.id}`"
+            :title="v.todo.completed ? '标记为未完成' : '标记为已完成'"
+            @change="handleToggle(v.todo)"
+          />
+          <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
         </div>
       </div>
       </TransitionGroup>
@@ -359,90 +352,105 @@ onUnmounted(() => {
     <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
 
     <!-- 新增/编辑弹框 -->
-    <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
-      <div class="dialog" data-testid="td-dialog">
+    <el-dialog
+      :model-value="showDialog"
+      :title="editingId ? '编辑待办' : '新增待办'"
+      width="480px"
+      data-testid="td-dialog"
+      @close="cancelForm"
+      @update:model-value="(v: boolean) => { if (!v) cancelForm() }"
+    >
+      <template #header>
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑待办' : '新增待办' }}</h3>
-          <button class="close-btn" @click="cancelForm"><Icon name="close" /></button>
+          <el-button class="close-btn" @click="cancelForm"><Icon name="close" /></el-button>
         </div>
-        <form class="dialog-body" @submit.prevent="handleSave">
-          <div class="form-group">
-            <label>标题 *</label>
-            <input
-              v-model="formTitle"
-              type="text"
-              class="form-input"
-              placeholder="例如：提交季度报告"
-              maxlength="100"
-              data-testid="td-title-input"
+      </template>
+      <form class="dialog-body" @submit.prevent="handleSave">
+        <div class="form-group">
+          <label>标题 *</label>
+          <el-input
+            v-model="formTitle"
+            placeholder="例如：提交季度报告"
+            maxlength="100"
+            data-testid="td-title-input"
+            @keyup.enter="handleSave"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>描述（可选）</label>
+          <el-input
+            v-model="formDescription"
+            type="textarea"
+            :rows="2"
+            placeholder="补充说明…"
+            data-testid="td-desc-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>分类</label>
+          <el-select v-model="formCategoryId" data-testid="td-form-category">
+            <el-option value="" label="未分类" />
+            <el-option v-for="cat in store.allCategories" :key="cat" :value="cat" :label="cat" />
+          </el-select>
+        </div>
+
+        <div class="form-row-fields">
+          <div class="field">
+            <label class="field-label">优先级</label>
+            <el-select v-model="formPriority" class="field-prio" data-testid="td-priority">
+              <el-option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value" :label="opt.label" />
+            </el-select>
+          </div>
+          <div class="field">
+            <label class="field-label">截止日期</label>
+            <el-date-picker
+              v-model="formDueDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              class="field-date"
+              placeholder="选择日期"
+              data-testid="td-due-input"
             />
           </div>
+        </div>
 
-          <div class="form-group">
-            <label>描述（可选）</label>
-            <textarea
-              v-model="formDescription"
-              class="form-input desc-input"
-              rows="2"
-              placeholder="补充说明…"
-              data-testid="td-desc-input"
-            ></textarea>
+        <div class="form-group">
+          <label>卡片颜色</label>
+          <div class="color-picker">
+            <button
+              v-for="(color, i) in TODO_COLOR_PRESETS"
+              :key="color"
+              type="button"
+              class="color-option"
+              :class="{ active: formColor.toLowerCase() === color }"
+              :style="{ '--swatch': color }"
+              :data-testid="'td-color-preset-' + (i + 1)"
+              :title="color"
+              @click="formColor = color"
+            ></button>
+            <el-color-picker
+              v-model="formColor"
+              class="color-custom"
+              data-testid="td-color-input"
+            />
+            <span class="color-custom-value">{{ formColor }}</span>
+            <el-button size="small" class="color-reset" @click="formColor = DEFAULT_TODO_COLOR">恢复默认</el-button>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label>分类</label>
-            <select v-model="formCategoryId" class="form-input" data-testid="td-form-category">
-              <option value="">未分类</option>
-              <option v-for="cat in store.allCategories" :key="cat" :value="cat">{{ cat }}</option>
-            </select>
-          </div>
-
-          <div class="form-row-fields">
-            <div class="field">
-              <label class="field-label">优先级</label>
-              <select v-model="formPriority" class="form-input field-prio" data-testid="td-priority">
-                <option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
-            </div>
-            <div class="field">
-              <label class="field-label">截止日期</label>
-              <input v-model="formDueDate" type="date" class="form-input field-date" data-testid="td-due-input" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>卡片颜色</label>
-            <div class="color-picker">
-              <button
-                v-for="(color, i) in TODO_COLOR_PRESETS"
-                :key="color"
-                type="button"
-                class="color-option"
-                :class="{ active: formColor.toLowerCase() === color }"
-                :style="{ '--swatch': color }"
-                :data-testid="'td-color-preset-' + (i + 1)"
-                :title="color"
-                @click="formColor = color"
-              ></button>
-              <label class="color-custom" title="自定义颜色">
-                <input v-model="formColor" type="color" class="color-input" data-testid="td-color-input" />
-                <span class="color-custom-value">{{ formColor }}</span>
-              </label>
-              <button type="button" class="color-reset" @click="formColor = DEFAULT_TODO_COLOR">恢复默认</button>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="td-cancel-button" @click="cancelForm">
-              取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="td-save-button">
-              {{ editingId ? '保存' : '添加' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="form-actions">
+          <el-button size="small" data-testid="td-cancel-button" @click="cancelForm">
+            取消
+          </el-button>
+          <el-button type="primary" size="small" :disabled="!isFormValid" data-testid="td-save-button" @click="handleSave">
+            {{ editingId ? '保存' : '添加' }}
+          </el-button>
+        </div>
+      </form>
+    </el-dialog>
 
   </div>
 </template>

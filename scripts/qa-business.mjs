@@ -24,6 +24,18 @@ const EVIDENCE_LIGHT = join(EVIDENCE_DIR, 'business-light.png')
 const EVIDENCE_DARK = join(EVIDENCE_DIR, 'business-dark.png')
 const EVIDENCE_LOG = join(EVIDENCE_DIR, 'qa-business.log')
 
+/** 当天回溯 n 天的本地日期键（YYYY-MM-DD） */
+function dayAgo(n) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
+/** 收摊种子日期：动态取昨天（S4 同日 upsert 覆盖 + S7 趋势窗口共用，写死会随运行日过期） */
+const SEED_DAILY_DATE = dayAgo(1)
+
 async function waitForServer(url, timeoutMs = 40000) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
@@ -114,6 +126,7 @@ async function guard(name, fn) {
 
 /** 注入销售记账种子数据（2 商品/1 进货/1 收摊/2 支出，阈值 100 触发双低库存预警） */
 function buildBusinessData() {
+  // 收摊日期动态取昨天（模块级 SEED_DAILY_DATE 共享：S4 同日 upsert、S7 趋势窗口用同一日期）
   return {
     productCategories: [
       { id: 'product-snack', name: '小吃', sortOrder: 1, visible: true },
@@ -138,7 +151,7 @@ function buildBusinessData() {
     ],
     dailyRecords: [
       {
-        id: 'qa-d1', date: '2026-08-02', totalRevenue: 200,
+        id: 'qa-d1', date: SEED_DAILY_DATE, totalRevenue: 200,
         items: [
           { productId: 'qa-p1', broughtOut: 30, remaining: 5, loss: 1 },
           { productId: 'qa-p2', broughtOut: 20, remaining: 0, loss: 0 }
@@ -157,7 +170,7 @@ function buildBusinessData() {
 async function injectIdb(page, payload) {
   return page.evaluate((value) => {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('easy-web-tab', 6)
+      const req = indexedDB.open('easy-web-tab')
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains('business')) req.result.createObjectStore('business')
       }
@@ -178,8 +191,13 @@ try {
   await ensureDevServer()
   browser = await chromium.launch()
   const page = await browser.newPage({ viewport: { width: 1366, height: 768 } })
+  // S9 类失败诊断：收集页面崩溃/控制台错误，超时后随 diag 一并输出
+  const pageErrors = []
+  const consoleMsgs = []
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+  page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleMsgs.push(m.type() + ': ' + m.text()) })
 
-  // 先加载首页（建 DB v6），再注入 business 数据，后进 /business（BusinessView onMounted 读 IDB）
+  // 先加载首页（App 初始化建 DB v12），再注入 business 数据（open 不带版本号 → 连接既有 v12，不复刻 v6 冲突），后进 /business（BusinessView onMounted 读 IDB）
   await page.goto(devBase + '/', { waitUntil: 'load', timeout: 90000 })
   await page.waitForTimeout(1500)
   await injectIdb(page, buildBusinessData())
@@ -194,18 +212,16 @@ try {
     const expense = (await page.locator('[data-testid="bizhome-expense"]').textContent()).trim()
     const profit = (await page.locator('[data-testid="bizhome-profit"]').textContent()).trim()
     const margin = (await page.locator('[data-testid="bizhome-margin"]').textContent()).trim()
-    const stall = await page.locator('[data-testid="bizhome-stall-input"]').inputValue()
+    const stall = (await page.locator('.bs-stall-name').textContent()).trim()
     // 快捷操作已删除：首页不再渲染任何 bizhome-nav-* 入口
     const navCount = await page.locator('[data-testid^="bizhome-nav-"]').count()
-    // 排行已移至首页：仅含有销量条目（种子当日 qa-p1 卖 24、qa-p2 卖 20，双分类双商品均上榜）
-    const homeCatSnack = await page.locator('[data-testid="bizhome-cat-product-snack"]').count()
-    const homeCatDrink = await page.locator('[data-testid="bizhome-cat-product-drink"]').count()
-    const homeProdP1 = await page.locator('[data-testid="bizhome-prod-qa-p1"]').count()
-    const homeProdP2 = await page.locator('[data-testid="bizhome-prod-qa-p2"]').count()
+    // 排行已移至首页：分类→商品树状展开（种子当日 qa-p1 卖 24、qa-p2 卖 20，双分类双商品均上榜且默认展开前 2 个分类）
+    const treeCatCount = await page.locator('[data-testid^="bizhome-tree-cat-"]').count()
+    const treeProdCount = await page.locator('[data-testid^="bizhome-tree-prod-"]').count()
     record(
-      'S1) 左树 7 项 + 首页统计卡数值（含支出）+ 分类/商品排行 + 无快捷操作',
-      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && expense.includes('40') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊' && navCount === 0 && homeCatSnack === 1 && homeCatDrink === 1 && homeProdP1 === 1 && homeProdP2 === 1,
-      { menuCount, homeActive, revenue, cost, expense, profit, margin, stall, navCount, homeCatSnack, homeCatDrink, homeProdP1, homeProdP2 }
+      'S1) 左树 7 项 + 首页统计卡数值（含支出）+ 分类/商品排行树 + 无快捷操作',
+      menuCount === 7 && homeActive && revenue.includes('200') && cost.includes('68') && expense.includes('40') && profit.includes('132') && margin.includes('66') && stall === 'QA 夜市摊' && navCount === 0 && treeCatCount === 2 && treeProdCount === 2,
+      { menuCount, homeActive, revenue, cost, expense, profit, margin, stall, navCount, treeCatCount, treeProdCount }
     )
   })
 
@@ -283,7 +299,7 @@ try {
     const lossBefore = (await page.locator('[data-testid="bizday-loss-qa-d1"]').textContent()).trim()
     await page.locator('[data-testid="bizday-add"]').click()
     await page.waitForSelector('[data-testid="bizday-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizday-form-date"]').fill('2026-08-02') // 同日 → upsert 覆盖
+    await page.locator('[data-testid="bizday-form-date"]').fill(SEED_DAILY_DATE) // 与种子同日 → upsert 覆盖
     await page.locator('[data-testid="bizday-row-product"]').nth(0).selectOption('qa-p1')
     await page.locator('[data-testid="bizday-row"]').nth(0).locator('input').nth(0).fill('10') // 带出
     await page.locator('[data-testid="bizday-row"]').nth(0).locator('input').nth(1).fill('0') // 剩余
@@ -308,31 +324,37 @@ try {
     )
   })
 
-  await guard('S5) 支出页：内置 tabs + 分类管理新增 + 新增支出', async () => {
+  await guard('S5) 支出页：分类管理新增电费 + 新增支出日卡片 1→2', async () => {
     await page.locator('[data-testid="bs-menu-expenses"]').click()
-    await page.waitForSelector('[data-testid="bizexp-tab-all"]', { state: 'visible', timeout: 8000 })
-    const tabCount = await page.locator('[data-testid^="bizexp-tab-"]').count() // 全部 + 内置 5（⚙️ 为独立按钮不计）
-    const cardsBefore = await page.locator('[data-testid="bizexp-card"]').count()
-    // ⚙️ 打开分类管理 → 新增「电费」→ 新 tab 出现
+    await page.waitForSelector('[data-testid="bizexp-cat-manager"]', { state: 'visible', timeout: 8000 })
+    // 支出按日分组卡片：种子 2 笔支出同在 2026-08-02 → 1 张日卡片（count() 不自动等待，先等卡片渲染）
+    await page.waitForSelector('[data-testid^="bizexp-card-"]', { state: 'visible', timeout: 8000 })
+    const cardsBefore = await page.locator('[data-testid^="bizexp-card-"]').count()
+    // ⚙️ 打开分类管理 → 新增「电费」→ 分类行出现
     await page.locator('[data-testid="bizexp-cat-manager"]').click()
     await page.waitForSelector('[data-testid="bizcat-dialog-expense"]', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="bizcat-new-expense"]').fill('电费')
     await page.locator('[data-testid="bizcat-add-expense"]').click()
     await page.waitForTimeout(300)
+    const customCatRow = (await page.locator('[data-testid^="bizcat-row-expense-bec_"]').count()) === 1
     await page.keyboard.press('Escape')
     await page.waitForTimeout(300)
-    const customTab = (await page.locator('[data-testid^="bizexp-tab-bec_"]').count()) === 1
-    // 新增支出
+    // 新增支出：2026-08-03 两行（电费 15 + 摊位费 5）→ 新日卡片
     await page.locator('[data-testid="bizexp-add"]').click()
     await page.waitForSelector('[data-testid="bizexp-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizexp-form-amount"]').fill('15')
+    await page.locator('[data-testid="bizexp-form-date"]').fill('2026-08-03')
+    await page.locator('[data-testid="bizexp-row-category"]').nth(0).selectOption({ label: '电费' })
+    await page.locator('[data-testid="bizexp-row-amount"]').nth(0).fill('15')
+    await page.locator('[data-testid="bizexp-row-add"]').click()
+    await page.locator('[data-testid="bizexp-row-category"]').nth(1).selectOption({ label: '摊位费' })
+    await page.locator('[data-testid="bizexp-row-amount"]').nth(1).fill('5')
     await page.locator('[data-testid="bizexp-save"]').click()
     await page.waitForTimeout(400)
-    const cardsAfter = await page.locator('[data-testid="bizexp-card"]').count()
+    const cardsAfter = await page.locator('[data-testid^="bizexp-card-"]').count()
     record(
-      'S5) 支出页：内置 tabs 6 + 自定义 tab + 卡片 2→3',
-      tabCount === 6 && customTab && cardsBefore === 2 && cardsAfter === 3,
-      { tabCount, customTab, cardsBefore, cardsAfter }
+      'S5) 支出页：分类管理新增电费 + 新增支出日卡片 1→2',
+      customCatRow && cardsBefore === 1 && cardsAfter === 2,
+      { customCatRow, cardsBefore, cardsAfter }
     )
   })
 
@@ -341,7 +363,8 @@ try {
     await page.waitForSelector('[data-testid="bizinv-alert"]', { state: 'visible', timeout: 8000 })
     const lowCardSel = '[data-testid^="bizinv-low-"]:not([data-testid="bizinv-low-empty"])'
     const lowCount = await page.locator(lowCardSel).count()
-    // 卡片网格：桌面 5 列（gridTemplateColumns 轨道数）
+    // 卡片网格：桌面 5 列（gridTemplateColumns 轨道数）；count() 不自动等待，先等卡片渲染
+    await page.waitForSelector('[data-testid^="bizinv-card-"]', { state: 'visible', timeout: 8000 })
     const cardCount = await page.locator('[data-testid^="bizinv-card-"]').count()
     const gridCols = await page.evaluate(() => {
       const el = document.querySelector('.bizinv-grid')
@@ -376,10 +399,11 @@ try {
   await guard('S7) 统计页：趋势每日一柱堆叠分色（排行已移至首页）', async () => {
     await page.locator('[data-testid="bs-menu-stats"]').click()
     await page.waitForSelector('[data-testid="bizstats-trend"]', { state: 'visible', timeout: 8000 })
-    // 排行已移首页：统计页不再渲染排行行
-    const catRows = await page.locator('[data-testid^="bizstats-cat-"]').count()
+    // 排行已移首页：统计页不再渲染排行行（bizstats-cat-pie 为支出分类占比环形图，需排除）
+    const catRows = await page.locator('[data-testid^="bizstats-cat-product-"]').count()
     const prodRows = await page.locator('[data-testid^="bizstats-prod-"]').count()
-    // 每日一柱堆叠分色按收摊记录口径：仅收摊日 08-02 两段（成本琥珀+利润绿，段高和=营业额50）；进货日/今日无收摊记录全 0 无段
+    // 每日一柱堆叠分色按收摊记录口径：仅收摊日（昨天，种子 dayAgo(1) 已保证在窗口内）两段（成本琥珀+利润绿）；count() 不自动等待，先等柱渲染
+    await page.waitForSelector('.bizstats-bar', { state: 'visible', timeout: 8000 })
     const barsAll = await page.locator('.bizstats-bar').count()
     const costSegs = await page.locator('.bizstats-bar.cost').count()
     const profitSegs = await page.locator('.bizstats-bar.profit').count()
@@ -409,7 +433,8 @@ try {
 
   await guard('S8) 设置弹窗销售记账 tab', async () => {
     await page.locator('[data-testid="bs-menu-home"]').click()
-    await page.getByRole('button', { name: '⚙️ 设置' }).click()
+    // 设置按钮实为 <Icon name="cog"> + 文本「设置」（无障碍名无 ⚙️ 前缀），getByRole 按名字匹配失败 → 用 testid
+    await page.locator('[data-testid="bs-settings"]').click()
     await page.waitForSelector('.manager', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="settings-tab-business"]').click()
     await page.waitForSelector('[data-testid="bizsettings-stall"]', { state: 'visible', timeout: 5000 })
@@ -430,7 +455,28 @@ try {
   await guard('S9) 移动端 375 无横向滚动 + 明暗截图', async () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.reload({ waitUntil: 'load', timeout: 90000 })
-    await page.waitForSelector('[data-testid="bs-menu-home"]', { state: 'visible', timeout: 30000 })
+    try {
+      await page.waitForSelector('[data-testid="bs-menu-home"]', { state: 'visible', timeout: 30000 })
+    } catch (e) {
+      // 诊断：reload 后页面实际状态（URL/菜单 DOM/控制台错误），避免盲改
+      const diag = await page.evaluate(() => {
+        const menu = document.querySelector('[data-testid="bs-menu-home"]')
+        return {
+          url: location.href,
+          menuExists: !!menu,
+          menuCount: document.querySelectorAll('[data-testid^="bs-menu-"]').length,
+          hasApp: !!document.querySelector('#app'),
+          appChildren: document.querySelector('#app')?.children.length ?? -1,
+          bodyText: (document.body?.innerText || '').slice(0, 160)
+        }
+      })
+      throw new Error(
+        e.message.split('\n')[0] +
+          ' | diag: ' + JSON.stringify(diag) +
+          ' | pageErrors: ' + JSON.stringify(pageErrors) +
+          ' | console: ' + JSON.stringify(consoleMsgs.slice(-6))
+      )
+    }
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
     await page.setViewportSize({ width: 1366, height: 768 })
     await page.reload({ waitUntil: 'load', timeout: 90000 })

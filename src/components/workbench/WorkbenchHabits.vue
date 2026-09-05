@@ -191,9 +191,9 @@ onMounted(() => {
   <div class="wb-habits">
     <!-- 顶部工具栏：左上角新增习惯按钮 -->
     <div class="hb-toolbar">
-      <button class="btn-primary hb-add-btn" data-testid="hb-add-btn" @click="openAddDialog">
+      <el-button class="hb-add-btn" type="primary" size="small" data-testid="hb-add-btn" @click="openAddDialog">
         <Icon name="plus" :size="16" /> 新增习惯
-      </button>
+      </el-button>
     </div>
 
     <!-- 习惯卡片网格（多条并排展示，分页在网格下方） -->
@@ -235,7 +235,7 @@ onMounted(() => {
                 ></div>
               </div>
             </div>
-            <button
+            <el-button
               class="hb-check-btn"
               :class="{ 'is-checked': v.checked }"
               :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
@@ -245,19 +245,19 @@ onMounted(() => {
             >
               <Icon name="check" :size="16" />
               <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
-            </button>
+            </el-button>
           </div>
           <!-- 卡片左下角：打开 / 编辑 / 删除 -->
           <div class="hb-card-footer">
-            <button class="btn-text" :data-testid="`hb-open-${v.habit.id}`" @click="openRecords(v.habit.id)">
+            <el-button size="small" class="btn-text" :data-testid="`hb-open-${v.habit.id}`" @click="openRecords(v.habit.id)">
               <Icon name="eye" :size="14" /> 查看
-            </button>
-            <button class="btn-text" :data-testid="`hb-edit-${v.habit.id}`" @click="openEditDialog(v.habit.id)">
+            </el-button>
+            <el-button size="small" class="btn-text" :data-testid="`hb-edit-${v.habit.id}`" @click="openEditDialog(v.habit.id)">
               <Icon name="pencil" :size="14" /> 编辑
-            </button>
-            <button class="btn-text btn-text-danger" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">
+            </el-button>
+            <el-button size="small" class="btn-text btn-text-danger" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">
               <Icon name="trash" :size="14" /> 删除
-            </button>
+            </el-button>
           </div>
         </div>
         </TransitionGroup>
@@ -267,100 +267,119 @@ onMounted(() => {
     </div>
 
     <!-- 新增/编辑弹框（顶部按钮与卡片编辑共用） -->
-    <div v-if="showEditDialog" class="dialog-overlay hb-dialog-overlay" @click.self="closeEditDialog">
-      <div class="dialog hb-dialog" role="dialog" aria-modal="true" :aria-label="editingId ? '编辑习惯' : '新增习惯'">
+    <el-dialog
+      :model-value="showEditDialog"
+      :title="editingId ? '编辑习惯' : '新增习惯'"
+      width="440px"
+      :aria-label="editingId ? '编辑习惯' : '新增习惯'"
+      @close="closeEditDialog"
+      @update:model-value="(v: boolean) => { if (!v) closeEditDialog() }"
+    >
+      <template #header>
         <div class="dialog-header">
           <span class="dialog-title">{{ editingId ? '编辑习惯' : '新增习惯' }}</span>
-          <button class="dialog-close" type="button" aria-label="关闭" @click="closeEditDialog">
+          <el-button class="dialog-close" aria-label="关闭" @click="closeEditDialog">
             <Icon name="close" :size="18" />
-          </button>
+          </el-button>
         </div>
-        <div class="dialog-body">
-          <div class="field">
-            <label class="field-label">名称 *</label>
-            <input
-              v-model="dialogName"
-              type="text"
-              class="form-input"
-              placeholder="例如：每天喝水 8 杯"
-              maxlength="30"
-              data-testid="hb-dialog-name"
+      </template>
+      <div class="dialog-body">
+        <div class="field">
+          <label class="field-label">名称 *</label>
+          <el-input
+            v-model="dialogName"
+            placeholder="例如：每天喝水 8 杯"
+            maxlength="30"
+            data-testid="hb-dialog-name"
+          />
+        </div>
+        <div class="field">
+          <label class="field-label">频率</label>
+          <el-select v-model="dialogFrequency" data-testid="hb-dialog-frequency">
+            <el-option
+              v-for="opt in FREQUENCY_OPTIONS"
+              :key="opt.value"
+              :value="opt.value"
+              :label="opt.label"
             />
-          </div>
-          <div class="field">
-            <label class="field-label">频率</label>
-            <select v-model="dialogFrequency" class="form-input" data-testid="hb-dialog-frequency">
-              <option v-for="opt in FREQUENCY_OPTIONS" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="field-label">颜色</label>
-            <div class="hb-color-picker" data-testid="hb-dialog-color">
-              <button
-                v-for="(color, i) in TODO_COLOR_PRESETS"
-                :key="color"
-                type="button"
-                class="hb-color-option"
-                :class="{ active: dialogColor.toLowerCase() === color }"
-                :style="{ '--hb-swatch': color }"
-                :data-testid="'hb-dialog-color-' + (i + 1)"
-                :title="color"
-                @click="dialogColor = color"
-              ></button>
-            </div>
-          </div>
+          </el-select>
         </div>
-        <div class="dialog-footer">
-          <button class="btn-secondary" type="button" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</button>
-          <button class="btn-primary" type="button" :disabled="!dialogName.trim()" data-testid="hb-dialog-save" @click="saveEditDialog">
-            {{ editingId ? '保存' : '添加' }}
-          </button>
+        <div class="field">
+          <label class="field-label">颜色</label>
+          <div class="hb-color-picker" data-testid="hb-dialog-color">
+            <button
+              v-for="(color, i) in TODO_COLOR_PRESETS"
+              :key="color"
+              type="button"
+              class="hb-color-option"
+              :class="{ active: dialogColor.toLowerCase() === color }"
+              :style="{ '--hb-swatch': color }"
+              :data-testid="'hb-dialog-color-' + (i + 1)"
+              :title="color"
+              @click="dialogColor = color"
+            ></button>
+          </div>
         </div>
       </div>
-    </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</el-button>
+          <el-button type="primary" size="small" :disabled="!dialogName.trim()" data-testid="hb-dialog-save" @click="saveEditDialog">
+            {{ editingId ? '保存' : '添加' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <!-- 打开：记录详情弹框 -->
-    <div v-if="showRecords" class="dialog-overlay hb-dialog-overlay" @click.self="closeRecords">
-      <div class="dialog hb-dialog" role="dialog" aria-modal="true" aria-label="习惯记录">
+    <el-dialog
+      :model-value="showRecords"
+      title="习惯记录"
+      width="440px"
+      aria-label="习惯记录"
+      @close="closeRecords"
+      @update:model-value="(v: boolean) => { if (!v) closeRecords() }"
+    >
+      <template #header>
         <div class="dialog-header">
           <span class="dialog-title">
             <Icon name="habits" :size="16" class="hb-dlg-ico" /> {{ recordsHabit?.name }}
           </span>
-          <button class="dialog-close" type="button" aria-label="关闭" @click="closeRecords">
+          <el-button class="dialog-close" aria-label="关闭" @click="closeRecords">
             <Icon name="close" :size="18" />
-          </button>
+          </el-button>
         </div>
-        <div class="dialog-body" v-if="recordsHabit">
-          <div class="hb-rec-summary">
-            <div class="hb-rec-item">
-              <span class="hb-rec-value">{{ recordsStreak.count }} {{ recordsStreak.unit }}</span>
-              <span class="hb-rec-label">连续</span>
-            </div>
-            <div class="hb-rec-item">
-              <span class="hb-rec-value">{{ recordsWeek.completed }}/{{ recordsWeek.target }}</span>
-              <span class="hb-rec-label">本周打卡</span>
-            </div>
-            <div class="hb-rec-item">
-              <span class="hb-rec-value">{{ recordsDates.length }}</span>
-              <span class="hb-rec-label">累计打卡</span>
-            </div>
+      </template>
+      <div class="dialog-body" v-if="recordsHabit">
+        <div class="hb-rec-summary">
+          <div class="hb-rec-item">
+            <span class="hb-rec-value">{{ recordsStreak.count }} {{ recordsStreak.unit }}</span>
+            <span class="hb-rec-label">连续</span>
           </div>
-          <div class="hb-rec-list">
-            <div v-for="d in recordsDates" :key="d" class="hb-rec-row">
-              <Icon name="check" :size="14" class="hb-rec-ico" />
-              <span>{{ d }}</span>
-            </div>
-            <div v-if="recordsDates.length === 0" class="hb-rec-empty">还没有打卡记录</div>
+          <div class="hb-rec-item">
+            <span class="hb-rec-value">{{ recordsWeek.completed }}/{{ recordsWeek.target }}</span>
+            <span class="hb-rec-label">本周打卡</span>
+          </div>
+          <div class="hb-rec-item">
+            <span class="hb-rec-value">{{ recordsDates.length }}</span>
+            <span class="hb-rec-label">累计打卡</span>
           </div>
         </div>
-        <div class="dialog-footer">
-          <button class="btn-secondary" type="button" @click="closeRecords">关闭</button>
-          <button class="btn-primary" type="button" data-testid="hb-rec-edit" @click="editFromRecords">编辑</button>
+        <div class="hb-rec-list">
+          <div v-for="d in recordsDates" :key="d" class="hb-rec-row">
+            <Icon name="check" :size="14" class="hb-rec-ico" />
+            <span>{{ d }}</span>
+          </div>
+          <div v-if="recordsDates.length === 0" class="hb-rec-empty">还没有打卡记录</div>
         </div>
       </div>
-    </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button size="small" @click="closeRecords">关闭</el-button>
+          <el-button type="primary" size="small" data-testid="hb-rec-edit" @click="editFromRecords">编辑</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

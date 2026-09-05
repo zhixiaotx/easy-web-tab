@@ -209,20 +209,20 @@ onUnmounted(() => {
         <Icon name="sleep" :size="16" class="stat-icon" />
         <span class="stat-label">睡眠目标</span>
         <div class="stat-panel-actions">
-          <button class="btn-add" data-testid="sl-add" @click="startAddRecord">＋ 新增</button>
-          <button
+          <el-button class="btn-add" data-testid="sl-add" @click="startAddRecord">＋ 新增</el-button>
+          <el-button
             v-if="store.records.sleep.length > 0"
             class="btn-manage"
             data-testid="sl-toggle-list"
             @click="openListDialog"
           >
             查看（{{ store.records.sleep.length }}）
-          </button>
+          </el-button>
         </div>
-        <button v-if="targetView" class="nav-btn" data-testid="sl-edit-target" @click="openTargetDialog">
+        <el-button v-if="targetView" class="nav-btn" data-testid="sl-edit-target" @click="openTargetDialog">
           调整目标
-        </button>
-        <button v-else class="nav-btn" data-testid="sl-target" @click="openTargetDialog">设定目标</button>
+        </el-button>
+        <el-button v-else class="nav-btn" data-testid="sl-target" @click="openTargetDialog">设定目标</el-button>
       </div>
       <template v-if="targetView">
         <div class="stat-value" data-testid="sl-plan-label">{{ targetView.label }}</div>
@@ -260,7 +260,7 @@ onUnmounted(() => {
         <div class="dialog list-dialog" data-testid="sl-list-dialog">
           <div class="dialog-header">
             <h3>睡眠记录（{{ store.records.sleep.length }} 条）</h3>
-            <button class="close-btn" @click="closeListDialog"><Icon name="close" /></button>
+            <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
           </div>
           <div class="ex-list">
             <el-table
@@ -303,8 +303,8 @@ onUnmounted(() => {
               </el-table-column>
               <el-table-column label="操作" width="150" align="center" fixed="right">
                 <template #default="{ row }">
-                  <button class="btn-edit" :data-testid="`sl-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right:6px;">编辑</button>
-                  <button class="btn-delete" :data-testid="`sl-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</button>
+                  <el-button class="btn-edit" :data-testid="`sl-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`sl-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -332,24 +332,26 @@ onUnmounted(() => {
       <div class="dialog" data-testid="sl-dialog">
         <div class="dialog-header">
           <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
-          <button class="close-btn" @click="closeTargetDialog"><Icon name="close" /></button>
+          <el-button class="close-btn" text @click="closeTargetDialog"><Icon name="close" /></el-button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSaveTarget">
           <div class="form-group">
             <label>每日目标（小时）*</label>
-            <input
-              v-model="formTarget"
-              type="number"
-              min="0.1"
-              step="0.1"
+            <el-input-number
+              :model-value="formTarget === '' ? undefined : Number(formTarget)"
+              :min="0.1"
+              :step="0.1"
               class="form-input"
               placeholder="例如：8"
               data-testid="sl-target-input"
+              :controls="false"
+              :precision="1"
+              @update:model-value="formTarget = $event == null ? '' : String($event)"
             />
           </div>
 
           <div class="form-actions">
-            <button
+            <el-button
               v-if="targetView"
               type="button"
               class="btn-clear"
@@ -357,12 +359,12 @@ onUnmounted(() => {
               @click="handleClearTarget"
             >
               清除目标
-            </button>
+            </el-button>
             <span class="form-actions-spacer"></span>
-            <button type="button" class="btn-cancel" data-testid="sl-cancel-target" @click="closeTargetDialog">
+            <el-button type="button" class="btn-cancel" data-testid="sl-cancel-target" @click="closeTargetDialog">
               取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="sl-save-target">保存</button>
+            </el-button>
+            <el-button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="sl-save-target">保存</el-button>
           </div>
         </form>
       </div>
@@ -375,35 +377,48 @@ onUnmounted(() => {
       <div class="dialog" data-testid="sl-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <button class="close-btn" @click="cancelRecordForm"><Icon name="close" /></button>
+          <el-button class="close-btn" text @click="cancelRecordForm"><Icon name="close" /></el-button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSaveRecord">
           <div class="form-row-fields">
             <div class="field">
               <label class="field-label">日期 *</label>
-              <input v-model="formDate" type="date" class="form-input field-date" data-testid="sl-form-date" />
+              <el-date-picker
+                v-model="formDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="form-input field-date"
+                data-testid="sl-form-date"
+              />
             </div>
             <div class="field">
               <label class="field-label">睡眠质量 *</label>
-              <select v-model="formQuality" class="form-input field-type" data-testid="sl-form-quality">
-                <option v-for="n in 5" :key="n" :value="String(n)">{{ n }} 星</option>
-              </select>
+              <el-select v-model="formQuality" class="form-input field-type" data-testid="sl-form-quality">
+                <el-option v-for="n in 5" :key="n" :value="String(n)" :label="`${n} 星`" />
+              </el-select>
             </div>
           </div>
 
           <div class="form-row-fields">
             <div class="field">
               <label class="field-label">入睡时间 *</label>
-              <input
+              <el-time-picker
                 v-model="formSleepTime"
-                type="time"
+                format="HH:mm"
+                value-format="HH:mm"
                 class="form-input field-time"
                 data-testid="sl-form-sleep-time"
               />
             </div>
             <div class="field">
               <label class="field-label">起床时间 *</label>
-              <input v-model="formWakeTime" type="time" class="form-input field-time" data-testid="sl-form-wake-time" />
+              <el-time-picker
+                v-model="formWakeTime"
+                format="HH:mm"
+                value-format="HH:mm"
+                class="form-input field-time"
+                data-testid="sl-form-wake-time"
+              />
             </div>
           </div>
 
@@ -418,22 +433,23 @@ onUnmounted(() => {
 
           <div class="form-group">
             <label>备注（可选）</label>
-            <textarea
+            <el-input
               v-model="formNote"
+              type="textarea"
+              :rows="2"
               class="form-input desc-input"
-              rows="2"
               placeholder="补充说明…"
               data-testid="sl-form-note"
-            ></textarea>
+            />
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="sl-cancel-record" @click="cancelRecordForm">
+            <el-button type="button" class="btn-cancel" data-testid="sl-cancel-record" @click="cancelRecordForm">
               取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="sl-save-record">
+            </el-button>
+            <el-button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="sl-save-record">
               {{ editingId ? '保存' : '添加' }}
-            </button>
+            </el-button>
           </div>
         </form>
       </div>

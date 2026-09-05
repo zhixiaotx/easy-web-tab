@@ -230,9 +230,9 @@ onUnmounted(() => {
         <div class="stat-header">
           <span class="stat-icon">📏</span>
           <span class="stat-label">身高</span>
-          <button class="nav-btn" data-testid="wt-set-height" @click="openHeightDialog">
+          <el-button class="nav-btn" data-testid="wt-set-height" @click="openHeightDialog">
             {{ store.height !== undefined ? '修改' : '设置' }}
-          </button>
+          </el-button>
         </div>
         <div v-if="store.height !== undefined" class="stat-value" data-testid="wt-height-value">
           身高 {{ store.height }} cm
@@ -246,15 +246,15 @@ onUnmounted(() => {
           <Icon name="weight" :size="16" class="stat-icon" />
           <span class="stat-label">最近体重 · BMI</span>
           <div class="stat-panel-actions">
-            <button class="btn-add" data-testid="wt-add" @click="startAddRecord">＋ 新增</button>
-            <button
+            <el-button class="btn-add" data-testid="wt-add" @click="startAddRecord">＋ 新增</el-button>
+            <el-button
               v-if="store.records.weight.length > 0"
               class="btn-manage"
               data-testid="wt-toggle-list"
               @click="toggleList"
             >
               查看（{{ store.records.weight.length }}）
-            </button>
+            </el-button>
           </div>
         </div>
         <div class="wt-bmi-row">
@@ -374,28 +374,29 @@ onUnmounted(() => {
       <div class="dialog" data-testid="wt-height-dialog">
         <div class="dialog-header">
           <h3>设置身高</h3>
-          <button class="close-btn" @click="closeHeightDialog"><Icon name="close" /></button>
+          <el-button class="close-btn" text @click="closeHeightDialog"><Icon name="close" /></el-button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSaveHeight">
           <div class="form-group">
             <label>身高（cm）*</label>
-            <input
-              v-model="formHeight"
-              type="number"
-              min="100"
-              max="250"
-              step="1"
+            <el-input-number
+              :model-value="formHeight === '' ? undefined : Number(formHeight)"
+              :min="100"
+              :max="250"
+              :step="1"
               class="form-input"
               placeholder="例如：170"
               data-testid="wt-height-input"
+              :controls="false"
+              @update:model-value="formHeight = $event == null ? '' : String($event)"
             />
             <div class="field-hint">请输入 100-250 之间的整数</div>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">
+            <el-button type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">
               取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isHeightValid" data-testid="wt-height-save">保存</button>
+            </el-button>
+            <el-button type="submit" class="btn-save" :disabled="!isHeightValid" data-testid="wt-height-save">保存</el-button>
           </div>
         </form>
       </div>
@@ -408,46 +409,55 @@ onUnmounted(() => {
       <div class="dialog" data-testid="wt-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <button class="close-btn" @click="cancelRecordForm"><Icon name="close" /></button>
+          <el-button class="close-btn" text @click="cancelRecordForm"><Icon name="close" /></el-button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSaveRecord">
           <div class="form-row-fields">
             <div class="field">
               <label class="field-label">日期 *</label>
-              <input v-model="formDate" type="date" class="form-input field-date" data-testid="wt-form-date" />
+              <el-date-picker
+                v-model="formDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="form-input field-date"
+                data-testid="wt-form-date"
+              />
             </div>
             <div class="field">
               <label class="field-label">体重（kg）*</label>
-              <input
-                v-model="formWeightKg"
-                type="number"
-                min="0.1"
-                step="0.1"
+              <el-input-number
+                :model-value="formWeightKg === '' ? undefined : Number(formWeightKg)"
+                :min="0.1"
+                :step="0.1"
                 class="form-input field-weight"
                 placeholder="例如：75"
                 data-testid="wt-form-weight"
+                :controls="false"
+                :precision="1"
+                @update:model-value="formWeightKg = $event == null ? '' : String($event)"
               />
             </div>
           </div>
 
           <div class="form-group">
             <label>备注（可选）</label>
-            <textarea
+            <el-input
               v-model="formNote"
+              type="textarea"
+              :rows="2"
               class="form-input desc-input"
-              rows="2"
               placeholder="补充说明…"
               data-testid="wt-form-note"
-            ></textarea>
+            />
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="wt-cancel-record" @click="cancelRecordForm">
+            <el-button type="button" class="btn-cancel" data-testid="wt-cancel-record" @click="cancelRecordForm">
               取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isRecordValid" data-testid="wt-save-record">
+            </el-button>
+            <el-button type="submit" class="btn-save" :disabled="!isRecordValid" data-testid="wt-save-record">
               {{ editingId ? '保存' : '添加' }}
-            </button>
+            </el-button>
           </div>
         </form>
       </div>
@@ -460,7 +470,7 @@ onUnmounted(() => {
       <div class="dialog list-dialog" data-testid="wt-records-dialog">
         <div class="dialog-header">
           <h3>体重记录（{{ store.records.weight.length }} 条）</h3>
-          <button class="close-btn" data-testid="wt-records-close" @click="closeRecordsDialog"><Icon name="close" /></button>
+          <el-button class="close-btn" data-testid="wt-records-close" text @click="closeRecordsDialog"><Icon name="close" /></el-button>
         </div>
         <div class="wt-list">
           <el-table
@@ -510,8 +520,8 @@ onUnmounted(() => {
             </el-table-column>
             <el-table-column label="操作" width="150" align="center" fixed="right">
               <template #default="{ row }">
-                <button class="btn-edit" :data-testid="`wt-edit-${row.id}`" @click="showRecordsDialog = false; startEditRecord(row.id)" style="margin-right:6px;">编辑</button>
-                <button class="btn-delete" :data-testid="`wt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</button>
+                <el-button class="btn-edit" :data-testid="`wt-edit-${row.id}`" @click="showRecordsDialog = false; startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button>
+                <el-button class="btn-delete" :data-testid="`wt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>

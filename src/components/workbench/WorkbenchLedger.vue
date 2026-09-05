@@ -272,19 +272,25 @@ onUnmounted(() => {
   <div class="wb-ledger">
     <!-- 月份选择条（stat 卡上方） -->
     <div class="ld-month-bar">
-      <button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</button>
-      <button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</button>
-      <input v-model="selectedMonth" type="month" class="form-input month-input" data-testid="ld-month" />
-      <button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</button>
+      <el-button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</el-button>
+      <el-button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</el-button>
+      <el-date-picker
+        v-model="selectedMonth"
+        type="month"
+        value-format="YYYY-MM"
+        class="form-input month-input"
+        data-testid="ld-month"
+      />
+      <el-button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</el-button>
       <div class="ld-month-actions">
-        <button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
+        <el-button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
           <Icon :name="store.showAmount ? 'eye-off' : 'eye'" :size="15" />
           {{ store.showAmount ? '隐藏金额' : '显示金额' }}
-        </button>
-        <button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增</button>
-        <button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
+        </el-button>
+        <el-button class="btn-add" data-testid="ld-add" @click="startAdd">＋ 新增</el-button>
+        <el-button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
           查看（{{ monthEntries.length }}）
-        </button>
+        </el-button>
       </div>
     </div>
 
@@ -337,7 +343,7 @@ onUnmounted(() => {
     <!-- 图表区（可折叠，默认展开）：趋势图 + 环形图。桌面中低宽度（769-1599px）并排压缩纵向占用（一屏契约 R1），
          ≥1600px 上下堆叠；展开记录时自动收起图表，为记录列表腾出空间 -->
     <div class="ld-charts-section">
-      <button
+      <el-button
         type="button"
         class="ld-charts-toggle"
         data-testid="ld-charts-toggle"
@@ -346,7 +352,7 @@ onUnmounted(() => {
       >
         <span><Icon name="profit" :size="15" /> 图表</span>
         <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
-      </button>
+      </el-button>
       <div v-show="chartsExpanded" class="ld-charts-row">
       <!-- 近 12 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
       <section class="ld-card" data-testid="ld-trend">
@@ -489,56 +495,65 @@ onUnmounted(() => {
       <div class="dialog" data-testid="ld-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-          <button class="close-btn" @click="cancelForm"><Icon name="close" /></button>
+          <el-button class="close-btn" text @click="cancelForm"><Icon name="close" /></el-button>
         </div>
         <form class="dialog-body" @submit.prevent="handleSave">
           <div class="form-row-fields">
             <div class="field">
               <label class="field-label">日期 *</label>
-              <input v-model="formDate" type="date" class="form-input field-date" data-testid="ld-form-date" />
+              <el-date-picker
+                v-model="formDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="form-input field-date"
+                data-testid="ld-form-date"
+              />
             </div>
             <div class="field field-category">
               <label class="field-label">分组 *</label>
-              <select v-model="formCategoryId" class="form-input" data-testid="ld-form-category">
-                <optgroup label="收入分组">
-                  <option v-for="c in store.incomeCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
-                </optgroup>
-                <optgroup label="支出分组">
-                  <option v-for="c in store.expenseCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
-                </optgroup>
-              </select>
+              <el-select v-model="formCategoryId" class="form-input" data-testid="ld-form-category">
+                <el-option-group label="收入分组">
+                  <el-option v-for="c in store.incomeCategories" :key="c.id" :value="c.id" :label="c.name" />
+                </el-option-group>
+                <el-option-group label="支出分组">
+                  <el-option v-for="c in store.expenseCategories" :key="c.id" :value="c.id" :label="c.name" />
+                </el-option-group>
+              </el-select>
             </div>
           </div>
 
           <div class="form-group">
             <label>金额 *</label>
-            <input
-              v-model="formAmount"
-              type="number"
-              min="0.01"
-              step="0.01"
+            <el-input-number
+              :model-value="formAmount === '' ? undefined : Number(formAmount)"
+              :min="0.01"
+              :step="0.01"
               class="form-input"
               placeholder="例如：100.00"
               data-testid="ld-form-amount"
+              :controls="false"
+              :precision="2"
+              @update:model-value="formAmount = $event == null ? '' : String($event)"
             />
           </div>
 
           <div class="form-group">
             <label>备注（可选）</label>
-            <textarea
+            <el-input
               v-model="formNote"
+              type="textarea"
+              :rows="2"
               class="form-input desc-input"
-              rows="2"
               placeholder="补充说明…"
               data-testid="ld-form-note"
-            ></textarea>
+            />
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">取消</button>
-            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">
+            <el-button type="button" class="btn-cancel" data-testid="ld-cancel" @click="cancelForm">取消</el-button>
+            <el-button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ld-save">
               {{ editingId ? '保存' : '添加' }}
-            </button>
+            </el-button>
           </div>
         </form>
       </div>
@@ -551,7 +566,7 @@ onUnmounted(() => {
         <div class="dialog ld-records-dialog" data-testid="ld-records-dialog">
           <div class="dialog-header">
             <h3>本月记录（{{ monthEntries.length }} 条）</h3>
-            <button class="close-btn" @click="closeRecordsModal"><Icon name="close" /></button>
+            <el-button class="close-btn" text @click="closeRecordsModal"><Icon name="close" /></el-button>
           </div>
           <div class="ld-records-body">
             <el-table
@@ -594,8 +609,8 @@ onUnmounted(() => {
               </el-table-column>
               <el-table-column label="操作" width="150" align="center" fixed="right">
                 <template #default="{ row }: { row: EntryView }">
-                  <button class="btn-edit" :data-testid="`ld-edit-${row.entry.id}`" @click="startEdit(row)" style="margin-right: 6px;">编辑</button>
-                  <button class="btn-delete" :data-testid="`ld-delete-${row.entry.id}`" @click="handleDelete(row.entry.id)">删除</button>
+                  <el-button class="btn-edit" :data-testid="`ld-edit-${row.entry.id}`" @click="startEdit(row)" style="margin-right: 6px;">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`ld-delete-${row.entry.id}`" @click="handleDelete(row.entry.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>

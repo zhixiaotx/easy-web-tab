@@ -19,21 +19,22 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
 
 <template>
   <div class="wb-health">
-    <div class="hd-tabs" role="tablist" data-testid="hd-tabs">
-      <button
-        v-for="tab in HEALTH_TABS"
-        :key="tab"
-        type="button"
-        role="tab"
-        class="hd-tab"
-        :class="{ active: activeTab === tab }"
-        :aria-selected="activeTab === tab"
-        :data-testid="`hd-tab-${tab}`"
-        @click="emit('change', tab)"
+    <div class="hd-tabs" data-testid="hd-tabs">
+      <el-radio-group
+        :model-value="activeTab"
+        size="small"
+        @update:model-value="emit('change', $event as HealthModule)"
       >
-        <span class="hd-tab-icon"><Icon :name="TAB_META[tab].icon" /></span>
-        <span class="hd-tab-label">{{ TAB_META[tab].label }}</span>
-      </button>
+        <el-radio-button
+          v-for="tab in HEALTH_TABS"
+          :key="tab"
+          :value="tab"
+          :data-testid="`hd-tab-${tab}`"
+        >
+          <span class="hd-tab-icon"><Icon :name="TAB_META[tab].icon" /></span>
+          <span class="hd-tab-label">{{ TAB_META[tab].label }}</span>
+        </el-radio-button>
+      </el-radio-group>
     </div>
 
     <WorkbenchExercise v-if="activeTab === 'exercise'" />
@@ -56,8 +57,17 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
   margin-bottom: 16px;
 }
 
-.hd-tab {
-  display: flex;
+.hd-tabs :deep(.el-radio-group) {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hd-tabs :deep(.el-radio-button + .el-radio-button) {
+  margin-left: 0;
+}
+
+.hd-tabs :deep(.el-radio-button__inner) {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
@@ -66,7 +76,7 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
   background-color: var(--color-bg-card, #ffffff);
   color: var(--color-text-secondary, #64748b);
   font-size: 14px;
-  cursor: pointer;
+  box-shadow: none;
   transition: all 0.15s ease;
 }
 
@@ -76,31 +86,33 @@ const emit = defineEmits<{ change: [tab: HealthModule] }>()
   justify-content: center;
 }
 
-.hd-tab:hover {
+.hd-tabs :deep(.el-radio-button__inner:hover) {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
 }
 
-.hd-tab.active {
+.hd-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   background-color: var(--color-primary-light, #eff6ff);
   color: var(--color-primary, #3b82f6);
   font-weight: 600;
+  border-color: var(--color-primary, #3b82f6);
 }
 
 /* 暗色模式覆盖（模式参考 WorkbenchView.vue:414-426） */
-html.dark .hd-tab {
+html.dark .hd-tabs :deep(.el-radio-button__inner) {
   background-color: var(--color-bg-card, #1f2937);
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
 }
 
-html.dark .hd-tab:hover {
+html.dark .hd-tabs :deep(.el-radio-button__inner:hover) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-text, #f9fafb);
 }
 
-html.dark .hd-tab.active {
+html.dark .hd-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
   background-color: #1e3a5f;
   color: #60a5fa;
+  border-color: #60a5fa;
 }
 </style>

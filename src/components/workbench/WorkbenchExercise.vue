@@ -227,20 +227,20 @@ onUnmounted(() => {
         <span class="stat-pill" data-testid="ex-year-run">跑步 {{ yearTotals['跑步'] ?? 0 }} 公里</span>
         <span class="stat-pill" data-testid="ex-year-ride">骑行 {{ yearTotals['骑行'] ?? 0 }} 公里</span>
         <div class="stat-panel-actions">
-          <button class="btn-add" data-testid="ex-add" @click="startAddRecord">＋ 新增</button>
-          <button
+          <el-button class="btn-add" data-testid="ex-add" @click="startAddRecord">＋ 新增</el-button>
+          <el-button
             v-if="store.records.exercise.length > 0"
             class="btn-manage"
             data-testid="ex-toggle-list"
             @click="openListDialog"
           >
             查看（{{ store.records.exercise.length }}）
-          </button>
+          </el-button>
         </div>
-        <button v-if="targetView" class="nav-btn" data-testid="ex-edit-target" @click="openTargetDialog">
+        <el-button v-if="targetView" class="nav-btn" data-testid="ex-edit-target" @click="openTargetDialog">
           调整目标
-        </button>
-        <button v-else class="nav-btn" data-testid="ex-target" @click="openTargetDialog">设定目标</button>
+        </el-button>
+        <el-button v-else class="nav-btn" data-testid="ex-target" @click="openTargetDialog">设定目标</el-button>
       </div>
       <template v-if="targetView">
         <div class="stat-value" data-testid="ex-plan-label">{{ targetView.label }}</div>
@@ -271,7 +271,7 @@ onUnmounted(() => {
         <div class="dialog list-dialog" data-testid="ex-list-dialog">
           <div class="dialog-header">
             <h3>运动记录（{{ store.records.exercise.length }} 条）</h3>
-            <button class="close-btn" @click="closeListDialog"><Icon name="close" /></button>
+            <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
           </div>
           <div class="ex-list">
             <el-table
@@ -317,8 +317,8 @@ onUnmounted(() => {
               </el-table-column>
               <el-table-column label="操作" width="150" align="center" fixed="right">
                 <template #default="{ row }">
-                  <button class="btn-edit" :data-testid="`ex-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right: 6px;">编辑</button>
-                  <button class="btn-delete" :data-testid="`ex-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</button>
+                  <el-button class="btn-edit" :data-testid="`ex-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right: 6px;">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`ex-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -346,31 +346,32 @@ onUnmounted(() => {
         <div class="dialog" data-testid="ex-dialog">
           <div class="dialog-header">
             <h3>{{ targetView ? '调整目标' : '设定目标' }}</h3>
-            <button class="close-btn" @click="closeTargetDialog"><Icon name="close" /></button>
+            <el-button class="close-btn" text @click="closeTargetDialog"><Icon name="close" /></el-button>
           </div>
           <form class="dialog-body" @submit.prevent="handleSaveTarget">
             <div class="form-group">
               <label>目标指标</label>
-              <select v-model="formMetric" class="form-input" data-testid="ex-metric">
-                <option v-for="opt in METRIC_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
+              <el-select v-model="formMetric" class="form-input" data-testid="ex-metric" size="default">
+                <el-option v-for="opt in METRIC_OPTIONS" :key="opt.value" :value="opt.value" :label="opt.label" />
+              </el-select>
             </div>
 
             <div class="form-group">
               <label>每周目标 *</label>
-              <input
-                v-model="formTarget"
-                type="number"
-                min="1"
-                step="1"
+              <el-input-number
+                :model-value="Number(formTarget) || undefined"
+                :min="1"
+                :step="1"
                 class="form-input"
                 placeholder="例如：3"
                 data-testid="ex-target-input"
+                :controls="false"
+                @update:model-value="formTarget = $event == null ? '' : String($event)"
               />
             </div>
 
             <div class="form-actions">
-              <button
+              <el-button
                 v-if="targetView"
                 type="button"
                 class="btn-clear"
@@ -378,10 +379,10 @@ onUnmounted(() => {
                 @click="handleClearTarget"
               >
                 清除目标
-              </button>
+              </el-button>
               <span class="form-actions-spacer"></span>
-              <button type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">取消</button>
-              <button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</button>
+              <el-button type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">取消</el-button>
+              <el-button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</el-button>
             </div>
           </form>
         </div>
@@ -394,45 +395,53 @@ onUnmounted(() => {
         <div class="dialog" data-testid="ex-dialog">
           <div class="dialog-header">
             <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
-            <button class="close-btn" @click="cancelRecordForm"><Icon name="close" /></button>
+            <el-button class="close-btn" text @click="cancelRecordForm"><Icon name="close" /></el-button>
           </div>
           <form class="dialog-body" @submit.prevent="handleSaveRecord">
             <div class="form-row-fields">
               <div class="field">
                 <label class="field-label">日期 *</label>
-                <input v-model="formDate" type="date" class="form-input field-date" data-testid="ex-form-date" />
+                <el-date-picker
+                  v-model="formDate"
+                  type="date"
+                  value-format="YYYY-MM-DD"
+                  class="form-input field-date"
+                  data-testid="ex-form-date"
+                />
               </div>
               <div class="field">
                 <label class="field-label">运动类型 *</label>
-                <select v-model="formType" class="form-input field-type" data-testid="ex-form-type">
-                  <option v-for="t in EXERCISE_TYPES" :key="t" :value="t">{{ t }}</option>
-                </select>
+                <el-select v-model="formType" class="form-input field-type" data-testid="ex-form-type">
+                  <el-option v-for="t in EXERCISE_TYPES" :key="t" :value="t" :label="t" />
+                </el-select>
               </div>
             </div>
 
             <div class="form-row-fields">
               <div class="field">
                 <label class="field-label">时长（分钟）*</label>
-                <input
-                  v-model="formDuration"
-                  type="number"
-                  min="1"
-                  step="1"
+                <el-input-number
+                  :model-value="formDuration === '' ? undefined : Number(formDuration)"
+                  :min="1"
+                  :step="1"
                   class="form-input field-duration"
                   placeholder="例如：30"
                   data-testid="ex-form-duration"
+                  :controls="false"
+                  @update:model-value="formDuration = $event == null ? '' : String($event)"
                 />
               </div>
               <div class="field">
                 <label class="field-label">热量（千卡）</label>
-                <input
-                  v-model="formCalories"
-                  type="number"
-                  min="0"
-                  step="1"
+                <el-input-number
+                  :model-value="Number(formCalories)"
+                  :min="0"
+                  :step="1"
                   class="form-input field-calories"
                   placeholder="例如：200"
                   data-testid="ex-form-calories"
+                  :controls="false"
+                  @update:model-value="formCalories = $event == null ? '0' : String($event)"
                 />
               </div>
             </div>
@@ -440,36 +449,39 @@ onUnmounted(() => {
             <div v-if="showDistanceField" class="form-row-fields">
               <div class="field">
                 <label class="field-label">距离（公里）</label>
-                <input
-                  v-model="formDistance"
-                  type="number"
-                  min="0"
-                  step="0.1"
+                <el-input-number
+                  :model-value="formDistance === '' ? undefined : Number(formDistance)"
+                  :min="0"
+                  :step="0.1"
                   class="form-input field-distance"
                   placeholder="例如：5.2"
                   data-testid="ex-form-distance"
+                  :controls="false"
+                  :precision="1"
+                  @update:model-value="formDistance = $event == null ? '' : String($event)"
                 />
               </div>
             </div>
 
             <div class="form-group">
               <label>备注（可选）</label>
-              <textarea
+              <el-input
                 v-model="formNote"
+                type="textarea"
+                :rows="2"
                 class="form-input desc-input"
-                rows="2"
                 placeholder="补充说明…"
                 data-testid="ex-form-note"
-              ></textarea>
+              />
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
+              <el-button type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
                 取消
-              </button>
-              <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
+              </el-button>
+              <el-button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
                 {{ editingId ? '保存' : '添加' }}
-              </button>
+              </el-button>
             </div>
           </form>
         </div>

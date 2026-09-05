@@ -34,15 +34,15 @@ function toggleHabit(habitId: string, date: string): void {
         </div>
       </div>
       <div class="week-nav">
-        <button type="button" class="week-nav-btn" data-testid="hw-week-prev" @click="changeWeek(-1)">‹ 上周</button>
+        <el-button class="week-nav-btn" data-testid="hw-week-prev" @click="changeWeek(-1)" size="small">‹ 上周</el-button>
         <span class="week-nav-range">{{ weekView.rangeText }}</span>
-        <button
-          type="button"
+        <el-button
           class="week-nav-btn"
           data-testid="hw-week-next"
           :disabled="weekView.isCurrentWeek"
           @click="changeWeek(1)"
-        >下周 ›</button>
+          size="small"
+        >下周 ›</el-button>
       </div>
     </header>
 
@@ -145,22 +145,6 @@ function toggleHabit(habitId: string, date: string): void {
   padding: 6px 14px;
   font-size: 13px;
   border-radius: var(--radius-full, 999px);
-  border: 1px solid var(--color-border, #e2e8f0);
-  background: var(--color-bg-card, #ffffff);
-  color: var(--color-primary, #3b82f6);
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.week-nav-btn:hover:not(:disabled) {
-  background: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-  color: #fff;
-}
-
-.week-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .week-nav-range {
@@ -300,12 +284,6 @@ html.dark .hw-page-title h2 {
 html.dark .hw-page-icon {
   background-color: #1e3a5f;
   color: #60a5fa;
-}
-
-html.dark .week-nav-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: #60a5fa;
-  border-color: var(--color-border, #374151);
 }
 
 html.dark .week-nav-range {

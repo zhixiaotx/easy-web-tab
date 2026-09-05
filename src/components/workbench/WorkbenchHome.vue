@@ -210,16 +210,16 @@ async function handleQuickNote(): Promise<void> {
                 <section class="bento-card bento-quick-add">
                   <div class="quick-add-label"><Icon name="todos" :size="16" />快速添加待办</div>
                   <div class="quick-add-row">
-                    <input
+                    <el-input
                       v-model="quickTodoTitle"
                       class="quick-add-input"
                       data-testid="home-quick-add-input"
-                      type="text"
                       maxlength="100"
                       placeholder="输入待办标题，回车即可添加…"
                       @keyup.enter="handleQuickAdd"
+                      size="small"
                     />
-                    <button type="button" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd">添加</button>
+                    <el-button type="primary" class="quick-add-btn" data-testid="home-quick-add-btn" @click="handleQuickAdd" size="small">添加</el-button>
                   </div>
                 </section>
               </HomeLayoutCard>
@@ -228,16 +228,16 @@ async function handleQuickNote(): Promise<void> {
                 <section class="bento-card bento-quick-add">
                   <div class="quick-add-label"><Icon name="notes" :size="16" />快速添加便签</div>
                   <div class="quick-add-row">
-                    <input
+                    <el-input
                       v-model="quickNoteTitle"
                       class="quick-add-input"
                       data-testid="home-quick-note-input"
-                      type="text"
                       maxlength="100"
                       placeholder="输入便签标题，回车即可添加…"
                       @keyup.enter="handleQuickNote"
+                      size="small"
                     />
-                    <button type="button" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote">添加</button>
+                    <el-button type="primary" class="quick-add-btn" data-testid="home-quick-note-btn" @click="handleQuickNote" size="small">添加</el-button>
                   </div>
                 </section>
               </HomeLayoutCard>
@@ -488,20 +488,20 @@ async function handleQuickNote(): Promise<void> {
 
       <!-- 轮播控制条：箭头 + 圆点 -->
       <div class="home-carousel-bar">
-        <button type="button" class="home-carousel-arrow" data-testid="home-carousel-prev" aria-label="上一屏" @click="prevSlide">‹</button>
+        <el-button class="home-carousel-arrow" data-testid="home-carousel-prev" aria-label="上一屏" @click="prevSlide" size="small">‹</el-button>
         <div class="home-carousel-dots">
-          <button
+          <el-button
             v-for="i in SLIDE_COUNT"
             :key="i"
-            type="button"
             class="home-carousel-dot"
             :class="{ active: slideIndex === i - 1 }"
             :data-testid="`home-carousel-dot-${i - 1}`"
             :aria-label="`第 ${i} 屏`"
             @click="goToSlide(i - 1)"
-          ></button>
+            size="small"
+          />
         </div>
-        <button type="button" class="home-carousel-arrow" data-testid="home-carousel-next" aria-label="下一屏" @click="nextSlide">›</button>
+        <el-button class="home-carousel-arrow" data-testid="home-carousel-next" aria-label="下一屏" @click="nextSlide" size="small">›</el-button>
       </div>
     </section>
   </div>
@@ -668,39 +668,10 @@ async function handleQuickNote(): Promise<void> {
 .quick-add-input {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
-  font-size: 14px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 8px);
-  color: var(--color-text, var(--color-text));
-  outline: none;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.quick-add-input:focus {
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.quick-add-input::placeholder {
-  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .quick-add-btn {
   flex-shrink: 0;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--radius-sm, 8px);
-  background: var(--color-primary, var(--color-primary));
-  border: 1px solid var(--color-primary, var(--color-primary));
-  color: #fff;
-  cursor: pointer;
-  transition: filter var(--transition-fast, 0.15s ease);
-}
-
-.quick-add-btn:hover {
-  filter: brightness(1.1);
 }
 
 /* ===== 工具页网格布局 ===== */
@@ -1062,6 +1033,8 @@ async function handleQuickNote(): Promise<void> {
 .home-carousel-arrow {
   width: 28px;
   height: 28px;
+  padding: 0;
+  min-width: auto;
   border-radius: 50%;
   border: 1px solid var(--color-border, var(--color-border));
   background: var(--color-bg-card, var(--color-bg-card));
@@ -1087,16 +1060,20 @@ async function handleQuickNote(): Promise<void> {
 .home-carousel-dot {
   width: 10px;
   height: 10px;
+  min-width: 10px;
   padding: 0;
   border-radius: 50%;
   border: none;
   background: var(--color-border, var(--color-border));
   cursor: pointer;
   transition: all var(--transition-fast, 0.2s ease);
+  font-size: 0;
+  line-height: 1;
 }
 
 .home-carousel-dot.active {
   width: 22px;
+  min-width: 22px;
   border-radius: 999px;
   background: var(--color-primary, var(--color-primary));
 }
@@ -1134,12 +1111,6 @@ html.dark .ring-text {
 html.dark .home-list-item {
   background-color: var(--color-bg-card, #1f2937);
   border-color: var(--color-border, #374151);
-}
-
-html.dark .quick-add-input {
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-  color: var(--color-text, #f9fafb);
 }
 
 html.dark .nav-btn {

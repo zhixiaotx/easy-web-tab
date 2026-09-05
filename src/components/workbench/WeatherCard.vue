@@ -44,12 +44,12 @@ watch(
     <div v-if="!city" class="wx-placeholder">
       <span class="wx-placeholder-icon">🌤️</span>
       <span class="wx-placeholder-text">未设置城市</span>
-      <button
-        type="button"
+      <el-button
         class="wx-setup-btn"
         data-testid="wx-setup-btn"
         @click="openAppSettings()"
-      >去设置</button>
+        size="small"
+      >去设置</el-button>
     </div>
 
     <!-- 已配置：成功显示天气数据；加载中/失败保持轻量占位（静默） -->
@@ -111,19 +111,7 @@ watch(
 }
 
 .wx-setup-btn {
-  padding: 4px 12px;
-  border: 1px solid var(--color-primary, #3b82f6);
-  border-radius: 6px;
-  background-color: var(--color-primary-light, #eff6ff);
-  color: var(--color-primary, #3b82f6);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.wx-setup-btn:hover {
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
+  flex-shrink: 0;
 }
 
 .wx-body {
@@ -217,10 +205,5 @@ html.dark .wx-feels {
 
 html.dark .wx-divider {
   background: #374151;
-}
-
-html.dark .wx-setup-btn {
-  background-color: #1e3a5f;
-  color: #60a5fa;
 }
 </style>

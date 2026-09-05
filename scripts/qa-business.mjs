@@ -124,6 +124,48 @@ async function guard(name, fn) {
   }
 }
 
+/* ---- Element Plus 适配：换皮后 testid 落在 el-* 包装根（div），交互需落到内部原生控件 ---- */
+
+/**
+ * EP 内部输入框解析：el-input 的 data-testid 直接落在原生 <input>（attrs 绑到 input 本身），
+ * 其余复合组件（el-input-number/el-select/el-date-editor/el-checkbox）落在包装根——统一走此处解析。
+ */
+async function resolveInput(page, testid, index = 0) {
+  const root = page.locator(`[data-testid="${testid}"]`).nth(index)
+  const isInput = await root.evaluate((el) => el.tagName === 'INPUT').catch(() => false)
+  return isInput ? { target: root } : { target: root.locator('input').first() }
+}
+
+/** 填 el-input/el-input-number/el-date-editor 内部原生 input（index 横向跨同 testid 的多个实例） */
+async function epFill(page, testid, value, index = 0) {
+  const { target } = await resolveInput(page, testid, index)
+  await target.fill(value)
+  await target.blur()
+  await page.waitForTimeout(150)
+}
+
+/** el-date-picker：填内部 input + Enter 提交（value-format=YYYY-MM-DD） */
+async function epFillDate(page, testid, value) {
+  const { target } = await resolveInput(page, testid, 0)
+  await target.fill(value)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(200)
+}
+
+/** el-select：点击包装根开下拉 → 点可见下拉项（按文本） */
+async function epSelect(page, testid, optionText, index = 0) {
+  await page.locator(`[data-testid="${testid}"]`).nth(index).click()
+  await page.waitForTimeout(250)
+  await page.locator('.el-select-dropdown__item:visible', { hasText: optionText }).first().click()
+  await page.waitForTimeout(200)
+}
+
+/** 读 el-input/el-input-number/el-date-editor 内部 input 值 */
+async function epInputValue(page, testid) {
+  const { target } = await resolveInput(page, testid, 0)
+  return target.inputValue()
+}
+
 /** 注入销售记账种子数据（2 商品/1 进货/1 收摊/2 支出，阈值 100 触发双低库存预警） */
 function buildBusinessData() {
   // 收摊日期动态取昨天（模块级 SEED_DAILY_DATE 共享：S4 同日 upsert、S7 趋势窗口用同一日期）
@@ -232,8 +274,8 @@ try {
     const cardsBefore = await page.locator('[data-testid^="bizprod-card-"]').count()
     await page.locator('[data-testid="bizprod-add"]').click()
     await page.waitForSelector('[data-testid="bizprod-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizprod-form-name"]').fill('爆米花')
-    await page.locator('[data-testid="bizprod-form-selling"]').fill('8')
+    await epFill(page, 'bizprod-form-name', '爆米花')
+    await epFill(page, 'bizprod-form-selling', '8')
     await page.locator('[data-testid="bizprod-save"]').click()
     await page.waitForSelector('[data-testid^="bizprod-card-"]', { state: 'visible', timeout: 5000 })
     await page.waitForTimeout(300)
@@ -257,8 +299,8 @@ try {
       const el = document.querySelector('.bizpur-grid')
       return el ? getComputedStyle(el).gridTemplateColumns.split(' ').length : 0
     })
-    // 分类 tabs：全部 + 5 可见分类（小吃/饮品/水果/日用品/服饰），badge 以 bizpur-cat-badge- 开头需排除
-    const tabCount = await page.locator('button.bizpur-tab').count()
+    // 分类 tabs：全部 + 5 可见分类（小吃/饮品/水果/日用品/服饰），badge 以 bizpur-cat-badge- 开头需排除（EP 换皮后 el-radio-button 渲染 <label> 非 <button>）
+    const tabCount = await page.locator('.bizpur-tabs .el-radio-button').count()
     const catAllVisible = await page.locator('[data-testid="bizpur-cat-all"]').isVisible()
     // 卡片分类徽标：qa-b1=烤肠→小吃
     const badgeText = (await page.locator('[data-testid="bizpur-cat-badge-qa-b1"]').textContent()).trim()
@@ -275,8 +317,8 @@ try {
     await page.waitForTimeout(200)
     await page.locator('[data-testid="bizpur-add"]').click()
     await page.waitForSelector('[data-testid="bizpur-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizpur-form-qty"]').fill('10')
-    await page.locator('[data-testid="bizpur-form-price"]').fill('2')
+    await epFill(page, 'bizpur-form-qty', '10')
+    await epFill(page, 'bizpur-form-price', '2')
     const totalText = (await page.locator('[data-testid="bizpur-form-total"]').textContent()).trim()
     await page.locator('[data-testid="bizpur-save"]').click()
     await page.waitForTimeout(400)
@@ -299,10 +341,14 @@ try {
     const lossBefore = (await page.locator('[data-testid="bizday-loss-qa-d1"]').textContent()).trim()
     await page.locator('[data-testid="bizday-add"]').click()
     await page.waitForSelector('[data-testid="bizday-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizday-form-date"]').fill(SEED_DAILY_DATE) // 与种子同日 → upsert 覆盖
-    await page.locator('[data-testid="bizday-row-product"]').nth(0).selectOption('qa-p1')
-    await page.locator('[data-testid="bizday-row"]').nth(0).locator('input').nth(0).fill('10') // 带出
-    await page.locator('[data-testid="bizday-row"]').nth(0).locator('input').nth(1).fill('0') // 剩余
+    await epFillDate(page, 'bizday-form-date', SEED_DAILY_DATE) // 与种子同日 → upsert 覆盖
+    await epSelect(page, 'bizday-row-product', '烤肠', 0)
+    // 行内为 el-select + 3 个 el-input-number（class bizday-num-input）；原 `input` nth(0/1) 会命中 el-select 内部输入框
+    const rowNumInputs = page.locator('[data-testid="bizday-row"]').nth(0).locator('.bizday-num-input input')
+    await rowNumInputs.nth(0).fill('10') // 带出
+    await rowNumInputs.nth(0).blur()
+    await rowNumInputs.nth(1).fill('0') // 剩余
+    await rowNumInputs.nth(1).blur()
     const previewRevenue = (await page.locator('[data-testid="bizday-form-revenue"]').textContent()).trim()
     const previewCost = (await page.locator('[data-testid="bizday-form-cost"]').textContent()).trim()
     const previewProfit = (await page.locator('[data-testid="bizday-form-profit"]').textContent()).trim()
@@ -333,7 +379,7 @@ try {
     // ⚙️ 打开分类管理 → 新增「电费」→ 分类行出现
     await page.locator('[data-testid="bizexp-cat-manager"]').click()
     await page.waitForSelector('[data-testid="bizcat-dialog-expense"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizcat-new-expense"]').fill('电费')
+    await epFill(page, 'bizcat-new-expense', '电费')
     await page.locator('[data-testid="bizcat-add-expense"]').click()
     await page.waitForTimeout(300)
     const customCatRow = (await page.locator('[data-testid^="bizcat-row-expense-bec_"]').count()) === 1
@@ -342,12 +388,12 @@ try {
     // 新增支出：2026-08-03 两行（电费 15 + 摊位费 5）→ 新日卡片
     await page.locator('[data-testid="bizexp-add"]').click()
     await page.waitForSelector('[data-testid="bizexp-dialog"]', { state: 'visible', timeout: 5000 })
-    await page.locator('[data-testid="bizexp-form-date"]').fill('2026-08-03')
-    await page.locator('[data-testid="bizexp-row-category"]').nth(0).selectOption({ label: '电费' })
-    await page.locator('[data-testid="bizexp-row-amount"]').nth(0).fill('15')
+    await epFillDate(page, 'bizexp-form-date', '2026-08-03')
+    await epSelect(page, 'bizexp-row-category', '电费', 0)
+    await epFill(page, 'bizexp-row-amount', '15', 0)
     await page.locator('[data-testid="bizexp-row-add"]').click()
-    await page.locator('[data-testid="bizexp-row-category"]').nth(1).selectOption({ label: '摊位费' })
-    await page.locator('[data-testid="bizexp-row-amount"]').nth(1).fill('5')
+    await epSelect(page, 'bizexp-row-category', '摊位费', 1)
+    await epFill(page, 'bizexp-row-amount', '5', 1)
     await page.locator('[data-testid="bizexp-save"]').click()
     await page.waitForTimeout(400)
     const cardsAfter = await page.locator('[data-testid^="bizexp-card-"]').count()
@@ -383,9 +429,8 @@ try {
       p2StockText.includes('库存剩余：0') &&
       cardTexts.length === 3 &&
       cardTexts.every((t) => t.includes('库存剩余：'))
-    // 阈值改 0 → 预警清空
-    await page.locator('[data-testid="bizinv-threshold"]').fill('0')
-    await page.locator('[data-testid="bizinv-threshold"]').blur()
+    // 阈值改 0 → 预警清空（el-input type="number"，fill 内部 input + blur 触发 commitThreshold）
+    await epFill(page, 'bizinv-threshold', '0')
     await page.waitForTimeout(400)
     const lowAfter = await page.locator(lowCardSel).count()
     const emptyVisible = (await page.locator('[data-testid="bizinv-low-empty"]').count()) === 1
@@ -438,8 +483,8 @@ try {
     await page.waitForSelector('.manager', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="settings-tab-business"]').click()
     await page.waitForSelector('[data-testid="bizsettings-stall"]', { state: 'visible', timeout: 5000 })
-    const stallVal = await page.locator('[data-testid="bizsettings-stall"]').inputValue()
-    const thresholdVal = await page.locator('[data-testid="bizsettings-threshold"]').inputValue()
+    const stallVal = await epInputValue(page, 'bizsettings-stall')
+    const thresholdVal = await epInputValue(page, 'bizsettings-threshold')
     await page.locator('[data-testid="bizsettings-product-cats"]').click()
     await page.waitForSelector('[data-testid="bizcat-dialog-product"]', { state: 'visible', timeout: 5000 })
     const productRows = await page.locator('[data-testid^="bizcat-row-product-"]').count()

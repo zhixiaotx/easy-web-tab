@@ -62,8 +62,8 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     try {
       // 嵌套 reactive 数组必须逐字段 toRaw（整体 toRaw 解不掉内层 Proxy，DataCloneError 实证）
       await idbPut('business', {
-        productCategories: toRaw(productCategories.value),
-        expenseCategories: toRaw(expenseCategories.value),
+        productCategories: toRaw(productCategories.value).map((c) => ({ ...toRaw(c) })),
+        expenseCategories: toRaw(expenseCategories.value).map((c) => ({ ...toRaw(c) })),
         products: toRaw(products.value),
         purchases: toRaw(purchases.value),
         dailyRecords: toRaw(dailyRecords.value),

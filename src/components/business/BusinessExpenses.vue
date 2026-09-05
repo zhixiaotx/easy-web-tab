@@ -203,13 +203,14 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
           <label>日期 *（同一天将自动合并到同一张卡片）</label>
-          <el-date-picker
-            v-model="editingDate"
-            type="date"
-            value-format="YYYY-MM-DD"
-            size="small"
-            data-testid="bizexp-form-date"
-          />
+          <div data-testid="bizexp-form-date">
+            <el-date-picker
+              v-model="editingDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              size="small"
+            />
+          </div>
         </div>
 
         <!-- 多行支出行 -->

@@ -223,13 +223,14 @@ async function handleDelete(id: string): Promise<void> {
         <div class="biz-form-row">
           <div class="biz-field">
             <label>日期 *</label>
-            <el-date-picker
-              v-model="formDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              size="small"
-              data-testid="bizpur-form-date"
-            />
+            <div data-testid="bizpur-form-date">
+              <el-date-picker
+                v-model="formDate"
+                type="date"
+                value-format="YYYY-MM-DD"
+                size="small"
+              />
+            </div>
           </div>
           <div class="biz-field">
             <label>数量 *</label>

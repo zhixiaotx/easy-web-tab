@@ -259,7 +259,7 @@ function drawerMarkupRate(): number | null {
               size="small"
               :min="0"
               :step="0.01"
-              :model-value="formPurchasePrice as unknown as number"
+              :model-value="formPurchasePrice === '' ? undefined : Number(formPurchasePrice)"
               @update:model-value="formPurchasePrice = String($event ?? '')"
               data-testid="bizprod-form-purchase"
             />
@@ -270,7 +270,7 @@ function drawerMarkupRate(): number | null {
               size="small"
               :min="0"
               :step="0.01"
-              :model-value="formSellingPrice as unknown as number"
+              :model-value="formSellingPrice === '' ? undefined : Number(formSellingPrice)"
               @update:model-value="formSellingPrice = String($event ?? '')"
               data-testid="bizprod-form-selling"
             />

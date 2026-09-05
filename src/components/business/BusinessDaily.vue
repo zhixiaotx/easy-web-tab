@@ -227,13 +227,14 @@ async function handleDelete(id: string): Promise<void> {
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
           <label>日期 *（同一天重复保存将覆盖）</label>
-          <el-date-picker
-            v-model="editingDate"
-            type="date"
-            value-format="YYYY-MM-DD"
-            size="small"
-            data-testid="bizday-form-date"
-          />
+          <div data-testid="bizday-form-date">
+            <el-date-picker
+              v-model="editingDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              size="small"
+            />
+          </div>
         </div>
 
         <div class="bizday-rows">

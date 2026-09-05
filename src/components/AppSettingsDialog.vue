@@ -1440,10 +1440,8 @@ onUnmounted(() => {
             <h3 class="wb-menu-title">天气城市</h3>
           </div>
           <p class="wb-menu-hint">设置工作台天气卡显示的城市，留空表示未配置</p>
-          <input
+          <el-input
             ref="cityInput"
-            type="text"
-            class="wb-menu-name-input"
             placeholder="如：北京"
             data-testid="wb-city-input"
             v-model="store.workbenchCity"
@@ -1455,7 +1453,7 @@ onUnmounted(() => {
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-menu'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">工作台菜单</h3>
-            <button type="button" class="row-reset" data-testid="wbmenu-reset" @click="store.resetWorkbenchMenu()">恢复默认</button>
+            <el-button size="small" data-testid="wbmenu-reset" @click="store.resetWorkbenchMenu()">恢复默认</el-button>
           </div>
           <p class="wb-menu-hint">主页固定置顶，不可调整顺序或关闭；开关关闭的功能将从菜单与主页统计中隐藏</p>
 
@@ -1468,49 +1466,39 @@ onUnmounted(() => {
               :data-testid="`wbmenu-row-${item.key}`"
             >
               <span class="wb-menu-icon"><Icon :name="item.icon" /></span>
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                maxlength="12"
+              <el-input
+                :maxlength="12"
                 :data-testid="`wbmenu-name-${item.key}`"
                 :aria-label="`${item.label}名称`"
-                :value="menuEditing[item.key] ?? item.label"
-                @input="menuEditing[item.key] = ($event.target as HTMLInputElement).value"
+                :model-value="menuEditing[item.key] ?? item.label"
+                @update:model-value="menuEditing[item.key] = $event"
                 @blur="commitMenuName(item.key)"
                 @keydown.enter="commitMenuName(item.key)"
                 @keydown.esc.stop="revertMenuName(item.key)"
               />
               <div class="wb-menu-actions">
-                <button
-                  type="button"
-                  class="wb-menu-btn"
+                <el-button
+                  size="small"
                   :data-testid="`wbmenu-up-${item.key}`"
                   :disabled="isMenuUpDisabled(item, index)"
                   :aria-disabled="isMenuUpDisabled(item, index) ? 'true' : 'false'"
                   @click="onMoveMenu(item.key, 'up')"
-                >上移</button>
-                <button
-                  type="button"
-                  class="wb-menu-btn"
+                >上移</el-button>
+                <el-button
+                  size="small"
                   :data-testid="`wbmenu-down-${item.key}`"
                   :disabled="isMenuDownDisabled(item, index)"
                   :aria-disabled="isMenuDownDisabled(item, index) ? 'true' : 'false'"
                   @click="onMoveMenu(item.key, 'down')"
-                >下移</button>
+                >下移</el-button>
               </div>
-              <button
-                type="button"
-                class="switch-btn"
-                :class="{ on: store.isWorkbenchMenuEnabled(item.key) }"
-                role="switch"
-                :aria-checked="store.isWorkbenchMenuEnabled(item.key)"
+              <el-switch
+                :model-value="store.isWorkbenchMenuEnabled(item.key)"
+                @change="store.setWorkbenchMenuVisibility(item.key, $event)"
                 :disabled="item.key === 'home'"
                 :title="item.key === 'home' ? '主页为默认页，不可关闭' : store.isWorkbenchMenuEnabled(item.key) ? '关闭此功能' : '开启此功能'"
                 :data-testid="`wbmenu-switch-${item.key}`"
-                @click="store.setWorkbenchMenuVisibility(item.key, !store.isWorkbenchMenuEnabled(item.key))"
-              >
-                <span class="switch-thumb"></span>
-              </button>
+              />
             </div>
           </div>
         </div>
@@ -1519,7 +1507,7 @@ onUnmounted(() => {
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-card'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">主页卡片尺寸</h3>
-            <button type="button" class="row-reset" data-testid="wbcard-reset-all" @click="resetAllCardSizes()">恢复默认</button>
+            <el-button size="small" data-testid="wbcard-reset-all" @click="resetAllCardSizes()">恢复默认</el-button>
           </div>
           <p class="wb-menu-hint">宽度 = 卡片横向占几列（上限为所属网格的列数）；高度 = 卡片最小高度（px），内容更高时自动撑开。留空即回退默认。修改后立即保存并推送到云同步文件。</p>
 
@@ -1535,31 +1523,27 @@ onUnmounted(() => {
                 <span class="wb-cardsize-name">{{ card.label }}</span>
                 <label class="wb-cardsize-field">
                   宽
-                  <input
-                    type="number"
-                    class="num-input"
-                    min="1"
-                    step="1"
+                  <el-input-number
+                    :min="1"
+                    :step="1"
                     :max="group.maxCols"
-                    :value="cardSizeDraft[card.id].w"
+                    :model-value="cardSizeDraft[card.id].w === '' ? undefined : Number(cardSizeDraft[card.id].w)"
                     :aria-label="`${card.label}宽度`"
                     :data-testid="`wbcard-w-${card.id}`"
-                    @input="onCardWInput(card.id, $event)"
+                    @input="onCardWInput(card.id, { target: { value: String($event ?? '') } } as unknown as Event)"
                     @blur="syncCardSizeRow(card.id)"
                   />
                 </label>
                 <label class="wb-cardsize-field">
                   高
-                  <input
-                    type="number"
-                    class="num-input"
-                    min="60"
-                    max="1200"
-                    step="10"
-                    :value="cardSizeDraft[card.id].h"
+                  <el-input-number
+                    :min="60"
+                    :max="1200"
+                    :step="10"
+                    :model-value="cardSizeDraft[card.id].h === '' ? undefined : Number(cardSizeDraft[card.id].h)"
                     :aria-label="`${card.label}高度`"
                     :data-testid="`wbcard-h-${card.id}`"
-                    @input="onCardHInput(card.id, $event)"
+                    @input="onCardHInput(card.id, { target: { value: String($event ?? '') } } as unknown as Event)"
                     @blur="syncCardSizeRow(card.id)"
                   />
                 </label>
@@ -1582,44 +1566,34 @@ onUnmounted(() => {
           <p class="wb-menu-hint">管理待办面板的分类列表；分类被待办引用时无法删除；勾选的分类会显示在面板筛选标签页</p>
           <div class="wb-menu-list">
             <div v-for="(cat, idx) in todosCatStore.customCategories" :key="cat" class="wb-menu-row">
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                :value="todoCatDrafts[cat] ?? cat"
-                @input="todoCatDrafts[cat] = ($event.target as HTMLInputElement).value"
+              <el-input
+                :model-value="todoCatDrafts[cat] ?? cat"
+                @update:model-value="todoCatDrafts[cat] = $event"
                 @blur="commitTodoCatName(cat)"
                 @keydown.enter="commitTodoCatName(cat)"
                 @keydown.esc="revertTodoCatName(cat)"
                 :data-testid="`wbcfg-todo-name-${cat}`"
               />
               <div class="wb-menu-actions">
-                <button type="button" class="wb-menu-btn" :disabled="idx <= 0" :data-testid="`wbcfg-todo-up-${cat}`" @click="handleMoveTodoCat(cat, 'up')">上移</button>
-                <button type="button" class="wb-menu-btn" :disabled="idx >= todosCatStore.customCategories.length - 1" :data-testid="`wbcfg-todo-down-${cat}`" @click="handleMoveTodoCat(cat, 'down')">下移</button>
+                <el-button size="small" :disabled="idx <= 0" :data-testid="`wbcfg-todo-up-${cat}`" @click="handleMoveTodoCat(cat, 'up')">上移</el-button>
+                <el-button size="small" :disabled="idx >= todosCatStore.customCategories.length - 1" :data-testid="`wbcfg-todo-down-${cat}`" @click="handleMoveTodoCat(cat, 'down')">下移</el-button>
               </div>
-              <button type="button" class="wb-menu-btn" :data-testid="`wbcfg-todo-del-${cat}`" @click="handleDeleteTodoCat(cat)">删除</button>
-              <button
-                type="button"
-                class="switch-btn"
-                :class="{ on: todosCatStore.tabCategories.includes(cat) }"
-                role="switch"
-                :aria-checked="todosCatStore.tabCategories.includes(cat)"
+              <el-button size="small" type="danger" :data-testid="`wbcfg-todo-del-${cat}`" @click="handleDeleteTodoCat(cat)">删除</el-button>
+              <el-switch
+                :model-value="todosCatStore.tabCategories.includes(cat)"
+                @change="todosCatStore.toggleTabCategory(cat, $event)"
                 :data-testid="`wbcfg-todo-tab-${cat}`"
-                @click="todosCatStore.toggleTabCategory(cat, !todosCatStore.tabCategories.includes(cat))"
-              >
-                <span class="switch-thumb"></span>
-              </button>
+              />
             </div>
           </div>
           <div class="wb-cat-add-row">
-            <input
+            <el-input
               v-model="newTodoCatName"
-              type="text"
-              class="wb-menu-name-input"
               placeholder="新分类名称"
               data-testid="wbcfg-todo-new"
               @keydown.enter="handleAddTodoCat"
             />
-            <button type="button" class="wb-menu-btn" :disabled="newTodoCatName.trim() === ''" data-testid="wbcfg-todo-add" @click="handleAddTodoCat">添加</button>
+            <el-button size="small" :disabled="newTodoCatName.trim() === ''" data-testid="wbcfg-todo-add" @click="handleAddTodoCat">添加</el-button>
           </div>
         </div>
 
@@ -1639,11 +1613,9 @@ onUnmounted(() => {
               class="wbcat-tab-row"
               :data-testid="`wbcfg-cd-builtin-tab-${c}`"
             >
-              <input
-                type="checkbox"
-                class="wbcat-tab-check"
-                :checked="countdownsCatStore.tabCategories.includes(c)"
-                @change="countdownsCatStore.setTabCategory(c, ($event.target as HTMLInputElement).checked)"
+              <el-checkbox
+                :model-value="countdownsCatStore.tabCategories.includes(c)"
+                @change="countdownsCatStore.setTabCategory(c, $event)"
               />
               <span>{{ categoryLabel(c) }}</span>
             </label>
@@ -1653,44 +1625,34 @@ onUnmounted(() => {
           <div class="wb-cat-sub-title">自定义分类</div>
           <div class="wb-menu-list">
             <div v-for="(cat, idx) in countdownsCatStore.customCategories" :key="cat" class="wb-menu-row">
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                :value="cdCatDrafts[cat] ?? cat"
-                @input="cdCatDrafts[cat] = ($event.target as HTMLInputElement).value"
+              <el-input
+                :model-value="cdCatDrafts[cat] ?? cat"
+                @update:model-value="cdCatDrafts[cat] = $event"
                 @blur="commitCdCatName(cat)"
                 @keydown.enter="commitCdCatName(cat)"
                 @keydown.esc="revertCdCatName(cat)"
                 :data-testid="`wbcfg-cd-name-${cat}`"
               />
               <div class="wb-menu-actions">
-                <button type="button" class="wb-menu-btn" :disabled="idx <= 0" :data-testid="`wbcfg-cd-up-${cat}`" @click="handleMoveCdCat(cat, 'up')">上移</button>
-                <button type="button" class="wb-menu-btn" :disabled="idx >= countdownsCatStore.customCategories.length - 1" :data-testid="`wbcfg-cd-down-${cat}`" @click="handleMoveCdCat(cat, 'down')">下移</button>
+                <el-button size="small" :disabled="idx <= 0" :data-testid="`wbcfg-cd-up-${cat}`" @click="handleMoveCdCat(cat, 'up')">上移</el-button>
+                <el-button size="small" :disabled="idx >= countdownsCatStore.customCategories.length - 1" :data-testid="`wbcfg-cd-down-${cat}`" @click="handleMoveCdCat(cat, 'down')">下移</el-button>
               </div>
-              <button type="button" class="wb-menu-btn" :data-testid="`wbcfg-cd-del-${cat}`" @click="handleDeleteCdCat(cat)">删除</button>
-              <button
-                type="button"
-                class="switch-btn"
-                :class="{ on: countdownsCatStore.tabCategories.includes(cat) }"
-                role="switch"
-                :aria-checked="countdownsCatStore.tabCategories.includes(cat)"
+              <el-button size="small" type="danger" :data-testid="`wbcfg-cd-del-${cat}`" @click="handleDeleteCdCat(cat)">删除</el-button>
+              <el-switch
+                :model-value="countdownsCatStore.tabCategories.includes(cat)"
+                @change="countdownsCatStore.setTabCategory(cat, $event)"
                 :data-testid="`wbcfg-cd-tab-${cat}`"
-                @click="countdownsCatStore.setTabCategory(cat, !countdownsCatStore.tabCategories.includes(cat))"
-              >
-                <span class="switch-thumb"></span>
-              </button>
+              />
             </div>
           </div>
           <div class="wb-cat-add-row">
-            <input
+            <el-input
               v-model="newCdCatName"
-              type="text"
-              class="wb-menu-name-input"
               placeholder="新分类名称"
               data-testid="wbcfg-cd-new"
               @keydown.enter="handleAddCdCat"
             />
-            <button type="button" class="wb-menu-btn" :disabled="newCdCatName.trim() === ''" data-testid="wbcfg-cd-add" @click="handleAddCdCat">添加</button>
+            <el-button size="small" :disabled="newCdCatName.trim() === ''" data-testid="wbcfg-cd-add" @click="handleAddCdCat">添加</el-button>
           </div>
         </div>
 
@@ -1702,44 +1664,34 @@ onUnmounted(() => {
           <p class="wb-menu-hint">管理便签面板的分类列表；删除分类后该分类下的便签将变为未分类</p>
           <div class="wb-menu-list">
             <div v-for="(cat, idx) in sortedNoteCategories" :key="cat.id" class="wb-menu-row">
-              <input
-                type="text"
-                class="wb-menu-name-input"
-                :value="noteCatDrafts[cat.id] ?? cat.name"
-                @input="noteCatDrafts[cat.id] = ($event.target as HTMLInputElement).value"
+              <el-input
+                :model-value="noteCatDrafts[cat.id] ?? cat.name"
+                @update:model-value="noteCatDrafts[cat.id] = $event"
                 @blur="commitNoteCatName(cat)"
                 @keydown.enter="commitNoteCatName(cat)"
                 @keydown.esc="revertNoteCatName(cat)"
                 :data-testid="`wbcfg-note-name-${cat.id}`"
               />
               <div class="wb-menu-actions">
-                <button type="button" class="wb-menu-btn" :disabled="idx <= 0" :data-testid="`wbcfg-note-up-${cat.id}`" @click="handleMoveNoteCat(cat.id, 'up')">上移</button>
-                <button type="button" class="wb-menu-btn" :disabled="idx >= sortedNoteCategories.length - 1" :data-testid="`wbcfg-note-down-${cat.id}`" @click="handleMoveNoteCat(cat.id, 'down')">下移</button>
+                <el-button size="small" :disabled="idx <= 0" :data-testid="`wbcfg-note-up-${cat.id}`" @click="handleMoveNoteCat(cat.id, 'up')">上移</el-button>
+                <el-button size="small" :disabled="idx >= sortedNoteCategories.length - 1" :data-testid="`wbcfg-note-down-${cat.id}`" @click="handleMoveNoteCat(cat.id, 'down')">下移</el-button>
               </div>
-              <button type="button" class="wb-menu-btn" :data-testid="`wbcfg-note-del-${cat.id}`" @click="handleDeleteNoteCat(cat)">删除</button>
-              <button
-                type="button"
-                class="switch-btn"
-                :class="{ on: cat.showInTabs !== false }"
-                role="switch"
-                :aria-checked="cat.showInTabs !== false"
+              <el-button size="small" type="danger" :data-testid="`wbcfg-note-del-${cat.id}`" @click="handleDeleteNoteCat(cat)">删除</el-button>
+              <el-switch
+                :model-value="cat.showInTabs !== false"
+                @change="handleToggleNoteCatTab({ id: cat.id, showInTabs: cat.showInTabs })"
                 :data-testid="`wbcfg-note-tab-${cat.id}`"
-                @click="handleToggleNoteCatTab({ id: cat.id, showInTabs: cat.showInTabs })"
-              >
-                <span class="switch-thumb"></span>
-              </button>
+              />
             </div>
           </div>
           <div class="wb-cat-add-row">
-            <input
+            <el-input
               v-model="newNoteCatName"
-              type="text"
-              class="wb-menu-name-input"
               placeholder="新分类名称"
               data-testid="wbcfg-note-new"
               @keydown.enter="handleAddNoteCat"
             />
-            <button type="button" class="wb-menu-btn" :disabled="newNoteCatName.trim() === ''" data-testid="wbcfg-note-add" @click="handleAddNoteCat">添加</button>
+            <el-button size="small" :disabled="newNoteCatName.trim() === ''" data-testid="wbcfg-note-add" @click="handleAddNoteCat">添加</el-button>
           </div>
         </div>
 
@@ -1752,34 +1704,30 @@ onUnmounted(() => {
           <div class="wb-menu-list">
             <div v-for="c in sortedLedgerCategories" :key="c.id" class="wb-menu-row" :data-testid="`ldcfg-ledgercat-row-${c.id}`">
               <template v-if="ledgerCatEditingId === c.id">
-                <input
-                  type="text"
-                  class="wb-menu-name-input"
-                  :value="ledgerCatDrafts[c.id] ?? c.name"
-                  @input="ledgerCatDrafts[c.id] = ($event.target as HTMLInputElement).value"
+                <el-input
+                  :model-value="ledgerCatDrafts[c.id] ?? c.name"
+                  @update:model-value="ledgerCatDrafts[c.id] = $event"
                   @keydown.enter="ledgerCatSave(c.id)"
                   @keydown.esc="ledgerCatCancelEdit()"
                   :data-testid="`ldcfg-ledgercat-edit-name-${c.id}`"
                 />
-                <select
-                  class="wb-menu-name-input"
+                <el-select
                   style="max-width: 120px; flex: 0 0 120px;"
-                  :value="ledgerCatEditType[c.id] ?? c.type"
-                  @change="ledgerCatEditType[c.id] = ($event.target as HTMLSelectElement).value as 'income' | 'expense'"
+                  :model-value="ledgerCatEditType[c.id] ?? c.type"
+                  @change="ledgerCatEditType[c.id] = $event"
                   :data-testid="`ldcfg-ledgercat-edit-type-${c.id}`"
                 >
-                  <option value="income">收入</option>
-                  <option value="expense">支出</option>
-                </select>
+                  <el-option value="income" label="收入" />
+                  <el-option value="expense" label="支出" />
+                </el-select>
                 <div class="wb-menu-actions">
-                  <button
-                    type="button"
-                    class="wb-menu-btn"
+                  <el-button
+                    size="small"
                     :disabled="(ledgerCatDrafts[c.id] ?? c.name).trim() === ''"
                     :data-testid="`ldcfg-ledgercat-save-${c.id}`"
                     @click="ledgerCatSave(c.id)"
-                  >保存</button>
-                  <button type="button" class="wb-menu-btn" :data-testid="`ldcfg-ledgercat-cancel-${c.id}`" @click="ledgerCatCancelEdit()">取消</button>
+                  >保存</el-button>
+                  <el-button size="small" :data-testid="`ldcfg-ledgercat-cancel-${c.id}`" @click="ledgerCatCancelEdit()">取消</el-button>
                 </div>
               </template>
               <template v-else>
@@ -1788,32 +1736,29 @@ onUnmounted(() => {
                 <span v-if="c.isBuiltIn" class="ld-builtin-tag">内置</span>
                 <template v-if="!c.isBuiltIn">
                   <div style="flex: 1"></div>
-                  <button type="button" class="wb-menu-btn" :data-testid="`ldcfg-ledgercat-edit-${c.id}`" @click="ledgerCatStartEdit(c)">编辑</button>
-                  <button type="button" class="wb-menu-btn" :data-testid="`ldcfg-ledgercat-del-${c.id}`" @click="handleDeleteLedgerCat(c.id)">删除</button>
+                  <el-button size="small" :data-testid="`ldcfg-ledgercat-edit-${c.id}`" @click="ledgerCatStartEdit(c)">编辑</el-button>
+                  <el-button size="small" type="danger" :data-testid="`ldcfg-ledgercat-del-${c.id}`" @click="handleDeleteLedgerCat(c.id)">删除</el-button>
                 </template>
                 <template v-else><div style="flex: 1"></div></template>
               </template>
             </div>
           </div>
           <div class="wb-cat-add-row">
-            <input
+            <el-input
               v-model="newLedgerCatName"
-              type="text"
-              class="wb-menu-name-input"
               placeholder="新记账分类名称"
               data-testid="ldcfg-ledgercat-new-name"
               @keydown.enter="handleAddLedgerCat"
             />
-            <select
+            <el-select
               v-model="newLedgerCatType"
-              class="wb-menu-name-input"
               style="max-width: 120px; flex: 0 0 120px;"
               data-testid="ldcfg-ledgercat-new-type"
             >
-              <option value="income">收入</option>
-              <option value="expense">支出</option>
-            </select>
-            <button type="button" class="wb-menu-btn" :disabled="newLedgerCatName.trim() === ''" data-testid="ldcfg-ledgercat-add" @click="handleAddLedgerCat">添加</button>
+              <el-option value="income" label="收入" />
+              <el-option value="expense" label="支出" />
+            </el-select>
+            <el-button size="small" :disabled="newLedgerCatName.trim() === ''" data-testid="ldcfg-ledgercat-add" @click="handleAddLedgerCat">添加</el-button>
           </div>
         </div>
 
@@ -1824,8 +1769,8 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">整包导出工作台所有数据（待办/便签/日记/倒计时/密码/健康/记账/销售记账/工作台设置）为 JSON 文件；导入时当前数据将被覆盖</p>
           <div class="remind-actions">
-            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-export" @click="handleWbExport"><Icon name="upload" /> 导出工作台备份</button>
-            <button type="button" class="wb-menu-btn" data-testid="wbcfg-wb-import" @click="handleWbImportClick"><Icon name="download" /> 导入工作台备份</button>
+            <el-button size="small" data-testid="wbcfg-wb-export" @click="handleWbExport"><Icon name="upload" /> 导出工作台备份</el-button>
+            <el-button size="small" data-testid="wbcfg-wb-import" @click="handleWbImportClick"><Icon name="download" /> 导入工作台备份</el-button>
           </div>
         </div>
 
@@ -1833,13 +1778,12 @@ onUnmounted(() => {
         <div v-if="activeTab === 'wb' && activeSubTab === 'wb-snapshot'" class="wb-menu-config wb-snapshot-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">数据时光机</h3>
-            <button
-              type="button"
-              class="row-reset"
+            <el-button
+              size="small"
               data-testid="wb-snapshot-now"
               :disabled="snapshotBusy"
               @click="handleSnapshotNow"
-            >立即备份</button>
+            >立即备份</el-button>
           </div>
           <p class="wb-menu-hint">进入工作台时自动备份当日数据（同日去重），环形保留最近 10 份；可随时恢复至历史快照</p>
 
@@ -1855,13 +1799,13 @@ onUnmounted(() => {
             >
               <span class="wb-snapshot-time">{{ snapshotTime(snap.createdAt) }}</span>
               <span class="wb-snapshot-source">{{ snapshotSourceLabel(snap) }}快照</span>
-              <button
-                type="button"
-                class="wb-menu-btn wb-snapshot-restore"
+              <el-button
+                size="small"
+                class="wb-snapshot-restore"
                 :data-testid="`wb-snapshot-restore-${snap.id}`"
                 :disabled="snapshotBusy"
                 @click="handleRestoreSnapshot(snap)"
-              >恢复</button>
+              >恢复</el-button>
             </div>
           </div>
         </div>
@@ -1870,17 +1814,11 @@ onUnmounted(() => {
         <div v-if="activeTab === 'remind'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">桌面通知</h3>
-            <button
-              type="button"
-              class="switch-btn"
-              :class="{ on: store.desktopNotifyEnabled }"
-              role="switch"
-              :aria-checked="store.desktopNotifyEnabled"
+            <el-switch
+              :model-value="store.desktopNotifyEnabled"
+              @change="onToggleDesktopNotify"
               data-testid="remind-desktop-switch"
-              @click="onToggleDesktopNotify"
-            >
-              <span class="switch-thumb"></span>
-            </button>
+            />
           </div>
           <p class="wb-menu-hint">
             开启后，倒计时提醒到点会弹出浏览器桌面通知；开启时将自动请求通知权限，若浏览器已拒绝，请在浏览器站点设置中重新授权
@@ -1891,75 +1829,60 @@ onUnmounted(() => {
         <div v-if="activeTab === 'remind'" class="wb-menu-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">邮件提醒</h3>
-            <button
-              type="button"
-              class="switch-btn"
-              :class="{ on: store.reminderEmailEnabled }"
-              role="switch"
-              :aria-checked="store.reminderEmailEnabled"
+            <el-switch
+              :model-value="store.reminderEmailEnabled"
+              @change="store.setReminderEmailEnabled($event as boolean)"
               data-testid="remind-email-switch"
-              @click="store.setReminderEmailEnabled(!store.reminderEmailEnabled)"
-            >
-              <span class="switch-thumb"></span>
-            </button>
+            />
           </div>
           <p class="wb-menu-hint">EmailJS 需注册（emailjs.com）→ 创建 Service + Template（模板变量命名契约：to_email / countdown_name / occurrence_time / app_url）</p>
 
           <div class="remind-fields">
             <label class="remind-field">
               <span class="remind-label">收件邮箱</span>
-              <input
-                type="email"
-                class="wb-menu-name-input"
+              <el-input
                 placeholder="example@email.com"
                 data-testid="remind-email-to"
-                :value="store.reminderEmailTo"
-                @input="store.setReminderEmailTo(($event.target as HTMLInputElement).value)"
+                :model-value="store.reminderEmailTo"
+                @update:model-value="store.setReminderEmailTo($event)"
               />
             </label>
             <label class="remind-field">
               <span class="remind-label">Service ID</span>
-              <input
-                type="text"
-                class="wb-menu-name-input"
+              <el-input
                 placeholder="service_xxxxxxxx"
                 data-testid="remind-email-service"
-                :value="store.reminderEmailServiceId"
-                @input="store.setReminderEmailServiceId(($event.target as HTMLInputElement).value)"
+                :model-value="store.reminderEmailServiceId"
+                @update:model-value="store.setReminderEmailServiceId($event)"
               />
             </label>
             <label class="remind-field">
               <span class="remind-label">Template ID</span>
-              <input
-                type="text"
-                class="wb-menu-name-input"
+              <el-input
                 placeholder="template_xxxxxxxx"
                 data-testid="remind-email-template"
-                :value="store.reminderEmailTemplateId"
-                @input="store.setReminderEmailTemplateId(($event.target as HTMLInputElement).value)"
+                :model-value="store.reminderEmailTemplateId"
+                @update:model-value="store.setReminderEmailTemplateId($event)"
               />
             </label>
             <label class="remind-field">
               <span class="remind-label">Public Key</span>
-              <input
-                type="text"
-                class="wb-menu-name-input"
+              <el-input
                 placeholder="public key"
                 data-testid="remind-email-key"
-                :value="store.reminderEmailPublicKey"
-                @input="store.setReminderEmailPublicKey(($event.target as HTMLInputElement).value)"
+                :model-value="store.reminderEmailPublicKey"
+                @update:model-value="store.setReminderEmailPublicKey($event)"
               />
             </label>
           </div>
 
           <div class="remind-actions">
-            <button
-              type="button"
-              class="wb-menu-btn"
+            <el-button
+              size="small"
               data-testid="remind-email-test"
               :disabled="!canTestEmail || testEmailBusy"
               @click="handleTestEmail"
-            >发送测试邮件</button>
+            >发送测试邮件</el-button>
           </div>
         </div>
 
@@ -2712,6 +2635,27 @@ html.dark .tab-btn.active {
 .wb-menu-name-input:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-primary));
+}
+
+/* EP 换皮：wb/remind 分支 el-input/el-select/el-input-number 在 flex 行内撑满（替代原 .wb-menu-name-input 的 flex:1） */
+.wb-menu-row :deep(.el-input),
+.wb-menu-row :deep(.el-select),
+.wb-menu-row :deep(.el-input-number),
+.wb-cat-add-row :deep(.el-input),
+.wb-cat-add-row :deep(.el-select),
+.wb-cat-add-row :deep(.el-input-number) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 天气城市输入框：整行撑满 */
+.wb-city-config :deep(.el-input) {
+  width: 100%;
+}
+
+/* 卡片尺寸数字框：收窄到与旧 .num-input 相近的宽度 */
+.wb-cardsize-field :deep(.el-input-number) {
+  width: 110px;
 }
 
 .wb-menu-actions {

@@ -10,21 +10,21 @@ defineEmits<{ prev: []; next: [] }>()
 
 <template>
   <div v-if="total > 1" class="panel-pager" data-testid="panel-pager">
-    <button
-      class="pp-btn"
+    <el-button
+      size="small"
       data-testid="panel-pager-prev"
       :disabled="page <= 1"
       aria-label="上一页"
       @click="$emit('prev')"
-    >←</button>
+    >←</el-button>
     <span class="pp-info" data-testid="panel-pager-info">第 {{ page }} / {{ total }} 页</span>
-    <button
-      class="pp-btn"
+    <el-button
+      size="small"
       data-testid="panel-pager-next"
       :disabled="page >= total"
       aria-label="下一页"
       @click="$emit('next')"
-    >→</button>
+    >→</el-button>
   </div>
 </template>
 

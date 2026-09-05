@@ -153,7 +153,7 @@ async function handleDelete(id: string): Promise<void> {
   <div class="bizday">
     <div class="bizday-bar">
       <span class="bizday-count">共 {{ store.dailyRecords.length }} 条（同一天自动覆盖）</span>
-      <button class="bizday-add" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</button>
+      <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
     </div>
 
     <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击右上角记下今天的第一笔</div>
@@ -194,8 +194,8 @@ async function handleDelete(id: string): Promise<void> {
           </div>
         </div>
         <div class="bizday-actions">
-          <button class="bizday-btn" :data-testid="`bizday-edit-${r.id}`" @click="startEdit(r)">编辑</button>
-          <button class="bizday-btn del" :data-testid="`bizday-del-${r.id}`" @click="handleDelete(r.id)">删除</button>
+          <el-button size="small" :data-testid="`bizday-edit-${r.id}`" @click="startEdit(r)">编辑</el-button>
+          <el-button size="small" type="danger" :data-testid="`bizday-del-${r.id}`" @click="handleDelete(r.id)">删除</el-button>
         </div>
       </div>
       </div>
@@ -210,87 +210,103 @@ async function handleDelete(id: string): Promise<void> {
     </div>
 
     <!-- 编辑弹框（商品行动态增删） -->
-    <div v-if="showDialog" class="biz-dialog-overlay" @click.self="showDialog = false">
-      <div class="biz-dialog bizday-dialog" data-testid="bizday-dialog">
+    <el-dialog
+      v-if="showDialog"
+      :model-value="true"
+      :show-close="false"
+      width="680px"
+      data-testid="bizday-dialog"
+      @close="showDialog = false"
+    >
+      <template #header>
         <div class="biz-dialog-header">
           <h3>收摊记录</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
-        <form class="biz-dialog-body" @submit.prevent="handleSave">
-          <div class="biz-field">
-            <label>日期 *（同一天重复保存将覆盖）</label>
-            <input v-model="editingDate" type="date" class="biz-input" data-testid="bizday-form-date" />
-          </div>
+      </template>
+      <form class="biz-dialog-body" @submit.prevent="handleSave">
+        <div class="biz-field">
+          <label>日期 *（同一天重复保存将覆盖）</label>
+          <el-date-picker
+            v-model="editingDate"
+            type="date"
+            value-format="YYYY-MM-DD"
+            size="small"
+            data-testid="bizday-form-date"
+          />
+        </div>
 
-          <div class="bizday-rows">
-            <div v-for="(row, i) in rows" :key="i" class="bizday-row" data-testid="bizday-row">
-              <div class="bizday-row-main">
-                <div class="bizday-product-wrap">
-                  <select v-model="row.productId" class="biz-input bizday-product" data-testid="bizday-row-product">
-                    <option v-for="p in store.products" :key="p.id" :value="p.id">
-                      {{ p.name }}{{ p.active ? '' : '（停售）' }}
-                    </option>
-                  </select>
-                  <!-- P0-3：商品进价/售价 + 当前库存 -->
-                  <div v-if="row.productId && rowProduct(row.productId)" class="bizday-row-context">
-                    <span class="bizday-row-price">
-                      {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
-                    </span>
-                    <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} 件</span>
-                  </div>
+        <div class="bizday-rows">
+          <div v-for="(row, i) in rows" :key="i" class="bizday-row" data-testid="bizday-row">
+            <div class="bizday-row-main">
+              <div class="bizday-product-wrap">
+                <el-select v-model="row.productId" size="small" class="bizday-product" data-testid="bizday-row-product">
+                  <el-option
+                    v-for="p in store.products"
+                    :key="p.id"
+                    :value="p.id"
+                    :label="p.name + (p.active ? '' : '（停售）')"
+                  />
+                </el-select>
+                <!-- P0-3：商品进价/售价 + 当前库存 -->
+                <div v-if="row.productId && rowProduct(row.productId)" class="bizday-row-context">
+                  <span class="bizday-row-price">
+                    {{ formatYuanOf(rowProduct(row.productId)!.purchasePrice) }}→{{ formatYuanOf(rowProduct(row.productId)!.sellingPrice) }}
+                  </span>
+                  <span class="bizday-row-stock">当前库存：{{ rowStock(row.productId) }} 件</span>
                 </div>
-                <div class="bizday-nums">
-                  <label class="bizday-num">
-                    带出
-                    <input v-model.number="row.broughtOut" type="number" min="0" step="1" class="biz-input" />
-                  </label>
-                  <label class="bizday-num">
-                    剩余
-                    <input v-model.number="row.remaining" type="number" min="0" step="1" class="biz-input" />
-                  </label>
-                  <label class="bizday-num">
-                    损耗
-                    <input v-model.number="row.loss" type="number" min="0" step="1" class="biz-input" />
-                  </label>
-                </div>
-                <button type="button" class="bizday-btn del" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</button>
               </div>
-              <!-- P0-3：带出后预计库存 + 行小计 -->
-              <div v-if="row.productId" class="bizday-row-preview">
-                <span
-                  class="bizday-row-expected"
-                  :class="{ 'stock-warn': rowExpectedStock(row.productId, row.broughtOut) < 0 }"
-                >
-                  带出后预计库存：{{ rowStock(row.productId) }} - {{ row.broughtOut }} = {{ rowExpectedStock(row.productId, row.broughtOut) }} 件
-                  <span v-if="rowExpectedStock(row.productId, row.broughtOut) < 0" class="bizday-stock-warn">超出库存</span>
-                </span>
-                <span class="bizday-row-subtotal">
-                  售出 {{ Math.max(0, row.broughtOut - row.remaining - row.loss) }} × ¥{{ (rowProduct(row.productId)?.sellingPrice ?? 0).toFixed(2) }} = ¥{{ rowSubtotal(row.productId, row.broughtOut, row.remaining, row.loss).toFixed(2) }}
-                </span>
+              <div class="bizday-nums">
+                <label class="bizday-num">
+                  带出
+                  <el-input-number v-model="row.broughtOut" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" />
+                </label>
+                <label class="bizday-num">
+                  剩余
+                  <el-input-number v-model="row.remaining" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" />
+                </label>
+                <label class="bizday-num">
+                  损耗
+                  <el-input-number v-model="row.loss" :min="0" :step="1" size="small" controls-position="right" class="bizday-num-input" />
+                </label>
               </div>
+              <el-button type="danger" size="small" :data-testid="`bizday-row-del-${i}`" @click="removeRow(i)">移除</el-button>
             </div>
-            <button type="button" class="bizday-add-row" data-testid="bizday-row-add" @click="addRow">＋ 添加商品行</button>
+            <!-- P0-3：带出后预计库存 + 行小计 -->
+            <div v-if="row.productId" class="bizday-row-preview">
+              <span
+                class="bizday-row-expected"
+                :class="{ 'stock-warn': rowExpectedStock(row.productId, row.broughtOut) < 0 }"
+              >
+                带出后预计库存：{{ rowStock(row.productId) }} - {{ row.broughtOut }} = {{ rowExpectedStock(row.productId, row.broughtOut) }} 件
+                <span v-if="rowExpectedStock(row.productId, row.broughtOut) < 0" class="bizday-stock-warn">超出库存</span>
+              </span>
+              <span class="bizday-row-subtotal">
+                售出 {{ Math.max(0, row.broughtOut - row.remaining - row.loss) }} × ¥{{ (rowProduct(row.productId)?.sellingPrice ?? 0).toFixed(2) }} = ¥{{ rowSubtotal(row.productId, row.broughtOut, row.remaining, row.loss).toFixed(2) }}
+              </span>
+            </div>
           </div>
+          <el-button data-testid="bizday-row-add" @click="addRow">＋ 添加商品行</el-button>
+        </div>
 
-          <div class="bizday-revenue-preview">
-            营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(formRevenue) }}</strong>
-            <span class="bizday-preview-sep">成本 <strong data-testid="bizday-form-cost">{{ formatYuanOf(formCost) }}</strong></span>
-            <span class="bizday-preview-sep">利润 <strong data-testid="bizday-form-profit">{{ formatYuanOf(formProfit) }}</strong></span>
-            <span class="bizday-preview-sep">损耗 <strong data-testid="bizday-form-loss">{{ formatYuanOf(formLossAmount) }}</strong></span>
-          </div>
+        <div class="bizday-revenue-preview">
+          营业额：<strong data-testid="bizday-form-revenue">{{ formatYuanOf(formRevenue) }}</strong>
+          <span class="bizday-preview-sep">成本 <strong data-testid="bizday-form-cost">{{ formatYuanOf(formCost) }}</strong></span>
+          <span class="bizday-preview-sep">利润 <strong data-testid="bizday-form-profit">{{ formatYuanOf(formProfit) }}</strong></span>
+          <span class="bizday-preview-sep">损耗 <strong data-testid="bizday-form-loss">{{ formatYuanOf(formLossAmount) }}</strong></span>
+        </div>
 
-          <div class="biz-field">
-            <label>备注（可选）</label>
-            <input v-model="formNote" type="text" maxlength="200" class="biz-input" data-testid="bizday-form-note" />
-          </div>
+        <div class="biz-field">
+          <label>备注（可选）</label>
+          <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizday-form-note" />
+        </div>
 
-          <div class="biz-form-actions">
-            <button type="button" class="bizday-btn" @click="showDialog = false">取消</button>
-            <button type="submit" class="bizday-btn save" :disabled="!isFormValid" data-testid="bizday-save">保存</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="biz-form-actions">
+          <el-button @click="showDialog = false">取消</el-button>
+          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizday-save">保存</el-button>
+        </div>
+      </form>
+    </el-dialog>
   </div>
 </template>
 
@@ -801,5 +817,31 @@ html.dark .biz-input {
   .bizday-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* el-dialog 外壳对齐原弹框 */
+.bizday :deep(.el-dialog) {
+  padding: 0;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.bizday :deep(.el-dialog__header) {
+  padding: 0;
+}
+
+.bizday :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.bizday :deep(.el-date-editor) {
+  width: 100%;
+}
+
+/* 行内数字输入紧凑宽度 */
+.bizday-num-input {
+  width: 90px;
 }
 </style>

@@ -134,23 +134,18 @@ async function handleDelete(id: string): Promise<void> {
     <!-- 分类 tabs + 新增 -->
     <div class="bizpur-bar">
       <div class="bizpur-tabs">
-        <button
-          class="bizpur-tab"
-          :class="{ active: activeCat === 'all' }"
-          data-testid="bizpur-cat-all"
-          @click="activeCat = 'all'"
-        >全部</button>
-        <button
-          v-for="cat in tabs"
-          :key="cat.id"
-          class="bizpur-tab"
-          :class="{ active: activeCat === cat.id }"
-          :data-testid="`bizpur-cat-${cat.id}`"
-          @click="activeCat = cat.id"
-        >{{ cat.name }}</button>
+        <el-radio-group v-model="activeCat" size="small">
+          <el-radio-button value="all" data-testid="bizpur-cat-all">全部</el-radio-button>
+          <el-radio-button
+            v-for="cat in tabs"
+            :key="cat.id"
+            :value="cat.id"
+            :data-testid="`bizpur-cat-${cat.id}`"
+          >{{ cat.name }}</el-radio-button>
+        </el-radio-group>
       </div>
       <span class="bizpur-count">共 {{ filteredWithProductFilter.length }} 笔</span>
-      <button class="bizpur-add" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</button>
+      <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</el-button>
     </div>
 
     <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
@@ -179,8 +174,8 @@ async function handleDelete(id: string): Promise<void> {
           >加价率 {{ markupRateOf(p.productId, p.unitPrice) ?? '—' }}%</span>
         </div>
         <div class="bizpur-actions">
-          <button class="bizpur-btn" :data-testid="`bizpur-edit-${p.id}`" @click="startEdit(p)">编辑</button>
-          <button class="bizpur-btn del" :data-testid="`bizpur-del-${p.id}`" @click="handleDelete(p.id)">删除</button>
+          <el-button size="small" :data-testid="`bizpur-edit-${p.id}`" @click="startEdit(p)">编辑</el-button>
+          <el-button size="small" type="danger" :data-testid="`bizpur-del-${p.id}`" @click="handleDelete(p.id)">删除</el-button>
         </div>
       </div>
       </div>
@@ -195,56 +190,88 @@ async function handleDelete(id: string): Promise<void> {
     </div>
 
     <!-- 新增/编辑弹框 -->
-    <div v-if="showDialog" class="biz-dialog-overlay" @click.self="showDialog = false">
-      <div class="biz-dialog" data-testid="bizpur-dialog">
+    <el-dialog
+      v-if="showDialog"
+      :model-value="true"
+      :show-close="false"
+      width="480px"
+      data-testid="bizpur-dialog"
+      @close="showDialog = false"
+    >
+      <template #header>
         <div class="biz-dialog-header">
           <h3>{{ editingId ? '编辑进货' : '新增进货' }}</h3>
           <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
         </div>
-        <form class="biz-dialog-body" @submit.prevent="handleSave">
+      </template>
+      <form class="biz-dialog-body" @submit.prevent="handleSave">
+        <div class="biz-field">
+          <label>商品 *</label>
+          <el-select v-model="formProductId" size="small" data-testid="bizpur-form-product">
+            <el-option
+              v-for="p in store.products"
+              :key="p.id"
+              :value="p.id"
+              :label="p.name + (p.active ? '' : '（已停售）')"
+            />
+          </el-select>
+          <!-- P0-2：选中商品后回显当前售价作为参考 -->
+          <span v-if="formProductId && findProduct(store.products, formProductId)" class="bizpur-form-price-ref">
+            当前售价参考：{{ formatYuanOf(findProduct(store.products, formProductId)!.sellingPrice) }}/件
+          </span>
+        </div>
+        <div class="biz-form-row">
           <div class="biz-field">
-            <label>商品 *</label>
-            <select v-model="formProductId" class="biz-input" data-testid="bizpur-form-product">
-              <option v-for="p in store.products" :key="p.id" :value="p.id">
-                {{ p.name }}{{ p.active ? '' : '（已停售）' }}
-              </option>
-            </select>
-            <!-- P0-2：选中商品后回显当前售价作为参考 -->
-            <span v-if="formProductId && findProduct(store.products, formProductId)" class="bizpur-form-price-ref">
-              当前售价参考：{{ formatYuanOf(findProduct(store.products, formProductId)!.sellingPrice) }}/件
-            </span>
-          </div>
-          <div class="biz-form-row">
-            <div class="biz-field">
-              <label>日期 *</label>
-              <input v-model="formDate" type="date" class="biz-input" data-testid="bizpur-form-date" />
-            </div>
-            <div class="biz-field">
-              <label>数量 *</label>
-              <input v-model="formQuantity" type="number" min="1" step="1" class="biz-input" data-testid="bizpur-form-qty" />
-            </div>
-            <div class="biz-field">
-              <label>单价 *</label>
-              <input v-model="formUnitPrice" type="number" min="0" step="0.01" class="biz-input" data-testid="bizpur-form-price" />
-            </div>
-          </div>
-          <div class="biz-field">
-            <label>合计（自动计算）</label>
-            <div class="bizpur-total-preview" data-testid="bizpur-form-total">{{ formatYuanOf(formTotal) }}</div>
+            <label>日期 *</label>
+            <el-date-picker
+              v-model="formDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              size="small"
+              data-testid="bizpur-form-date"
+            />
           </div>
           <div class="biz-field">
-            <label>备注（可选）</label>
-            <input v-model="formNote" type="text" maxlength="100" class="biz-input" data-testid="bizpur-form-note" />
+            <label>数量 *</label>
+            <el-input-number
+              :min="1"
+              :step="1"
+              size="small"
+              controls-position="right"
+              :model-value="formQuantity === '' ? undefined : Number(formQuantity)"
+              @update:model-value="formQuantity = String($event ?? '')"
+              data-testid="bizpur-form-qty"
+            />
           </div>
-          <div class="biz-form-actions">
-            <button type="button" class="bizpur-btn" @click="showDialog = false">取消</button>
-            <button type="submit" class="bizpur-btn save" :disabled="!isFormValid" data-testid="bizpur-save">
-              {{ editingId ? '保存' : '添加' }}
-            </button>
+          <div class="biz-field">
+            <label>单价 *</label>
+            <el-input-number
+              :min="0"
+              :step="0.01"
+              size="small"
+              controls-position="right"
+              :model-value="formUnitPrice === '' ? undefined : Number(formUnitPrice)"
+              @update:model-value="formUnitPrice = String($event ?? '')"
+              data-testid="bizpur-form-price"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div class="biz-field">
+          <label>合计（自动计算）</label>
+          <div class="bizpur-total-preview" data-testid="bizpur-form-total">{{ formatYuanOf(formTotal) }}</div>
+        </div>
+        <div class="biz-field">
+          <label>备注（可选）</label>
+          <el-input v-model="formNote" size="small" maxlength="100" data-testid="bizpur-form-note" />
+        </div>
+        <div class="biz-form-actions">
+          <el-button @click="showDialog = false">取消</el-button>
+          <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizpur-save">
+            {{ editingId ? '保存' : '添加' }}
+          </el-button>
+        </div>
+      </form>
+    </el-dialog>
   </div>
 </template>
 
@@ -653,5 +680,31 @@ html.dark .biz-input {
   .bizpur-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* el-* 表单控件撑满字段 */
+.bizpur :deep(.el-date-editor) {
+  width: 100%;
+}
+
+.bizpur :deep(.el-input-number) {
+  width: 100%;
+}
+
+/* el-dialog 外壳对齐原弹框 */
+.bizpur :deep(.el-dialog) {
+  padding: 0;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.bizpur :deep(.el-dialog__header) {
+  padding: 0;
+}
+
+.bizpur :deep(.el-dialog__body) {
+  padding: 0;
 }
 </style>

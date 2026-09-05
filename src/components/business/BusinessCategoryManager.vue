@@ -99,132 +99,68 @@ function handleAdd(): void {
 </script>
 
 <template>
-  <div class="bizcat-overlay" @click.self="emit('close')">
-    <div class="bizcat-dialog" :data-testid="`bizcat-dialog-${kind}`">
-      <div class="bizcat-header">
-        <h3>{{ isProduct ? '商品分类管理' : '支出分类管理' }}</h3>
-        <button class="bizcat-close" @click="emit('close')"><Icon name="close" /></button>
-      </div>
-      <div class="bizcat-body">
-        <p class="bizcat-hint">勾选控制标签页显示；{{ isProduct ? '内置分类可删除（删除后该分类商品归未分类）' : '内置分类不可删除，可改名与排序' }}</p>
-        <div class="bizcat-list">
-          <div
-            v-for="cat in list"
-            :key="cat.id"
-            class="bizcat-row"
-            :data-testid="`bizcat-row-${kind}-${cat.id}`"
-          >
-            <label class="bizcat-vis">
-              <input
-                type="checkbox"
-                :checked="cat.visible"
-                :data-testid="`bizcat-tab-${kind}-${cat.id}`"
-                @change="onToggleVisible(cat.id)"
-              />
-            </label>
-            <span class="bizcat-icon">
-              <Icon v-if="isProduct" name="tag" :size="14" />
-              <Icon v-else-if="isBuiltInOf(cat.id)" name="lock" :size="14" />
-              <Icon v-else name="expenses" :size="14" />
-            </span>
-            <input
-              type="text"
-              class="bizcat-name"
-              maxlength="20"
-              :data-testid="`bizcat-name-${kind}-${cat.id}`"
-              :value="editing[cat.id] ?? cat.name"
-              @input="editing[cat.id] = ($event.target as HTMLInputElement).value"
-              @blur="commitRename(cat.id)"
-              @keydown.enter="commitRename(cat.id)"
-              @keydown.esc.stop="revertRename(cat.id)"
-            />
-            <div class="bizcat-actions">
-              <button
-                class="bizcat-btn"
-                :data-testid="`bizcat-up-${kind}-${cat.id}`"
-                @click="onMove(cat.id, 'up')"
-              >↑</button>
-              <button
-                class="bizcat-btn"
-                :data-testid="`bizcat-down-${kind}-${cat.id}`"
-                @click="onMove(cat.id, 'down')"
-              >↓</button>
-              <button
-                class="bizcat-btn bizcat-del"
-                :data-testid="`bizcat-del-${kind}-${cat.id}`"
-                @click="onDelete(cat.id)"
-              >删除</button>
-            </div>
+  <el-dialog
+    :model-value="true"
+    width="420px"
+    :title="isProduct ? '商品分类管理' : '支出分类管理'"
+    :data-testid="`bizcat-dialog-${kind}`"
+    @close="emit('close')"
+  >
+    <div class="bizcat-body">
+      <p class="bizcat-hint">勾选控制标签页显示；{{ isProduct ? '内置分类可删除（删除后该分类商品归未分类）' : '内置分类不可删除，可改名与排序' }}</p>
+      <div class="bizcat-list">
+        <div
+          v-for="cat in list"
+          :key="cat.id"
+          class="bizcat-row"
+          :data-testid="`bizcat-row-${kind}-${cat.id}`"
+        >
+          <el-checkbox
+            :checked="cat.visible"
+            :data-testid="`bizcat-tab-${kind}-${cat.id}`"
+            @change="onToggleVisible(cat.id)"
+          />
+          <span class="bizcat-icon">
+            <Icon v-if="isProduct" name="tag" :size="14" />
+            <Icon v-else-if="isBuiltInOf(cat.id)" name="lock" :size="14" />
+            <Icon v-else name="expenses" :size="14" />
+          </span>
+          <el-input
+            size="small"
+            maxlength="20"
+            :data-testid="`bizcat-name-${kind}-${cat.id}`"
+            :model-value="editing[cat.id] ?? cat.name"
+            @input="editing[cat.id] = $event"
+            @blur="commitRename(cat.id)"
+            @keydown.enter="commitRename(cat.id)"
+            @keydown.esc.stop="revertRename(cat.id)"
+          />
+          <div class="bizcat-actions">
+            <el-button size="small" :data-testid="`bizcat-up-${kind}-${cat.id}`" @click="onMove(cat.id, 'up')">↑</el-button>
+            <el-button size="small" :data-testid="`bizcat-down-${kind}-${cat.id}`" @click="onMove(cat.id, 'down')">↓</el-button>
+            <el-button size="small" type="danger" :data-testid="`bizcat-del-${kind}-${cat.id}`" @click="onDelete(cat.id)">删除</el-button>
           </div>
         </div>
+      </div>
 
-        <div class="bizcat-add">
-          <input
-            v-model="newName"
-            type="text"
-            class="bizcat-name"
-            maxlength="20"
-            placeholder="新分类名称"
-            :data-testid="`bizcat-new-${kind}`"
-            @keydown.enter="handleAdd"
-          />
-          <button class="bizcat-btn bizcat-add-btn" :data-testid="`bizcat-add-${kind}`" @click="handleAdd">添加</button>
-        </div>
+      <div class="bizcat-add">
+        <el-input
+          v-model="newName"
+          size="small"
+          maxlength="20"
+          placeholder="新分类名称"
+          :data-testid="`bizcat-new-${kind}`"
+          @keydown.enter="handleAdd"
+        />
+        <el-button size="small" type="primary" :data-testid="`bizcat-add-${kind}`" @click="handleAdd">添加</el-button>
       </div>
     </div>
-  </div>
+  </el-dialog>
 </template>
 
 <style scoped>
-.bizcat-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.bizcat-dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 460px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-.bizcat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  flex-shrink: 0;
-}
-
-.bizcat-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
-.bizcat-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-}
-
 .bizcat-body {
-  padding: 16px 20px;
-  overflow-y: auto;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -248,60 +184,30 @@ function handleAdd(): void {
   gap: 8px;
 }
 
-.bizcat-vis {
-  display: inline-flex;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 .bizcat-icon {
   flex-shrink: 0;
   font-size: 14px;
 }
 
-.bizcat-name {
+:deep(.bizcat-row .el-input),
+:deep(.bizcat-add .el-input) {
   flex: 1;
   min-width: 0;
-  box-sizing: border-box;
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--color-text, var(--color-text));
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
 }
 
-.bizcat-name:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
+:deep(.bizcat-row .el-input__inner),
+:deep(.bizcat-add .el-input__inner) {
+  font-size: 13px;
+}
+
+:deep(.bizcat-row .el-checkbox) {
+  margin-right: 0;
 }
 
 .bizcat-actions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
-}
-
-.bizcat-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  white-space: nowrap;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizcat-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizcat-del:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
 }
 
 .bizcat-add {
@@ -312,29 +218,26 @@ function handleAdd(): void {
   border-top: 1px dashed var(--color-border, var(--color-border));
 }
 
-.bizcat-add-btn {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
+/* el-dialog 外壳对齐原弹框（组件根即 .el-dialog，自带 data-v 作用域） */
+.el-dialog {
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.el-dialog__header) {
+  flex-shrink: 0;
+}
+
+:deep(.el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* 暗色模式 */
-html.dark .bizcat-dialog {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .bizcat-name {
-  color: var(--color-text, #f9fafb);
-  background-color: var(--color-bg-input, #374151);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .bizcat-btn {
-  color: var(--color-text-secondary, #d1d5db);
-  background-color: var(--color-bg-card, #1f2937);
-  border-color: var(--color-border, #374151);
-}
-
 html.dark .bizcat-hint {
   color: var(--color-text-muted, #9ca3af);
 }

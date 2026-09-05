@@ -102,31 +102,34 @@ async function handleDelete(): Promise<void> {
     <!-- 工具栏：日期输入 + 今日/保存/删除 + 编辑/预览切换 + 字数 -->
     <div class="dj-toolbar">
       <div class="dj-toolbar-left">
-        <input
-          :value="selectedDate"
+        <el-date-picker
+          :model-value="selectedDate"
           type="date"
-          class="form-input dj-date-input"
+          value-format="YYYY-MM-DD"
+          class="dj-date-input"
           data-testid="dj-date-input"
-          @change="handleDateInput"
+          size="small"
+          @change="(v: unknown) => handleDateInput({ target: { value: String(v ?? '') } } as unknown as Event)"
         />
-        <button type="button" class="dj-btn-secondary" data-testid="dj-today-btn" @click="handleToday">今日</button>
-        <button type="button" class="dj-btn-primary" data-testid="dj-save-btn" @click="handleSave">保存</button>
-        <button
+        <el-button size="small" data-testid="dj-today-btn" @click="handleToday">今日</el-button>
+        <el-button type="primary" size="small" data-testid="dj-save-btn" @click="handleSave">保存</el-button>
+        <el-button
           v-if="selectedEntry"
-          type="button"
-          class="dj-btn-danger"
+          type="danger"
+          plain
+          size="small"
           data-testid="dj-delete-btn"
           @click="handleDelete"
-        >删除</button>
+        >删除</el-button>
       </div>
       <div class="dj-toolbar-right">
-        <button
-          type="button"
-          class="dj-btn-toggle"
-          :class="{ active: previewMode }"
+        <el-button
+          size="small"
+          :type="previewMode ? 'primary' : 'default'"
+          plain
           data-testid="dj-preview-toggle"
           @click="previewMode = !previewMode"
-        >{{ previewMode ? '编辑' : '预览' }}</button>
+        >{{ previewMode ? '编辑' : '预览' }}</el-button>
         <span class="dj-char-count" data-testid="dj-char-count">{{ charCount }} 字</span>
       </div>
     </div>
@@ -135,13 +138,15 @@ async function handleDelete(): Promise<void> {
     <div class="dj-main">
       <!-- 编辑器 / Markdown 预览（切换保留草稿） -->
       <div class="dj-editor">
-        <textarea
+        <el-input
           v-if="!previewMode"
           v-model="draft"
-          class="form-input dj-content-input"
+          type="textarea"
+          class="dj-content-input"
           data-testid="dj-content-input"
           placeholder="写下今天的心情…"
-        ></textarea>
+          resize="vertical"
+        />
         <div
           v-else
           class="dj-preview"
@@ -179,21 +184,19 @@ async function handleDelete(): Promise<void> {
           </div>
 
           <div v-if="paging.totalPages > 1" class="dj-pagination">
-            <button
-              type="button"
-              class="page-btn"
+            <el-button
+              size="small"
               :disabled="paging.currentPage <= 1"
               data-testid="dj-page-prev"
               @click="paging.prev()"
-            >‹ 上一页</button>
+            >‹ 上一页</el-button>
             <span class="dj-page-info" data-testid="dj-page-info">第 {{ paging.currentPage }} / {{ paging.totalPages }} 页</span>
-            <button
-              type="button"
-              class="page-btn"
+            <el-button
+              size="small"
               :disabled="paging.currentPage >= paging.totalPages"
               data-testid="dj-page-next"
               @click="paging.next()"
-            >下一页 ›</button>
+            >下一页 ›</el-button>
           </div>
         </template>
       </div>
@@ -236,25 +239,12 @@ async function handleDelete(): Promise<void> {
   flex-shrink: 0;
 }
 
-/* 表单输入（本组件自包含，与其它面板 .form-input 同构） */
-.form-input {
-  padding: 9px 12px;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  transition: border-color var(--transition-fast, 0.15s ease);
+/* 工具栏按钮（el-button 统一尺寸，与其它 EP 面板一致；相邻按钮间距由容器 gap 控制） */
+.dj-toolbar :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-/* 保存（实心主色，仿 .nt-btn-query） */
+/* 保存（实心主色） */
 .dj-btn-primary {
   padding: 9px 16px;
   background: var(--color-primary, var(--color-primary));
@@ -271,7 +261,7 @@ async function handleDelete(): Promise<void> {
   background: var(--color-primary-hover, var(--color-primary-hover));
 }
 
-/* 今日 / 预览切换（次级描边，仿 .nt-btn-reset） */
+/* 今日 / 预览切换（次级描边） */
 .dj-btn-secondary,
 .dj-btn-toggle {
   padding: 9px 14px;
@@ -296,7 +286,7 @@ async function handleDelete(): Promise<void> {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* 删除（危险描边，仿 .btn-delete） */
+/* 删除（危险描边） */
 .dj-btn-danger {
   padding: 9px 16px;
   font-size: 14px;

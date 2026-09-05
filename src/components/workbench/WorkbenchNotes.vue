@@ -343,58 +343,50 @@ onUnmounted(() => {
       <div class="nt-search-fields">
         <label class="nt-field nt-field-grow">
           <span class="nt-field-label">关键词</span>
-          <input
+          <el-input
             v-model="searchDraft"
             type="text"
             class="form-input nt-field-keyword"
             placeholder="搜索便签…"
             data-testid="nt-search-input"
             @keydown.enter="applyFilters"
+            clearable
           />
         </label>
         <label class="nt-field">
           <span class="nt-field-label">类型</span>
-          <select
+          <el-select
             v-model="typeDraft"
             class="form-input nt-field-select"
             data-testid="nt-type-select"
+            size="small"
           >
-            <option value="all">全部类型</option>
-            <option value="normal">普通便签</option>
-            <option value="timeline">时光轴便签</option>
-          </select>
+            <el-option value="all" label="全部类型" />
+            <el-option value="normal" label="普通便签" />
+            <el-option value="timeline" label="时光轴便签" />
+          </el-select>
         </label>
       </div>
       <div class="nt-search-actions" data-testid="nt-search-actions">
-        <button class="nt-btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</button>
-        <button class="nt-btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</button>
+        <el-button class="nt-btn-query" data-testid="nt-search-btn" @click="applyFilters">查询</el-button>
+        <el-button class="nt-btn-reset" data-testid="nt-reset-btn" @click="resetFilters">重置</el-button>
       </div>
     </div>
 
     <!-- 分类筛选标签页（全部/未分类/可见分类，即时过滤）+ 新增便签按钮靠右 -->
     <div class="nt-cat-tabs">
-      <button
-        class="nt-cat-tab"
-        :class="{ active: activeCategoryId === undefined }"
-        data-testid="nt-cat-all"
-        @click="selectCategoryTab(undefined)"
-      >全部</button>
-      <button
-        class="nt-cat-tab"
-        :class="{ active: activeCategoryId === 'uncategorized' }"
-        data-testid="nt-cat-uncategorized"
-        @click="selectCategoryTab('uncategorized')"
-      >未分类</button>
-      <button
-        v-for="cat in tabCategories"
-        :key="cat.id"
-        class="nt-cat-tab"
-        :class="{ active: activeCategoryId === cat.id }"
-        :data-testid="`nt-cat-${cat.id}`"
-        @click="selectCategoryTab(cat.id)"
-      >{{ cat.name }}</button>
+      <el-radio-group :model-value="activeCategoryId" @update:model-value="selectCategoryTab($event === 'all' ? undefined : $event)">
+        <el-radio-button :value="undefined" data-testid="nt-cat-all">全部</el-radio-button>
+        <el-radio-button value="uncategorized" data-testid="nt-cat-uncategorized">未分类</el-radio-button>
+        <el-radio-button
+          v-for="cat in tabCategories"
+          :key="cat.id"
+          :value="cat.id"
+          :data-testid="`nt-cat-${cat.id}`"
+        >{{ cat.name }}</el-radio-button>
+      </el-radio-group>
       <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
-      <button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</button>
+      <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
     </div>
 
     <!-- 时光轴便签（仅在类型=时光轴时渲染，'all' 视图只显示普通便签） -->
@@ -416,7 +408,8 @@ onUnmounted(() => {
           <div class="note-card-header">
             <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
             <span v-else></span>
-            <button
+            <el-button
+              text
               class="pin-toggle"
               :class="{ active: note.pinned }"
               :title="note.pinned ? '取消置顶' : '置顶'"
@@ -424,19 +417,19 @@ onUnmounted(() => {
               @click.stop="handlePin(note)"
             >
               📌
-            </button>
+            </el-button>
           </div>
 
           <div class="timeline-card-head">
             <span class="timeline-title">{{ note.title || '时光轴便签' }}</span>
-            <button
+            <el-button
               type="button"
               class="btn-edit"
               :data-testid="`nt-note-edit-${note.id}`"
               @click.stop="startEdit(note)"
             >
               编辑
-            </button>
+            </el-button>
           </div>
 
           <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序），卡片内联前 5 条（S4），超限经「+N 条」开浮层看全量 -->
@@ -450,22 +443,24 @@ onUnmounted(() => {
               <span class="timeline-dot"></span>
               <template v-if="editingEntry && editingEntry.noteId === note.id && editingEntry.entryId === entry.id">
                 <div class="timeline-item-edit">
-                  <input
+                  <el-input
                     v-model="entryEditDatetime"
                     type="text"
                     class="form-input"
                     :data-testid="`nt-entry-edit-dt-${entry.id}`"
                     placeholder="YYYY-MM-DD HH:mm"
+                    size="small"
                   />
-                  <input
+                  <el-input
                     v-model="entryEditContent"
                     type="text"
                     class="form-input"
                     :data-testid="`nt-entry-edit-content-${entry.id}`"
                     placeholder="记录内容"
+                    size="small"
                   />
                   <div class="timeline-item-actions">
-                    <button
+                    <el-button
                       type="button"
                       class="btn-save"
                       :disabled="!canSaveEntry()"
@@ -473,10 +468,10 @@ onUnmounted(() => {
                       @click="handleSaveEntry(note.id, entry.id)"
                     >
                       保存
-                    </button>
-                    <button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
+                    </el-button>
+                    <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
                       取消
-                    </button>
+                    </el-button>
                   </div>
                 </div>
               </template>
@@ -485,22 +480,22 @@ onUnmounted(() => {
                   <div class="timeline-item-time">{{ entry.datetime }}</div>
                   <div class="timeline-item-content" v-html="renderedContent(entry.content)"></div>
                   <div class="timeline-item-actions">
-                    <button
+                    <el-button
                       type="button"
                       class="btn-edit"
                       :data-testid="`nt-entry-edit-${entry.id}`"
                       @click.stop="startEditEntry(note.id, entry)"
                     >
                       编辑
-                    </button>
-                    <button
+                    </el-button>
+                    <el-button
                       type="button"
                       class="btn-delete"
                       :data-testid="`nt-entry-del-${entry.id}`"
                       @click.stop="handleDeleteEntry(note.id, entry.id)"
                     >
                       删除
-                    </button>
+                    </el-button>
                   </div>
                 </div>
               </template>
@@ -508,7 +503,7 @@ onUnmounted(() => {
           </div>
 
           <!-- 超限「+N 条」按钮（S4）：点击开全量条目浮层 -->
-          <button
+          <el-button
             v-if="hiddenEntryCount(note) > 0"
             type="button"
             class="timeline-more-btn"
@@ -516,26 +511,28 @@ onUnmounted(() => {
             @click.stop="openTimelineExpand(note.id)"
           >
             +{{ hiddenEntryCount(note) }} 条
-          </button>
+          </el-button>
 
           <!-- 卡片底部快速追加行：datetime（默认本地当前时间）+ content + 添加按钮 -->
           <div class="timeline-add-row">
-            <input
+            <el-input
               v-model="entryDraftDatetime[note.id]"
               type="text"
               class="form-input timeline-dt-input"
               :data-testid="`nt-entry-dt-${note.id}`"
               placeholder="YYYY-MM-DD HH:mm"
+              size="small"
             />
-            <input
+            <el-input
               v-model="entryDraftContent[note.id]"
               type="text"
               class="form-input timeline-content-input"
               :data-testid="`nt-entry-content-${note.id}`"
               placeholder="添加时光记录…"
               @keydown.enter="handleAddEntry(note)"
+              size="small"
             />
-            <button
+            <el-button
               type="button"
               class="btn-add"
               :disabled="!canAddEntry(note)"
@@ -543,16 +540,16 @@ onUnmounted(() => {
               @click="handleAddEntry(note)"
             >
               添加
-            </button>
+            </el-button>
           </div>
-          <button
+          <el-button
             type="button"
             class="btn-delete card-delete-btn"
             :data-testid="`note-delete-${note.id}`"
             @click.stop="handleDelete(note.id)"
           >
             删除
-          </button>
+          </el-button>
         </div>
         </TransitionGroup>
       </div>
@@ -573,9 +570,9 @@ onUnmounted(() => {
       <div class="timeline-expand-panel">
         <div class="timeline-expand-head">
           <span class="timeline-title">{{ expandedTimelineNote.title || '时光轴便签' }}</span>
-          <button type="button" class="btn-cancel" data-testid="nt-entry-overlay-close" @click="closeTimelineExpand">
+          <el-button type="button" class="btn-cancel" data-testid="nt-entry-overlay-close" @click="closeTimelineExpand">
             关闭
-          </button>
+          </el-button>
         </div>
         <div class="timeline-expand-list">
           <div
@@ -589,22 +586,24 @@ onUnmounted(() => {
               v-if="editingEntry && editingEntry.noteId === expandedTimelineNote.id && editingEntry.entryId === entry.id"
             >
               <div class="timeline-item-edit">
-                <input
+                <el-input
                   v-model="entryEditDatetime"
                   type="text"
                   class="form-input"
                   :data-testid="`nt-entry-edit-dt-${entry.id}`"
                   placeholder="YYYY-MM-DD HH:mm"
+                  size="small"
                 />
-                <input
+                <el-input
                   v-model="entryEditContent"
                   type="text"
                   class="form-input"
                   :data-testid="`nt-entry-edit-content-${entry.id}`"
                   placeholder="记录内容"
+                  size="small"
                 />
                 <div class="timeline-item-actions">
-                  <button
+                  <el-button
                     type="button"
                     class="btn-save"
                     :disabled="!canSaveEntry()"
@@ -612,10 +611,10 @@ onUnmounted(() => {
                     @click="handleSaveEntry(expandedTimelineNote.id, entry.id)"
                   >
                     保存
-                  </button>
-                  <button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
+                  </el-button>
+                  <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
                     取消
-                  </button>
+                  </el-button>
                 </div>
               </div>
             </template>
@@ -624,22 +623,22 @@ onUnmounted(() => {
                 <div class="timeline-item-time">{{ entry.datetime }}</div>
                 <div class="timeline-item-content" v-html="renderedContent(entry.content)"></div>
                 <div class="timeline-item-actions">
-                  <button
+                  <el-button
                     type="button"
                     class="btn-edit"
                     :data-testid="`nt-entry-edit-${entry.id}`"
                     @click.stop="startEditEntry(expandedTimelineNote.id, entry)"
                   >
                     编辑
-                  </button>
-                  <button
+                  </el-button>
+                  <el-button
                     type="button"
                     class="btn-delete"
                     :data-testid="`nt-entry-del-${entry.id}`"
                     @click.stop="handleDeleteEntry(expandedTimelineNote.id, entry.id)"
                   >
                     删除
-                  </button>
+                  </el-button>
                 </div>
               </div>
             </template>
@@ -668,7 +667,8 @@ onUnmounted(() => {
           <div class="note-card-header">
             <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
             <span v-else></span>
-            <button
+            <el-button
+              text
               class="pin-toggle"
               :class="{ active: note.pinned }"
               :title="note.pinned ? '取消置顶' : '置顶'"
@@ -676,7 +676,7 @@ onUnmounted(() => {
               @click.stop="handlePin(note)"
             >
               📌
-            </button>
+            </el-button>
           </div>
 
           <div v-if="note.title" class="note-title">{{ note.title }}</div>
@@ -691,14 +691,14 @@ onUnmounted(() => {
               <span>{{ COLOR_LABELS[note.color] }}</span>
             </div>
           </div>
-          <button
+          <el-button
             type="button"
             class="btn-delete card-delete-btn"
             :data-testid="`note-delete-${note.id}`"
             @click.stop="handleDelete(note.id)"
           >
             删除
-          </button>
+          </el-button>
         </div>
         </TransitionGroup>
       </div>
@@ -719,7 +719,7 @@ onUnmounted(() => {
       <div class="note-form">
         <h3 class="note-form-title">{{ editingId ? '编辑便签' : '新增便签' }}</h3>
 
-        <input
+        <el-input
           v-model="formTitle"
           type="text"
           class="form-input note-title-input"
@@ -730,57 +730,56 @@ onUnmounted(() => {
         <div class="note-form-row">
           <label class="note-form-label">类型</label>
           <div class="note-type-radios">
-            <label class="type-radio-option" :class="{ active: formType === 'normal' }">
-              <input v-model="formType" type="radio" name="note-type" value="normal" data-testid="nt-form-type-normal" />
-              <span>普通</span>
-            </label>
-            <label class="type-radio-option" :class="{ active: formType === 'timeline' }">
-              <input v-model="formType" type="radio" name="note-type" value="timeline" data-testid="nt-form-type-timeline" />
-              <span>时光轴</span>
-            </label>
+            <el-radio-group v-model="formType">
+              <el-radio-button value="normal" data-testid="nt-form-type-normal">普通</el-radio-button>
+              <el-radio-button value="timeline" data-testid="nt-form-type-timeline">时光轴</el-radio-button>
+            </el-radio-group>
           </div>
         </div>
 
         <div class="note-form-row">
           <label class="note-form-label" for="nt-form-category">分类</label>
-          <select
+          <el-select
             v-model="formCategoryId"
             id="nt-form-category"
             class="form-input note-cat-select"
             data-testid="nt-form-category"
           >
-            <option value="">未分类</option>
-            <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-          </select>
+            <el-option value="" label="未分类" />
+            <el-option v-for="cat in sortedCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
+          </el-select>
         </div>
 
-        <textarea
+        <el-input
           v-model="formContent"
+          type="textarea"
+          :rows="5"
           class="form-input note-content-input"
-          rows="5"
           data-testid="note-content-input"
           :placeholder="formType === 'timeline' ? '便签内容（时光轴可为空，条目在卡片上追加）' : '便签内容…'"
-        ></textarea>
+        />
 
         <div class="note-color-picker">
-          <label
-            v-for="color in NOTE_COLORS"
-            :key="color"
-            class="color-option"
-            :class="[`color-${color}`, { active: formColor === color }]"
-            :data-testid="`note-color-${color}`"
-          >
-            <input v-model="formColor" type="radio" name="note-color" :value="color" />
-            <span class="color-swatch"></span>
-            <span class="color-name">{{ COLOR_LABELS[color] }}</span>
-          </label>
+          <el-radio-group v-model="formColor">
+            <el-radio
+              v-for="color in NOTE_COLORS"
+              :key="color"
+              :value="color"
+              class="color-option"
+              :class="[`color-${color}`, { active: formColor === color }]"
+              :data-testid="`note-color-${color}`"
+            >
+              <span class="color-swatch"></span>
+              <span class="color-name">{{ COLOR_LABELS[color] }}</span>
+            </el-radio>
+          </el-radio-group>
         </div>
 
         <div class="note-form-actions">
-          <button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">
+          <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">
             取消
-          </button>
-          <button
+          </el-button>
+          <el-button
             type="button"
             class="btn-save"
             :disabled="!isFormValid"
@@ -788,7 +787,7 @@ onUnmounted(() => {
             @click="handleSave"
           >
             {{ editingId ? '保存' : '添加' }}
-          </button>
+          </el-button>
         </div>
       </div>
     </div>
@@ -1442,35 +1441,6 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.type-radio-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-full, 999px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.type-radio-option input {
-  display: none;
-}
-
-.type-radio-option:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.type-radio-option.active {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
 .note-cat-select {
   flex: 1;
   min-width: 180px;
@@ -1494,10 +1464,6 @@ onUnmounted(() => {
   border: 2px solid transparent;
   border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
-}
-
-.color-option input {
-  display: none;
 }
 
 .color-option:hover {
@@ -1751,23 +1717,6 @@ html.dark .note-cat-badge {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.2);
   border-color: rgba(59, 130, 246, 0.45);
-}
-
-html.dark .type-radio-option {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .type-radio-option:hover {
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-html.dark .type-radio-option.active {
-  color: #fff;
-  background: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
 }
 
 html.dark .note-cat-select {

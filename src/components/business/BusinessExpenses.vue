@@ -141,9 +141,9 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
     <div class="bizexp-bar">
       <div class="bizexp-bar-left">
         <span class="bizexp-count">共 {{ dayGroups.length }} 天（{{ store.expenses.length }} 笔支出）</span>
-        <button class="bizexp-cat-btn" data-testid="bizexp-cat-manager" @click="showCatManager = true"><Icon name="cog" :size="15" /> 支出分类管理</button>
+        <el-button size="small" data-testid="bizexp-cat-manager" @click="showCatManager = true"><Icon name="cog" :size="15" /> 支出分类管理</el-button>
       </div>
-      <button class="bizexp-add" data-testid="bizexp-add" @click="startAdd">＋ 新增支出记录</button>
+      <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出记录</el-button>
     </div>
 
     <!-- 卡片网格：一天一张卡 -->
@@ -175,8 +175,8 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 
         <!-- 操作：编辑/删除 -->
         <div class="bizexp-actions">
-          <button class="bizexp-btn" :data-testid="`bizexp-edit-${g.date}`" @click="startEdit(g)">编辑</button>
-          <button class="bizexp-btn del" :data-testid="`bizexp-del-${g.date}`" @click="handleDeleteGroup(g)">删除</button>
+          <el-button size="small" :data-testid="`bizexp-edit-${g.date}`" @click="startEdit(g)">编辑</el-button>
+          <el-button size="small" type="danger" :data-testid="`bizexp-del-${g.date}`" @click="handleDeleteGroup(g)">删除</el-button>
         </div>
       </div>
       </div>
@@ -191,60 +191,69 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
     </div>
 
     <!-- 新增/编辑弹框（多行支出） -->
-    <div v-if="showDialog" class="biz-dialog-overlay" @click.self="showDialog = false">
-      <div class="biz-dialog bizexp-dialog" data-testid="bizexp-dialog">
-        <div class="biz-dialog-header">
-          <h3>{{ editingDateOrig ? '编辑支出记录' : '新增支出记录' }}</h3>
-          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
+    <el-dialog
+      v-if="showDialog"
+      :model-value="true"
+      width="640px"
+      class="bizexp-dialog"
+      data-testid="bizexp-dialog"
+      :title="editingDateOrig ? '编辑支出记录' : '新增支出记录'"
+      @close="showDialog = false"
+    >
+      <form class="biz-dialog-body" @submit.prevent="handleSave">
+        <div class="biz-field">
+          <label>日期 *（同一天将自动合并到同一张卡片）</label>
+          <el-date-picker
+            v-model="editingDate"
+            type="date"
+            value-format="YYYY-MM-DD"
+            size="small"
+            data-testid="bizexp-form-date"
+          />
         </div>
-        <form class="biz-dialog-body" @submit.prevent="handleSave">
-          <div class="biz-field">
-            <label>日期 *（同一天将自动合并到同一张卡片）</label>
-            <input v-model="editingDate" type="date" class="biz-input" data-testid="bizexp-form-date" />
-          </div>
 
-          <!-- 多行支出行 -->
-          <div class="bizexp-rows">
-            <div v-for="(row, i) in rows" :key="i" class="bizexp-row" data-testid="bizexp-row">
-              <select v-model="row.categoryId" class="biz-input bizexp-row-cat" data-testid="bizexp-row-category">
-                <option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-              </select>
-              <input
-                v-model="row.amount"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="金额"
-                class="biz-input bizexp-row-amt"
-                data-testid="bizexp-row-amount"
-              />
-              <input
-                v-model="row.note"
-                type="text"
-                maxlength="100"
-                placeholder="备注（可选）"
-                class="biz-input bizexp-row-note"
-                data-testid="bizexp-row-note"
-              />
-              <button type="button" class="bizexp-btn del" :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</button>
-            </div>
-            <button type="button" class="bizexp-add-row" data-testid="bizexp-row-add" @click="addRow">＋ 添加支出行</button>
+        <!-- 多行支出行 -->
+        <div class="bizexp-rows">
+          <div v-for="(row, i) in rows" :key="i" class="bizexp-row" data-testid="bizexp-row">
+            <el-select v-model="row.categoryId" size="small" class="bizexp-row-cat" data-testid="bizexp-row-category">
+              <el-option v-for="cat in store.expenseCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
+            </el-select>
+            <el-input-number
+              :model-value="row.amount === '' ? undefined : Number(row.amount)"
+              :min="0"
+              :step="0.01"
+              size="small"
+              class="bizexp-row-amt"
+              data-testid="bizexp-row-amount"
+              placeholder="金额"
+              @update:model-value="row.amount = $event == null ? '' : String($event)"
+            />
+            <el-input
+              v-model="row.note"
+              size="small"
+              maxlength="100"
+              placeholder="备注（可选）"
+              class="bizexp-row-note"
+              data-testid="bizexp-row-note"
+            />
+            <el-button type="danger" size="small" :data-testid="`bizexp-row-del-${i}`" @click="removeRow(i)">移除</el-button>
           </div>
+          <el-button size="small" data-testid="bizexp-row-add" @click="addRow">＋ 添加支出行</el-button>
+        </div>
 
-          <!-- 当天合计预览 -->
-          <div class="bizexp-preview">
-            当天合计：<strong data-testid="bizexp-form-total">{{ formatYuanOf(rows.reduce((s, r) => s + (Number(r.amount) || 0), 0)) }}</strong>
-          </div>
+        <!-- 当天合计预览 -->
+        <div class="bizexp-preview">
+          当天合计：<strong data-testid="bizexp-form-total">{{ formatYuanOf(rows.reduce((s, r) => s + (Number(r.amount) || 0), 0)) }}</strong>
+        </div>
 
-          <div class="biz-form-actions">
-            <button type="button" class="bizexp-btn" @click="showDialog = false">取消</button>
-            <button type="submit" class="bizexp-btn save" :disabled="!isFormValid" data-testid="bizexp-save">
-              {{ editingDateOrig ? '保存' : '添加' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="biz-form-actions">
+          <el-button size="small" @click="showDialog = false">取消</el-button>
+          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="bizexp-save">
+            {{ editingDateOrig ? '保存' : '添加' }}
+          </el-button>
+        </div>
+      </form>
+    </el-dialog>
 
     <BusinessCategoryManager v-if="showCatManager" kind="expense" @close="showCatManager = false" />
   </div>
@@ -497,8 +506,8 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   align-items: center;
 }
 
-.bizexp-row-cat { min-width: 0; }
-.bizexp-row-amt { min-width: 0; }
+.bizexp-row-cat { min-width: 0; width: 100%; }
+.bizexp-row-amt { min-width: 0; width: 100%; }
 .bizexp-row-note { min-width: 0; }
 
 .bizexp-add-row {
@@ -607,6 +616,26 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .biz-input:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-primary));
+}
+
+/* el-dialog 换皮：对齐原 biz-dialog 视觉 */
+.bizexp-dialog :deep(.el-dialog) {
+  border-radius: var(--radius-lg, 12px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.bizexp-dialog :deep(.el-dialog__header) {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+.bizexp-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  overflow-y: auto;
 }
 
 html.dark .bizexp-card,

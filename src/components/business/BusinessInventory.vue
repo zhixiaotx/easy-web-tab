@@ -85,14 +85,15 @@ function closeTraceModal(): void {
         <span class="bizinv-alert-title"><Icon name="alert" :size="15" /> 低库存预警</span>
         <label class="bizinv-threshold">
           阈值
-          <input
+          <el-input
             type="number"
             min="0"
             step="1"
-            class="biz-input bizinv-th-input"
+            size="small"
+            class="bizinv-th-input"
             data-testid="bizinv-threshold"
-            :value="thresholdDraft || String(store.settings.lowStockThreshold)"
-            @input="thresholdDraft = ($event.target as HTMLInputElement).value"
+            :model-value="thresholdDraft || String(store.settings.lowStockThreshold)"
+            @input="thresholdDraft = $event"
             @blur="commitThreshold"
             @keydown.enter="commitThreshold"
           />
@@ -129,7 +130,7 @@ function closeTraceModal(): void {
           </div>
           <div class="bizinv-card-right">
             <!-- 查看溯源按钮（卡片右上角） -->
-            <button class="bizinv-trace-btn" @click="openTraceModal(row.product.id)">查看溯源</button>
+            <el-button size="small" @click="openTraceModal(row.product.id)">查看溯源</el-button>
             <span class="bizinv-num num-brought">带出合计：<b>{{ broughtOutTotals[row.product.id] ?? 0 }}</b> {{ row.product.unit }}</span>
             <span class="bizinv-num num-stock">库存剩余：<b>{{ row.stock }}</b> {{ row.product.unit }}</span>
           </div>
@@ -147,35 +148,35 @@ function closeTraceModal(): void {
     </div>
 
     <!-- 溯源弹框（屏幕居中） -->
-    <Teleport to="body">
-      <div v-if="traceModalProductId" class="bizinv-trace-overlay" @click.self="closeTraceModal">
-        <div class="bizinv-trace-modal" data-testid="bizinv-trace-modal">
-          <div class="bizinv-trace-head">
-            <span class="bizinv-trace-title">溯源记录 · {{ traceModalProduct?.name ?? '未知商品' }}</span>
-            <button class="bizinv-trace-close" @click="closeTraceModal"><Icon name="close" /></button>
-          </div>
-          <div class="bizinv-trace-body">
-            <p v-if="traceModalSources.length === 0" class="bizinv-trace-empty">暂无溯源记录</p>
-            <div
-              v-for="src in traceModalSources"
-              :key="src.type + '-' + src.id"
-              class="bizinv-source-row"
-              @click="emit('navigate', src.type === 'purchase' ? 'purchases' : 'daily', traceModalProductId!)"
-            >
-              <span v-if="src.type === 'purchase'" class="bizinv-source-type purchase">进货</span>
-              <span v-else class="bizinv-source-type daily">收摊</span>
-              <span class="bizinv-source-date">{{ src.date }}</span>
-              <span v-if="src.type === 'purchase'" class="bizinv-source-detail">
-                ×{{ src.quantity }} @{{ formatYuanOf(src.unitPrice) }} {{ formatYuanOf(src.total) }}
-              </span>
-              <span v-else class="bizinv-source-detail">
-                带出 {{ src.broughtOut }} 剩余 {{ src.remaining }} 损耗 {{ src.loss }}
-              </span>
-            </div>
-          </div>
+    <el-dialog
+      v-if="traceModalProductId"
+      :model-value="true"
+      width="480px"
+      class="bizinv-trace"
+      data-testid="bizinv-trace"
+      :title="`溯源记录 · ${traceModalProduct?.name ?? '未知商品'}`"
+      @close="closeTraceModal"
+    >
+      <div class="bizinv-trace-body" data-testid="bizinv-trace-modal">
+        <p v-if="traceModalSources.length === 0" class="bizinv-trace-empty">暂无溯源记录</p>
+        <div
+          v-for="src in traceModalSources"
+          :key="src.type + '-' + src.id"
+          class="bizinv-source-row"
+          @click="emit('navigate', src.type === 'purchase' ? 'purchases' : 'daily', traceModalProductId!)"
+        >
+          <span v-if="src.type === 'purchase'" class="bizinv-source-type purchase">进货</span>
+          <span v-else class="bizinv-source-type daily">收摊</span>
+          <span class="bizinv-source-date">{{ src.date }}</span>
+          <span v-if="src.type === 'purchase'" class="bizinv-source-detail">
+            ×{{ src.quantity }} @{{ formatYuanOf(src.unitPrice) }} {{ formatYuanOf(src.total) }}
+          </span>
+          <span v-else class="bizinv-source-detail">
+            带出 {{ src.broughtOut }} 剩余 {{ src.remaining }} 损耗 {{ src.loss }}
+          </span>
         </div>
       </div>
-    </Teleport>
+    </el-dialog>
   </div>
 </template>
 
@@ -238,7 +239,6 @@ function closeTraceModal(): void {
 
 .bizinv-th-input {
   width: 80px;
-  padding: 6px 8px;
 }
 
 .bizinv-empty {
@@ -513,6 +513,26 @@ function closeTraceModal(): void {
 .biz-input:focus {
   outline: none;
   border-color: var(--color-primary, var(--color-primary));
+}
+
+/* el-dialog 换皮：溯源弹框 */
+.bizinv-trace :deep(.el-dialog) {
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.bizinv-trace :deep(.el-dialog__header) {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+.bizinv-trace :deep(.el-dialog__body) {
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 html.dark .bizinv-alert,

@@ -168,9 +168,9 @@ onUnmounted(() => {
       </div>
 
       <div class="pm-controls">
-        <button class="btn-primary" data-testid="pm-start" :disabled="running" @click="start">开始</button>
-        <button class="btn-secondary" data-testid="pm-pause" :disabled="!running" @click="pause">暂停</button>
-        <button class="btn-secondary" data-testid="pm-reset" @click="reset">重置</button>
+        <el-button class="btn-primary" data-testid="pm-start" :disabled="running" @click="start">开始</el-button>
+        <el-button class="btn-secondary" data-testid="pm-pause" :disabled="!running" @click="pause">暂停</el-button>
+        <el-button class="btn-secondary" data-testid="pm-reset" @click="reset">重置</el-button>
       </div>
 
       <div class="pm-today" data-testid="pm-today-count">今日完成 {{ todayCount }} 个番茄</div>
@@ -185,27 +185,27 @@ onUnmounted(() => {
       <div class="pm-settings-row">
         <div class="field">
           <label class="field-label">专注（分钟）</label>
-          <input
-            v-model="formWork"
-            type="number"
-            min="1"
-            step="1"
+          <el-input-number
+            :model-value="Number(formWork) || 1"
+            :min="1"
+            :step="1"
             class="form-input field-short"
             placeholder="例如：25"
             data-testid="pm-settings-work"
+            @update:model-value="formWork = String($event ?? 1)"
             @change="commitSettings"
           />
         </div>
         <div class="field">
           <label class="field-label">休息（分钟）</label>
-          <input
-            v-model="formBreak"
-            type="number"
-            min="1"
-            step="1"
+          <el-input-number
+            :model-value="Number(formBreak) || 1"
+            :min="1"
+            :step="1"
             class="form-input field-short"
             placeholder="例如：5"
             data-testid="pm-settings-break"
+            @update:model-value="formBreak = String($event ?? 1)"
             @change="commitSettings"
           />
         </div>

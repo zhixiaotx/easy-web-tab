@@ -261,11 +261,6 @@ const SORT_MODES: { value: CountdownSortMode; label: string }[] = [
 
 const isManual = computed(() => store.sortMode === 'manual')
 
-function onSortChange(event: Event): void {
-  store.setSort((event.target as HTMLSelectElement).value as CountdownSortMode)
-  goto(1)
-}
-
 // manual 模式边界：按 filteredItems 位置判断，首行 ▲ 禁用、末行 ▼ 禁用
 function canMoveUp(id: string): boolean {
   return filteredItems.value.findIndex(i => i.id === id) > 0
@@ -307,64 +302,62 @@ onUnmounted(() => {
     <div class="cd-search-card">
       <div class="cd-search-fields">
         <label class="search-label">名称</label>
-        <input
+        <el-input
           v-model="searchName"
-          type="text"
-          class="form-input search-name"
+          class="search-name"
           placeholder="按名称查询…"
           data-testid="cd-search-name"
+          size="small"
+          clearable
           @keyup.enter="applySearch"
         />
-        <select v-model="searchRepeat" class="form-input search-select" data-testid="cd-search-repeat">
-          <option value="">全部重复</option>
-          <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-        </select>
+        <el-select v-model="searchRepeat" class="search-select" data-testid="cd-search-repeat" size="small">
+          <el-option value="" label="全部重复" />
+          <el-option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
+        </el-select>
         <label class="search-label">排序类型</label>
-        <select
-          class="form-input sort-select"
+        <el-select
+          class="sort-select"
           data-testid="cd-sort-select"
-          :value="store.sortMode"
-          @change="onSortChange"
+          :model-value="store.sortMode"
+          size="small"
+          @update:model-value="(v: string) => { store.setSort(v as CountdownSortMode); goto(1) }"
         >
-          <option v-for="m in SORT_MODES" :key="m.value" :value="m.value">{{ m.label }}</option>
-        </select>
-        <button
+          <el-option v-for="m in SORT_MODES" :key="m.value" :value="m.value" :label="m.label" />
+        </el-select>
+        <el-button
           v-if="!isManual"
           class="sort-dir-btn"
           data-testid="cd-sort-dir"
+          size="small"
           @click="store.toggleDirection()"
         >
           {{ store.sortDirection === 'asc' ? '↑ 升序' : '↓ 降序' }}
-        </button>
+        </el-button>
         <span v-if="isManual" class="sort-hint">点击 ▲▼ 箭头调整顺序</span>
       </div>
       <div class="cd-search-actions">
-        <button class="search-btn" data-testid="cd-search-btn" @click="applySearch">查询</button>
-        <button class="search-reset-btn" data-testid="cd-search-reset" @click="resetSearch">重置</button>
+        <el-button type="primary" size="small" data-testid="cd-search-btn" @click="applySearch">查询</el-button>
+        <el-button size="small" data-testid="cd-search-reset" @click="resetSearch">重置</el-button>
       </div>
     </div>
 
     <!-- 分类标签页（即时过滤）+ 新增提醒按钮靠右 -->
     <div class="cd-cat-tabs">
-      <button
-        class="cd-cat-tab"
-        :class="{ active: activeCategoryTab === '' }"
-        data-testid="cd-cat-all"
-        @click="selectCategoryTab('')"
-      >全部</button>
-      <button
-        v-for="c in store.tabCategories"
-        :key="c"
-        class="cd-cat-tab"
-        :class="{ active: activeCategoryTab === c }"
-        :data-testid="'cd-cat-' + c"
-        @click="selectCategoryTab(c)"
-      >{{ categoryLabel(c) }}</button>
+      <el-radio-group v-model="activeCategoryTab" size="small" @update:model-value="selectCategoryTab">
+        <el-radio-button value="" data-testid="cd-cat-all">全部</el-radio-button>
+        <el-radio-button
+          v-for="c in store.tabCategories"
+          :key="c"
+          :value="c"
+          :data-testid="'cd-cat-' + c"
+        >{{ categoryLabel(c) }}</el-radio-button>
+      </el-radio-group>
       <span class="toolbar-count" data-testid="cd-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
         <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
       </span>
-      <button class="btn-add" data-testid="cd-add-button" @click="startAdd">＋ 新增提醒</button>
+      <el-button type="primary" size="small" class="btn-add" data-testid="cd-add-button" @click="startAdd"><Icon name="plus" :size="16" /> 新增提醒</el-button>
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -374,7 +367,7 @@ onUnmounted(() => {
 
     <div v-else-if="filteredItems.length === 0" class="empty-state filter-empty" data-testid="cd-filter-empty">
       <span>没有符合查询条件的提醒</span>
-      <button class="btn-cancel" @click="resetSearch">重置查询</button>
+      <el-button size="small" @click="resetSearch">重置查询</el-button>
     </div>
 
     <div v-else ref="gridEl" class="cd-grid" :class="{ 'cd-grid-scroll': !fitsOnePage }">
@@ -406,32 +399,34 @@ onUnmounted(() => {
 
         <div class="cd-meta">
           <span class="cd-time">{{ item.remaining.nextTime }}</span>
-          <label class="front-toggle" :title="item.showOnDisplay === false ? '前台隐藏' : '前台显示'" @click.stop>
-            <input
-              type="checkbox"
-              :checked="item.showOnDisplay !== false"
-              @change="store.setShowOnDisplay(item.id, ($event.target as HTMLInputElement).checked)"
-            />
-            <span>前台显示</span>
-          </label>
+          <el-checkbox
+            class="front-toggle"
+            :model-value="item.showOnDisplay !== false"
+            :title="item.showOnDisplay === false ? '前台隐藏' : '前台显示'"
+            size="small"
+            @update:model-value="store.setShowOnDisplay(item.id, $event)"
+            @click.stop
+          >前台显示</el-checkbox>
         </div>
 
         <div class="cd-actions" @click.stop>
           <div v-if="isManual" class="move-btns">
-            <button
+            <el-button
               class="btn-move"
+              size="small"
               :disabled="!canMoveUp(item.id)"
               title="上移"
               @click="store.moveCountdown(item.id, 'up')"
-            >▲</button>
-            <button
+            >▲</el-button>
+            <el-button
               class="btn-move"
+              size="small"
               :disabled="!canMoveDown(item.id)"
               title="下移"
               @click="store.moveCountdown(item.id, 'down')"
-            >▼</button>
+            >▼</el-button>
           </div>
-          <button class="btn-delete" @click="handleDelete(item.id)">删除</button>
+          <el-button class="btn-delete" size="small" @click="handleDelete(item.id)">删除</el-button>
         </div>
       </div>
       </TransitionGroup>
@@ -440,143 +435,149 @@ onUnmounted(() => {
     <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
 
     <!-- 新增/编辑弹框 -->
-    <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
-      <div class="dialog" data-testid="cd-dialog">
-        <div class="dialog-header">
-          <h3>{{ editingId ? '编辑倒计时' : '新增倒计时' }}</h3>
-          <button class="close-btn" @click="cancelForm"><Icon name="close" /></button>
+    <el-dialog
+      :model-value="showDialog"
+      :title="editingId ? '编辑倒计时' : '新增倒计时'"
+      width="480px"
+      data-testid="cd-dialog"
+      @close="cancelForm"
+    >
+      <form class="dialog-body" @submit.prevent="handleSave">
+        <div class="form-group">
+          <label>名称 *</label>
+          <el-input
+            v-model="formName"
+            placeholder="例如：期末考试"
+            data-testid="cd-name-input"
+            size="small"
+          />
         </div>
-        <form class="dialog-body" @submit.prevent="handleSave">
-          <div class="form-group">
-            <label>名称 *</label>
-            <input
-              v-model="formName"
-              type="text"
-              class="form-input"
-              placeholder="例如：期末考试"
-              data-testid="cd-name-input"
+
+        <div class="form-row-fields">
+          <div class="field">
+            <label class="field-label">日期 *</label>
+            <el-date-picker
+              v-model="formDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              class="field-date"
+              data-testid="cd-date-input"
+              size="small"
             />
           </div>
-
-          <div class="form-row-fields">
-            <div class="field">
-              <label class="field-label">日期 *</label>
-              <input v-model="formDate" type="date" class="form-input field-date" data-testid="cd-date-input" />
-            </div>
-            <div class="field">
-              <label class="field-label">时间 *</label>
-              <input v-model="formTime" type="time" class="form-input field-time" data-testid="cd-time-input" />
-            </div>
-            <div class="field">
-              <label class="field-label">分类</label>
-              <select v-model="formCategory" class="form-input field-cat" data-testid="cd-category">
-                <option v-for="c in store.allCategories" :key="c" :value="c">{{ categoryLabel(c) }}</option>
-              </select>
-            </div>
+          <div class="field">
+            <label class="field-label">时间 *</label>
+            <el-time-picker
+              v-model="formTime"
+              value-format="HH:mm"
+              class="field-time"
+              data-testid="cd-time-input"
+              size="small"
+            />
           </div>
+          <div class="field">
+            <label class="field-label">分类</label>
+            <el-select v-model="formCategory" class="field-cat" data-testid="cd-category" size="small">
+              <el-option v-for="c in store.allCategories" :key="c" :value="c" :label="categoryLabel(c)" />
+            </el-select>
+          </div>
+        </div>
 
-          <div class="form-group">
-            <label>重复</label>
-            <select v-model="formRepeatType" class="form-input" data-testid="cd-repeat-type">
-              <option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
-            <div v-if="formRepeatType === 'weekly'" class="weekday-grid">
-              <label
+        <div class="form-group">
+          <label>重复</label>
+          <el-select v-model="formRepeatType" data-testid="cd-repeat-type" size="small">
+            <el-option v-for="opt in repeatTypeOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
+          </el-select>
+          <div v-if="formRepeatType === 'weekly'" class="weekday-grid">
+            <el-checkbox-group v-model="formWeekDays" size="small">
+              <el-checkbox
                 v-for="(label, i) in weekDayLabels"
                 :key="i + 1"
-                class="weekday-check"
-                :class="{ active: formWeekDays.includes(i + 1) }"
-              >
-                <input
-                  v-model="formWeekDays"
-                  type="checkbox"
-                  :value="i + 1"
-                  :data-testid="'cd-week-' + (i + 1)"
-                />
-                <span>{{ label }}</span>
-              </label>
-              <button
-                type="button"
-                class="workdays-btn"
-                data-testid="cd-workdays-btn"
-                @click="formWeekDays = [1, 2, 3, 4, 5]"
-              >工作日（周一~五）</button>
-            </div>
-            <div v-if="formRepeatType === 'monthly'" class="rule-panel">
-              <label class="panel-label">每月</label>
-              <input
-                v-model.number="formDayOfMonth"
-                type="number"
-                min="1"
-                max="31"
-                class="form-input month-day-input"
-                data-testid="cd-month-day"
-              />
-              <label class="panel-label">日</label>
-            </div>
-            <div v-if="formRepeatType === 'interval'" class="rule-panel">
-              <label class="panel-label">每隔</label>
-              <input
-                v-model.number="formIntervalMinutes"
-                type="number"
-                min="1"
-                class="form-input interval-min-input"
-                data-testid="cd-interval-min"
-              />
-              <label class="panel-label">分钟</label>
-            </div>
+                :value="i + 1"
+                :data-testid="'cd-week-' + (i + 1)"
+              >{{ label }}</el-checkbox>
+            </el-checkbox-group>
+            <el-button
+              type="button"
+              size="small"
+              class="workdays-btn"
+              data-testid="cd-workdays-btn"
+              @click="formWeekDays = [1, 2, 3, 4, 5]"
+            >工作日（周一~五）</el-button>
           </div>
-
-          <div class="form-group">
-            <label>卡片颜色</label>
-            <div class="color-picker">
-              <button
-                v-for="(color, i) in COUNTDOWN_COLOR_PRESETS"
-                :key="color"
-                type="button"
-                class="color-option"
-                :class="{ active: formColor.toLowerCase() === color }"
-                :style="{ '--swatch': color }"
-                :data-testid="'cd-color-preset-' + (i + 1)"
-                :title="color"
-                @click="formColor = color"
-              ></button>
-              <label class="color-custom" title="自定义颜色">
-                <input v-model="formColor" type="color" class="color-input" data-testid="cd-color-input" />
-                <span class="color-custom-value">{{ formColor }}</span>
-              </label>
-              <button type="button" class="color-reset" @click="formColor = DEFAULT_COUNTDOWN_COLOR">恢复默认</button>
-            </div>
+          <div v-if="formRepeatType === 'monthly'" class="rule-panel">
+            <label class="panel-label">每月</label>
+            <el-input-number
+              v-model="formDayOfMonth"
+              :min="1"
+              :max="31"
+              class="month-day-input"
+              data-testid="cd-month-day"
+              size="small"
+            />
+            <label class="panel-label">日</label>
           </div>
+          <div v-if="formRepeatType === 'interval'" class="rule-panel">
+            <label class="panel-label">每隔</label>
+            <el-input-number
+              v-model="formIntervalMinutes"
+              :min="1"
+              class="interval-min-input"
+              data-testid="cd-interval-min"
+              size="small"
+            />
+            <label class="panel-label">分钟</label>
+          </div>
+        </div>
 
-          <div class="form-group">
-            <label class="email-check-row" data-testid="cd-form-email">
-              <input v-model="formEmailReminder" type="checkbox" class="form-checkbox" />
-              <span>发送邮件提醒</span>
+        <div class="form-group">
+          <label>卡片颜色</label>
+          <div class="color-picker">
+            <button
+              v-for="(color, i) in COUNTDOWN_COLOR_PRESETS"
+              :key="color"
+              type="button"
+              class="color-option"
+              :class="{ active: formColor.toLowerCase() === color }"
+              :style="{ '--swatch': color }"
+              :data-testid="'cd-color-preset-' + (i + 1)"
+              :title="color"
+              @click="formColor = color"
+            ></button>
+            <label class="color-custom" title="自定义颜色">
+              <el-color-picker v-model="formColor" class="color-input" data-testid="cd-color-input" size="small" />
+              <span class="color-custom-value">{{ formColor }}</span>
             </label>
-            <p class="form-hint">需在设置-提醒设置中配置收件邮箱</p>
+            <el-button type="button" size="small" class="color-reset" @click="formColor = DEFAULT_COUNTDOWN_COLOR">恢复默认</el-button>
           </div>
+        </div>
 
-          <!-- 实时预览 -->
-          <div v-if="previewRemaining" class="preview-row">
-            <span class="preview-label">实时预览：</span>
-            <span class="preview-value" :class="statusClass(previewRemaining.status)">
-              {{ previewRemaining.label }}
-            </span>
-            <span class="preview-time">{{ previewRemaining.nextTime }}</span>
-          </div>
+        <div class="form-group">
+          <el-checkbox v-model="formEmailReminder" class="email-check-row" data-testid="cd-form-email">
+            发送邮件提醒
+          </el-checkbox>
+          <p class="form-hint">需在设置-提醒设置中配置收件邮箱</p>
+        </div>
 
-          <div class="form-actions">
-            <button type="button" class="btn-cancel" data-testid="cd-cancel-button" @click="cancelForm">
-              取消
-            </button>
-            <button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="cd-save-button">
-              {{ editingId ? '保存' : '添加' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <!-- 实时预览 -->
+        <div v-if="previewRemaining" class="preview-row">
+          <span class="preview-label">实时预览：</span>
+          <span class="preview-value" :class="statusClass(previewRemaining.status)">
+            {{ previewRemaining.label }}
+          </span>
+          <span class="preview-time">{{ previewRemaining.nextTime }}</span>
+        </div>
+
+        <div class="form-actions">
+          <el-button type="button" size="small" data-testid="cd-cancel-button" @click="cancelForm">
+            取消
+          </el-button>
+          <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="cd-save-button">
+            {{ editingId ? '保存' : '添加' }}
+          </el-button>
+        </div>
+      </form>
+    </el-dialog>
 
   </div>
 </template>
@@ -636,61 +637,10 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.sort-dir-btn {
-  padding: 8px 14px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-  flex-shrink: 0;
-}
-
-.sort-dir-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
 .sort-hint {
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
   flex-shrink: 0;
-}
-
-.search-btn {
-  padding: 9px 16px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.search-btn:hover {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.search-reset-btn {
-  padding: 9px 14px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.search-reset-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 操作行（新增提醒 + 分类管理 靠左，数量靠右） ===== */
@@ -709,22 +659,6 @@ onUnmounted(() => {
   margin-left: auto;
   font-size: 14px;
   color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.btn-add {
-  padding: 10px 16px;
-  background-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-add:hover {
-  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 /* ===== 卡片墙 ===== */
@@ -929,13 +863,6 @@ html.dark .reminded-badge {
   flex-shrink: 0;
 }
 
-.front-toggle input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: var(--color-primary, var(--color-primary));
-}
-
 /* ===== 卡片操作 ===== */
 .cd-actions {
   display: flex;
@@ -951,81 +878,12 @@ html.dark .reminded-badge {
   gap: 4px;
 }
 
-.btn-move {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  font-size: 11px;
-  border-radius: var(--radius-sm, 6px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  line-height: 1;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-move:hover:not(:disabled) {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.btn-move:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.btn-edit,
-.btn-delete {
-  padding: 2px 8px;
-  font-size: 11px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-edit:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.btn-delete:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
-}
-
 /* ===== 分类标签页 ===== */
 .cd-cat-tabs {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.cd-cat-tab {
-  padding: 5px 14px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.cd-cat-tab:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.cd-cat-tab.active {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ===== 空态 ===== */
@@ -1061,61 +919,6 @@ html.dark .reminded-badge {
 }
 
 /* ===== 表单（新增/编辑弹框）===== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: var(--dlg-w-wb-countdown, 480px);
-  max-height: var(--dlg-h-wb-countdown, 85vh);
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-}
-
-.dialog-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  transition: color var(--transition-fast, 0.15s ease);
-}
-
-.close-btn:hover {
-  color: var(--color-text, var(--color-text));
-}
-
 .dialog-body {
   padding: 20px;
   display: flex;
@@ -1171,33 +974,10 @@ html.dark .reminded-badge {
   cursor: pointer;
 }
 
-.email-check-row input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: var(--color-primary, var(--color-primary));
-}
-
 .form-hint {
   margin: 0;
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
-}
-
-.form-input {
-  padding: 9px 12px;
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  box-sizing: border-box;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 每周重复选项 */
@@ -1206,50 +986,6 @@ html.dark .reminded-badge {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-.weekday-check {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.weekday-check.active {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.weekday-check input[type='checkbox'] {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
-  accent-color: var(--color-primary, var(--color-primary));
-}
-
-.workdays-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.workdays-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 每月 / 间隔 参数面板 */
@@ -1308,36 +1044,10 @@ html.dark .reminded-badge {
   gap: 6px;
 }
 
-.color-input {
-  width: 36px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  background: none;
-  cursor: pointer;
-}
-
 .color-custom-value {
   font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
-}
-
-.color-reset {
-  padding: 5px 10px;
-  font-size: 12px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-full, 999px);
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.color-reset:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* 实时预览 */
@@ -1373,43 +1083,6 @@ html.dark .reminded-badge {
   justify-content: flex-end;
 }
 
-.btn-save {
-  padding: 9px 18px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: #fff;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-save:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.btn-save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
-.btn-cancel {
-  padding: 9px 16px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-cancel:hover {
-  background: var(--color-bg-hover, var(--color-bg-active));
-}
-
 /* ===== 暗色模式覆盖 ===== */
 html.dark .cd-search {
   background-color: var(--color-bg-card, #1f2937);
@@ -1423,41 +1096,6 @@ html.dark .cd-card {
 
 html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .dialog {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .dialog-header {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-/* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-html.dark .btn-save:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
-
-html.dark .form-input,
-html.dark select.form-input,
-html.dark input.form-input {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .weekday-check,
-html.dark .workdays-btn,
-html.dark .color-reset {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .weekday-check.active {
-  color: #60a5fa;
-  border-color: #60a5fa;
 }
 
 html.dark .cat-work {
@@ -1493,16 +1131,6 @@ html.dark .cat-sleep {
   background: rgba(6, 182, 212, 0.18);
 }
 
-html.dark .sort-dir-btn,
-html.dark .btn-cancel,
-html.dark .btn-edit,
-html.dark .btn-delete,
-html.dark .btn-move {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
 html.dark .status-normal {
   color: #4ade80;
 }
@@ -1519,12 +1147,6 @@ html.dark .cat-default {
   color: #9ca3af;
   border-color: #6b7280;
   background: rgba(107, 114, 128, 0.15);
-}
-
-html.dark .cd-cat-tab {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
 }
 
 /* ===== 桌面自适应分页（一屏布局 Wave-2 T8：R1/R3/R4/R7 契约）===== */

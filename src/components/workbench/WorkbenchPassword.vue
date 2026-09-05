@@ -335,31 +335,33 @@ watch(
       <div class="pwd-auth-card">
         <h3>设置主密码</h3>
         <p class="pwd-auth-hint">首次使用，请设置主密码来保护您的密码数据</p>
-        <input
+        <el-input
           v-model="masterPasswordInput"
           type="password"
           placeholder="输入主密码"
           class="form-input"
           data-testid="pwd-setup-input"
           @keyup.enter="handleSetupMasterPassword"
+          show-password
         />
-        <input
+        <el-input
           v-model="masterPasswordConfirm"
           type="password"
           placeholder="确认主密码"
           class="form-input"
           data-testid="pwd-setup-confirm"
           @keyup.enter="handleSetupMasterPassword"
+          show-password
         />
         <p v-if="authError" class="pwd-auth-error" data-testid="pwd-auth-error">{{ authError }}</p>
-        <button
+        <el-button
           class="pwd-btn-primary"
           data-testid="pwd-setup-submit"
           :disabled="isUnlocking || !masterPasswordInput || !masterPasswordConfirm"
           @click="handleSetupMasterPassword"
         >
           {{ isUnlocking ? '设置中...' : '设置密码' }}
-        </button>
+        </el-button>
       </div>
     </div>
 
@@ -368,23 +370,24 @@ watch(
       <div class="pwd-auth-card">
         <h3>输入主密码</h3>
         <p class="pwd-auth-hint">请输入主密码以解锁密码管理器</p>
-        <input
+        <el-input
           v-model="masterPasswordInput"
           type="password"
           placeholder="主密码"
           class="form-input"
           data-testid="pwd-unlock-input"
           @keyup.enter="handleUnlock"
+          show-password
         />
         <p v-if="authError" class="pwd-auth-error" data-testid="pwd-auth-error">{{ authError }}</p>
-        <button
+        <el-button
           class="pwd-btn-primary"
           data-testid="pwd-unlock-submit"
           :disabled="isUnlocking || !masterPasswordInput"
           @click="handleUnlock"
         >
           {{ isUnlocking ? '解锁中...' : '解锁' }}
-        </button>
+        </el-button>
       </div>
     </div>
 
@@ -392,28 +395,29 @@ watch(
     <div v-else class="pwd-main">
       <div class="pwd-toolbar">
         <div class="pwd-search-wrap">
-          <input
+          <el-input
             v-model="searchQuery"
             type="text"
             placeholder="搜索网站名称…"
             class="form-input pwd-search"
             data-testid="pwd-search-input"
+            clearable
           />
-          <button
+          <el-button
             v-if="searchQuery"
             type="button"
             class="pwd-search-clear"
             title="清除搜索"
             data-testid="pwd-search-clear"
             @click="searchQuery = ''"
-          ><Icon name="close" /></button>
+          ><Icon name="close" /></el-button>
         </div>
-        <button class="pwd-btn-lock" data-testid="pwd-lock-btn" title="锁定" @click="handleLock">
+        <el-button class="pwd-btn-lock" data-testid="pwd-lock-btn" title="锁定" @click="handleLock">
           <Icon name="lock" :size="16" />锁定
-        </button>
-        <button class="pwd-btn-primary pwd-btn-add" data-testid="pwd-add-btn" @click="startAdd">
+        </el-button>
+        <el-button class="pwd-btn-primary pwd-btn-add" data-testid="pwd-add-btn" @click="startAdd">
           + 新增密码
-        </button>
+        </el-button>
       </div>
 
       <!-- 空态 -->
@@ -451,7 +455,8 @@ watch(
             </span>
           </div>
           <div class="pwd-actions">
-            <button
+            <el-button
+              text
               class="pwd-icon-btn"
               :title="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
               :aria-label="isPasswordVisible(entry.id) ? '隐藏密码' : '显示密码'"
@@ -459,33 +464,37 @@ watch(
               @click="togglePasswordVisibility(entry.id)"
             >
               <Icon :name="isPasswordVisible(entry.id) ? 'eye-off' : 'eye'" :size="16" />
-            </button>
-            <button
+            </el-button>
+            <el-button
+              text
               class="pwd-icon-btn"
               title="复制用户名"
               aria-label="复制用户名"
               :data-testid="`pwd-copy-username-${entry.id}`"
               @click="copyToClipboard(entry.username, '用户名')"
-            ><Icon name="copy" :size="16" /></button>
-            <button
+            ><Icon name="copy" :size="16" /></el-button>
+            <el-button
+              text
               class="pwd-icon-btn"
               title="复制密码"
               aria-label="复制密码"
               :data-testid="`pwd-copy-password-${entry.id}`"
               @click="copyToClipboard(entry.password, '密码')"
-            ><Icon name="copy" :size="16" /></button>
-            <button
+            ><Icon name="copy" :size="16" /></el-button>
+            <el-button
+              text
               class="pwd-icon-btn"
               title="编辑"
               :data-testid="`pwd-edit-${entry.id}`"
               @click="startEdit(entry)"
-            ><Icon name="pencil" /></button>
-            <button
+            ><Icon name="pencil" /></el-button>
+            <el-button
+              text
               class="pwd-icon-btn pwd-delete"
               title="删除"
               :data-testid="`pwd-delete-${entry.id}`"
               @click="handleDelete(entry.id)"
-            ><Icon name="trash" /></button>
+            ><Icon name="trash" /></el-button>
           </div>
         </div>
         </TransitionGroup>
@@ -496,30 +505,30 @@ watch(
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <Teleport to="body">
-      <Transition name="dialog">
-        <div
-          v-if="showForm"
-          class="pwd-modal-overlay"
-          data-testid="pwd-form-modal"
-          @click.self="cancelForm"
-        >
-        <div class="pwd-modal">
-          <div class="pwd-modal-header">
-            <h3>{{ editingId ? '编辑密码' : '新增密码' }}</h3>
-            <button
-              type="button"
-              class="pwd-modal-close"
-              title="关闭"
-              data-testid="pwd-modal-close"
-              @click="cancelForm"
-            ><Icon name="close" /></button>
-          </div>
-          <form class="pwd-modal-body" @submit.prevent="handleSave">
+    <el-dialog
+      v-model="showForm"
+      width="480px"
+      data-testid="pwd-form-modal"
+      @close="cancelForm"
+    >
+      <template #header="{ close }">
+        <div class="pwd-dialog-header">
+          <h3 class="pwd-dialog-title">{{ editingId ? '编辑密码' : '新增密码' }}</h3>
+          <el-button
+            type="button"
+            class="pwd-modal-close"
+            title="关闭"
+            data-testid="pwd-modal-close"
+            text
+            @click="close"
+          ><Icon name="close" :size="16" /></el-button>
+        </div>
+      </template>
+      <form class="pwd-modal-body" @submit.prevent="handleSave">
             <div class="form-group">
               <label>网站名称</label>
               <div class="pwd-site-input-wrap">
-                <input
+                <el-input
                   v-model="formSiteName"
                   type="text"
                   placeholder="输入网站名称或从下拉选择"
@@ -545,7 +554,7 @@ watch(
             </div>
             <div class="form-group">
               <label>网站 URL</label>
-              <input
+              <el-input
                 v-model="formUrl"
                 type="text"
                 placeholder="https://example.com"
@@ -555,7 +564,7 @@ watch(
             </div>
             <div class="form-group">
               <label>用户名</label>
-              <input
+              <el-input
                 v-model="formUsername"
                 type="text"
                 placeholder="用户名或邮箱"
@@ -566,31 +575,26 @@ watch(
             <div class="form-group">
               <label>密码</label>
               <div class="pwd-password-wrap">
-                <input
+                <el-input
                   v-model="formPassword"
                   :type="showFormPassword ? 'text' : 'password'"
                   placeholder="密码"
                   class="form-input"
                   data-testid="pwd-form-password"
+                  show-password
                 />
-                <button type="button" class="pwd-eye-btn" title="显示/隐藏" aria-label="显示或隐藏密码" @click="showFormPassword = !showFormPassword">
-                  <Icon :name="showFormPassword ? 'eye-off' : 'eye'" :size="16" />
-                </button>
               </div>
             </div>
             <div class="pwd-form-actions">
-              <button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
-                取消
-              </button>
-              <button type="submit" class="pwd-btn-primary" data-testid="pwd-save-btn" :disabled="!isFormValid">
-                {{ editingId ? '保存' : '添加' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-      </Transition>
-    </Teleport>
+<el-button type="button" class="pwd-btn-cancel" data-testid="pwd-cancel-btn" @click="cancelForm">
+              取消
+            </el-button>
+            <el-button type="primary" native-type="submit" class="pwd-btn-primary" data-testid="pwd-save-btn" :disabled="!isFormValid">
+              {{ editingId ? '保存' : '添加' }}
+            </el-button>
+          </div>
+        </form>
+    </el-dialog>
   </div>
 </template>
 
@@ -917,15 +921,14 @@ watch(
   box-shadow: var(--shadow-card, 0 8px 30px rgba(0, 0, 0, 0.15));
 }
 
-.pwd-modal-header {
+.pwd-dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border, var(--color-border));
+  width: 100%;
 }
 
-.pwd-modal-header h3 {
+.pwd-dialog-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
@@ -1097,7 +1100,7 @@ html.dark .pwd-item {
 }
 
 html.dark .pwd-auth-card h3,
-html.dark .pwd-modal-header h3 {
+html.dark .pwd-dialog-title {
   color: var(--color-text, #f9fafb);
 }
 

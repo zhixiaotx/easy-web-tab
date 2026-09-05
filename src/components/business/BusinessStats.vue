@@ -94,14 +94,18 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
         <h3>近 {{ trendDays }} 天经营趋势 · 每日一柱</h3>
         <div class="bizstats-head-btns">
           <div class="bizstats-days">
-            <button class="bizstats-btn" :class="{ active: trendDays === 7 }" data-testid="bizstats-days-7" @click="trendDays = 7">7 天</button>
-            <button class="bizstats-btn" :class="{ active: trendDays === 14 }" data-testid="bizstats-days-14" @click="trendDays = 14">14 天</button>
-            <button class="bizstats-btn" :class="{ active: trendDays === 30 }" data-testid="bizstats-days-30" @click="trendDays = 30">30 天</button>
+            <el-radio-group v-model="trendDays" size="small">
+              <el-radio-button :value="7" data-testid="bizstats-days-7">7 天</el-radio-button>
+              <el-radio-button :value="14" data-testid="bizstats-days-14">14 天</el-radio-button>
+              <el-radio-button :value="30" data-testid="bizstats-days-30">30 天</el-radio-button>
+            </el-radio-group>
           </div>
           <div class="bizstats-days">
-            <button class="bizstats-btn" :class="{ active: trendMode === 'all' }" data-testid="bizstats-mode-all" @click="trendMode = 'all'">全部</button>
-            <button class="bizstats-btn" :class="{ active: trendMode === 'revenue' }" data-testid="bizstats-mode-revenue" @click="trendMode = 'revenue'">营业额</button>
-            <button class="bizstats-btn" :class="{ active: trendMode === 'profit' }" data-testid="bizstats-mode-profit" @click="trendMode = 'profit'">利润</button>
+            <el-radio-group v-model="trendMode" size="small">
+              <el-radio-button value="all" data-testid="bizstats-mode-all">全部</el-radio-button>
+              <el-radio-button value="revenue" data-testid="bizstats-mode-revenue">营业额</el-radio-button>
+              <el-radio-button value="profit" data-testid="bizstats-mode-profit">利润</el-radio-button>
+            </el-radio-group>
           </div>
         </div>
       </div>

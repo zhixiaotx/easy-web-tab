@@ -1972,32 +1972,28 @@ onUnmounted(() => {
           <div class="remind-fields">
             <label class="remind-field">
               <span class="remind-label">摊位名称</span>
-              <input
-                type="text"
-                class="wb-menu-name-input"
+              <el-input
                 maxlength="30"
                 placeholder="例如：夜市A区小吃摊"
                 data-testid="bizsettings-stall"
-                :value="businessStore.settings.stallName"
-                @input="businessStore.setStallName(($event.target as HTMLInputElement).value)"
+                :model-value="businessStore.settings.stallName"
+                @input="businessStore.setStallName($event)"
               />
             </label>
             <label class="remind-field">
               <span class="remind-label">低库存阈值</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                class="wb-menu-name-input"
+              <el-input-number
+                :min="0"
+                :step="1"
                 data-testid="bizsettings-threshold"
-                :value="String(businessStore.settings.lowStockThreshold)"
-                @change="businessStore.setLowStockThreshold(Number(($event.target as HTMLInputElement).value) || 0)"
+                :model-value="businessStore.settings.lowStockThreshold"
+                @change="businessStore.setLowStockThreshold(Number($event) || 0)"
               />
             </label>
           </div>
           <div class="remind-actions">
-            <button type="button" class="wb-menu-btn" data-testid="bizsettings-product-cats" @click="bizCatManagerKind = 'product'">管理商品分类</button>
-            <button type="button" class="wb-menu-btn" data-testid="bizsettings-expense-cats" @click="bizCatManagerKind = 'expense'">管理支出分类</button>
+            <el-button size="small" data-testid="bizsettings-product-cats" @click="bizCatManagerKind = 'product'">管理商品分类</el-button>
+            <el-button size="small" data-testid="bizsettings-expense-cats" @click="bizCatManagerKind = 'expense'">管理支出分类</el-button>
           </div>
         </div>
 
@@ -2008,8 +2004,8 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">独立导出销售记账七字段（商品/进货/收摊/支出/分类/设置）为 JSON 文件；导入时当前销售记账数据将被覆盖</p>
           <div class="remind-actions">
-            <button type="button" class="wb-menu-btn" data-testid="bizsettings-export" @click="handleBizExport"><Icon name="upload" /> 导出销售备份</button>
-            <button type="button" class="wb-menu-btn" data-testid="bizsettings-import" @click="handleBizImportClick"><Icon name="download" /> 导入销售备份</button>
+            <el-button size="small" data-testid="bizsettings-export" @click="handleBizExport"><Icon name="upload" /> 导出销售备份</el-button>
+            <el-button size="small" data-testid="bizsettings-import" @click="handleBizImportClick"><Icon name="download" /> 导入销售备份</el-button>
           </div>
         </div>
 
@@ -2968,6 +2964,13 @@ html.dark .wb-snapshot-empty {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* 销售记账 tab：el-input/el-input-number 在 .remind-field 行内 flex 撑满（原生 .wb-menu-name-input 样式不适用于 el 外壳） */
+.remind-field :deep(.el-input),
+.remind-field :deep(.el-input-number) {
+  flex: 1;
+  min-width: 0;
 }
 
 .remind-label {

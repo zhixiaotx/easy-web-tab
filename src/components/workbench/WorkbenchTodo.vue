@@ -305,84 +305,99 @@ onUnmounted(() => {
       <button class="btn-cancel" @click="resetSearch">重置查询</button>
     </div>
 
-    <div v-else class="td-table-wrap">
-      <el-table :data="pageTodos" data-testid="td-table" @row-click="rowClick" style="width:100%">
-        <el-table-column label="完成" width="70" align="center">
-          <template #default="{ row: v }">
-            <el-checkbox
-              :model-value="v.todo.completed"
-              :data-testid="`td-toggle-${v.todo.id}`"
-              :title="v.todo.completed ? '标记为未完成' : '标记为已完成'"
-              @click.stop
-              @change="handleToggle(v.todo)"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column label="标题" min-width="200" show-overflow-tooltip>
-          <template #default="{ row: v }">
-            <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="描述" min-width="160" show-overflow-tooltip>
-          <template #default="{ row: v }">
-            <span v-if="v.todo.description" class="td-desc">{{ v.todo.description }}</span>
-            <span v-else class="td-col-empty">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="优先级" width="90" align="center">
-          <template #default="{ row: v }">
-            <span
-              class="prio-badge"
-              :class="priorityMeta(v.todo.priority).className"
-              :data-testid="`td-prio-${v.todo.id}`"
-            >{{ priorityMeta(v.todo.priority).label }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="截止日期" width="150">
-          <template #default="{ row: v }">
-            <div v-if="v.todo.dueDate" class="td-meta">
+    <template v-else>
+      <div class="td-table-wrap">
+        <el-table
+          :data="pageTodos"
+          data-testid="td-table"
+          @row-click="rowClick"
+          stripe
+          border
+          size="default"
+          style="width: 100%"
+          height="100%"
+          empty-text="没有符合查询条件的待办"
+        >
+          <el-table-column label="完成" width="70" align="center">
+            <template #default="{ row: v }">
+              <el-checkbox
+                :model-value="v.todo.completed"
+                :data-testid="`td-toggle-${v.todo.id}`"
+                :title="v.todo.completed ? '标记为未完成' : '标记为已完成'"
+                @click.stop
+                @change="handleToggle(v.todo)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="标题" min-width="200" show-overflow-tooltip>
+            <template #default="{ row: v }">
+              <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="描述" min-width="160" show-overflow-tooltip>
+            <template #default="{ row: v }">
+              <span v-if="v.todo.description" class="td-desc">{{ v.todo.description }}</span>
+              <span v-else class="td-col-empty">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="优先级" width="90" align="center">
+            <template #default="{ row: v }">
               <span
-                class="td-date"
-                :class="{ overdue: !v.todo.completed && v.hero?.status === 'overdue' }"
-              >{{ v.todo.dueDate }}</span>
-              <span
-                v-if="!v.todo.completed && v.hero?.status === 'overdue'"
-                class="overdue-tag"
-              >已逾期</span>
-            </div>
-            <span v-else class="td-col-empty">—</span>
-            <div v-if="v.hero && v.hero.status !== 'done'" class="td-hero" :class="'td-' + v.hero.status">
-              <span class="td-hero-value">{{ v.hero.label }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="分类" width="130">
-          <template #default="{ row: v }">
-            <span v-if="v.todo.categoryId" class="td-cat-badge" :data-testid="`td-cat-badge-${v.todo.id}`">{{ v.todo.categoryId }}</span>
-            <span v-else class="td-col-empty">未分类</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="110" align="center">
-          <template #default="{ row: v }">
-            <div class="td-actions" @click.stop>
-              <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
-              <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        v-if="viewTodos.length > LIST_PAGE_SIZE"
-        :current-page="listPage"
-        :page-size="LIST_PAGE_SIZE"
-        :total="viewTodos.length"
-        layout="prev, pager, next"
-        data-testid="td-pagination"
-        background
-        @current-change="(p: number) => { listPage = p }"
-      />
-    </div>
+                class="prio-badge"
+                :class="priorityMeta(v.todo.priority).className"
+                :data-testid="`td-prio-${v.todo.id}`"
+              >{{ priorityMeta(v.todo.priority).label }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="截止日期" width="150">
+            <template #default="{ row: v }">
+              <div v-if="v.todo.dueDate" class="td-meta">
+                <span
+                  class="td-date"
+                  :class="{ overdue: !v.todo.completed && v.hero?.status === 'overdue' }"
+                >{{ v.todo.dueDate }}</span>
+                <span
+                  v-if="!v.todo.completed && v.hero?.status === 'overdue'"
+                  class="overdue-tag"
+                >已逾期</span>
+              </div>
+              <span v-else class="td-col-empty">—</span>
+              <div v-if="v.hero && v.hero.status !== 'done'" class="td-hero" :class="'td-' + v.hero.status">
+                <span class="td-hero-value">{{ v.hero.label }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="分类" width="130">
+            <template #default="{ row: v }">
+              <span v-if="v.todo.categoryId" class="td-cat-badge" :data-testid="`td-cat-badge-${v.todo.id}`">{{ v.todo.categoryId }}</span>
+              <span v-else class="td-col-empty">未分类</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="110" align="center" fixed="right">
+            <template #default="{ row: v }">
+              <div class="td-actions" @click.stop>
+                <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
+                <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <div class="td-list-pager">
+        <el-pagination
+          v-model:current-page="listPage"
+          :page-size="LIST_PAGE_SIZE"
+          :page-sizes="[LIST_PAGE_SIZE]"
+          layout="total, prev, pager, next, jumper"
+          :total="viewTodos.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+          data-testid="td-pagination"
+        />
+      </div>
+    </template>
 
     <!-- 新增/编辑弹框 -->
     <el-dialog
@@ -622,12 +637,97 @@ onUnmounted(() => {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* ===== 表格列表 ===== */
+/* ===== el-table 表格容器（参考 WorkbenchNotes）===== */
 .td-table-wrap {
+  flex: 1 1 auto;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  box-sizing: border-box;
 }
+.td-table-wrap > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.td-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.td-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .td-table-wrap > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .td-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(html.dark) .td-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.td-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
+.td-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+}
+
+/* ===== 分页条（参考 WorkbenchNotes）===== */
+.td-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+:global(html.dark) .td-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.td-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
+.td-list-pager > :global(.el-pagination button),
+.td-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.td-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .td-list-pager > :global(.el-pagination button),
+:global(html.dark) .td-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(html.dark) .td-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.td-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+/* ===== 表格内徽章/标签 ===== */
 
 .td-col-empty {
   color: var(--color-text-muted, var(--color-text-muted));
@@ -1199,16 +1299,6 @@ html.dark .btn-add:disabled {
   .td-field-title,
   .td-field-grow {
     width: 100%;
-  }
-}
-
-/* ===== 桌面端 ≥769px：表格区占满剩余高度并内部滚动 ===== */
-@media (min-width: 769px) {
-  /* flex 列内可收缩占满剩余高度（T3 shell 契约 .wb-content > * flex:1 min-height:0 已在视图层就位） */
-  .td-table-wrap {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
   }
 }
 </style>

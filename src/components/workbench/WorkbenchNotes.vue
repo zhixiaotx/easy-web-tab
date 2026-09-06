@@ -1,23 +1,30 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from './PanelPager.vue'
 
 const store = useWorkbenchNotesStore()
 
 // 便签/时光轴条目内容按 Markdown 渲染（renderer 纯函数，template 经 renderedContent 调用）
 const renderedContent = (md: string): string => renderMarkdown(md)
 
-// 内容内点击：锚点链接不冒泡到卡片 @click="startEdit"；其余区域照常打开编辑
-function onContentClick(e: MouseEvent): void {
-  const t = e.target as Element | null
-  if (t && t.closest('a')) e.stopPropagation()
+// 内容纯文本预览（strip HTML tags for el-table tooltip）
+function contentPreview(md: string): string {
+  const html = renderMarkdown(md)
+  return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 120)
 }
+
+// 更新时间格式化（时间戳 → 'YYYY-MM-DD HH:mm'）
+function formatNoteTime(ts: number): string {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 // ===== 搜索表单（草稿 → 应用：输入控件绑定草稿，点「查询」才生效；「重置」一键清空）=====
 // 草稿值（绑定搜索表单控件）：
 //   searchDraft 关键词；typeDraft 类型（普通/时光轴）；categoryDraft 分类（''=全部；'uncategorized'=未分类；分类 id）
@@ -36,16 +43,16 @@ function applyFilters(): void {
   activeType.value = typeDraft.value
   activeCategoryId.value = categoryDraft.value === '' ? undefined : categoryDraft.value
   // 筛选变化 → 双段分页回第 1 页（R8 两个实例独立，但关键词/类型/分类影响两段，均需归位）
-  normalPaging.goto(1)
-  timelinePaging.goto(1)
+  normalListPage.value = 1
+  timelineListPage.value = 1
 }
 
 // 分类筛选标签页：点击即时生效（与倒计时面板一致）；同步草稿 ref，保证「查询」不覆盖、重置/删分类回退逻辑一致
 function selectCategoryTab(id: string | undefined): void {
   categoryDraft.value = id ?? ''
   activeCategoryId.value = id
-  normalPaging.goto(1)
-  timelinePaging.goto(1)
+  normalListPage.value = 1
+  timelineListPage.value = 1
 }
 
 // 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
@@ -78,24 +85,18 @@ const filteredPartition = computed(() => partitionNotesByType(filteredNotes.valu
 const filteredNormal = computed(() => filteredPartition.value.normal)
 const filteredTimeline = computed(() => filteredPartition.value.timeline)
 
-// ===== 自适应分页（R1/R3/R7/R8）：普通/时光轴两个独立实例（'all' 视图双段各翻各的）=====
-// rowHeight 来自 .omo/evidence/workbench-onescreen/row-heights.json 实测（MAX + 2px margin，R4）
-// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
-const normalGridEl = ref<HTMLElement | null>(null)
-const timelineGridEl = ref<HTMLElement | null>(null)
-const normalPaging = reactive(usePanelPaging({
-  items: () => filteredNormal.value,
-  rowHeight: 150,
-  maxRows: 2,
-  containerRef: normalGridEl,
-  gridRef: normalGridEl
-}))
-const timelinePaging = reactive(usePanelPaging({
-  items: () => filteredTimeline.value,
-  rowHeight: 2343, // row-heights.json: timeline = 2343 — 时光轴卡片整卡高度（含全部条目）
-  containerRef: timelineGridEl,
-  gridRef: timelineGridEl
-}))
+// ===== Element Plus el-pagination 分页（普通/时光轴两套独立）=====
+const LIST_PAGE_SIZE = 10
+const normalListPage = ref(1)
+const normalListPageItems = computed<WorkbenchNote[]>(() => {
+  const start = (normalListPage.value - 1) * LIST_PAGE_SIZE
+  return filteredNormal.value.slice(start, start + LIST_PAGE_SIZE)
+})
+const timelineListPage = ref(1)
+const timelineListPageItems = computed<WorkbenchNote[]>(() => {
+  const start = (timelineListPage.value - 1) * LIST_PAGE_SIZE
+  return filteredTimeline.value.slice(start, start + LIST_PAGE_SIZE)
+})
 
 // 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
 const hasActiveFilter = computed(() =>
@@ -391,176 +392,111 @@ onUnmounted(() => {
 
     <!-- 时光轴便签（仅在类型=时光轴时渲染，'all' 视图只显示普通便签） -->
     <template v-if="activeType === 'timeline'">
-      <div
-        v-if="filteredTimeline.length > 0"
-        ref="timelineGridEl"
-        class="notes-grid timeline-grid"
-        :class="{ 'timeline-grid-scroll': !timelinePaging.fitsOnePage }"
-      >
-        <TransitionGroup name="grid">
-        <div
-          v-for="note in timelinePaging.pageItems"
-          :key="note.id"
-          class="note-card timeline-card"
-          :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
-          data-testid="nt-timeline-card"
+      <div v-if="filteredTimeline.length > 0" class="nt-table-wrap">
+        <el-table
+          :data="timelineListPageItems"
+          stripe
+          border
+          size="default"
+          style="width: 100%"
+          height="100%"
+          empty-text="还没有时光轴便签"
         >
-          <div class="note-card-header">
-            <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
-            <span v-else></span>
-            <el-button
-              text
-              class="pin-toggle"
-              :class="{ active: note.pinned }"
-              :title="note.pinned ? '取消置顶' : '置顶'"
-              :data-testid="`note-pin-${note.id}`"
-              @click.stop="handlePin(note)"
-            >
-              📌
-            </el-button>
-          </div>
-
-          <div class="timeline-card-head">
-            <span class="timeline-title">{{ note.title || '时光轴便签' }}</span>
-            <el-button
-              type="button"
-              class="btn-edit"
-              :data-testid="`nt-note-edit-${note.id}`"
-              @click.stop="startEdit(note)"
-            >
-              编辑
-            </el-button>
-          </div>
-
-          <!-- 条目列表：sortTimelineEntries（datetime 升序 → createdAt 升序），卡片内联前 5 条（S4），超限经「+N 条」开浮层看全量 -->
-          <div class="timeline-list" data-testid="nt-timeline-list">
-            <div
-              v-for="entry in inlineEntriesOf(note)"
-              :key="entry.id"
-              class="timeline-item"
-              :data-testid="`nt-entry-${entry.id}`"
-            >
-              <span class="timeline-dot"></span>
-              <template v-if="editingEntry && editingEntry.noteId === note.id && editingEntry.entryId === entry.id">
-                <div class="timeline-item-edit">
-                  <el-input
-                    v-model="entryEditDatetime"
-                    type="text"
-                    class="form-input"
-                    :data-testid="`nt-entry-edit-dt-${entry.id}`"
-                    placeholder="YYYY-MM-DD HH:mm"
-                    size="small"
-                  />
-                  <el-input
-                    v-model="entryEditContent"
-                    type="text"
-                    class="form-input"
-                    :data-testid="`nt-entry-edit-content-${entry.id}`"
-                    placeholder="记录内容"
-                    size="small"
-                  />
-                  <div class="timeline-item-actions">
-                    <el-button
-                      type="button"
-                      class="btn-save"
-                      :disabled="!canSaveEntry()"
-                      :data-testid="`nt-entry-save-${entry.id}`"
-                      @click="handleSaveEntry(note.id, entry.id)"
-                    >
-                      保存
-                    </el-button>
-                    <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">
-                      取消
-                    </el-button>
+          <!-- 展开行：时光轴条目管理 -->
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="nt-timeline-expand" @click.stop>
+                <div class="nt-timeline-expand-title">时光记录（{{ sortedEntriesOf(row).length }} 条）</div>
+                <div class="nt-timeline-list">
+                  <div
+                    v-for="entry in inlineEntriesOf(row)"
+                    :key="entry.id"
+                    class="nt-timeline-item"
+                    :data-testid="`nt-entry-${entry.id}`"
+                  >
+                    <template v-if="editingEntry && editingEntry.noteId === row.id && editingEntry.entryId === entry.id">
+                      <div class="nt-timeline-item-edit">
+                        <el-input v-model="entryEditDatetime" type="text" class="form-input" :data-testid="`nt-entry-edit-dt-${entry.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+                        <el-input v-model="entryEditContent" type="text" class="form-input" :data-testid="`nt-entry-edit-content-${entry.id}`" placeholder="记录内容" size="small" />
+                        <div class="nt-timeline-item-actions">
+                          <el-button type="button" class="btn-save" :disabled="!canSaveEntry()" :data-testid="`nt-entry-save-${entry.id}`" @click="handleSaveEntry(row.id, entry.id)">保存</el-button>
+                          <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">取消</el-button>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="nt-timeline-item-body">
+                        <div class="nt-timeline-item-time">{{ entry.datetime }}</div>
+                        <div class="nt-timeline-item-content" v-html="renderedContent(entry.content)"></div>
+                        <div class="nt-timeline-item-actions">
+                          <el-button type="button" class="btn-edit" :data-testid="`nt-entry-edit-${entry.id}`" @click.stop="startEditEntry(row.id, entry)">编辑</el-button>
+                          <el-button type="button" class="btn-delete" :data-testid="`nt-entry-del-${entry.id}`" @click.stop="handleDeleteEntry(row.id, entry.id)">删除</el-button>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                 </div>
-              </template>
-              <template v-else>
-                <div class="timeline-item-body">
-                  <div class="timeline-item-time">{{ entry.datetime }}</div>
-                  <div class="timeline-item-content" v-html="renderedContent(entry.content)"></div>
-                  <div class="timeline-item-actions">
-                    <el-button
-                      type="button"
-                      class="btn-edit"
-                      :data-testid="`nt-entry-edit-${entry.id}`"
-                      @click.stop="startEditEntry(note.id, entry)"
-                    >
-                      编辑
-                    </el-button>
-                    <el-button
-                      type="button"
-                      class="btn-delete"
-                      :data-testid="`nt-entry-del-${entry.id}`"
-                      @click.stop="handleDeleteEntry(note.id, entry.id)"
-                    >
-                      删除
-                    </el-button>
-                  </div>
+                <!-- 超限「+N 条」按钮 -->
+                <el-button v-if="hiddenEntryCount(row) > 0" type="button" class="timeline-more-btn" :data-testid="`nt-entry-more-${row.id}`" @click.stop="openTimelineExpand(row.id)">
+                  +{{ hiddenEntryCount(row) }} 条
+                </el-button>
+                <!-- 快速追加行 -->
+                <div class="nt-timeline-add-row">
+                  <el-input v-model="entryDraftDatetime[row.id]" type="text" class="form-input nt-timeline-dt-input" :data-testid="`nt-entry-dt-${row.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+                  <el-input v-model="entryDraftContent[row.id]" type="text" class="form-input nt-timeline-content-input" :data-testid="`nt-entry-content-${row.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(row)" size="small" />
+                  <el-button type="button" class="btn-add" :disabled="!canAddEntry(row)" data-testid="nt-entry-add" @click="handleAddEntry(row)">添加</el-button>
                 </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- 超限「+N 条」按钮（S4）：点击开全量条目浮层 -->
-          <el-button
-            v-if="hiddenEntryCount(note) > 0"
-            type="button"
-            class="timeline-more-btn"
-            :data-testid="`nt-entry-more-${note.id}`"
-            @click.stop="openTimelineExpand(note.id)"
-          >
-            +{{ hiddenEntryCount(note) }} 条
-          </el-button>
-
-          <!-- 卡片底部快速追加行：datetime（默认本地当前时间）+ content + 添加按钮 -->
-          <div class="timeline-add-row">
-            <el-input
-              v-model="entryDraftDatetime[note.id]"
-              type="text"
-              class="form-input timeline-dt-input"
-              :data-testid="`nt-entry-dt-${note.id}`"
-              placeholder="YYYY-MM-DD HH:mm"
-              size="small"
-            />
-            <el-input
-              v-model="entryDraftContent[note.id]"
-              type="text"
-              class="form-input timeline-content-input"
-              :data-testid="`nt-entry-content-${note.id}`"
-              placeholder="添加时光记录…"
-              @keydown.enter="handleAddEntry(note)"
-              size="small"
-            />
-            <el-button
-              type="button"
-              class="btn-add"
-              :disabled="!canAddEntry(note)"
-              data-testid="nt-entry-add"
-              @click="handleAddEntry(note)"
-            >
-              添加
-            </el-button>
-          </div>
-          <el-button
-            type="button"
-            class="btn-delete card-delete-btn"
-            :data-testid="`note-delete-${note.id}`"
-            @click.stop="handleDelete(note.id)"
-          >
-            删除
-          </el-button>
-        </div>
-        </TransitionGroup>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="标题" min-width="180" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span style="font-weight: 600;">{{ row.title || '时光轴便签' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="分类" width="100" align="center">
+            <template #default="{ row }">
+              <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
+              <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="条目数" width="80" align="center">
+            <template #default="{ row }">{{ sortedEntriesOf(row).length }} 条</template>
+          </el-table-column>
+          <el-table-column label="最新条目" min-width="200" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="sortedEntriesOf(row).length > 0">
+                {{ sortedEntriesOf(row)[sortedEntriesOf(row).length - 1].datetime }} · {{ contentPreview(sortedEntriesOf(row)[sortedEntriesOf(row).length - 1].content) }}
+              </span>
+              <span v-else style="color: var(--color-text-secondary, #9ca3af);">暂无条目</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="更新时间" width="140" align="center">
+            <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)" style="margin-right:6px;">编辑</el-button>
+              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
-      <PanelPager
-        :page="timelinePaging.currentPage"
-        :total="timelinePaging.totalPages"
-        @prev="timelinePaging.prev()"
-        @next="timelinePaging.next()"
-      />
+      <div v-if="filteredTimeline.length > 0" class="nt-list-pager">
+        <el-pagination
+          v-model:current-page="timelineListPage"
+          :page-size="LIST_PAGE_SIZE"
+          :page-sizes="[LIST_PAGE_SIZE]"
+          layout="total, prev, pager, next, jumper"
+          :total="filteredTimeline.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+        />
+      </div>
 
-      <div v-if="filteredTimeline.length === 0 && activeType === 'timeline'" class="empty-state" data-testid="note-timeline-empty">
+      <div v-if="filteredTimeline.length === 0" class="empty-state" data-testid="note-timeline-empty">
         {{ emptyText }}
       </div>
     </template>
@@ -647,67 +583,73 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 普通便签：空态（区分文案）/ 网格卡片 -->
+    <!-- 普通便签：空态 / el-table 表格 -->
     <template v-if="activeType !== 'timeline'">
-      <div
-        v-if="filteredNormal.length > 0"
-        ref="normalGridEl"
-        class="notes-grid"
-        :class="{ 'notes-grid-scroll': !normalPaging.fitsOnePage }"
-      >
-        <TransitionGroup name="grid">
-        <div
-          v-for="note in normalPaging.pageItems"
-          :key="note.id"
-          class="note-card"
-          :class="[`note-${note.color}`, { 'is-pinned': note.pinned }]"
-          data-testid="note-card"
-          @click="startEdit(note)"
+      <div v-if="filteredNormal.length > 0" class="nt-table-wrap">
+        <el-table
+          :data="normalListPageItems"
+          stripe
+          border
+          size="default"
+          style="width: 100%"
+          height="100%"
+          empty-text="当前分类/搜索下无便签"
         >
-          <div class="note-card-header">
-            <span v-if="note.pinned" class="pin-badge">📌 置顶</span>
-            <span v-else></span>
-            <el-button
-              text
-              class="pin-toggle"
-              :class="{ active: note.pinned }"
-              :title="note.pinned ? '取消置顶' : '置顶'"
-              :data-testid="`note-pin-${note.id}`"
-              @click.stop="handlePin(note)"
-            >
-              📌
-            </el-button>
-          </div>
-
-          <div v-if="note.title" class="note-title">{{ note.title }}</div>
-          <div class="note-content" v-html="renderedContent(note.content)" @click="onContentClick"></div>
-
-          <div class="note-card-footer">
-            <span v-if="catNameOf(note)" class="note-cat-badge" :data-testid="`note-cat-badge-${note.id}`">
-              {{ catNameOf(note) }}
-            </span>
-            <div class="note-color-tag">
-              <span class="color-dot" :class="`dot-${note.color}`"></span>
-              <span>{{ COLOR_LABELS[note.color] }}</span>
-            </div>
-          </div>
-          <el-button
-            type="button"
-            class="btn-delete card-delete-btn"
-            :data-testid="`note-delete-${note.id}`"
-            @click.stop="handleDelete(note.id)"
-          >
-            删除
-          </el-button>
-        </div>
-        </TransitionGroup>
+          <el-table-column label="标题" min-width="150" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span style="font-weight: 600;">{{ row.title || '无标题' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="内容" min-width="200" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="nt-content-preview">{{ contentPreview(row.content) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="分类" width="100" align="center">
+            <template #default="{ row }">
+              <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
+              <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="颜色" width="80" align="center">
+            <template #default="{ row }">
+              <span class="nt-color-tag">
+                <span class="color-dot" :class="`dot-${row.color}`"></span>
+                <span>{{ COLOR_LABELS[row.color as NoteColor] }}</span>
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="置顶" width="70" align="center">
+            <template #default="{ row }">
+              <span v-if="row.pinned" class="nt-pin-badge">📌</span>
+              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="更新时间" width="140" align="center">
+            <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="180" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)" style="margin-right:6px;">编辑</el-button>
+              <el-button text size="small" class="nt-pin-btn" :class="{ active: row.pinned }" :data-testid="`note-pin-${row.id}`" @click="handlePin(row)" style="margin-right:6px;">📌</el-button>
+              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
-      <PanelPager
-        :page="normalPaging.currentPage"
-        :total="normalPaging.totalPages"
-        @prev="normalPaging.prev()"
-        @next="normalPaging.next()"
-      />
+      <div v-if="filteredNormal.length > 0" class="nt-list-pager">
+        <el-pagination
+          v-model:current-page="normalListPage"
+          :page-size="LIST_PAGE_SIZE"
+          :page-sizes="[LIST_PAGE_SIZE]"
+          layout="total, prev, pager, next, jumper"
+          :total="filteredNormal.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+        />
+      </div>
 
       <div v-if="filteredNormal.length === 0" class="empty-state" data-testid="note-empty">
         {{ emptyText }}
@@ -799,10 +741,10 @@ onUnmounted(() => {
 .wb-notes {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* ===== 查询区（卡片：关键词/分类/类型 + 右侧查询/重置，与 WorkbenchTodo .td-search 同构）===== */
+/* ===== 查询区 ===== */
 .nt-search {
   display: flex;
   flex-direction: column;
@@ -813,517 +755,213 @@ onUnmounted(() => {
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
-
-.nt-search-fields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-}
-
-.nt-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.nt-field-grow {
-  flex: 0 0 auto;
-}
-
-.nt-field-grow .nt-field-keyword {
-  width: 250px;
-}
-
-.nt-field-label {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.nt-search-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-/* 分类筛选标签页（全部/未分类/各分类，即时过滤；与 WorkbenchCountdown .cd-cat-tabs 同构） */
-.nt-cat-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.nt-cat-tab {
-  padding: 5px 14px;
-  font-size: 13px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.nt-cat-tab:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.nt-cat-tab.active {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-/* 类型下拉：复用 form-input 基础外观，固定合理宽度 */
-.nt-field-select {
-  width: 130px;
-  flex-shrink: 0;
-}
-
-/* 查询（实心主色） */
+.nt-search-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.nt-field { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.nt-field-grow { flex: 0 0 auto; }
+.nt-field-grow .nt-field-keyword { width: 250px; }
+.nt-field-label { font-size: 13px; color: var(--color-text-secondary, var(--color-text-secondary)); }
+.nt-search-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.nt-field-select { width: 130px; flex-shrink: 0; }
 .nt-btn-query {
-  padding: 9px 16px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
+  padding: 9px 16px; background: var(--color-primary, var(--color-primary)); border: none;
+  border-radius: var(--radius-md, 8px); font-size: 14px; color: #fff; cursor: pointer; white-space: nowrap;
 }
-
-.nt-btn-query:hover {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-/* 重置（次级描边） */
 .nt-btn-reset {
-  padding: 9px 14px;
-  background: var(--color-bg-card, var(--color-bg-hover));
+  padding: 9px 14px; background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
+  border-radius: var(--radius-md, 8px); font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary));
+  cursor: pointer; white-space: nowrap;
 }
 
-.nt-btn-reset:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-/* ===== 操作栏（无卡片：新增/分类管理 + 计数，与 WorkbenchTodo .td-headbar 同构）===== */
-.nt-headbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.nt-headbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.nt-toolbar-count {
-  margin-left: auto;
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
+/* ===== 分类筛选标签页 + 新增按钮 ===== */
+.nt-cat-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nt-toolbar-count { margin-left: auto; font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .nt-btn-add {
-  padding: 10px 16px;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
+  padding: 10px 16px; background: var(--color-primary, var(--color-primary)); border: none;
+  border-radius: var(--radius-md, 8px); font-size: 14px; color: #fff; cursor: pointer; white-space: nowrap;
 }
 
-.nt-btn-add:hover {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-/* ===== 网格卡片 ===== */
-.notes-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: 150px;
-  gap: 10px;
-  align-content: start;
-}
-
-.note-card {
-  position: relative;
+/* ===== el-table 表格容器（参考 StudentReading）===== */
+.nt-table-wrap {
+  flex: 1 1 auto;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  cursor: pointer;
-  transition: box-shadow var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
+  box-sizing: border-box;
 }
-
-.note-card:hover {
-  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
-  transform: translateY(-2px);
-}
-
-.note-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 22px;
-}
-
-.pin-badge {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: var(--radius-full, 999px);
-  background: rgba(0, 0, 0, 0.12);
-}
-
-.pin-toggle {
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm, 6px);
-  opacity: 0.4;
-  transition: opacity var(--transition-fast, 0.15s ease);
-}
-
-.pin-toggle:hover {
-  opacity: 0.8;
-}
-
-.pin-toggle.active {
-  opacity: 1;
-}
-
-.note-title {
+.nt-table-wrap > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
   font-size: 13px;
-  font-weight: 700;
+  border-radius: 10px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-
-.note-content {
-  font-size: 12px;
-  line-height: 1.4;
-  word-break: break-word;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-
-.note-content > :first-child {
-  margin-top: 0;
-}
-
-.note-content > :last-child {
-  margin-bottom: 0;
-}
-
-.note-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.note-cat-badge {
-  font-size: 12px;
+.nt-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
   font-weight: 600;
-  padding: 2px 10px;
+  user-select: none;
+}
+.nt-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .nt-table-wrap > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .nt-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(html.dark) .nt-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.nt-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
+.nt-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+}
+
+/* ===== 分页条 ===== */
+.nt-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+:global(html.dark) .nt-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.nt-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
+.nt-list-pager > :global(.el-pagination button),
+.nt-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.nt-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .nt-list-pager > :global(.el-pagination button),
+:global(html.dark) .nt-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(html.dark) .nt-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.nt-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+/* ===== 表格内徽章/标签 ===== */
+.nt-content-preview {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+}
+.nt-cat-badge {
+  font-size: 12px; font-weight: 600; padding: 2px 10px;
   border-radius: var(--radius-full, 999px);
   color: var(--color-primary, var(--color-primary));
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
 }
+.nt-color-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; opacity: 0.75; }
+.nt-pin-badge { font-size: 14px; }
+.nt-edit-btn { color: var(--color-link, #3b82f6); }
+.nt-delete-btn { color: #ef4444; }
+.nt-pin-btn { opacity: 0.4; }
+.nt-pin-btn.active { opacity: 1; }
 
-.note-color-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  opacity: 0.75;
+.color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot-yellow { background: #eab308; }
+.dot-blue { background: #3b82f6; }
+.dot-green { background: #22c55e; }
+.dot-pink { background: #ec4899; }
+.dot-red { background: #ef4444; }
+.dot-orange { background: #f97316; }
+.dot-cyan { background: #06b6d4; }
+.dot-purple { background: #a855f7; }
+
+/* ===== 时光轴 expand 行（表格内展开）===== */
+.nt-timeline-expand { padding: 12px 24px 12px 48px; }
+.nt-timeline-expand-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: 8px;
 }
-
-.color-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
+.nt-timeline-list { display: flex; flex-direction: column; margin: 4px 0 2px; }
+.nt-timeline-item { display: flex; gap: 10px; padding: 6px 0; }
+.nt-timeline-item-body { flex: 1; min-width: 0; }
+.nt-timeline-item-time { font-size: 12px; font-weight: 600; color: var(--color-text-secondary, #6b7280); font-variant-numeric: tabular-nums; }
+.nt-timeline-item-content { font-size: 13px; line-height: 1.5; word-break: break-word; }
+.nt-timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; }
+.nt-timeline-item-actions .btn-edit, .nt-timeline-item-actions .btn-delete { padding: 3px 8px; font-size: 12px; }
+.nt-timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.nt-timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
+.nt-timeline-item-edit .btn-save, .nt-timeline-item-edit .btn-cancel { padding: 4px 12px; font-size: 12px; }
+.nt-timeline-add-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 8px; padding-top: 10px;
+  border-top: 1px dashed var(--color-border, var(--color-border));
 }
+.nt-timeline-dt-input { flex: 0 1 150px; min-width: 130px; }
+.nt-timeline-content-input { flex: 1; min-width: 120px; }
+.nt-timeline-add-row .btn-add { padding: 6px 14px; font-size: 13px; }
 
-/* ===== 四色（浅色）===== */
-.note-yellow {
-  background: #fef9c3;
-  border-color: #fde047;
-  color: #713f12;
-}
-
-.note-blue {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e3a8a;
-}
-
-.note-green {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: #14532d;
-}
-
-.note-pink {
-  background: #fce7f3;
-  border-color: #f9a8d4;
-  color: #831843;
-}
-
-.note-red {
-  background: #fee2e2;
-  border-color: #fca5a5;
-  color: #991b1b;
-}
-
-.note-orange {
-  background: #ffedd5;
-  border-color: #fdba74;
-  color: #7c2d12;
-}
-
-.note-cyan {
-  background: #cffafe;
-  border-color: #67e8f9;
-  color: #164e63;
-}
-
-.note-purple {
-  background: #f3e8ff;
-  border-color: #d8b4fe;
-  color: #581c87;
-}
-
-.dot-yellow {
-  background: #eab308;
-}
-
-.dot-blue {
-  background: #3b82f6;
-}
-
-.dot-green {
-  background: #22c55e;
-}
-
-.dot-pink {
-  background: #ec4899;
-}
-
-.dot-red {
-  background: #ef4444;
-}
-
-.dot-orange {
-  background: #f97316;
-}
-
-.dot-cyan {
-  background: #06b6d4;
-}
-
-.dot-purple {
-  background: #a855f7;
-}
-
-/* ===== 时光轴卡片（竖排时间轴：左侧圆点+竖线，右侧 datetime + content）===== */
-.timeline-grid {
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-}
-
-.timeline-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.timeline-title {
-  font-size: 15px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.timeline-list {
-  display: flex;
-  flex-direction: column;
-  margin: 4px 0 2px;
-}
-
-/* 「+N 条」按钮（S4）：卡片内联条目超限时显示，点击开全量条目浮层 */
+/* ===== 时光轴全量条目浮层（保留原样式）===== */
+.timeline-title { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timeline-more-btn {
-  margin: 2px 0 6px;
-  padding: 6px 12px;
+  margin: 2px 0 6px; padding: 6px 12px;
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
   color: var(--color-primary, var(--color-primary));
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
+  font-size: 13px; font-weight: 600; cursor: pointer;
 }
-
-.timeline-more-btn:hover {
-  background: color-mix(in srgb, var(--color-primary, #3b82f6) 16%, transparent);
-}
-
-.timeline-item {
-  position: relative;
-  display: flex;
-  gap: 10px;
-  padding: 6px 0;
-}
-
-/* 轴线竖线：圆点下方延伸到下一条（最后一条不画） */
+.timeline-item { position: relative; display: flex; gap: 10px; padding: 6px 0; }
 .timeline-item::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 20px;
-  bottom: -6px;
-  width: 2px;
+  content: ''; position: absolute; left: 7px; top: 20px; bottom: -6px; width: 2px;
   background: var(--color-border, var(--color-border));
 }
-
-.timeline-item:last-child::before {
-  display: none;
-}
-
+.timeline-item:last-child::before { display: none; }
 .timeline-dot {
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
-  margin-top: 3px;
-  border-radius: 50%;
+  flex: 0 0 16px; width: 16px; height: 16px; margin-top: 3px; border-radius: 50%;
   background: var(--color-primary, var(--color-primary));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #3b82f6) 25%, transparent);
   z-index: 1;
 }
-
-.timeline-item-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.timeline-item-time {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-variant-numeric: tabular-nums;
-}
-
-.timeline-item-content {
-  font-size: 14px;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-/* 条目 hover 出现编辑/删除按钮 */
-.timeline-item-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-  opacity: 0;
-  transition: opacity var(--transition-fast, 0.15s ease);
-}
-
-.timeline-item:hover .timeline-item-actions {
-  opacity: 1;
-}
-
-.timeline-item-actions .btn-edit,
-.timeline-item-actions .btn-delete {
-  padding: 3px 8px;
-  font-size: 12px;
-}
-
-.timeline-item-edit {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.timeline-item-edit .form-input {
-  padding: 6px 10px;
-  font-size: 13px;
-}
-
-.timeline-item-edit .btn-save,
-.timeline-item-edit .btn-cancel {
-  padding: 4px 12px;
-  font-size: 12px;
-}
-
-/* 快速追加行 */
-.timeline-add-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border, var(--color-border));
-}
-
-.timeline-dt-input {
-  flex: 0 1 150px;
-  min-width: 130px;
-}
-
-.timeline-content-input {
-  flex: 1;
-  min-width: 120px;
-}
-
-.timeline-add-row .btn-add {
-  padding: 6px 14px;
-  font-size: 13px;
-}
+.timeline-item-body { flex: 1; min-width: 0; }
+.timeline-item-time { font-size: 12px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); font-variant-numeric: tabular-nums; }
+.timeline-item-content { font-size: 14px; line-height: 1.5; word-break: break-word; }
+.timeline-item-actions { display: flex; gap: 6px; margin-top: 4px; opacity: 0; transition: opacity var(--transition-fast, 0.15s ease); }
+.timeline-item:hover .timeline-item-actions { opacity: 1; }
+.timeline-item-actions .btn-edit, .timeline-item-actions .btn-delete { padding: 3px 8px; font-size: 12px; }
+.timeline-item-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.timeline-item-edit .form-input { padding: 6px 10px; font-size: 13px; }
+.timeline-item-edit .btn-save, .timeline-item-edit .btn-cancel { padding: 4px 12px; font-size: 12px; }
 
 /* ===== 空态 ===== */
 .empty-state {
-  text-align: center;
-  color: var(--color-text-muted, var(--color-text-muted));
-  font-size: 14px;
-  padding: 40px 20px;
+  text-align: center; color: var(--color-text-muted, var(--color-text-muted));
+  font-size: 14px; padding: 40px 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
@@ -1331,552 +969,139 @@ onUnmounted(() => {
 
 /* ===== 编辑浮层 ===== */
 .note-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
   background: rgba(0, 0, 0, 0.5);
 }
-
-/* 时光轴全量条目浮层（S4）：复用 note-overlay 遮罩，面板内列表滚动看全量 */
-.timeline-expand-overlay {
-  z-index: 1100;
-}
-
+.timeline-expand-overlay { z-index: 1100; }
 .timeline-expand-panel {
-  width: 100%;
-  max-width: 640px;
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 18px;
+  width: 100%; max-width: 640px; max-height: calc(100vh - 40px);
+  display: flex; flex-direction: column; gap: 10px; padding: 18px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 14px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
-
-.timeline-expand-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.timeline-expand-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 4px;
-}
+.timeline-expand-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
+.timeline-expand-list { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 
 .note-form {
-  width: 100%;
-  max-width: var(--dlg-w-notes, 1000px);
-  height: var(--dlg-h-notes, 90vh);
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  width: 100%; max-width: var(--dlg-w-notes, 1000px);
+  height: var(--dlg-h-notes, 90vh); max-height: calc(100vh - 40px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px; padding: 20px;
   background: var(--color-bg-card, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-lg, 14px);
   box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
 }
-
-.note-form-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-}
-
+.note-form-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text, var(--color-text)); }
 .form-input {
-  padding: 9px 12px;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
+  padding: 9px 12px; box-sizing: border-box; font-family: inherit; font-size: 14px;
   color: var(--color-text, var(--color-text));
   background-color: var(--color-bg-input, var(--color-bg-card));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
   transition: border-color var(--transition-fast, 0.15s ease);
 }
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.note-content-input {
-  height: 180px;
-  min-height: 180px;
-  resize: none;
-}
-
-/* ===== 浮层类型 radio + 分类下拉 ===== */
-.note-form-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.note-form-label {
-  flex: 0 0 auto;
-  min-width: 44px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.note-type-radios {
-  display: flex;
-  gap: 8px;
-}
-
-.note-cat-select {
-  flex: 1;
-  min-width: 180px;
-}
-
-/* ===== 颜色选择器 ===== */
-.note-color-picker {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
+.form-input:focus { outline: none; border-color: var(--color-primary, var(--color-primary)); }
+.note-content-input { height: 180px; min-height: 180px; resize: none; }
+.note-form-row { display: flex; align-items: center; gap: 10px; }
+.note-form-label { flex: 0 0 auto; min-width: 44px; font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); }
+.note-type-radios { display: flex; gap: 8px; }
+.note-cat-select { flex: 1; min-width: 180px; }
+.note-color-picker { display: flex; gap: 10px; flex-wrap: wrap; }
 .color-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  border: 2px solid transparent;
-  border-radius: var(--radius-full, 999px);
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 13px;
+  cursor: pointer; color: var(--color-text-secondary, var(--color-text-secondary));
+  border: 2px solid transparent; border-radius: var(--radius-full, 999px);
   transition: all var(--transition-fast, 0.15s ease);
 }
-
-.color-option:hover {
-  border-color: var(--color-border-hover, var(--color-border));
-}
-
-.color-option.active {
-  border-color: var(--color-primary, var(--color-primary));
-  color: var(--color-text, var(--color-text));
-}
-
-.color-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.color-yellow .color-swatch {
-  background: #eab308;
-}
-
-.color-blue .color-swatch {
-  background: #3b82f6;
-}
-
-.color-green .color-swatch {
-  background: #22c55e;
-}
-
-.color-pink .color-swatch {
-  background: #ec4899;
-}
-
-.color-red .color-swatch {
-  background: #ef4444;
-}
-
-.color-orange .color-swatch {
-  background: #f97316;
-}
-
-.color-cyan .color-swatch {
-  background: #06b6d4;
-}
-
-.color-purple .color-swatch {
-  background: #a855f7;
-}
-
-/* ===== 表单操作 ===== */
-.note-form-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
+.color-option:hover { border-color: var(--color-border-hover, var(--color-border)); }
+.color-option.active { border-color: var(--color-primary, var(--color-primary)); color: var(--color-text, var(--color-text)); }
+.color-swatch { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.color-yellow .color-swatch { background: #eab308; }
+.color-blue .color-swatch { background: #3b82f6; }
+.color-green .color-swatch { background: #22c55e; }
+.color-pink .color-swatch { background: #ec4899; }
+.color-red .color-swatch { background: #ef4444; }
+.color-orange .color-swatch { background: #f97316; }
+.color-cyan .color-swatch { background: #06b6d4; }
+.color-purple .color-swatch { background: #a855f7; }
+.note-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .btn-save {
-  padding: 9px 18px;
-  font-size: 14px;
-  color: #fff;
-  white-space: nowrap;
-  cursor: pointer;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  transition: background-color var(--transition-fast, 0.15s ease);
+  padding: 9px 18px; font-size: 14px; color: #fff; white-space: nowrap; cursor: pointer;
+  background: var(--color-primary, var(--color-primary)); border: none; border-radius: var(--radius-md, 8px);
 }
-
-.btn-save:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.btn-save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
+.btn-save:disabled { background: var(--color-text-muted, var(--color-text-muted)); cursor: not-allowed; }
 .btn-cancel {
-  padding: 9px 16px;
-  font-size: 14px;
-  white-space: nowrap;
-  cursor: pointer;
+  padding: 9px 16px; font-size: 14px; white-space: nowrap; cursor: pointer;
   color: var(--color-text-secondary, var(--color-text-secondary));
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 8px);
-  transition: all var(--transition-fast, 0.15s ease);
 }
-
-.btn-cancel:hover {
-  background: var(--color-bg-hover, var(--color-bg-active));
-}
-
 .btn-delete {
-  padding: 9px 16px;
-  font-size: 14px;
-  white-space: nowrap;
-  cursor: pointer;
+  padding: 9px 16px; font-size: 14px; white-space: nowrap; cursor: pointer;
   color: var(--color-error, var(--color-error));
   background: var(--color-bg-card, var(--color-bg-hover));
   border: 1px solid var(--color-error, var(--color-error));
   border-radius: var(--radius-md, 8px);
-  transition: all var(--transition-fast, 0.15s ease);
 }
-
-.btn-delete:hover {
-  background: var(--color-error, var(--color-error));
-  color: #fff;
-}
-
-/* 便签卡片右下角删除按钮 */
-.card-delete-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 5px 12px;
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity var(--transition-fast, 0.15s ease);
-  z-index: 2;
-}
-
-.note-card:hover .card-delete-btn {
-  opacity: 1;
-}
-
-
 
 /* ===== 暗色模式覆盖 ===== */
-html.dark .note-yellow {
-  background: rgba(234, 179, 8, 0.18);
-  border-color: #a16207;
-  color: #fde047;
-}
-
-html.dark .note-blue {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: #1d4ed8;
-  color: #93c5fd;
-}
-
-html.dark .note-green {
-  background: rgba(34, 197, 94, 0.16);
-  border-color: #047857;
-  color: #6ee7b7;
-}
-
-html.dark .note-pink {
-  background: rgba(236, 72, 153, 0.16);
-  border-color: #be185d;
-  color: #f9a8d4;
-}
-
-html.dark .note-red {
-  background: rgba(239, 68, 68, 0.16);
-  border-color: #b91c1c;
-  color: #fca5a5;
-}
-
-html.dark .note-orange {
-  background: rgba(249, 115, 22, 0.16);
-  border-color: #c2410c;
-  color: #fdba74;
-}
-
-html.dark .note-cyan {
-  background: rgba(6, 182, 212, 0.16);
-  border-color: #0e7490;
-  color: #67e8f9;
-}
-
-html.dark .note-purple {
-  background: rgba(168, 85, 247, 0.16);
-  border-color: #7e22ce;
-  color: #d8b4fe;
-}
-
-html.dark .pin-badge {
-  background: rgba(0, 0, 0, 0.35);
-}
-
-html.dark .note-overlay {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-html.dark .note-form {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .timeline-expand-panel {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .empty-state {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-/* 禁用态按钮：亮灰底 + 白字在暗色下对比度不足，改用暗输入底 + 灰色文字 */
-html.dark .btn-save:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
-
-html.dark .btn-add:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
-
-html.dark .nt-search {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
-html.dark .nt-search .form-input {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .nt-cat-tab {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .nt-cat-tab:hover {
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-/* 显式覆盖，避免 html.dark 更高优先级压掉 active 填充（倒计时面板同类陷阱） */
-html.dark .nt-cat-tab.active {
-  color: #fff;
-  background: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-html.dark .nt-btn-reset {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .nt-btn-reset:hover {
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-primary, #3b82f6);
-}
-
-html.dark .note-cat-badge {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.45);
-}
-
-html.dark .note-cat-select {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text, #f9fafb);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .timeline-item-time {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .timeline-item::before {
-  background: var(--color-border, #374151);
-}
+html.dark .note-overlay { background: rgba(0, 0, 0, 0.7); }
+html.dark .note-form { background-color: var(--color-bg-card, #1f2937); }
+html.dark .timeline-expand-panel { background-color: var(--color-bg-card, #1f2937); }
+html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
+html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
+html.dark .btn-add:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
+html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }
+html.dark .nt-search .form-input { background-color: var(--color-bg-input, #374151); color: var(--color-text, #f9fafb); border-color: var(--color-border, #374151); }
+html.dark .nt-btn-reset { background-color: var(--color-bg-card, #1f2937); color: var(--color-text-secondary, #d1d5db); border-color: var(--color-border, #374151); }
+html.dark .nt-cat-badge { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.45); }
+html.dark .note-cat-select { background-color: var(--color-bg-input, #374151); color: var(--color-text, #f9fafb); border-color: var(--color-border, #374151); }
+html.dark .timeline-item-time { color: var(--color-text-secondary, #d1d5db); }
+html.dark .timeline-item::before { background: var(--color-border, #374151); }
 
 @media (max-width: 640px) {
-  .note-form {
-    max-width: 100%;
-  }
-
-  .nt-field-grow {
-    width: 100%;
-  }
-
-  .nt-field-grow .nt-field-keyword {
-    width: 100%;
-  }
+  .note-form { max-width: 100%; }
+  .nt-field-grow { width: 100%; }
+  .nt-field-grow .nt-field-keyword { width: 100%; }
 }
 
-/* ===== 桌面（≥769px）一屏布局：网格区 flex 占满 + 分页（R1/R2/R7）=====
-   仅桌面作用域；移动端保持原状（页面滚动、全量渲染，composable 惰性不切片）。
-   flex:1 + min-height:0 让网格区占满可用高度（RO 测量基准）；!fitsOnePage 退化时区内滚动兜底（R7）；
-   timeline-card 卡内只内联前 5 条（S4），超限经「+N 条」开全量浮层（浮层内列表滚动），超高时卡内滚动兜底（min-height:0 允许 grid item 收缩）。 */
-@media (min-width: 769px) {
-  .notes-grid,
-  .timeline-grid {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .notes-grid-scroll,
-  .timeline-grid-scroll {
-    overflow-y: auto;
-  }
-
-  .timeline-card {
-    overflow-y: auto;
-    min-height: 0;
-  }
-}
-
-/* ===== 便签/时光轴内容 Markdown 排版 =====
-   v-html 注入的子节点不带 data-v-* 属性，必须用 :deep() 匹配；
-   currentColor 自动继承 8 种卡片主题色与暗色覆盖，不逐主题覆盖。 */
-.note-content :deep(h1),
-.timeline-item-content :deep(h1) {
-  font-size: 15px;
-  font-weight: 700;
-  margin: 0.35em 0;
-}
-
-.note-content :deep(h2),
-.timeline-item-content :deep(h2) {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0.35em 0;
-}
-
-.note-content :deep(h3),
-.timeline-item-content :deep(h3) {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0.35em 0;
-}
-
-.note-content :deep(p),
-.timeline-item-content :deep(p) {
-  margin: 0.35em 0;
-}
-
-.note-content :deep(ul),
+/* ===== 便签/时光轴内容 Markdown 排版 ===== */
+.nt-timeline-item-content :deep(h1),
+.timeline-item-content :deep(h1) { font-size: 15px; font-weight: 700; margin: 0.35em 0; }
+.nt-timeline-item-content :deep(h2),
+.timeline-item-content :deep(h2) { font-size: 14px; font-weight: 700; margin: 0.35em 0; }
+.nt-timeline-item-content :deep(h3),
+.timeline-item-content :deep(h3) { font-size: 14px; font-weight: 600; margin: 0.35em 0; }
+.nt-timeline-item-content :deep(p),
+.timeline-item-content :deep(p) { margin: 0.35em 0; }
+.nt-timeline-item-content :deep(ul),
 .timeline-item-content :deep(ul),
-.note-content :deep(ol),
-.timeline-item-content :deep(ol) {
-  margin: 0.35em 0;
-  padding-left: 1.4em;
-}
-
-.note-content :deep(li),
-.timeline-item-content :deep(li) {
-  margin: 0.15em 0;
-}
-
-.note-content :deep(a),
-.timeline-item-content :deep(a) {
-  color: var(--color-primary, var(--color-primary));
-  text-decoration: underline;
-  word-break: break-all;
-}
-
-.note-content :deep(code),
-.timeline-item-content :deep(code) {
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  padding: 1px 4px;
-  border-radius: var(--radius-sm, 6px);
-  font-size: 0.9em;
-}
-
-.note-content :deep(pre),
-.timeline-item-content :deep(pre) {
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  margin: 0.4em 0;
-  padding: 8px 10px;
-  border-radius: 6px;
-  overflow-x: auto;
-  max-width: 100%;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.note-content :deep(blockquote),
-.timeline-item-content :deep(blockquote) {
-  margin: 0.4em 0;
-  padding-left: 0.6em;
-  border-left: 3px solid color-mix(in srgb, currentColor 35%, transparent);
-  opacity: 0.85;
-}
-
-.note-content :deep(table),
-.timeline-item-content :deep(table) {
-  border-collapse: collapse;
-  margin: 0.4em 0;
-  font-size: 12px;
-  max-width: 100%;
-}
-
-.note-content :deep(th),
+.nt-timeline-item-content :deep(ol),
+.timeline-item-content :deep(ol) { margin: 0.35em 0; padding-left: 1.4em; }
+.nt-timeline-item-content :deep(li),
+.timeline-item-content :deep(li) { margin: 0.15em 0; }
+.nt-timeline-item-content :deep(a),
+.timeline-item-content :deep(a) { color: var(--color-primary, var(--color-primary)); text-decoration: underline; word-break: break-all; }
+.nt-timeline-item-content :deep(code),
+.timeline-item-content :deep(code) { background: color-mix(in srgb, currentColor 12%, transparent); padding: 1px 4px; border-radius: var(--radius-sm, 6px); font-size: 0.9em; }
+.nt-timeline-item-content :deep(pre),
+.timeline-item-content :deep(pre) { background: color-mix(in srgb, currentColor 12%, transparent); margin: 0.4em 0; padding: 8px 10px; border-radius: 6px; overflow-x: auto; max-width: 100%; font-size: 12px; line-height: 1.4; }
+.nt-timeline-item-content :deep(blockquote),
+.timeline-item-content :deep(blockquote) { margin: 0.4em 0; padding-left: 0.6em; border-left: 3px solid color-mix(in srgb, currentColor 35%, transparent); opacity: 0.85; }
+.nt-timeline-item-content :deep(table),
+.timeline-item-content :deep(table) { border-collapse: collapse; margin: 0.4em 0; font-size: 12px; max-width: 100%; }
+.nt-timeline-item-content :deep(th),
 .timeline-item-content :deep(th),
-.note-content :deep(td),
-.timeline-item-content :deep(td) {
-  padding: 2px 6px;
-  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-}
-
-.note-content :deep(th),
-.timeline-item-content :deep(th) {
-  font-weight: 600;
-}
-
-.note-content :deep(hr),
-.timeline-item-content :deep(hr) {
-  border: none;
-  border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-  margin: 0.5em 0;
-}
-
-.note-content :deep(img),
-.timeline-item-content :deep(img) {
-  max-width: 100%;
-  border-radius: 6px;
-}
+.nt-timeline-item-content :deep(td),
+.timeline-item-content :deep(td) { padding: 2px 6px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+.nt-timeline-item-content :deep(th),
+.timeline-item-content :deep(th) { font-weight: 600; }
+.nt-timeline-item-content :deep(hr),
+.timeline-item-content :deep(hr) { border: none; border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent); margin: 0.5em 0; }
+.nt-timeline-item-content :deep(img),
+.timeline-item-content :deep(img) { max-width: 100%; border-radius: 6px; }
 </style>

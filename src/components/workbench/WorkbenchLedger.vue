@@ -274,13 +274,15 @@ onUnmounted(() => {
     <div class="ld-month-bar">
       <el-button class="month-btn" data-testid="ld-prev" @click="shiftMonth(-1)">‹ 上月</el-button>
       <el-button class="month-btn" data-testid="ld-next" @click="shiftMonth(1)">› 下月</el-button>
-      <el-date-picker
-        v-model="selectedMonth"
-        type="month"
-        value-format="YYYY-MM"
-        class="form-input month-input"
-        data-testid="ld-month"
-      />
+      <!-- ld-month 契约：EP el-date-picker 不透传 data-* 属性，testid 放包裹 div（同 business bizday-form-date 约定）；宽度由 wrapper .month-input 控 150px，picker 经 :deep 填满 wrapper（直接给 picker 加 class 不透传 data-v 且被 EP --el-date-editor-width 220px 覆盖） -->
+      <div class="month-input" data-testid="ld-month">
+        <el-date-picker
+          v-model="selectedMonth"
+          type="month"
+          value-format="YYYY-MM"
+          class="form-input"
+        />
+      </div>
       <el-button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</el-button>
       <div class="ld-month-actions">
         <el-button class="btn-manage" data-testid="ld-toggle-amounts" @click="store.toggleAmountVisibility()">
@@ -687,6 +689,11 @@ onUnmounted(() => {
 .month-input {
   width: 150px;
   flex-shrink: 0;
+}
+
+/* EP el-date-picker 根是子组件不透传父 scoped data-v；:deep 强制 picker 填满 150px wrapper（否则 EP --el-date-editor-width=220px 溢出盖住 本月 按钮） */
+.month-input :deep(.el-date-editor) {
+  width: 100%;
 }
 
 /* ===== 统计卡 6 张 ===== */

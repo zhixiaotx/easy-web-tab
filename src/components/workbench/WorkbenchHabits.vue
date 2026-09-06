@@ -36,12 +36,12 @@ const viewHabits = computed(() =>
     }))
 )
 
-// ===== 自适应分页（R4/R7：rowHeight 82 = row-heights.json MAX 79.58 + 2px；
+// ===== 自适应分页（R4/R7：rowHeight 180 = row-heights.json MAX 177.16 + 2px；
 // 右侧卡片网格：gridRef = listEl 同元素实测列数 → 每页 = rowsPerPage × colsPerRow）=====
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewHabits.value,
-  rowHeight: 82, // row-heights.json: habits = 82 (MAX 79.58 + 2px)
+  rowHeight: 180, // row-heights.json: habits = 180 (MAX 177.16 + 2px)
   containerRef: listEl,
   gridRef: listEl
 })

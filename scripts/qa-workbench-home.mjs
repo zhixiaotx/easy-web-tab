@@ -2,7 +2,7 @@
  * QA: 工作台主页轮播布局（workbench-home-carousel）契约 S1-S7
  * 后台启动/复用 vite dev（16718-16726）→ /workbench（主页=菜单 index 0 直达）：
  *  S1 fresh profile：home-greeting 可见 + 轮播骨架（3 圆点/箭头/3 屏）+ 概览空态（无统计卡）
- *  S2 播种待办（切到工具屏快捷添加）→ 行动屏 home-todo-list + 概览屏 home-stats-todos 均出现
+ *  S2 播种待办（行动屏快捷添加）→ 行动屏 home-todo-list + 概览屏 home-stats-todos 均出现
  *  S3 手动切换：next 箭头 → 圆点 1 active + track transform translateX(-100%)；dot 2 → 工具屏
  *  S4 自动轮播：鼠标移出轮播区后 ~6.5s → 活动圆点推进
  *  S5 菜单开关联动：设置 → 工作台设置 → 关闭「工作待办」→ 左菜单项消失 + 主页快捷添加/待办面板/待办统计卡消失；重新开启恢复
@@ -144,9 +144,7 @@ try {
   })
 
   await guard('S2) 播种待办 → 行动屏列表 + 概览屏统计卡出现', async () => {
-    // 切到工具屏（圆点 2）再快捷添加（被裁剪的屏内元素不可交互）
-    await page.locator('[data-testid="home-carousel-dot-2"]').click()
-    await page.waitForTimeout(500)
+    // 快捷添加位于行动屏（slide 0 默认屏）；不可先切走——切到工具屏后行动屏被平移出视口，按钮不可点击
     await page.locator('[data-testid="home-quick-add-input"]').fill('qa-seed-todo')
     await page.locator('[data-testid="home-quick-add-btn"]').click()
     await page.waitForSelector('[data-testid="home-todo-list"]', { state: 'attached', timeout: 5000 })
@@ -190,9 +188,11 @@ try {
   })
 
   await guard('S5) 菜单开关联动：关闭「工作待办」→ 菜单项 + 快捷添加 + 待办面板/统计卡全隐藏，重新开启恢复', async () => {
-    await page.getByRole('button', { name: '⚙️ 设置' }).click()
+    await page.locator('[data-testid="wb-settings"]').click()
     await page.waitForSelector('.manager', { state: 'visible', timeout: 5000 })
     await page.getByRole('tab', { name: '工作台设置' }).click()
+    // 工作台设置主 tab 下还有子 tab 条（默认落到 wb-city）；工作台菜单区块需切到“工作台菜单”子 tab
+    await page.getByRole('tab', { name: '工作台菜单' }).click()
     await page.waitForSelector('[data-testid="wbmenu-switch-todos"]', { state: 'visible', timeout: 5000 })
     await page.locator('[data-testid="wbmenu-switch-todos"]').click()
     await page.waitForTimeout(300)

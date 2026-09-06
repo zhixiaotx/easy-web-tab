@@ -176,7 +176,7 @@ function buildDiaryEntries() {
 async function injectDiaryArray(page, entries) {
   return page.evaluate((payload) => {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('easy-web-tab', 6)
+      const req = indexedDB.open('easy-web-tab')
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains('diary')) req.result.createObjectStore('diary')
       }
@@ -320,6 +320,17 @@ try {
         const info = document.querySelector('[data-testid="dj-page-info"]')
         return !!info && /第\s*2\s*\/\s*\d+\s*页/.test(info.textContent)
       }, { timeout: 5000 })
+      // 过渡稳定等待：History grid 有 TransitionGroup（name="grid"，卡片 0.15s 过渡），翻页瞬间旧页卡片仍在 DOM
+      // 去重后 = 4 旧 + 4 新 = 8，需等稳定到第 2 页应有张数（既有竞态，EP 前后 3796167/HEAD 复现一致，非换皮回归）
+      const page2Size = Math.min(diaryPageSize, diaryEntries.length - diaryPageSize)
+      await pageB.waitForFunction(
+        (size) =>
+          Array.from(document.querySelectorAll('[data-testid^="dj-card-"]'))
+            .map((el) => el.getAttribute('data-testid') ?? '')
+            .filter((tid) => /^dj-card-(?!date-|today-|preview-)/.test(tid)).length === size,
+        page2Size,
+        { timeout: 3000 }
+      )
       const cards = await cardIds(pageB)
       const pageInfo = (await pageB.locator('[data-testid="dj-page-info"]').textContent()).trim()
       const nextDisabled = await pageB.locator('[data-testid="dj-page-next"]').isDisabled()
@@ -344,6 +355,15 @@ try {
         const info = document.querySelector('[data-testid="dj-page-info"]')
         return !!info && info.textContent.includes('第 1 /')
       }, { timeout: 5000 })
+      // 过渡稳定等待：同 S3a，等稳定回第 1 页 diaryPageSize 张卡片再计数
+      await pageB.waitForFunction(
+        (size) =>
+          Array.from(document.querySelectorAll('[data-testid^="dj-card-"]'))
+            .map((el) => el.getAttribute('data-testid') ?? '')
+            .filter((tid) => /^dj-card-(?!date-|today-|preview-)/.test(tid)).length === size,
+        diaryPageSize,
+        { timeout: 3000 }
+      )
       const cards = await cardIds(pageB)
       const pageInfo = (await pageB.locator('[data-testid="dj-page-info"]').textContent()).trim()
       const prevDisabled = await pageB.locator('[data-testid="dj-page-prev"]').isDisabled()

@@ -183,7 +183,7 @@ async function injectIdb(page, storeName, payload) {
   return page.evaluate(
     ({ storeName, payload }) =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('easy-web-tab', 6)
+        const req = indexedDB.open('easy-web-tab')
         req.onupgradeneeded = () => {
           if (!req.result.objectStoreNames.contains(storeName)) req.result.createObjectStore(storeName)
         }
@@ -216,7 +216,7 @@ async function readIdb(page, storeName) {
   return page.evaluate(
     (storeName) =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('easy-web-tab', 6)
+        const req = indexedDB.open('easy-web-tab')
         req.onsuccess = () => {
           const db = req.result
           try {
@@ -269,9 +269,12 @@ function buildSettings(overrides) {
   }
 }
 
-/** 已到期 once 倒计时（无 lastRemindedAt → getReminderDue 返回发生时刻）。 */
-function buildDueCountdown(id, name, minutesAgo = 1) {
-  const endDateTime = localDateTime(new Date(Date.now() - minutesAgo * 60000))
+/** 已到期 once 倒计时（无 lastRemindedAt → getReminderDue 返回发生时刻）。
+ * 锚定当前分钟（配合 alignSafeSecond 对齐到安全秒区）：reload 后首次 tick（~1-3s）时
+ * 发生时刻年龄 ∈ [16,48]s < OVERDUE_THRESHOLD_MS（60s，useCountdownReminder L31）→ 稳触三通道，
+ * 不跨分钟边界失败（旧实现 minutesAgo=1 锚上一分钟，阈值缩 60s 后恒被引擎静默置 lastRemindedAt）。 */
+function buildDueCountdown(id, name) {
+  const endDateTime = localDateTime(new Date())
   return {
     id,
     name,
@@ -281,6 +284,18 @@ function buildDueCountdown(id, name, minutesAgo = 1) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
+}
+
+/**
+ * 对齐到当前分钟的安全秒区 [15,45]：锚定 endDateTime 于本分钟，reload 后首 tick（~1-3s）
+ * 的 occurrence 年龄恒 ∈ [16,48]s < OVERDUE_THRESHOLD_MS（60s）→ 稳触三通道不跨分钟边界失败。
+ * （endDateTime 是分钟精度 'YYYY-MM-DDTHH:mm'，纯时间偏移会因截断到 :00 而在边界处超 60s。）
+ */
+async function alignSafeSecond() {
+  const sec = new Date().getSeconds()
+  if (sec >= 15 && sec <= 45) return
+  const target = sec < 15 ? 15 : 15 + 60
+  await new Promise((r) => setTimeout(r, (target - sec) * 1000 + 300))
 }
 
 /**
@@ -356,13 +371,22 @@ try {
       const name = 'QA 表单邮件倒计时'
       const futureDate = dateOffsetKey(1)
       const futureTime = '10:30'
-      await page.locator('[data-testid="cd-form-email"] input[type="checkbox"]').check()
+      // cd-form-email 是 el-checkbox：原生 input 视觉隐藏，check() 会 actionability 失败 → 点击 label 整体切换
+      await page.locator('[data-testid="cd-form-email"]').click()
       const checked = await page.locator('[data-testid="cd-form-email"] input[type="checkbox"]').isChecked()
       await page.locator('[data-testid="cd-name-input"]').fill(name)
-      await page.locator('[data-testid="cd-date-input"]').fill(futureDate)
-      await page.locator('[data-testid="cd-time-input"]').fill(futureTime)
+      // cd-date-input/cd-time-input testid 被 EP 日期/时间选择器吞掉 → 用 .field-date/.field-time 内层 input 直填
+      // 日期：fill 即 blur 提交（YYYY-MM-DD）；时间：显示格式 HH:mm:ss，fill 前先 click 展开面板，
+      //       然后 fill + Enter 提交（实证：仅 fill+Tab 会回退当前时间、Enter 若在选中态会覆盖；
+      //       click 展开后 fill 再 Enter 稳定提交 HH:mm:ss）→ IDB 需 `${futureTime}` 精确匹配
+      await page.locator('.field-date input').fill(futureDate)
+      await page.locator('.field-time input').click({ force: true })
+      await page.waitForTimeout(200)
+      await page.locator('.field-time input').fill(`${futureTime}:00`)
+      await page.keyboard.press('Enter')
       await page.locator('[data-testid="cd-save-button"]').click()
-      await page.waitForFunction(() => !document.querySelector('[data-testid="cd-dialog"]'), { timeout: 5000 })
+      // EP el-dialog 关闭后节点仍在 DOM（v-show display:none）→ 断言用 state:'hidden'，勿等节点消失
+      await page.waitForSelector('[data-testid="cd-dialog"]', { state: 'hidden', timeout: 5000 })
 
       const countdowns = (await readIdb(page, 'countdowns')) ?? []
       const record_ = countdowns.find((c) => c && c.name === name)
@@ -394,7 +418,8 @@ try {
       await addNotificationSpy(page)
 
       const name = 'QA 到期倒计时'
-      const due = buildDueCountdown('cd_qa_due', name, 1)
+      await alignSafeSecond()
+      const due = buildDueCountdown('cd_qa_due', name)
       due.emailReminder = true // opt-in 邮件提醒 → shouldSendReminderEmail 通过
       const occurrenceTime = due.endDateTime.replace('T', ' ')
       await page.goto(`${devBase}/workbench`, { waitUntil: 'networkidle' })
@@ -422,7 +447,8 @@ try {
         tp.app_url.length > 0
 
       await page.locator('.reminder-close').click()
-      await page.waitForTimeout(200)
+      // overlay 走 <Transition name="dialog">（≈400ms leave），v-if 销毁 → 等 detached 而非固定 200ms
+      await page.waitForSelector('.reminder-overlay', { state: 'detached', timeout: 5000 })
       const overlayClosed = (await page.locator('.reminder-overlay').count()) === 0
 
       record(
@@ -456,7 +482,8 @@ try {
 
       const name = 'QA 缺省邮件倒计时'
       // emailReminder 字段缺省（不输出）→ normalizeCountdown 不输出该字段 → 缺省不发邮件
-      const due = buildDueCountdown('cd_qa_noemail', name, 1)
+      await alignSafeSecond()
+      const due = buildDueCountdown('cd_qa_noemail', name)
       delete due.emailReminder
       await page.goto(`${devBase}/workbench`, { waitUntil: 'networkidle' })
       await injectIdb(page, 'settings', buildSettings(COMPLETE_EMAIL_SETTINGS))
@@ -492,7 +519,8 @@ try {
       await addNotificationSpy(page)
 
       const name = 'QA 配置缺失倒计时'
-      const due = buildDueCountdown('cd_qa_badcfg', name, 1)
+      await alignSafeSecond()
+      const due = buildDueCountdown('cd_qa_badcfg', name)
       due.emailReminder = true
       // 配置不完整：serviceId 空串 → isEmailConfigured 短路 false，sendReminderEmail 不被调用
       const badSettings = buildSettings({ ...COMPLETE_EMAIL_SETTINGS, reminderEmailServiceId: '' })
@@ -586,23 +614,24 @@ try {
       await addNotificationSpy(page)
 
       await page.goto(`${devBase}/workbench`, { waitUntil: 'networkidle' })
-      await page.getByRole('button', { name: '⚙️ 设置' }).click()
+      await page.locator('[data-testid="wb-settings"]').click()
       await page.waitForSelector('.manager', { state: 'visible', timeout: 5000 })
       await page.getByRole('tab', { name: '提醒设置' }).click()
       const sw = page.locator('[data-testid="remind-desktop-switch"]')
       await sw.waitFor({ state: 'visible', timeout: 5000 })
-
-      const initialChecked = (await sw.getAttribute('aria-checked')) === 'true'
+      // EP el-switch：testid 落在 wrapper div.el-switch 上，wrapper 无 aria-checked（实测 getAttribute 恒 null）；
+      // 真实开关态在隐藏的原生 input.el-switch__input[type=checkbox]（role=switch）上 → 用 isChecked() 读
+      const initialChecked = await sw.locator('input[type="checkbox"]').isChecked()
       await sw.click()
       await page.waitForTimeout(500)
-      const afterOnChecked = (await sw.getAttribute('aria-checked')) === 'true'
+      const afterOnChecked = await sw.locator('input[type="checkbox"]').isChecked()
       const permissionCalls = await page.evaluate(() => window.__notifPermissionCalls ?? 0)
       const settingsOn = await readIdb(page, 'settings')
       const onPersisted = settingsOn && settingsOn.desktopNotifyEnabled === true
 
       await sw.click()
       await page.waitForTimeout(500)
-      const afterOffChecked = (await sw.getAttribute('aria-checked')) === 'true'
+      const afterOffChecked = await sw.locator('input[type="checkbox"]').isChecked()
       const settingsOff = await readIdb(page, 'settings')
       const offPersisted = settingsOff && settingsOff.desktopNotifyEnabled === false
 
@@ -630,13 +659,15 @@ try {
         key: 'public_key_persist'
       }
       await page.goto(`${devBase}/workbench`, { waitUntil: 'networkidle' })
-      await page.getByRole('button', { name: '⚙️ 设置' }).click()
+      await page.locator('[data-testid="wb-settings"]').click()
       await page.waitForSelector('.manager', { state: 'visible', timeout: 5000 })
       await page.getByRole('tab', { name: '提醒设置' }).click()
 
       const emailSwitch = page.locator('[data-testid="remind-email-switch"]')
       await emailSwitch.waitFor({ state: 'visible', timeout: 5000 })
       await emailSwitch.click()
+      // 四字段是 el-input：testid 直接落在内层 <input class="el-input__inner"> 上（实证 inputValue/fill 直接作用于 testid 元素，
+      //       无 wrapper —— 勿加 ` input` 后缀，那会匹配不到任何元素）→ fill 直接用 testid
       await page.locator('[data-testid="remind-email-to"]').fill(values.to)
       await page.locator('[data-testid="remind-email-service"]').fill(values.service)
       await page.locator('[data-testid="remind-email-template"]').fill(values.template)
@@ -654,12 +685,12 @@ try {
 
       await page.keyboard.press('Escape')
       await page.reload({ waitUntil: 'networkidle' })
-      await page.getByRole('button', { name: '⚙️ 设置' }).click()
+      await page.locator('[data-testid="wb-settings"]').click()
       await page.waitForSelector('.manager', { state: 'visible', timeout: 5000 })
       await page.getByRole('tab', { name: '提醒设置' }).click()
       const restoredSwitch = page.locator('[data-testid="remind-email-switch"]')
       await restoredSwitch.waitFor({ state: 'visible', timeout: 5000 })
-      const restoredChecked = (await restoredSwitch.getAttribute('aria-checked')) === 'true'
+      const restoredChecked = await restoredSwitch.locator('input[type="checkbox"]').isChecked()
       const restoredTo = await page.locator('[data-testid="remind-email-to"]').inputValue()
       const restoredService = await page.locator('[data-testid="remind-email-service"]').inputValue()
       const restoredTemplate = await page.locator('[data-testid="remind-email-template"]').inputValue()
@@ -690,7 +721,8 @@ try {
       await setupEmailMock(page, [])
       await addNotificationSpy(page)
 
-      const due = buildDueCountdown('cd_qa_evidence', 'QA 证据倒计时', 1)
+      await alignSafeSecond()
+      const due = buildDueCountdown('cd_qa_evidence', 'QA 证据倒计时')
       due.emailReminder = true
       await page.goto(`${devBase}/workbench`, { waitUntil: 'networkidle' })
       await injectIdb(page, 'settings', buildSettings(COMPLETE_EMAIL_SETTINGS))

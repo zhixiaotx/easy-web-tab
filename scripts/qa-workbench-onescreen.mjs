@@ -170,7 +170,7 @@ async function injectIdbStore(page, storeName, payload) {
   return page.evaluate(
     ({ store, value }) =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('easy-web-tab', 6)
+        const req = indexedDB.open('easy-web-tab')
         req.onupgradeneeded = () => {
           if (!req.result.objectStoreNames.contains(store)) req.result.createObjectStore(store)
         }
@@ -409,16 +409,13 @@ function buildLedgerData() {
 const MEASURE_PANELS = [
   { key: 'todo', menu: 'todos', item: '[data-testid="td-item"]' },
   { key: 'notes', menu: 'notes', item: '[data-testid="note-card"]' },
-  { key: 'timeline', menu: 'notes', item: '[data-testid="nt-timeline-card"]' },
+  { key: 'timeline', menu: 'notes', type: 'timeline', item: '[data-testid="nt-timeline-card"]' },
   { key: 'diary', menu: 'diary', item: '.dj-card' },
   { key: 'countdown', menu: 'countdowns', item: '[data-testid="cd-item"]' },
   { key: 'habits', menu: 'habits', item: '.hb-card' },
   { key: 'password', menu: 'passwords', item: '[data-testid="pwd-item"]' },
-  { key: 'exercise', menu: 'health', tab: 'exercise', toggle: '[data-testid="ex-toggle-list"]', item: '[data-testid="ex-item"]' },
-  { key: 'diet', menu: 'health', tab: 'diet', toggle: '[data-testid="dt-toggle-list"]', item: '[data-testid="dt-item"]' },
-  { key: 'sleep', menu: 'health', tab: 'sleep', toggle: '[data-testid="sl-toggle-list"]', item: '[data-testid="sl-item"]' },
-  { key: 'weight', menu: 'health', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-record-item"]', closeSel: '[data-testid="wt-records-close"]' },
-  { key: 'ledger', menu: 'ledger', toggle: '[data-testid="ld-toggle-list"]', item: '[data-testid="ld-item"]' }
+  // 健康四面板与记账均不再使用 usePanelPaging（3378f00/403fbe4 起记录改弹框 el-table 展示）→ 无 rowHeight 常量，不入行高测量
+  // 记账记录在 ld-records-dialog（el-table + el-pagination），面板本身只有统计卡+图表，无需展开测量
 ]
 
 const SCREENSHOT_PANELS = [
@@ -466,13 +463,15 @@ async function seedPasswords(page) {
   await page.waitForSelector('[data-testid="pwd-add-btn"]', { timeout: 10000 })
   for (const [site, url, user] of PASSWORD_ENTRIES) {
     await page.click('[data-testid="pwd-add-btn"]')
-    await page.waitForSelector('[data-testid="pwd-form-modal"]')
+    // EP 换皮后为 el-dialog：打开后仍需可见才可填表（waitForSelector 默认 attached 在 el-dialog 下立即满足）
+    await page.waitForSelector('[data-testid="pwd-form-modal"]', { state: 'visible', timeout: 10000 })
     await page.fill('[data-testid="pwd-form-site"]', site)
     await page.fill('[data-testid="pwd-form-url"]', url)
     await page.fill('[data-testid="pwd-form-username"]', user)
     await page.fill('[data-testid="pwd-form-password"]', `pwd-${site}`)
     await page.click('[data-testid="pwd-save-btn"]')
-    await page.waitForSelector('[data-testid="pwd-form-modal"]', { state: 'detached' })
+    // EP 换皮后为 el-dialog（关闭后节点保留隐藏，不再 detached；产品行为正确，测试适配 hidden）
+    await page.waitForSelector('[data-testid="pwd-form-modal"]', { state: 'hidden', timeout: 10000 })
   }
   await page.waitForSelector('[data-testid="pwd-item"]', { timeout: 10000 })
 }
@@ -488,6 +487,12 @@ async function measurePanels(page, heights) {
     }
     if (panel.toggle) {
       await page.click(panel.toggle) // 展开列表（健康/记账列表默认收起）
+      await page.waitForTimeout(150)
+    }
+    if (panel.type) {
+      // 便签面板类型预选（'timeline'=时光轴便签）：el-select 交互 + 查询应用（草稿→应用模式，'all' 视图只渲染普通便签——76dfe48 契约）
+      await elSelectByText(page, 'nt-type-select', panel.type === 'timeline' ? '时光轴便签' : panel.type)
+      await page.click('[data-testid="nt-search-btn"]')
       await page.waitForTimeout(150)
     }
     const loc = page.locator(panel.item).first()
@@ -521,24 +526,31 @@ const CONTRACT_PANELS = [
   {
     key: 'ledger',
     menu: 'ledger',
-    wait: '[data-testid="ld-toggle-list"]',
-    toggle: '[data-testid="ld-toggle-list"]',
-    item: '[data-testid="ld-item"]'
+    wait: '[data-testid="ld-toggle-list"]'
+    // 记录已移入弹框 el-table（403fbe4）：面板本身=统计卡+图表,无内联列表可展开 → 有数据时仍一屏即断言面板不滚动
   },
   { key: 'health', menu: 'health', wait: '[data-testid="hd-tabs"]' }
 ]
 
-// 健康 tabs 容器 4 个子面板（同一菜单项，逐 tab 实测展开态）
+// 健康 tabs 容器 4 个子面板（同一菜单项，逐 tab 实测展开态；3378f00 起记录改弹框 el-table 展示 → item=弹框内表格行，测完即关防遮罩拦截）
 const CONTRACT_HEALTH_TABS = [
-  { key: 'exercise', tab: 'exercise', toggle: '[data-testid="ex-toggle-list"]', item: '[data-testid="ex-item"]' },
-  { key: 'diet', tab: 'diet', toggle: '[data-testid="dt-toggle-list"]', item: '[data-testid="dt-item"]' },
-  { key: 'sleep', tab: 'sleep', toggle: '[data-testid="sl-toggle-list"]', item: '[data-testid="sl-item"]' },
-  { key: 'weight', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-record-item"]', closeSel: '[data-testid="wt-records-close"]' }
+  { key: 'exercise', tab: 'exercise', toggle: '[data-testid="ex-toggle-list"]', item: '[data-testid="ex-list-dialog"] .el-table__row', closeSel: '[data-testid="ex-list-dialog"] .close-btn' },
+  { key: 'diet', tab: 'diet', toggle: '[data-testid="dt-toggle-list"]', item: '[data-testid="dt-list-dialog"] .el-table__row', closeSel: '[data-testid="dt-list-dialog"] .close-btn' },
+  { key: 'sleep', tab: 'sleep', toggle: '[data-testid="sl-toggle-list"]', item: '[data-testid="sl-list-dialog"] .el-table__row', closeSel: '[data-testid="sl-list-dialog"] .close-btn' },
+  { key: 'weight', tab: 'weight', toggle: '[data-testid="wt-toggle-list"]', item: '[data-testid="wt-records-dialog"] .el-table__row', closeSel: '[data-testid="wt-records-close"]' }
 ]
 
 async function navPanel(page, menu) {
   await page.click(`[data-testid="wb-menu-${menu}"]`)
   await page.waitForTimeout(120)
+}
+
+/** el-select：点击包装根开下拉 → 点可见下拉项（按文本；EP 换皮后不可用 selectOption——同 qa-business-ep.mjs epSelect 模式） */
+async function elSelectByText(page, testid, optionText) {
+  await page.locator(`[data-testid="${testid}"]`).click()
+  await page.waitForTimeout(250)
+  await page.locator('.el-select-dropdown__item:visible', { hasText: optionText }).first().click()
+  await page.waitForTimeout(200)
 }
 
 /** .wb-content 与 document 的滚动/尺寸度量（S1/S6/S7 共用）。 */
@@ -568,6 +580,21 @@ async function getPagerState(page) {
   const info = ((await page.locator('[data-testid="panel-pager-info"]').textContent()) || '').trim()
   const m = info.match(/第\s*(\d+)\s*\/\s*(\d+)\s*页/)
   return m ? { page: Number(m[1]), total: Number(m[2]), text: info } : { page: 0, total: 0, text: info }
+}
+
+/** 等 TransitionGroup leave 完成（td-card 过渡 0.15s，翻页后新旧卡短并存——固定 120ms 等待会读到旧页首条，S2 实证）。
+ *  mode 'changed'：等首条文本不再是 target（下一页）；'restored'：等首条文本恢复 target（上一页）。 */
+async function waitTodoFirst(page, target, mode) {
+  await page.waitForFunction(
+    ({ target, mode }) => {
+      const el = document.querySelector('[data-testid="td-item"]')
+      if (!el) return false
+      const text = (el.textContent || '').trim().slice(0, 24)
+      return mode === 'changed' ? text !== target : text === target
+    },
+    { target, mode },
+    { timeout: 5000 }
+  )
 }
 
 /** 确保列表处于展开态（SPA 内切换面板列表状态持久化，重复点击会误收起——先探测再点）。 */
@@ -632,7 +659,7 @@ async function runContractAssertions(page) {
             wc: `${m.wcScrollH}/${m.wcClientH}`,
             doc: `${m.docScrollH}/${m.docClientH}`
           })
-          // 体重记录为弹框展示：断言完关闭，防遮罩拦截后续面板点击
+          // 健康四面板记录均为弹框展示（ex-list-dialog/dt-list-dialog/sl-list-dialog/wt-records-dialog）：断言完关闭，防遮罩拦截后续面板点击
           if (sub.closeSel) {
             await page.click(sub.closeSel)
             await page.waitForTimeout(100)
@@ -669,13 +696,13 @@ async function runContractAssertions(page) {
     const first0 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
     record(`S2 初始第 ${p0.page} / ${p0.total} 页（prev=${prevDisabled0} next=${nextDisabled0}）`, p0.page === 1 && prevDisabled0 && !nextDisabled0, { p0 })
     await page.locator('[data-testid="panel-pager-next"]').click()
-    await page.waitForTimeout(120)
+    await waitTodoFirst(page, first0, 'changed')
     const p1 = await getPagerState(page)
     const prevDisabled1 = await page.locator('[data-testid="panel-pager-prev"]').isDisabled()
     const first1 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
     record(`S2 下一页 → 第 ${p1 ? p1.page : '?'} 页 + 首条变化`, p1 && p1.page === 2 && !prevDisabled1 && first1 !== first0, { p1, first1 })
     await page.locator('[data-testid="panel-pager-prev"]').click()
-    await page.waitForTimeout(120)
+    await waitTodoFirst(page, first0, 'restored')
     const p2 = await getPagerState(page)
     const first2 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
     record(`S2 上一页 → 第 ${p2 ? p2.page : '?'} 页 + 首条还原`, p2 && p2.page === 1 && first2 === first0, { p2 })
@@ -752,33 +779,47 @@ async function runContractAssertions(page) {
       await page.waitForTimeout(100)
     }
   })
-  await guard('S3 记账月份切换 goto(1)', async () => {
+  await guard('S3 记账记录弹框 + 月份切换', async () => {
     await navPanel(page, 'ledger')
     await page.waitForSelector('[data-testid="ld-toggle-list"]', { state: 'visible', timeout: 10000 })
-    await ensureExpanded(page, '[data-testid="ld-toggle-list"]', '[data-testid="ld-item"]')
-    const p0 = await getPagerState(page)
-    if (!p0 || p0.total < 2) {
-      record('S3 记账月份切换 goto(1)（跳过：无分页）', true, {})
-    } else {
-      await page.locator('[data-testid="panel-pager-next"]').click()
-      await page.waitForTimeout(100)
-      await page.click('[data-testid="ld-prev"]')
-      await page.waitForTimeout(150)
-      const p1 = await getPagerState(page)
-      record(`S3 记账上月切换 goto(1)（第 ${p1 ? p1.page : '—'} 页）`, !p1 || p1.page === 1, { p1 })
-      await page.click('[data-testid="ld-today"]')
-      await page.waitForTimeout(150)
-      const p2 = await getPagerState(page)
-      record(`S3 记账本月切换 goto(1)（第 ${p2 ? p2.page : '—'} 页）`, !p2 || p2.page === 1, { p2 })
+    // 403fbe4 起记录移入弹框 el-table + el-pagination（10 条/页），面板无内联列表/PanelPager → 契约改为：弹框行渲染 + 月份切换
+    const errBase = pageErrors.length
+    await page.click('[data-testid="ld-toggle-list"]')
+    await page.waitForSelector('[data-testid="ld-records-dialog"] .el-table__row', { state: 'visible', timeout: 10000 })
+    const rowCount = await page.locator('[data-testid="ld-records-dialog"] .el-table__row').count()
+    record(`S3 记账记录弹框 el-table 行渲染（${rowCount} 行）`, rowCount > 0, { rowCount })
+    await page.locator('[data-testid="ld-records-dialog"] .close-btn').click()
+    await page.waitForSelector('[data-testid="ld-records-dialog"]', { state: 'hidden', timeout: 10000 })
+    await page.waitForTimeout(200)
+    // 探针：ld-month 无条件渲染（WorkbenchLedger 月栏），弹框关闭后缺失 = 面板随关闭卸载/运行时异常
+    const wbLedgerCount = await page.locator('.wb-ledger').count()
+    const monthCount = await page.locator('[data-testid="ld-month"]').count()
+    const closeErrors = pageErrors.slice(errBase)
+    const panelAlive = wbLedgerCount === 1 && monthCount === 1
+    record(
+      `S3 记账弹框关闭后面板存活（.wb-ledger=${wbLedgerCount} / ld-month=${monthCount} / 异常=${closeErrors.length}）`,
+      panelAlive,
+      { wbLedgerCount, monthCount, closeErrors: closeErrors.slice(0, 6) }
+    )
+    if (!panelAlive) {
+      record(`S3 记账月份切换（${closeErrors.length > 0 ? '面板崩溃' : '面板卸载'} → 跳过）`, false, { closeErrors: closeErrors.slice(0, 6) })
+      return
     }
+    // ld-month 现为包裹 div（EP el-date-picker 不透传 data-*，testid 放 wrapper），月份值在内部 input 的 value 中
+    const m0 = ((await page.locator('[data-testid="ld-month"] input').inputValue()) || '').trim()
+    await page.click('[data-testid="ld-prev"]')
+    await page.waitForTimeout(150)
+    const m1 = ((await page.locator('[data-testid="ld-month"] input').inputValue()) || '').trim()
+    record(`S3 记账月份切换（${m0} → ${m1}）`, m0 !== m1, { m0, m1 })
+    await page.click('[data-testid="ld-today"]')
+    await page.waitForTimeout(150)
   })
 
   // ===== S4：时光轴卡内联 5 条 + 「+15 条」全量浮层（WorkbenchNotes S4 修复契约）=====
   await guard('S4 时光轴卡内联 5 条 + 「+15 条」浮层', async () => {
     await navPanel(page, 'notes')
-    await page.waitForSelector('[data-testid="nt-timeline-card"]', { state: 'visible', timeout: 10000 })
-    // 类型切「时光轴」+ 查询应用，保证只渲染 1 张时光轴卡（'all' 视图也会渲染时光轴段）
-    await page.selectOption('[data-testid="nt-type-select"]', 'timeline')
+    // 类型先切「时光轴」+ 查询应用（76dfe48 起 'all' 视图只渲染普通便签，时光轴卡仅 activeType==='timeline' 渲染；EP 换皮后 nt-type-select 为 el-select 不可 selectOption）
+    await elSelectByText(page, 'nt-type-select', '时光轴便签')
     await page.click('[data-testid="nt-search-btn"]')
     await page.waitForTimeout(150)
     await page.waitForSelector('[data-testid="nt-timeline-card"]', { state: 'visible', timeout: 10000 })
@@ -868,10 +909,10 @@ async function runContractAssertions(page) {
       { todoCount, pagerCount, overflowY: m.wcOverflowY, scrollable, noHOverflow }
     )
   })
-  await guard('S6 移动端 375×667：记账展开列表无分页条 + 无横向溢出', async () => {
+  await guard('S6 移动端 375×667：记账无分页条 + 无横向溢出', async () => {
     await navPanel(page, 'ledger')
     await page.waitForSelector('[data-testid="ld-toggle-list"]', { state: 'visible', timeout: 10000 })
-    await ensureExpanded(page, '[data-testid="ld-toggle-list"]', '[data-testid="ld-item"]')
+    // 记录已移入弹框 el-table（403fbe4），面板无内联列表 → 无需展开；仅断言无 PanelPager + 无横向溢出
     const pagerCount = await page.locator('[data-testid="panel-pager"]').count()
     const m = await metricsOf(page)
     const noHOverflow = m.wcScrollW <= m.wcClientW + 1 && m.docScrollW <= m.docClientW + 1
@@ -882,10 +923,16 @@ async function runContractAssertions(page) {
 let browser
 let qaFailed = false
 const screenshotCount = { n: 0 }
+// 运行时异常收集（S3 记账弹框关闭探针用：面板若在关弹框时崩溃，pageerror/console error 必被捕获）
+const pageErrors = []
 try {
   await ensureDevServer()
   browser = await chromium.launch()
   const page = await browser.newPage()
+  page.on('pageerror', (err) => pageErrors.push(`[pageerror] ${String(err)}`))
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') pageErrors.push(`[console] ${msg.text()}`)
+  })
 
   // 1. 进入工作台（应用自建 DB v5 与全部 store）
   await page.goto(`${devBase}/workbench`, { waitUntil: 'networkidle' })

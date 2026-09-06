@@ -1,13 +1,10 @@
 <script setup lang="ts">
-// 支出记录：按天合并卡片（对齐收摊记录），一天一张卡，内联多行支出条目（分类+金额，备注仅弹框编辑）
-// 卡片固定高度 200px，只展示前 3 条，超出点击编辑查看；每页 8 卡（2 行 × 4 列）
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+// 支出记录：按天分组 el-table（对齐收摊记录），展开行展示当日支出条目（分类+金额+备注）
+import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
 import type { BusinessExpense } from '@/types'
 import BusinessCategoryManager from './BusinessCategoryManager.vue'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 
 const store = useWorkbenchBusinessStore()
@@ -39,19 +36,14 @@ function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
 }
 
-// ===== 自适应分页（4 列，rowHeight 200，maxRows 2 = 每页 8 卡）=====
-const listEl = ref<HTMLElement | null>(null)
-const gridEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => dayGroups.value,
-  rowHeight: 218,
-  gap: 12,
-  maxRows: 2,
-  containerRef: listEl,
-  gridRef: gridEl
+// ===== el-pagination 分页（固定 10 条/页，每个日组一行） =====
+const LIST_PAGE_SIZE = 10
+const listPage = ref(1)
+const pageItems = computed<ExpenseDayGroup[]>(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return dayGroups.value.slice(start, start + LIST_PAGE_SIZE)
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
-watch(dayGroups, () => nextTick(() => goto(1)))
+watch(dayGroups, () => { listPage.value = 1 })
 
 // ===== 新增/编辑弹框（多行支出行） =====
 const showDialog = ref(false)
@@ -146,60 +138,105 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
       <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出记录</el-button>
     </div>
 
-    <!-- 卡片网格：一天一张卡 -->
+    <!-- el-table 表格列表：一天一行，展开行展示当日支出条目 -->
     <div v-if="dayGroups.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击右上角记下今天的第一笔</div>
-    <div v-else ref="listEl" class="bizexp-list" :class="{ 'bizexp-list-scroll': !fitsOnePage }" data-testid="bizexp-grid">
-      <div ref="gridEl" class="bizexp-grid">
-      <div v-for="g in pageItems" :key="g.date" class="bizexp-card" :data-testid="`bizexp-card-${g.date}`">
-        <!-- 头部：完整日期 + 当天合计 -->
-        <div class="bizexp-head">
-          <span class="bizexp-date">{{ g.date }}</span>
-          <span class="bizexp-total">{{ formatYuanOf(g.total) }}</span>
-        </div>
-
-        <!-- 明细行（固定展示前 3 条，超出点击编辑查看） -->
-        <div class="bizexp-details">
-          <div class="bizexp-detail-head">
-            <span class="bizexp-detail-th name">分类</span>
-            <span class="bizexp-detail-th amount">金额</span>
-          </div>
-          <div
-            v-for="e in g.items.slice(0, 3)"
-            :key="e.id"
-            class="bizexp-detail-row"
-          >
-            <span class="bizexp-detail-td name bizexp-cat">{{ catNameOf(e.categoryId) }}</span>
-            <span class="bizexp-detail-td amount bizexp-amt">{{ formatYuanOf(e.amount) }}</span>
-          </div>
-        </div>
-
-        <!-- 操作：编辑/删除 -->
-        <div class="bizexp-actions">
-          <el-button size="small" :data-testid="`bizexp-edit-${g.date}`" @click="startEdit(g)">编辑</el-button>
-          <el-button size="small" type="danger" :data-testid="`bizexp-del-${g.date}`" @click="handleDeleteGroup(g)">删除</el-button>
-        </div>
+    <template v-else>
+      <div class="bizexp-table-wrap">
+        <el-table
+          :data="pageItems"
+          data-testid="bizexp-table"
+          stripe
+          border
+          size="default"
+          style="width: 100%"
+          height="100%"
+          empty-text="暂无支出记录"
+          row-key="date"
+        >
+          <!-- 展开行：当日支出条目明细 -->
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="bizexp-expand" @click.stop>
+                <div class="bizexp-expand-title">支出明细（{{ row.items.length }} 笔）</div>
+                <div class="bizexp-detail-head">
+                  <span class="bizexp-detail-th name">分类</span>
+                  <span class="bizexp-detail-th amount">金额</span>
+                  <span class="bizexp-detail-th note">备注</span>
+                </div>
+                <div
+                  v-for="e in row.items"
+                  :key="e.id"
+                  class="bizexp-detail-row"
+                  :data-testid="`bizexp-detail-${e.id}`"
+                >
+                  <span class="bizexp-detail-td name bizexp-cat">{{ catNameOf(e.categoryId) }}</span>
+                  <span class="bizexp-detail-td amount bizexp-amt">{{ formatYuanOf(e.amount) }}</span>
+                  <span class="bizexp-detail-td note">{{ e.note || '—' }}</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="日期" width="140" align="center">
+            <template #default="{ row }">
+              <span style="font-weight: 600;">{{ row.date }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="支出合计" width="140" align="right">
+            <template #default="{ row }">
+              <span class="bizexp-total-text" :data-testid="`bizexp-total-${row.date}`">{{ formatYuanOf(row.total) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="笔数" width="90" align="center">
+            <template #default="{ row }">{{ row.items.length }} 笔</template>
+          </el-table-column>
+          <el-table-column label="首笔分类" min-width="140" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="bizexp-cat">{{ catNameOf(row.items[0].categoryId) }}</span>
+              <span v-if="row.items.length > 1" class="bizexp-more-cats">+{{ row.items.length - 1 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" align="center" fixed="right">
+            <template #default="{ row }">
+              <div class="bizexp-actions" @click.stop>
+                <el-button size="small" :data-testid="`bizexp-edit-${row.date}`" @click="startEdit(row)">编辑</el-button>
+                <el-button size="small" type="danger" :data-testid="`bizexp-del-${row.date}`" @click="handleDeleteGroup(row)">删除</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
+      <div class="bizexp-list-pager">
+        <el-pagination
+          v-model:current-page="listPage"
+          :page-size="LIST_PAGE_SIZE"
+          :page-sizes="[LIST_PAGE_SIZE]"
+          layout="total, prev, pager, next, jumper"
+          :total="dayGroups.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+          data-testid="bizexp-pagination"
+        />
       </div>
-      <PanelPager
-        v-if="totalPages > 1"
-        :page="currentPage"
-        :total="totalPages"
-        data-testid="panel-pager"
-        @prev="prev()"
-        @next="next()"
-      />
-    </div>
+    </template>
 
     <!-- 新增/编辑弹框（多行支出） -->
     <el-dialog
       v-if="showDialog"
       :model-value="true"
+      :show-close="false"
       width="640px"
       class="bizexp-dialog"
       data-testid="bizexp-dialog"
-      :title="editingDateOrig ? '编辑支出记录' : '新增支出记录'"
       @close="showDialog = false"
     >
+      <template #header>
+        <div class="biz-dialog-header">
+          <h3>{{ editingDateOrig ? '编辑支出记录' : '新增支出记录' }}</h3>
+          <button class="biz-dialog-close" @click="showDialog = false"><Icon name="close" /></button>
+        </div>
+      </template>
       <form class="biz-dialog-body" @submit.prevent="handleSave">
         <div class="biz-field">
           <label>日期 *（同一天将自动合并到同一张卡片）</label>
@@ -269,22 +306,6 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   min-height: 0;
 }
 
-.bizexp-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-}
-.bizexp-list.bizexp-list-scroll {
-  overflow-y: auto;
-}
-
-@media (max-width: 768px) {
-  .bizexp { min-height: 0; }
-  .bizexp-list { flex: none; overflow: visible; }
-}
-
 .bizexp-bar {
   display: flex;
   align-items: center;
@@ -305,37 +326,6 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.bizexp-cat-btn {
-  padding: 7px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizexp-cat-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizexp-add {
-  padding: 9px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  white-space: nowrap;
-}
-
-.bizexp-add:hover {
-  filter: brightness(1.08);
-}
-
 .bizexp-empty {
   padding: 40px 20px;
   text-align: center;
@@ -346,96 +336,162 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   border-radius: var(--radius-md, 10px);
 }
 
-.bizexp-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  align-content: start;
-}
-
-.bizexp-card {
+/* ===== el-table 表格容器（参考 WorkbenchNotes / BusinessDaily） ===== */
+.bizexp-table-wrap {
+  flex: 1 1 auto;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-  height: 218px;
+  box-sizing: border-box;
+}
+.bizexp-table-wrap > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
   overflow: hidden;
 }
-
-.bizexp-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
+.bizexp-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.bizexp-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .bizexp-table-wrap > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .bizexp-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(html.dark) .bizexp-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.bizexp-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
+.bizexp-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
 }
 
-.bizexp-head {
+/* ===== 分页条（参考 WorkbenchNotes / BusinessDaily） ===== */
+.bizexp-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
   display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+}
+:global(html.dark) .bizexp-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.bizexp-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
+.bizexp-list-pager > :global(.el-pagination button),
+.bizexp-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.bizexp-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .bizexp-list-pager > :global(.el-pagination button),
+:global(html.dark) .bizexp-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(html.dark) .bizexp-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.bizexp-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
 }
 
-.bizexp-date {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-}
-
-.bizexp-total {
-  font-size: 18px;
+/* ===== 表格内文本样式 ===== */
+.bizexp-total-text {
   font-weight: 700;
   color: var(--color-error, var(--color-error));
   font-variant-numeric: tabular-nums;
 }
-
-/* 明细行（分类 | 金额 | 备注） */
-.bizexp-details {
+.bizexp-more-cats {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+.bizexp-actions {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  justify-content: center;
 }
 
+/* ===== 展开行内支出明细 ===== */
+.bizexp-expand { padding: 12px 24px 12px 48px; }
+.bizexp-expand-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: 8px;
+}
 .bizexp-detail-head {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(80px, 1fr) minmax(70px, 0.7fr) minmax(120px, 1.3fr);
   gap: 6px;
   font-size: 11px;
   color: var(--color-text-muted, var(--color-text-muted));
-  padding: 0 4px 4px;
+  padding: 0 4px 6px;
   border-bottom: 1px solid var(--color-border, var(--color-border));
 }
-
 .bizexp-detail-th {
+  text-align: right;
   font-weight: 600;
+}
+.bizexp-detail-th.name,
+.bizexp-detail-th.note {
   text-align: left;
 }
-
 .bizexp-detail-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(80px, 1fr) minmax(70px, 0.7fr) minmax(120px, 1.3fr);
   gap: 6px;
-  padding: 3px 4px;
+  padding: 4px 4px;
   font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   align-items: center;
 }
-
 .bizexp-detail-td {
+  text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.bizexp-detail-td.muted {
+.bizexp-detail-td.name,
+.bizexp-detail-td.note {
+  text-align: left;
+}
+.bizexp-detail-td.note {
   color: var(--color-text-muted, var(--color-text-muted));
 }
 
-/* 分类徽标 + 金额色，直接嵌在明细行 */
+/* 分类徽标 */
 .bizexp-cat {
   font-size: 12px;
   padding: 2px 8px;
@@ -444,53 +500,14 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   background: var(--color-primary-light, #eff6ff);
   border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
   white-space: nowrap;
-  justify-self: start;
+  display: inline-block;
 }
-
 .bizexp-amt {
   font-weight: 700;
   color: var(--color-error, var(--color-error));
 }
 
-.bizexp-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.bizexp-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizexp-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizexp-btn.del:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
-}
-
-.bizexp-btn.save {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizexp-btn.save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
-/* 弹框多行编辑 */
+/* ===== 弹框多行编辑 ===== */
 .bizexp-rows {
   display: flex;
   flex-direction: column;
@@ -511,16 +528,6 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 .bizexp-row-amt { min-width: 0; width: 100%; }
 .bizexp-row-note { min-width: 0; }
 
-.bizexp-add-row {
-  padding: 8px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--color-primary, var(--color-primary));
-  background: none;
-  border: 1px dashed var(--color-primary, var(--color-primary));
-  border-radius: var(--radius-md, 8px);
-}
-
 .bizexp-preview {
   padding: 10px 12px;
   background: var(--color-bg-card, var(--color-bg-hover));
@@ -535,28 +542,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   font-weight: 700;
 }
 
-/* 复用收摊弹框样式（biz-dialog 类已在 BusinessDaily scoped 外通过全局注入？——这里补定义避免依赖兄弟组件） */
-.biz-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.biz-dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 560px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
+/* 弹框通用样式 */
 .biz-dialog-header {
   display: flex;
   align-items: center;
@@ -639,42 +625,30 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   overflow-y: auto;
 }
 
-html.dark .bizexp-card,
-html.dark .biz-dialog {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
-html.dark .bizexp-date {
-  color: var(--color-text, #f9fafb);
-}
-
-html.dark .bizexp-total,
-html.dark .bizexp-preview strong {
+/* ===== 暗色模式 ===== */
+:global(html.dark) .bizexp-total-text,
+:global(html.dark) .bizexp-amt,
+:global(html.dark) .bizexp-preview strong {
   color: #f87171;
 }
 
-html.dark .bizexp-row {
+:global(html.dark) .bizexp-row {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-html.dark .bizexp-btn,
-html.dark .bizexp-cat-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .biz-input {
+:global(html.dark) .biz-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
 }
 
+:global(html.dark) .bizexp-cat {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #93c5fd;
+}
+
 @media (max-width: 640px) {
-  .bizexp-grid {
-    grid-template-columns: 1fr;
-  }
   .bizexp-row {
     grid-template-columns: 1fr 1fr;
   }

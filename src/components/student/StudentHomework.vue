@@ -484,18 +484,20 @@ onMounted(async () => {
   min-width: 60px;
 }
 
-/* ===== 行状态着色（左边框/底色，仿旧卡片） ===== */
-.shw-list > :global(.el-table .el-table__row.shw-row-pending td.el-table__cell) {
+/* ===== 行状态着色（仅首个单元格左侧色条，其余保持默认细边框，对齐教育经历表格） ===== */
+.shw-list > :global(.el-table .el-table__row.shw-row-pending td.el-table__cell:first-child) {
   border-left: 3px solid #6b7280;
 }
-.shw-list > :global(.el-table .el-table__row.shw-row-doing td.el-table__cell) {
+.shw-list > :global(.el-table .el-table__row.shw-row-doing td.el-table__cell:first-child) {
   border-left: 3px solid #3b82f6;
 }
-.shw-list > :global(.el-table .el-table__row.shw-row-overdue td.el-table__cell) {
+.shw-list > :global(.el-table .el-table__row.shw-row-overdue td.el-table__cell:first-child) {
   border-left: 3px solid #ef4444;
 }
-.shw-list > :global(.el-table .el-table__row.shw-row-done td.el-table__cell) {
+.shw-list > :global(.el-table .el-table__row.shw-row-done td.el-table__cell:first-child) {
   border-left: 3px solid #10b981;
+}
+.shw-list > :global(.el-table .el-table__row.shw-row-done td.el-table__cell) {
   opacity: 0.75;
 }
 

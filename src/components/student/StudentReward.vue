@@ -36,17 +36,15 @@ const rewardPaging = usePanelPaging({
 })
 const { pageItems: rewardPageItems, currentPage: rewardCurrentPage, totalPages: rewardTotalPages, fitsOnePage: rewardFitsOnePage, next: rewardNext, prev: rewardPrev } = rewardPaging
 
-// ===== 历史记录卡片网格（6 列/行 × 3 行/页 = 每页 18 卡；卡片行高 150px） =====
-const historyWrapEl = ref<HTMLElement | null>(null)
-const historyListEl = ref<HTMLElement | null>(null)
-const historyPaging = usePanelPaging({
-  items: () => store.allHistory(),
-  rowHeight: 150,
-  maxRows: 3,
-  containerRef: historyWrapEl,
-  gridRef: historyListEl
+// ===== 交易记录表格（el-table + el-pagination，固定 10 条/页，对齐教育经历） =====
+const HISTORY_PAGE_SIZE = 10
+const historyPage = ref(1)
+const historyTotal = computed(() => store.allHistory().length)
+const historyPageItems = computed<StudentRewardTxn[]>(() => {
+  const all = store.allHistory()
+  const start = (historyPage.value - 1) * HISTORY_PAGE_SIZE
+  return all.slice(start, start + HISTORY_PAGE_SIZE)
 })
-const { pageItems: historyPageItems, currentPage: historyCurrentPage, totalPages: historyTotalPages, fitsOnePage: historyFitsOnePage, next: historyNext, prev: historyPrev } = historyPaging
 
 // ===== 兑换 =====
 async function redeem(item: StudentRewardItem): Promise<void> {
@@ -166,35 +164,57 @@ onMounted(async () => {
     </div>
 
     <!-- 交易记录视图 -->
-    <div v-else ref="mainEl" class="sr-main">
+    <div v-else class="sr-main">
       <div v-if="stats.txnCount === 0" class="empty-state" data-testid="sr-empty-history">
         <p>暂无交易记录</p>
       </div>
-      <div v-else ref="historyWrapEl" class="sr-history-wrap">
-        <div ref="historyListEl" class="sr-history-grid" :class="{ 'sr-history-scroll': !historyFitsOnePage }">
-          <div
-            v-for="t in historyPageItems"
-            :key="t.id"
-            class="sr-txn-card"
-            :class="{ earn: t.type === 'earn', redeem: t.type === 'redeem' }"
-            :data-testid="`sr-txn-${t.id}`"
+      <template v-else>
+        <div class="sr-history-list">
+          <el-table
+            :data="historyPageItems"
+            stripe
+            border
+            size="default"
+            style="width: 100%"
+            height="100%"
+            empty-text="暂无交易记录"
           >
-            <div class="sr-txn-card-head">
-              <span class="sr-txn-points" :class="t.type">{{ txnPointsText(t) }}</span>
-              <span class="sr-txn-type-tag">{{ t.type === 'earn' ? '加分' : '兑换' }}</span>
-            </div>
-            <div class="sr-txn-card-reason" :title="t.reason">{{ t.reason }}</div>
-            <div class="sr-txn-card-date">{{ txnDateText(t.createdAt) }}</div>
-          </div>
+            <el-table-column label="时间" width="170" align="center">
+              <template #default="{ row }">{{ txnDateText(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="类型" width="100" align="center">
+              <template #default="{ row }">
+                <span class="sr-txn-type-tag" :class="row.type" :data-testid="`sr-txn-type-${row.id}`">
+                  {{ row.type === 'earn' ? '加分' : '兑换' }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="积分变动" width="130" align="right">
+              <template #default="{ row }">
+                <span class="sr-txn-points" :class="row.type" :data-testid="`sr-txn-${row.id}`">{{ txnPointsText(row) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="事由" min-width="220" align="left" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span :title="row.reason">{{ row.reason }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
-        <PanelPager
-          v-if="historyTotalPages > 1"
-          :page="historyCurrentPage"
-          :total="historyTotalPages"
-          @prev="historyPrev"
-          @next="historyNext"
-        />
-      </div>
+        <div class="sr-history-pager">
+          <el-pagination
+            v-model:current-page="historyPage"
+            :page-size="HISTORY_PAGE_SIZE"
+            :page-sizes="[HISTORY_PAGE_SIZE]"
+            layout="total, prev, pager, next, jumper"
+            :total="historyTotal"
+            background
+            small
+            prev-text="上一页"
+            next-text="下一页"
+          />
+        </div>
+      </template>
     </div>
 
     <!-- 积分规则弹框 -->
@@ -383,116 +403,124 @@ onMounted(async () => {
   background: #9ca3af;
 }
 
-/* ===== 奖励工作台一屏布局：中间包装层（grid + Pager 之间的 wrapper）必须 flex 列 ===== */
-/* 参考密码面板 .pwd-main 规则：缺此规则时 .sr-history-grid 的 flex:1 失效、RO 只测到 1 行高 → rowsPerPage=1 */
-.sr-history-wrap {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sr-history-grid {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  padding: 4px 2px;
-}
-.sr-history-scroll { overflow-y: auto; }
-
-.sr-txn-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 10px 10px;
-  background: var(--color-bg-card, #ffffff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 10px;
-  /* 宽时封顶 150px；窄时自动跟随宽度（正方形 1:1）收窄，不会出现"高 150 但卡窄成细长条" */
-  aspect-ratio: 1 / 1;
-  max-height: 150px;
-  box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  overflow: hidden;
-}
-.sr-txn-card.redeem {
-  border-color: #fecaca;
-  background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
-}
-.sr-txn-card.earn {
-  border-color: #a7f3d0;
-  background: linear-gradient(180deg, #fff 0%, #ecfdf5 100%);
-}
-.sr-txn-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.sr-txn-card .sr-txn-points {
-  font-weight: 800;
-  font-size: 18px;
-  width: auto;
-  text-align: left;
-}
-.sr-txn-card .sr-txn-points.earn { color: #059669; }
-.sr-txn-card .sr-txn-points.redeem { color: #dc2626; }
-.sr-txn-type-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.8);
-  color: var(--color-text-soft, #6b7280);
-  border: 1px solid var(--color-border, #e5e7eb);
-}
-.sr-txn-card-reason {
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--color-text-secondary, #374151);
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-all;
-  flex: 1;
-}
-.sr-txn-card-date {
-  font-size: 11px;
-  color: var(--color-text-soft, #9ca3af);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 保留旧类（其他模块无引用），以安全过渡 */
+/* ===== 交易记录表格容器（参考教育经历 .edu-list） ===== */
 .sr-history-list {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 240px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.sr-history-list > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(16, 185, 129, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
   overflow: hidden;
 }
-.sr-txn-row {
+.sr-history-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.sr-history-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .sr-history-list > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .sr-history-list > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(html.dark) .sr-history-list > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.sr-history-list > :global(.el-table .el-table__body-wrapper .cell),
+.sr-history-list > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+}
+
+/* ===== 交易记录分页条（参考教育经历 .edu-list-pager） ===== */
+.sr-history-pager {
+  flex: 0 0 auto;
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--color-border, #f3f4f6);
+}
+:global(html.dark) .sr-history-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.sr-history-pager > :global(.el-pagination) {
+  --el-pagination-bg-color: transparent;
+}
+.sr-history-pager > :global(.el-pagination button),
+.sr-history-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.sr-history-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #10b981) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #10b981) !important;
+}
+:global(html.dark) .sr-history-pager > :global(.el-pagination button),
+:global(html.dark) .sr-history-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(html.dark) .sr-history-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #10b981) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #10b981) !important;
+}
+.sr-history-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
   font-size: 13px;
 }
-.sr-txn-reason {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+
+/* 积分变动：加分绿 / 兑换红 */
+.sr-txn-points {
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
-.sr-txn-date {
+.sr-txn-points.earn { color: #059669; }
+.sr-txn-points.redeem { color: #dc2626; }
+
+/* 类型标签：加分绿底 / 兑换红底 */
+.sr-txn-type-tag {
+  display: inline-block;
   font-size: 11px;
-  color: var(--color-text-soft, #9ca3af);
-  flex-shrink: 0;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.sr-txn-type-tag.earn {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+.sr-txn-type-tag.redeem {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
 }
 
 /* ===== 弹框 ===== */

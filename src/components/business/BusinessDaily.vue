@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue'
-// 收摊记录：日记录卡片（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
-// P0-1：结构化商品明细行展示（折叠/展开、损耗高亮、已删除标记）
+// 收摊记录：日记录表格（date 唯一 upsert）+ 编辑弹框（商品行：带出/剩余/损耗，收入自动合计）
+// P0-1：结构化商品明细行（展开行展示）
 // P0-3：编辑弹框增加库存上下文（当前库存、预计库存、小计实时计算）
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, findProduct, formatYuanOf, localDateKey, sortDailyRecords } from '@/composables/businessCore'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -17,19 +15,14 @@ const store = useWorkbenchBusinessStore()
 
 const sorted = computed(() => sortDailyRecords(store.dailyRecords))
 
-// ===== 自适应分页（usePanelPaging：ResizeObserver 测可用高 + grid 实测列数）=====
-// rowHeight = 卡片固定 250 + gap 12 = 262
-const listEl = ref<HTMLElement | null>(null)
-const gridEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => sorted.value,
-  rowHeight: 262,
-  gap: 12,
-  containerRef: listEl,
-  gridRef: gridEl
+// ===== el-pagination 分页（固定 10 条/页） =====
+const LIST_PAGE_SIZE = 10
+const listPage = ref(1)
+const pageItems = computed<BusinessDailyRecord[]>(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return sorted.value.slice(start, start + LIST_PAGE_SIZE)
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
-watch(sorted, () => goto(1))
+watch(sorted, () => { listPage.value = 1 })
 
 /** 获取某条记录的结构化商品明细 */
 function dailyItemDetails(record: BusinessDailyRecord) {
@@ -157,57 +150,110 @@ async function handleDelete(id: string): Promise<void> {
     </div>
 
     <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击右上角记下今天的第一笔</div>
-    <div v-else ref="listEl" class="bizday-list" :class="{ 'bizday-list-scroll': !fitsOnePage }">
-      <div ref="gridEl" class="bizday-grid">
-        <div v-for="r in pageItems" :key="r.id" class="bizday-card" :data-testid="`bizday-card-${r.id}`">
-        <div class="bizday-head">
-          <span class="bizday-date">{{ r.date }}</span>
-          <span class="bizday-revenue" :data-testid="`bizday-revenue-${r.id}`">{{ formatYuanOf(r.totalRevenue) }}</span>
-        </div>
-        <div class="bizday-stats">
-          <span class="bizday-stat">成本 <strong :data-testid="`bizday-cost-${r.id}`">{{ formatYuanOf(recordCost(r)) }}</strong></span>
-          <span class="bizday-stat">利润 <strong :data-testid="`bizday-profit-${r.id}`">{{ formatYuanOf(recordProfit(r)) }}</strong></span>
-          <span class="bizday-stat">损耗 <strong :data-testid="`bizday-loss-${r.id}`">{{ formatYuanOf(recordLossAmount(r)) }}</strong></span>
-        </div>
-        <!-- P0-1：结构化商品明细行（固定 3 条） -->
-        <div class="bizday-details" :data-testid="`bizday-details-${r.id}`">
-          <div class="bizday-detail-head">
-            <span class="bizday-detail-th name">商品</span>
-            <span class="bizday-detail-th">带出</span>
-            <span class="bizday-detail-th">售出</span>
-            <span class="bizday-detail-th">单价</span>
-            <span class="bizday-detail-th sub">小计</span>
-          </div>
-          <div
-            v-for="d in dailyItemDetails(r).slice(0, 3)"
-            :key="d.productId"
-            class="bizday-detail-row"
-            :class="{ deleted: d.deleted }"
-          >
-            <span class="bizday-detail-td name" @click="!d.deleted && emit('navigate', 'products', d.productId)">
-              {{ d.name }}{{ d.deleted ? '（已删除商品）' : '' }}
-            </span>
-            <span class="bizday-detail-td">{{ d.broughtOut }}</span>
-            <span class="bizday-detail-td sold-bold">{{ d.sold }}</span>
-            <span class="bizday-detail-td">¥{{ d.sellingPrice.toFixed(2) }}</span>
-            <span class="bizday-detail-td sub-bold">¥{{ d.subtotal.toFixed(2) }}</span>
-          </div>
-        </div>
-        <div class="bizday-actions">
-          <el-button size="small" :data-testid="`bizday-edit-${r.id}`" @click="startEdit(r)">编辑</el-button>
-          <el-button size="small" type="danger" :data-testid="`bizday-del-${r.id}`" @click="handleDelete(r.id)">删除</el-button>
-        </div>
+    <template v-else>
+      <div class="bizday-table-wrap">
+        <el-table
+          :data="pageItems"
+          data-testid="bizday-table"
+          stripe
+          border
+          size="default"
+          style="width: 100%"
+          height="100%"
+          empty-text="暂无收摊记录"
+          row-key="id"
+        >
+          <!-- 展开行：商品明细 -->
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="bizday-expand" @click.stop>
+                <div class="bizday-expand-title">商品明细（{{ dailyItemDetails(row).length }} 项）</div>
+                <div class="bizday-detail-head">
+                  <span class="bizday-detail-th name">商品</span>
+                  <span class="bizday-detail-th">带出</span>
+                  <span class="bizday-detail-th">售出</span>
+                  <span class="bizday-detail-th">损耗</span>
+                  <span class="bizday-detail-th">单价</span>
+                  <span class="bizday-detail-th sub">小计</span>
+                </div>
+                <div
+                  v-for="d in dailyItemDetails(row)"
+                  :key="d.productId"
+                  class="bizday-detail-row"
+                  :class="{ deleted: d.deleted }"
+                  :data-testid="`bizday-detail-${d.productId}`"
+                >
+                  <span class="bizday-detail-td name" @click="!d.deleted && emit('navigate', 'products', d.productId)">
+                    {{ d.name }}{{ d.deleted ? '（已删除商品）' : '' }}
+                  </span>
+                  <span class="bizday-detail-td">{{ d.broughtOut }}</span>
+                  <span class="bizday-detail-td sold-bold">{{ d.sold }}</span>
+                  <span class="bizday-detail-td">{{ d.loss }}</span>
+                  <span class="bizday-detail-td">¥{{ d.sellingPrice.toFixed(2) }}</span>
+                  <span class="bizday-detail-td sub-bold">¥{{ d.subtotal.toFixed(2) }}</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="日期" width="130" align="center">
+            <template #default="{ row }">
+              <span style="font-weight: 600;">{{ row.date }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="营业额" width="130" align="right">
+            <template #default="{ row }">
+              <span class="bizday-revenue-text" :data-testid="`bizday-revenue-${row.id}`">{{ formatYuanOf(row.totalRevenue) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="成本" width="110" align="right">
+            <template #default="{ row }">
+              <span :data-testid="`bizday-cost-${row.id}`">{{ formatYuanOf(recordCost(row)) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="利润" width="110" align="right">
+            <template #default="{ row }">
+              <span class="bizday-profit-text" :data-testid="`bizday-profit-${row.id}`">{{ formatYuanOf(recordProfit(row)) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="损耗" width="110" align="right">
+            <template #default="{ row }">
+              <span class="bizday-loss-text" :data-testid="`bizday-loss-${row.id}`">{{ formatYuanOf(recordLossAmount(row)) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="商品数" width="90" align="center">
+            <template #default="{ row }">{{ row.items.length }} 项</template>
+          </el-table-column>
+          <el-table-column label="备注" min-width="160" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.note" class="bizday-note-text">{{ row.note }}</span>
+              <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" align="center" fixed="right">
+            <template #default="{ row }">
+              <div class="bizday-actions" @click.stop>
+                <el-button size="small" :data-testid="`bizday-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
+                <el-button size="small" type="danger" :data-testid="`bizday-del-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
+      <div class="bizday-list-pager">
+        <el-pagination
+          v-model:current-page="listPage"
+          :page-size="LIST_PAGE_SIZE"
+          :page-sizes="[LIST_PAGE_SIZE]"
+          layout="total, prev, pager, next, jumper"
+          :total="sorted.length"
+          background
+          small
+          prev-text="上一页"
+          next-text="下一页"
+          data-testid="bizday-pagination"
+        />
       </div>
-      <PanelPager
-        v-if="totalPages > 1"
-        :page="currentPage"
-        :total="totalPages"
-        data-testid="panel-pager"
-        @prev="prev()"
-        @next="next()"
-      />
-    </div>
+    </template>
 
     <!-- 编辑弹框（商品行动态增删） -->
     <el-dialog
@@ -320,28 +366,6 @@ async function handleDelete(id: string): Promise<void> {
   min-height: 0;
 }
 
-.bizday-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-}
-
-.bizday-list.bizday-list-scroll {
-  overflow-y: auto;
-}
-
-@media (max-width: 768px) {
-  .bizday {
-    min-height: 0;
-  }
-  .bizday-list {
-    flex: none;
-    overflow: visible;
-  }
-}
-
 .bizday-bar {
   display: flex;
   align-items: center;
@@ -354,21 +378,6 @@ async function handleDelete(id: string): Promise<void> {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.bizday-add {
-  padding: 9px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  white-space: nowrap;
-}
-
-.bizday-add:hover {
-  filter: brightness(1.08);
-}
-
 .bizday-empty {
   padding: 40px 20px;
   text-align: center;
@@ -379,102 +388,162 @@ async function handleDelete(id: string): Promise<void> {
   border-radius: var(--radius-md, 10px);
 }
 
-.bizday-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  align-content: start;
-}
-
-.bizday-card {
+/* ===== el-table 表格容器（参考 WorkbenchNotes） ===== */
+.bizday-table-wrap {
+  flex: 1 1 auto;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
-  height: 250px;
-  min-height: 250px;
-  max-height: 250px;
+  box-sizing: border-box;
+}
+.bizday-table-wrap > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
   overflow: hidden;
 }
-
-.bizday-card:hover {
-  border-color: var(--color-primary, var(--color-primary));
+.bizday-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.bizday-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .bizday-table-wrap > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .bizday-table-wrap > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-secondary, #d1d5db);
+}
+:global(html.dark) .bizday-table-wrap > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.bizday-table-wrap > :global(.el-table .el-table__body-wrapper .cell),
+.bizday-table-wrap > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
 }
 
-.bizday-head {
+/* ===== 分页条（参考 WorkbenchNotes） ===== */
+.bizday-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
   display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+}
+:global(html.dark) .bizday-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.bizday-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
+.bizday-list-pager > :global(.el-pagination button),
+.bizday-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.bizday-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .bizday-list-pager > :global(.el-pagination button),
+:global(html.dark) .bizday-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(html.dark) .bizday-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.bizday-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
 }
 
-.bizday-date {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-}
-
-.bizday-revenue {
-  font-size: 18px;
+/* ===== 表格内文本样式 ===== */
+.bizday-revenue-text {
   font-weight: 700;
   color: var(--color-success, var(--color-success));
   font-variant-numeric: tabular-nums;
 }
-
-/* P0-1：结构化商品明细行 */
-.bizday-details {
+.bizday-profit-text {
+  font-weight: 700;
+  color: var(--color-text, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+.bizday-loss-text {
+  color: var(--color-error, var(--color-error));
+  font-variant-numeric: tabular-nums;
+}
+.bizday-note-text {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 12px;
+}
+.bizday-actions {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow: hidden;
+  gap: 6px;
+  justify-content: center;
 }
 
+/* ===== 展开行内商品明细 ===== */
+.bizday-expand { padding: 12px 24px 12px 48px; }
+.bizday-expand-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: 8px;
+}
 .bizday-detail-head {
   display: grid;
-  grid-template-columns: minmax(60px, 1.1fr) minmax(32px, 0.55fr) minmax(32px, 0.55fr) minmax(44px, 0.65fr) minmax(56px, 0.85fr);
-  gap: 3px;
+  grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr);
+  gap: 6px;
   font-size: 11px;
   color: var(--color-text-muted, var(--color-text-muted));
-  padding: 0 2px 4px;
+  padding: 0 4px 6px;
   border-bottom: 1px solid var(--color-border, var(--color-border));
 }
-
 .bizday-detail-th {
   text-align: right;
   font-weight: 600;
 }
-
 .bizday-detail-th.name,
 .bizday-detail-th.sub {
   text-align: left;
 }
-
 .bizday-detail-row {
   display: grid;
-  grid-template-columns: minmax(60px, 1.1fr) minmax(32px, 0.55fr) minmax(32px, 0.55fr) minmax(44px, 0.65fr) minmax(56px, 0.85fr);
-  gap: 3px;
-  padding: 3px 2px;
+  grid-template-columns: minmax(80px, 1.4fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(40px, 0.5fr) minmax(60px, 0.7fr) minmax(70px, 0.85fr);
+  gap: 6px;
+  padding: 4px 4px;
   font-size: 12px;
   color: var(--color-text-secondary, var(--color-text-secondary));
   font-variant-numeric: tabular-nums;
   align-items: center;
 }
-
 .bizday-detail-row.deleted {
   opacity: 0.5;
   font-style: italic;
 }
-
 .bizday-detail-td {
   text-align: right;
 }
-
 .bizday-detail-td.name {
   text-align: left;
   cursor: pointer;
@@ -482,22 +551,14 @@ async function handleDelete(id: string): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .bizday-detail-row:not(.deleted) .bizday-detail-td.name:hover {
   color: var(--color-primary, var(--color-primary));
   text-decoration: underline;
 }
-
-.bizday-detail-td.loss-red {
-  color: var(--color-error, var(--color-error));
-  font-weight: 700;
-}
-
 .bizday-detail-td.sold-bold {
   font-weight: 700;
   color: var(--color-text, var(--color-text));
 }
-
 .bizday-detail-td.sub-bold {
   font-weight: 700;
   color: var(--color-success, var(--color-success));
@@ -555,75 +616,6 @@ async function handleDelete(id: string): Promise<void> {
   font-variant-numeric: tabular-nums;
   color: var(--color-success, var(--color-success));
   font-weight: 600;
-}
-
-.bizday-stats {
-  display: flex;
-  gap: 14px;
-  font-size: 12px;
-  color: var(--color-text-muted, var(--color-text-muted));
-}
-
-.bizday-stat {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.bizday-stat strong {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
-}
-
-.bizday-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-  margin-top: auto;
-}
-
-.bizday-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-sm, 6px);
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.bizday-btn:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizday-btn.del:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
-}
-
-.bizday-btn.save {
-  color: #fff;
-  background: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.bizday-btn.save:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
-.bizday-add-row {
-  padding: 8px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--color-primary, var(--color-primary));
-  background: none;
-  border: 1px dashed var(--color-primary, var(--color-primary));
-  border-radius: var(--radius-md, 8px);
 }
 
 .bizday-rows {
@@ -695,27 +687,6 @@ async function handleDelete(id: string): Promise<void> {
 }
 
 /* 弹框 */
-.biz-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-
-.biz-dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 560px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
 .biz-dialog-header {
   display: flex;
   align-items: center;
@@ -778,17 +749,12 @@ async function handleDelete(id: string): Promise<void> {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-html.dark .bizday-card,
 html.dark .biz-dialog {
   background-color: var(--color-bg-card, #1f2937);
   box-shadow: none;
 }
 
-html.dark .bizday-date {
-  color: var(--color-text, #f9fafb);
-}
-
-html.dark .bizday-revenue {
+html.dark .bizday-revenue-text {
   color: #4ade80;
 }
 
@@ -796,28 +762,10 @@ html.dark .bizday-row {
   background-color: var(--color-bg-card, #1f2937);
 }
 
-html.dark .bizday-btn {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
 html.dark .biz-input {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);
   border-color: var(--color-border, #374151);
-}
-
-@media (max-width: 1200px) {
-  .bizday-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .bizday-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* el-dialog 外壳对齐原弹框 */

@@ -6,7 +6,7 @@
  *
  * 覆盖（逐文件验证「零原生残留」+ 明暗全页截图）：
  *  - S1  home        （切换工具屏轮播 → 快捷添加 + WeatherCard，home-carousel-* el-button）
- *  - S2  todos       （含 PanelPager el-button 断言：prev/next 类 + 「第 X / Y 页」+ 边界 + 翻页往返）
+ *  - S2  todos       （待办 el-table + el-pagination 固定 10 条/页：td-pagination 可见 + 「第 1 / 2 页」等值断言 + prev/next 边界 + 翻页往返）
  *  - S3  notes       （新增弹框 note-overlay）
  *  - S4  diary       （列表 .dj-card + dj-save-btn）
  *  - S5  countdowns  （新增弹框 cd-dialog）
@@ -48,9 +48,8 @@ mkdirSync(EVIDENCE_DIR, { recursive: true })
 
 const ONLY = process.argv.includes('--settings') ? 'settings' : process.argv.includes('--panels') ? 'panels' : 'full'
 
-// PanelPager 换皮属批次 F（契约 D2 例外）：换皮前原生 pp-btn；批次 F 落地后以 EXPECT_PAGER_EP=1
-// 运行才断言 prev/next el-button 类，功能断言（「第 X / Y 页」/翻页/边界）两态均跑。
-const EXPECT_PAGER_EP = process.env.EXPECT_PAGER_EP === '1'
+// 待办 2026-09 起 el-table + el-pagination（td-pagination，el-* 组件）→ panel-pager/EXPECT_PAGER_EP 契约随旧 todo 断言一并移除；
+// 其余面板的 PanelPager 换皮（批次 F，契约 D2 例外）不在本脚本覆盖范围内。
 
 // ===== 脚手架（复用 qa-workbench-onescreen.mjs 协议）=====
 
@@ -652,35 +651,34 @@ async function homeExtra(page) {
 
 async function todosExtra(page) {
   const out = []
-  // PanelPager el-button（D2 例外）：15 条 @ 1366x768 必然多页
-  const pagerCount = await page.locator('[data-testid="panel-pager"]').count()
+  // 待办 el-table + el-pagination 固定 10 条/页（td-pagination，2026-09 起替代 PanelPager）：15 条 @ 1366x768 必然多页
+  const pagerCount = await page.locator('[data-testid="td-pagination"]').count()
   out.push({ ok: pagerCount === 1, detail: { pagerCount } })
   if (pagerCount === 1) {
-    // 批次 F 前 PanelPager 仍是原生 pp-btn（无 el-button 类）——仅 EXPECT_PAGER_EP=1（换皮落地）断言 EP 类；功能断言两态均跑
-    if (EXPECT_PAGER_EP) {
-      out.push(await assertClass(page, 'panel-pager-prev', 'el-button'))
-      out.push(await assertClass(page, 'panel-pager-next', 'el-button'))
-    }
-    const info = ((await page.locator('[data-testid="panel-pager-info"]').textContent()) || '').trim()
-    const m = info.match(/第\s*(\d+)\s*\/\s*(\d+)\s*页/)
-    out.push({ ok: !!m, detail: { info, parsed: m ? { page: Number(m[1]), total: Number(m[2]) } : null } })
-    const total = m ? Number(m[2]) : 0
-    out.push({ ok: total > 1, detail: { total } })
-    const prevDisabled = await page
-      .locator('[data-testid="panel-pager-prev"]')
+    // el-pagination 属 el-* 组件，直接断言 EP 类 + 行数 + 边界 + 翻页往返
+    out.push(await assertClass(page, 'td-pagination', 'el-pagination'))
+    const rowCount = await page.locator('[data-testid="td-table"] .el-table__row').count()
+    out.push({ ok: rowCount === 10, detail: { rowCount } })
+    const active0 = ((await page.locator('[data-testid="td-pagination"] .el-pager li.is-active').first().textContent()) || '').trim()
+    const totalLi = await page.locator('[data-testid="td-pagination"] .el-pager li.number').count()
+    out.push({ ok: active0 === '1' && totalLi === 2, detail: { active0, totalLi } })
+    const prevDisabled0 = await page
+      .locator('[data-testid="td-pagination"] .btn-prev')
       .evaluate((el) => el.classList.contains('is-disabled') || el.getAttribute('disabled') !== null)
       .catch(() => false)
-    out.push({ ok: prevDisabled, detail: { prevDisabled } })
-    await page.click('[data-testid="panel-pager-next"]')
+    const nextDisabled0 = await page
+      .locator('[data-testid="td-pagination"] .btn-next')
+      .evaluate((el) => el.classList.contains('is-disabled') || el.getAttribute('disabled') !== null)
+      .catch(() => false)
+    out.push({ ok: prevDisabled0 && !nextDisabled0, detail: { prevDisabled0, nextDisabled0 } })
+    await page.click('[data-testid="td-pagination"] .btn-next')
     await page.waitForTimeout(250)
-    const info2 = ((await page.locator('[data-testid="panel-pager-info"]').textContent()) || '').trim()
-    const m2 = info2.match(/第\s*(\d+)\s*\/\s*(\d+)\s*页/)
-    out.push({ ok: m2 && Number(m2[1]) === 2, detail: { info2 } })
-    await page.click('[data-testid="panel-pager-prev"]')
+    const active1 = ((await page.locator('[data-testid="td-pagination"] .el-pager li.is-active').first().textContent()) || '').trim()
+    out.push({ ok: active1 === '2', detail: { active1 } })
+    await page.click('[data-testid="td-pagination"] .btn-prev')
     await page.waitForTimeout(250)
-    const info3 = ((await page.locator('[data-testid="panel-pager-info"]').textContent()) || '').trim()
-    const m3 = info3.match(/第\s*(\d+)\s*\/\s*(\d+)\s*页/)
-    out.push({ ok: m3 && Number(m3[1]) === 1, detail: { info3 } })
+    const active2 = ((await page.locator('[data-testid="td-pagination"] .el-pager li.is-active').first().textContent()) || '').trim()
+    out.push({ ok: active2 === '1', detail: { active2 } })
   }
   return out
 }
@@ -724,7 +722,7 @@ const PANELS = [
   { name: 'S1-home', shot: 'home', menu: 'home', wait: '[data-testid="home-greeting"]', extra: homeExtra },
   {
     name: 'S2-todos', shot: 'todos', menu: 'todos',
-    wait: '[data-testid="td-item"]', extra: todosExtra,
+    wait: '[data-testid="td-table"]', extra: todosExtra,
     open: { sel: '[data-testid="td-add-button"]', wait: '[data-testid="td-dialog"]', close: '[data-testid="td-cancel-button"]' }
   },
   {

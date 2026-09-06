@@ -29,7 +29,7 @@
  *   S3 筛选/分类/月份切换后 goto(1) 回第 1 页
  *   S4 时光轴卡内联 5 条 + 「+N 条」全量浮层（WorkbenchNotes 时光轴折叠）
  *   S5 日记 ≥1100px 双栏 + dj-page-* 分页
- *   S6 375×667 移动端分页惰性 + 页面滚动保留 + 无横向溢出
+ *   S6 375×667 移动端分页惰性（待办 2026-09 起 el-table+el-pagination 固定 10 条/页，不再惰性）+ 页面滚动保留 + 无横向溢出
  *   S7 明暗双主题 × 两视口 × 10 面板无横向溢出
  *
  * 运行：node scripts/qa-workbench-onescreen.mjs
@@ -407,7 +407,7 @@ function buildLedgerData() {
 // ===== 面板测量目标（testid 已逐一核对组件源码；静态 testid 必须 .first()）=====
 
 const MEASURE_PANELS = [
-  { key: 'todo', menu: 'todos', item: '[data-testid="td-item"]' },
+  // 待办 2026-09 起改 el-table + el-pagination 固定 10 条/页（不再 usePanelPaging）→ 无 rowHeight 常量，不入行高测量
   { key: 'notes', menu: 'notes', item: '[data-testid="note-card"]' },
   { key: 'timeline', menu: 'notes', type: 'timeline', item: '[data-testid="nt-timeline-card"]' },
   { key: 'diary', menu: 'diary', item: '.dj-card' },
@@ -420,7 +420,7 @@ const MEASURE_PANELS = [
 
 const SCREENSHOT_PANELS = [
   { key: 'home', menu: 'home', wait: '[data-testid="home-greeting"]' },
-  { key: 'todos', menu: 'todos', wait: '[data-testid="td-item"]' },
+  { key: 'todos', menu: 'todos', wait: '[data-testid="td-table"]' },
   { key: 'notes', menu: 'notes', wait: '[data-testid="note-card"]' },
   { key: 'diary', menu: 'diary', wait: '.dj-card' },
   { key: 'countdowns', menu: 'countdowns', wait: '[data-testid="cd-item"]' },
@@ -516,7 +516,7 @@ async function setDark(page, dark) {
 // 10 个菜单面板：wait=进入面板后的首屏 testid；toggle/item 用于展开默认收起的列表（健康子面板/记账）后实测「有数据时仍一屏」
 const CONTRACT_PANELS = [
   { key: 'home', menu: 'home', wait: '[data-testid="home-greeting"]' },
-  { key: 'todos', menu: 'todos', wait: '[data-testid="td-item"]' },
+  { key: 'todos', menu: 'todos', wait: '[data-testid="td-table"]' },
   { key: 'notes', menu: 'notes', wait: '[data-testid="note-card"]' },
   { key: 'diary', menu: 'diary', wait: '.dj-card' },
   { key: 'countdowns', menu: 'countdowns', wait: '[data-testid="cd-item"]' },
@@ -582,12 +582,21 @@ async function getPagerState(page) {
   return m ? { page: Number(m[1]), total: Number(m[2]), text: info } : { page: 0, total: 0, text: info }
 }
 
-/** 等 TransitionGroup leave 完成（td-card 过渡 0.15s，翻页后新旧卡短并存——固定 120ms 等待会读到旧页首条，S2 实证）。
- *  mode 'changed'：等首条文本不再是 target（下一页）；'restored'：等首条文本恢复 target（上一页）。 */
+/** 读取待办 el-pagination（td-pagination）状态：无分页条（total≤10）→ null；否则 {page, total}。
+ *  EP el-pagination 无「第 X / Y 页」文本：page=li.is-active 文本、total=li.number（页码按钮）数量（含省略号 more 时 number 仍在）。 */
+async function getTdPager(page) {
+  const pager = page.locator('[data-testid="td-pagination"]')
+  if ((await pager.count()) === 0) return null
+  const active = ((await pager.locator('.el-pager li.is-active').first().textContent()) || '').trim()
+  const total = await pager.locator('.el-pager li.number').count()
+  return { page: Number(active) || 0, total }
+}
+
+/** 等列表首条变化/还原（el-table 行重渲染同步，无需 TransitionGroup 长等待）。 */
 async function waitTodoFirst(page, target, mode) {
   await page.waitForFunction(
     ({ target, mode }) => {
-      const el = document.querySelector('[data-testid="td-item"]')
+      const el = document.querySelector('[data-testid="td-table"] .el-table__row')
       if (!el) return false
       const text = (el.textContent || '').trim().slice(0, 24)
       return mode === 'changed' ? text !== target : text === target
@@ -677,81 +686,93 @@ async function runContractAssertions(page) {
     }
   }
 
-  // ===== S2：待办分页条可见 + 边界禁用 + 翻页内容变化（15 条 @ 1366x768 必多页）=====
+  // ===== S2：待办 el-pagination 分页条可见 + 边界禁用 + 翻页内容变化（15 条必多页）=====
   await page.setViewportSize({ width: 1366, height: 768 })
   await setDark(page, false)
   await page.waitForTimeout(150)
-  await guard('S2 待办分页条：可见 + 边界禁用 + 翻页变化', async () => {
+  await guard('S2 待办 el-pagination：可见 + 边界禁用 + 翻页变化', async () => {
     await navPanel(page, 'todos')
-    await page.waitForSelector('[data-testid="td-item"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="td-table"]', { state: 'visible', timeout: 10000 })
     await page.click('[data-testid="td-search-reset"]')
     await page.waitForTimeout(120)
-    const p0 = await getPagerState(page)
+    const p0 = await getTdPager(page)
     if (!p0 || p0.total < 2) {
-      record('S2 待办分页条（跳过：数据不足一页）', true, { pager: p0 })
+      record('S2 待办 el-pagination（跳过：数据不足一页）', true, { pager: p0 })
       return
     }
-    const prevDisabled0 = await page.locator('[data-testid="panel-pager-prev"]').isDisabled()
-    const nextDisabled0 = await page.locator('[data-testid="panel-pager-next"]').isDisabled()
-    const first0 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
+    const prevDisabled0 = await page
+      .locator('[data-testid="td-pagination"] .btn-prev')
+      .evaluate((el) => el.classList.contains('is-disabled') || el.getAttribute('disabled') !== null)
+      .catch(() => false)
+    const nextDisabled0 = await page
+      .locator('[data-testid="td-pagination"] .btn-next')
+      .evaluate((el) => el.classList.contains('is-disabled') || el.getAttribute('disabled') !== null)
+      .catch(() => false)
+    const first0 = ((await page.locator('[data-testid="td-table"] .el-table__row').first().textContent()) || '').trim().slice(0, 24)
     record(`S2 初始第 ${p0.page} / ${p0.total} 页（prev=${prevDisabled0} next=${nextDisabled0}）`, p0.page === 1 && prevDisabled0 && !nextDisabled0, { p0 })
-    await page.locator('[data-testid="panel-pager-next"]').click()
+    await page.locator('[data-testid="td-pagination"] .btn-next').click()
     await waitTodoFirst(page, first0, 'changed')
-    const p1 = await getPagerState(page)
-    const prevDisabled1 = await page.locator('[data-testid="panel-pager-prev"]').isDisabled()
-    const first1 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
+    const p1 = await getTdPager(page)
+    const prevDisabled1 = await page
+      .locator('[data-testid="td-pagination"] .btn-prev')
+      .evaluate((el) => el.classList.contains('is-disabled') || el.getAttribute('disabled') !== null)
+      .catch(() => false)
+    const first1 = ((await page.locator('[data-testid="td-table"] .el-table__row').first().textContent()) || '').trim().slice(0, 24)
     record(`S2 下一页 → 第 ${p1 ? p1.page : '?'} 页 + 首条变化`, p1 && p1.page === 2 && !prevDisabled1 && first1 !== first0, { p1, first1 })
-    await page.locator('[data-testid="panel-pager-prev"]').click()
+    await page.locator('[data-testid="td-pagination"] .btn-prev').click()
     await waitTodoFirst(page, first0, 'restored')
-    const p2 = await getPagerState(page)
-    const first2 = ((await page.locator('[data-testid="td-item"]').first().textContent()) || '').trim().slice(0, 24)
+    const p2 = await getTdPager(page)
+    const first2 = ((await page.locator('[data-testid="td-table"] .el-table__row').first().textContent()) || '').trim().slice(0, 24)
     record(`S2 上一页 → 第 ${p2 ? p2.page : '?'} 页 + 首条还原`, p2 && p2.page === 1 && first2 === first0, { p2 })
     let guardN = 0
     while (guardN < 12) {
-      const cur = await getPagerState(page)
+      const cur = await getTdPager(page)
       if (!cur || cur.page >= cur.total) break
-      await page.locator('[data-testid="panel-pager-next"]').click()
+      await page.locator('[data-testid="td-pagination"] .btn-next').click()
       await page.waitForTimeout(100)
       guardN++
     }
-    const pLast = await getPagerState(page)
-    const nextDisabledLast = await page.locator('[data-testid="panel-pager-next"]').isDisabled()
+    const pLast = await getTdPager(page)
+    const nextDisabledLast = await page
+      .locator('[data-testid="td-pagination"] .btn-next')
+      .evaluate((el) => el.classList.contains('is-disabled') || el.getAttribute('disabled') !== null)
+      .catch(() => false)
     record(`S2 末页 next 禁用（第 ${pLast ? pLast.page : '?'} / ${pLast ? pLast.total : '?'} 页）`, pLast && pLast.page === pLast.total && nextDisabledLast, { pLast })
   })
 
   // ===== S3：筛选/分类/月份切换后 goto(1) 回第 1 页 =====
   await guard('S3 待办搜索 goto(1)', async () => {
     await navPanel(page, 'todos')
-    await page.waitForSelector('[data-testid="td-item"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="td-table"]', { state: 'visible', timeout: 10000 })
     await page.click('[data-testid="td-search-reset"]')
     await page.waitForTimeout(100)
-    const p0 = await getPagerState(page)
+    const p0 = await getTdPager(page)
     if (!p0 || p0.total < 2) {
       record('S3 待办搜索 goto(1)（跳过：无分页）', true, {})
       return
     }
-    await page.locator('[data-testid="panel-pager-next"]').click()
+    await page.locator('[data-testid="td-pagination"] .btn-next').click()
     await page.waitForTimeout(100)
-    // 「待办任务 1」命中 td_1 + td_10..td_15 共 7 条 → 仍 2 页 → 断言回第 1 页
+    // 「待办任务 1」命中 td_1 + td_10..td_15 共 7 条 → ≤10 单页 → el-pagination 隐藏（v-if total>10）且命中仍在
     await page.fill('[data-testid="td-search-title"]', '待办任务 1')
     await page.click('[data-testid="td-search-btn"]')
     await page.waitForTimeout(150)
-    const p1 = await getPagerState(page)
-    const itemCount = await page.locator('[data-testid="td-item"]').count()
+    const p1 = await getTdPager(page)
+    const itemCount = await page.locator('[data-testid="td-table"] .el-table__row').count()
     const ok = itemCount > 0 && (!p1 || p1.page === 1)
     record(`S3 待办搜索 goto(1)（搜索后第 ${p1 ? p1.page : '—'} 页 / 命中 ${itemCount} 条）`, ok, { p1, itemCount })
   })
   await guard('S3 待办分类 tab goto(1)', async () => {
-    const p0 = await getPagerState(page)
+    const p0 = await getTdPager(page)
     if (!p0 || p0.total < 2) {
       record('S3 待办分类 tab goto(1)（跳过：无分页）', true, {})
     } else {
-      await page.locator('[data-testid="panel-pager-next"]').click()
+      await page.locator('[data-testid="td-pagination"] .btn-next').click()
       await page.waitForTimeout(100)
       await page.click('[data-testid="td-cat-all"]')
       await page.waitForTimeout(120)
-      const p1 = await getPagerState(page)
-      const itemCount = await page.locator('[data-testid="td-item"]').count()
+      const p1 = await getTdPager(page)
+      const itemCount = await page.locator('[data-testid="td-table"] .el-table__row').count()
       const ok = itemCount > 0 && (!p1 || p1.page === 1)
       record(`S3 待办分类 tab goto(1)（点击后第 ${p1 ? p1.page : '—'} 页 / ${itemCount} 条）`, ok, { p1, itemCount })
     }
@@ -889,24 +910,25 @@ async function runContractAssertions(page) {
     }
   })
 
-  // ===== S6：375×667 移动端分页惰性 + 页面滚动保留（.wb-content overflow-y auto）+ 无横向溢出 =====
-  await guard('S6 移动端 375×667：待办全量渲染 + 无分页条 + 滚动保留', async () => {
+  // ===== S6：375×667 移动端 el-table 固定 10 条/页 + 页面滚动保留（.wb-content overflow-y auto）+ 无横向溢出 =====
+  // 待办 2026-09 起 el-table + el-pagination 固定 10 条/页：移动端不再惰性渲染 15 条，固定渲染 10 行 + 分页条可见（表格内部横向滚动由 el-table 自含）
+  await guard('S6 移动端 375×667：待办 10 行 + el-pagination 可见 + 滚动保留', async () => {
     await page.setViewportSize({ width: 375, height: 667 })
     await page.waitForTimeout(200)
     await navPanel(page, 'todos')
-    await page.waitForSelector('[data-testid="td-item"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="td-table"]', { state: 'visible', timeout: 10000 })
     await page.click('[data-testid="td-search-reset"]')
     await page.waitForTimeout(120)
-    const todoCount = await page.locator('[data-testid="td-item"]').count()
-    const pagerCount = await page.locator('[data-testid="panel-pager"]').count()
+    const todoRows = await page.locator('[data-testid="td-table"] .el-table__row').count()
+    const pagerCount = await page.locator('[data-testid="td-pagination"]').count()
     const m = await metricsOf(page)
     const overflowAuto = m.wcOverflowY === 'auto'
     const scrollable = m.wcScrollH > m.wcClientH
     const noHOverflow = m.wcScrollW <= m.wcClientW + 1 && m.docScrollW <= m.docClientW + 1
     record(
-      `S6 待办 @ 375×667（全量 ${todoCount} 条 / 分页条 ${pagerCount} / overflow-y=${m.wcOverflowY} / 可滚动=${scrollable} / 无横向溢出=${noHOverflow}）`,
-      todoCount === 15 && pagerCount === 0 && overflowAuto && scrollable && noHOverflow,
-      { todoCount, pagerCount, overflowY: m.wcOverflowY, scrollable, noHOverflow }
+      `S6 待办 @ 375×667（行 ${todoRows} / el-pagination ${pagerCount} / overflow-y=${m.wcOverflowY} / 可滚动=${scrollable} / 无横向溢出=${noHOverflow}）`,
+      todoRows === 10 && pagerCount === 1 && overflowAuto && scrollable && noHOverflow,
+      { todoRows, pagerCount, overflowY: m.wcOverflowY, scrollable, noHOverflow }
     )
   })
   await guard('S6 移动端 375×667：记账无分页条 + 无横向溢出', async () => {

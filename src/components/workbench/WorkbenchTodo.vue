@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue'
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { filterTodos, dueInfo } from '@/composables/todoCore'
 import type { TodoFilterCriteria } from '@/composables/todoCore'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
 import { TODO_COLOR_PRESETS, DEFAULT_TODO_COLOR } from '@/types'
-import PanelPager from './PanelPager.vue'
-import { usePanelPaging } from '@/composables/usePanelPaging'
+
 
 const store = useWorkbenchTodosStore()
 
@@ -23,7 +22,7 @@ const activeCategoryId = ref('')
 
 function selectCategoryTab(name: string): void {
   activeCategoryId.value = name
-  paging.goto(1)
+  listPage.value = 1
 }
 
 const hasActiveFilter = computed(() =>
@@ -41,7 +40,7 @@ function applySearch(): void {
     priority: searchPriority.value,
     status: searchStatus.value
   }
-  paging.goto(1)
+  listPage.value = 1
 }
 
 function resetSearch(): void {
@@ -51,7 +50,7 @@ function resetSearch(): void {
   searchStatus.value = ''
   activeCategoryId.value = ''
   appliedFilters.value = {}
-  paging.goto(1)
+  listPage.value = 1
 }
 
 // 列表渲染用筛选后的数据（标签页与查询条件叠加）；排序由 store 的 sortedTodos 保证
@@ -74,17 +73,22 @@ function heroOf(todo: WorkbenchTodo): TodoHero | null {
 
 const viewTodos = computed(() => filteredTodos.value.map(todo => ({ todo, hero: heroOf(todo) })))
 
-// ===== 自适应分页（Wave-2 T5）：≥769px 分页；≤768px 惰性（全量渲染、pager 隐藏，R2）=====
-const gridEl = ref<HTMLElement | null>(null)
-// reactive() 解包嵌套 ref：模板中 paging.pageItems/currentPage/totalPages/fitsOnePage 直接取值
-// （Vue 模板只对顶层 ref 自动解包，嵌套 ref 需 reactive 包装，vue-tsc 实证）
-const paging = reactive(usePanelPaging({
-  items: () => viewTodos.value,
-  rowHeight: 148,
-  maxRows: 2,
-  containerRef: gridEl,
-  gridRef: gridEl
-}))
+// ===== 固定分页（el-table 列表，10 条/页）=====
+const LIST_PAGE_SIZE = 10
+const listPage = ref(1)
+const pageTodos = computed(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return viewTodos.value.slice(start, start + LIST_PAGE_SIZE)
+})
+
+// 条目数缩减后钳制页码，避免末页渲染为空
+watch(
+  () => viewTodos.value.length,
+  (n) => {
+    const maxPage = Math.max(1, Math.ceil(n / LIST_PAGE_SIZE))
+    if (listPage.value > maxPage) listPage.value = maxPage
+  }
+)
 
 // ===== 表单状态机（新增/编辑共用，弹框承载）=====
 const showDialog = ref(false)
@@ -159,7 +163,7 @@ async function handleSave(): Promise<void> {
       color: formColor.value,
       categoryId: formCategoryId.value || undefined
     })
-    paging.goto(1) // 新增条目回第 1 页（复用日记分页惯例）
+    listPage.value = 1 // 新增条目回第 1 页（复用日记分页惯例）
   }
   cancelForm()
 }
@@ -174,11 +178,21 @@ async function handleDelete(id: string): Promise<void> {
   }
 }
 
+// 行点击 → 编辑（保留旧卡片点击行为）
+function rowClick(todoRow: { todo: WorkbenchTodo; hero: TodoHero | null }): void {
+  startEdit(todoRow.todo)
+}
+
 // ===== 优先级徽章 =====
 const PRIORITY_META: Record<TodoPriority, { label: string; className: string }> = {
   high: { label: '高', className: 'prio-high' },
   medium: { label: '中', className: 'prio-medium' },
   low: { label: '低', className: 'prio-low' }
+}
+
+// el-table 插槽 row 为 any，索引查询走显式类型助手避免 TS7053
+function priorityMeta(priority: TodoPriority): { label: string; className: string } {
+  return PRIORITY_META[priority]
 }
 
 
@@ -198,7 +212,7 @@ watch(
   (cats) => {
     if (activeCategoryId.value !== '' && !cats.includes(activeCategoryId.value)) {
       activeCategoryId.value = ''
-      paging.goto(1)
+      listPage.value = 1
     }
   }
 )
@@ -291,65 +305,84 @@ onUnmounted(() => {
       <button class="btn-cancel" @click="resetSearch">重置查询</button>
     </div>
 
-    <div v-else ref="gridEl" class="td-grid" :class="{ 'td-grid-scroll': !paging.fitsOnePage }">
-      <TransitionGroup name="grid">
-      <div
-        v-for="v in paging.pageItems"
-        :key="v.todo.id"
-        class="td-card"
-        data-testid="td-item"
-        :style="{ '--td-color': v.todo.color ?? DEFAULT_TODO_COLOR }"
-        role="button"
-        tabindex="0"
-        @click="startEdit(v.todo)"
-        @keyup.enter="startEdit(v.todo)"
-      >
-        <div class="td-card-head">
-          <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
-          <span
-            class="prio-badge"
-            :class="PRIORITY_META[v.todo.priority].className"
-            :data-testid="`td-prio-${v.todo.id}`"
-          >
-            {{ PRIORITY_META[v.todo.priority].label }}
-          </span>
-        </div>
+    <div v-else class="td-table-wrap">
+      <el-table :data="pageTodos" data-testid="td-table" @row-click="rowClick" style="width:100%">
+        <el-table-column label="完成" width="70" align="center">
+          <template #default="{ row: v }">
+            <el-checkbox
+              :model-value="v.todo.completed"
+              :data-testid="`td-toggle-${v.todo.id}`"
+              :title="v.todo.completed ? '标记为未完成' : '标记为已完成'"
+              @click.stop
+              @change="handleToggle(v.todo)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="标题" min-width="200" show-overflow-tooltip>
+          <template #default="{ row: v }">
+            <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="描述" min-width="160" show-overflow-tooltip>
+          <template #default="{ row: v }">
+            <span v-if="v.todo.description" class="td-desc">{{ v.todo.description }}</span>
+            <span v-else class="td-col-empty">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="优先级" width="90" align="center">
+          <template #default="{ row: v }">
+            <span
+              class="prio-badge"
+              :class="priorityMeta(v.todo.priority).className"
+              :data-testid="`td-prio-${v.todo.id}`"
+            >{{ priorityMeta(v.todo.priority).label }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="截止日期" width="150">
+          <template #default="{ row: v }">
+            <div v-if="v.todo.dueDate" class="td-meta">
+              <span
+                class="td-date"
+                :class="{ overdue: !v.todo.completed && v.hero?.status === 'overdue' }"
+              >{{ v.todo.dueDate }}</span>
+              <span
+                v-if="!v.todo.completed && v.hero?.status === 'overdue'"
+                class="overdue-tag"
+              >已逾期</span>
+            </div>
+            <span v-else class="td-col-empty">—</span>
+            <div v-if="v.hero && v.hero.status !== 'done'" class="td-hero" :class="'td-' + v.hero.status">
+              <span class="td-hero-value">{{ v.hero.label }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="分类" width="130">
+          <template #default="{ row: v }">
+            <span v-if="v.todo.categoryId" class="td-cat-badge" :data-testid="`td-cat-badge-${v.todo.id}`">{{ v.todo.categoryId }}</span>
+            <span v-else class="td-col-empty">未分类</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="110" align="center">
+          <template #default="{ row: v }">
+            <div class="td-actions" @click.stop>
+              <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
+              <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
 
-        <div v-if="v.hero" class="td-hero" :class="'td-' + v.hero.status">
-          <span class="td-hero-value">{{ v.hero.label }}</span>
-        </div>
-
-        <div v-if="v.todo.description" class="td-desc">{{ v.todo.description }}</div>
-
-        <span v-if="v.todo.categoryId" class="td-cat-badge" :data-testid="`td-cat-badge-${v.todo.id}`">{{ v.todo.categoryId }}</span>
-
-        <div v-if="v.todo.dueDate" class="td-meta">
-          <span
-            class="td-date"
-            :class="{ overdue: !v.todo.completed && v.hero?.status === 'overdue' }"
-          >
-            {{ v.todo.dueDate }}
-          </span>
-          <span
-            v-if="!v.todo.completed && v.hero?.status === 'overdue'"
-            class="overdue-tag"
-          >已逾期</span>
-        </div>
-
-        <div class="td-actions" @click.stop>
-          <el-checkbox
-            :model-value="v.todo.completed"
-            :data-testid="`td-toggle-${v.todo.id}`"
-            :title="v.todo.completed ? '标记为未完成' : '标记为已完成'"
-            @change="handleToggle(v.todo)"
-          />
-          <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
-        </div>
-      </div>
-      </TransitionGroup>
+      <el-pagination
+        v-if="viewTodos.length > LIST_PAGE_SIZE"
+        :current-page="listPage"
+        :page-size="LIST_PAGE_SIZE"
+        :total="viewTodos.length"
+        layout="prev, pager, next"
+        data-testid="td-pagination"
+        background
+        @current-change="(p: number) => { listPage = p }"
+      />
     </div>
-
-    <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
 
     <!-- 新增/编辑弹框 -->
     <el-dialog
@@ -589,44 +622,16 @@ onUnmounted(() => {
   border-color: var(--color-primary, var(--color-primary));
 }
 
-/* ===== 卡片墙 ===== */
-.td-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: 148px;
-  gap: 10px;
-  align-content: start;
-}
-
-.td-card {
-  --td-color: #3b82f6;
-  position: relative;
+/* ===== 表格列表 ===== */
+.td-table-wrap {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  background-image: linear-gradient(135deg, color-mix(in srgb, var(--td-color) 8%, transparent), transparent 55%);
-  border: 1px solid var(--color-border, var(--color-border));
-  border-left: 4px solid var(--td-color);
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  cursor: pointer;
-  transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease),
-    border-color var(--transition-fast, 0.15s ease);
+  gap: 8px;
 }
 
-.td-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(0, 0, 0, 0.12));
-  border-color: color-mix(in srgb, var(--td-color) 45%, var(--color-border, #e2e8f0));
-}
-
-.td-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 4px;
+.td-col-empty {
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-size: 12px;
 }
 
 .td-title {
@@ -1069,11 +1074,6 @@ html.dark .td-search {
   box-shadow: none;
 }
 
-html.dark .td-card {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
 html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
 }
@@ -1202,16 +1202,12 @@ html.dark .btn-add:disabled {
   }
 }
 
-/* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T5，R1/R2/R7）===== */
+/* ===== 桌面端 ≥769px：表格区占满剩余高度并内部滚动 ===== */
 @media (min-width: 769px) {
   /* flex 列内可收缩占满剩余高度（T3 shell 契约 .wb-content > * flex:1 min-height:0 已在视图层就位） */
-  .td-grid {
+  .td-table-wrap {
     flex: 1;
     min-height: 0;
-  }
-
-  /* 列表区滚动兜底：仅 !fitsOnePage（一屏放不下）时由模板类绑定启用（R7） */
-  .td-grid-scroll {
     overflow-y: auto;
   }
 }

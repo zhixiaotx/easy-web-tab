@@ -317,6 +317,12 @@ async function handleDelete(): Promise<void> {
   line-height: 1.6;
 }
 
+/* EP textarea 内层同样 ≥260px（外层 min-height 不传导到 <textarea>，且 EP 内联 min-height:31px 挡样式表，
+   需 !important 才能覆盖内联样式；桌面媒体查询再以 height:100% 覆盖为列高，此处为移动端/未钉满时兜底） */
+.dj-content-input :deep(.el-textarea__inner) {
+  min-height: 260px !important;
+}
+
 .dj-preview {
   min-height: 260px;
   max-height: 480px;
@@ -589,15 +595,24 @@ async function handleDelete(): Promise<void> {
   border-radius: 6px;
 }
 
-/* ===== 桌面 769-1099px：单列堆叠、历史网格高度受限（自适应分页测量基准，R3）===== */
+/* ===== 桌面 769-1099px：单列堆叠、写作区 80% / 历史 20%、历史网格高度受限（自适应分页测量基准，R3）===== */
 @media (min-width: 769px) and (max-width: 1099.98px) {
-  /* dj-main 纵向铺满工具栏以下剩余高度；历史列 flex:1、网格 flex:1 → RO 测得的是可用高度而非内容高度 */
+  /* dj-main 纵向铺满工具栏以下剩余高度；编辑器 flex:4（80%）+ 历史 flex:1（20%）上下五五分高，
+     写作区占比更大以展示更多内容；历史网格 flex:1 → RO 测得的是可用高度而非内容高度 */
   .dj-main {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  /* 写作区占 80%：flex 列让内部 textarea/preview 填满列高（仿 ≥1100px 双栏规则） */
+  .dj-editor {
+    flex: 4;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .dj-history {
@@ -608,6 +623,22 @@ async function handleDelete(): Promise<void> {
   .dj-grid {
     flex: 1;
     min-height: 0;
+  }
+
+  /* 编辑器列填满 80% 高度：textarea/preview height 100%（覆盖单列 min-height: 260px 规则） */
+  .dj-main .dj-content-input,
+  .dj-main .dj-preview {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .dj-main .dj-preview {
+    max-height: none;
+  }
+
+  /* el-input textarea 内层 <textarea> 拉伸填满列高（EP 默认固定 ~5 行 52px 不撑满，实测 innerH=52） */
+  .dj-main .dj-content-input :deep(.el-textarea__inner) {
+    height: 100%;
   }
 }
 
@@ -644,6 +675,11 @@ async function handleDelete(): Promise<void> {
 
   .dj-main .dj-preview {
     max-height: none;
+  }
+
+  /* el-input textarea 内层 <textarea> 拉伸填满列高（EP 默认固定 ~5 行 52px 不撑满，实测 innerH=52） */
+  .dj-main .dj-content-input :deep(.el-textarea__inner) {
+    height: 100%;
   }
 }
 

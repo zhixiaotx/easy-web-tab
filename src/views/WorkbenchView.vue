@@ -353,15 +353,21 @@ async function handleSyncNowClick(): Promise<void> {
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--motion-duration, 220ms) var(--motion-ease, ease);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   white-space: nowrap;
 }
 
 .wb-btn:hover {
+  /* 统一微交互：hover 抬升（PRD §6.1） */
+  transform: var(--motion-hover-rise, translateY(-1px));
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+.wb-btn:active:not(:disabled) {
+  transform: var(--motion-press, scale(0.97));
 }
 
 .wb-body {
@@ -434,7 +440,12 @@ async function handleSyncNowClick(): Promise<void> {
   font-size: 14px;
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--motion-duration, 220ms) var(--motion-ease, ease);
+}
+
+/* 统一微交互：按压缩放（菜单项不做抬升，避免侧栏/底部 Tab 割裂） */
+.wb-menu-item:active {
+  transform: var(--motion-press, scale(0.97));
 }
 
 .wb-menu-icon {
@@ -533,10 +544,14 @@ html.dark .wb-content {
   background-color: var(--color-bg, #111827);
 }
 
-/* 移动端菜单底边框沿用亮色 token，暗色下需覆盖 */
+/* 移动端底部 Tab Bar 顶边框（原为侧栏右/底边框），暗色下需覆盖 */
 @media (max-width: 768px) {
   html.dark .wb-menu {
-    border-bottom-color: var(--color-border, #374151);
+    border-top-color: var(--color-border, #374151);
+  }
+
+  html.dark .wb-menu {
+    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
   }
 }
 
@@ -560,15 +575,26 @@ html.dark .wb-content {
     flex-direction: column;
   }
 
+  /* 侧栏降级为底部固定 Tab Bar：脱离文档流、常驻拇指区，保留全部菜单项横向滚动 */
   .wb-menu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
     width: 100%;
     flex-direction: row;
+    gap: 4px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
     scroll-snap-type: x proximity;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     border-right: none;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    border-bottom: none;
+    background-color: var(--color-bg-card, #ffffff);
+    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
   }
 
   /* 移动端横排布局：忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
@@ -604,9 +630,9 @@ html.dark .wb-content {
     min-height: 40px;
   }
 
-  /* P3-13 窄屏间距压缩：内容区内边距收窄 */
+  /* P3-13 窄屏间距压缩：内容区内边距收窄；底部留白避让固定 Tab Bar（40px 触控 + 内边距 + 安全区） */
   .wb-content {
-    padding: 12px;
+    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }
 

@@ -10,6 +10,7 @@ import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentAchievementsStore } from '@/stores/studentAchievements'
 import { useToast } from '@/composables/useToast'
+import { useThemeStore } from '@/stores/theme'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import type { StudentParentTask } from '@/types'
@@ -33,6 +34,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const themeStore = useThemeStore()
 
 // ===== stores =====
 const tasksStore = useStudentParentTasksStore()
@@ -217,14 +219,56 @@ const weekTrendData = computed(() => {
 })
 
 // ===== 近 7 天趋势图（ECharts 柱状图） =====
+// canvas 渲染不支持 CSS 变量颜色 → 用 getComputedStyle 解析真实 token 值，
+// 并依赖 themeStore.theme 在亮暗切换时重算（ECharts: 柱渐变/轨道/圆角/图例/tooltip/动画）
+function cssVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return v || fallback
+}
+
 const weekChartOption = computed(() => {
   const days = weekTrendData.value.map(d => d.date)
   const habitPcts = weekTrendData.value.map(d => Math.round(d.habitPct * 100))
   const hwPcts = weekTrendData.value.map(d => Math.round(d.hwPct * 100))
+  // 读取主题真实值（亮/暗 token），图表随主题色联动
+  const isDark = themeStore.theme === 'dark'
+  const text = cssVar('--color-text-secondary', isDark ? '#9ca3af' : '#64748b')
+  const border = cssVar('--color-border', isDark ? '#374151' : '#e2e8f0')
+  const surface = cssVar('--color-bg-card', isDark ? '#1f2937' : '#ffffff')
+  const track = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)'
+  const shadow = isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.12)'
+  // 色板：习惯打卡率=主色蓝（--color-primary），作业完成率=success 绿（--color-success）
+  const habitTop = cssVar('--color-primary', '#3b82f6')
+  const habitBottom = cssVar('--color-primary-hover', '#2563eb')
+  const hwTop = cssVar('--color-success', '#10b981')
+  const hwBottom = '#059669'
+  const radius: [number, number, number, number] = [5, 5, 2, 2]
+  const baseBar = {
+    barWidth: 18,
+    barGap: '30%',
+    showBackground: true,
+    backgroundStyle: { color: track, borderRadius: radius },
+    itemStyle: { borderRadius: radius },
+    emphasis: { focus: 'series' as const },
+    blur: { itemStyle: { opacity: 0.35 } }
+  }
   return {
+    animationDuration: 900,
+    animationDurationUpdate: 500,
+    animationEasing: 'cubicOut' as const,
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      axisPointer: {
+        type: 'shadow',
+        shadowStyle: { color: track }
+      },
+      backgroundColor: surface,
+      borderColor: border,
+      borderWidth: 1,
+      padding: [8, 12],
+      textStyle: { color: text, fontSize: 12 },
+      extraCssText: `border-radius: 8px; box-shadow: 0 4px 16px ${shadow};`,
       formatter: (params: any[]) => {
         const date = params[0].axisValue
         const lines = params.map((p: any) =>
@@ -235,44 +279,70 @@ const weekChartOption = computed(() => {
     },
     legend: {
       data: ['习惯打卡率', '作业完成率'],
-      bottom: 0,
-      textStyle: { color: 'var(--color-text-secondary, #6b7280)', fontSize: 11 },
-      itemWidth: 12,
-      itemHeight: 12
+      top: 0,
+      right: 0,
+      icon: 'roundRect',
+      itemWidth: 14,
+      itemHeight: 8,
+      itemGap: 18,
+      textStyle: { color: text, fontSize: 12 }
     },
-    grid: { left: 44, right: 16, top: 16, bottom: 36, containLabel: false },
+    grid: { left: 40, right: 12, top: 36, bottom: 28, containLabel: false },
     xAxis: {
       type: 'category',
       data: days,
-      axisLine: { lineStyle: { color: 'var(--color-border, #e5e7eb)' } },
-      axisLabel: { color: 'var(--color-text-secondary, #6b7280)', fontSize: 10 }
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: text, fontSize: 11, margin: 10 }
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 100,
-      interval: 50,
+      interval: 25,
+      axisLine: { show: false },
+      axisTick: { show: false },
       axisLabel: {
-        color: 'var(--color-text-secondary, #6b7280)',
-        fontSize: 10,
+        color: text,
+        fontSize: 11,
         formatter: '{value}%'
       },
-      splitLine: { lineStyle: { color: 'var(--color-border, #e5e7eb)', type: 'dashed' } }
+      splitLine: { lineStyle: { color: border, type: 'dashed' } }
     },
     series: [
       {
         name: '习惯打卡率',
         type: 'bar',
         data: habitPcts,
-        itemStyle: { color: 'var(--color-primary, #10b981)', borderRadius: [3, 3, 0, 0] },
-        barWidth: 14
+        ...baseBar,
+        itemStyle: {
+          ...baseBar.itemStyle,
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: habitTop },
+              { offset: 1, color: habitBottom }
+            ]
+          }
+        }
       },
       {
         name: '作业完成率',
         type: 'bar',
         data: hwPcts,
-        itemStyle: { color: '#f59e0b', borderRadius: [3, 3, 0, 0] },
-        barWidth: 14
+        ...baseBar,
+        itemStyle: {
+          ...baseBar.itemStyle,
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: hwTop },
+              { offset: 1, color: hwBottom }
+            ]
+          }
+        }
       }
     ]
   }

@@ -9,6 +9,7 @@ import './styles/element-theme.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import './style.css'
 import './styles/background.css'
+import './styles/mobile.css'
 import { useThemeStore } from './stores/theme'
 import { useAppSettingsStore } from './stores/settings'
 

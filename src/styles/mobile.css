@@ -1,0 +1,68 @@
+/* ============================================
+   移动端弹窗全屏化（PRD §5.3）
+   <768px 时弹窗铺满视口；桌面端保持居中卡片，完全不受影响。
+
+   实现说明（为何用 !important 与 > * 选择器）：
+   1. 项目内手写弹窗（.modal / .manager / .dialog / .help-modal / .pwd-modal …）
+      全部是各组件 <style scoped> 内重复定义，选择器带 [data-v-xxx]，
+      特异性高于全局类选择器 —— 因此全局兜底必须加 !important 才能生效。
+   2. 内层卡片类名高度碎片化（同一 .manager 在不同文件语义不同），
+      故不对卡片类名逐个枚举，而是统一作用于「遮罩层的直接子元素」，
+      既覆盖全部弹窗，又不会误伤弹窗之外的同名元素。
+   3. Element Plus 的 .el-dialog 不带 data-v 属性，全局规则即可一次性
+      命中全部使用方（约 24 个文件），无需逐组件修改。
+   4. 卡片保留 overflow-y:auto：即便某些弹窗内部结构不支持 flex 收缩，
+      内容也能整体滚动查看，绝不被裁切。
+   ============================================ */
+@media (max-width: 767px) {
+  /* 1) 遮罩层：去掉用于居中的留白内边距，铺满视口 */
+  .dialog-overlay,
+  .manager-overlay,
+  .modal-overlay,
+  .pwd-modal-overlay,
+  .note-overlay,
+  .reminder-overlay,
+  .sp-overlay,
+  .biz-dialog-overlay,
+  .bizcat-overlay,
+  .el-overlay {
+    padding: 0 !important;
+  }
+
+  /* 2) 手写弹窗卡片（遮罩层直接子元素）：全屏化，保留自身滚动 */
+  .dialog-overlay > *,
+  .manager-overlay > *,
+  .modal-overlay > *,
+  .pwd-modal-overlay > *,
+  .note-overlay > *,
+  .reminder-overlay > *,
+  .sp-overlay > *,
+  .biz-dialog-overlay > *,
+  .bizcat-overlay > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  /* 3) Element Plus 弹窗：全屏 + body 区独立滚动（结构统一，可安全固定头尾） */
+  .el-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .el-dialog__body {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+}

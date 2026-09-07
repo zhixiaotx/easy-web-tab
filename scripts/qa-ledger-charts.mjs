@@ -4,11 +4,12 @@
  * 在 E1 脚手架（后台启动/复用 vite dev 16718-16726 → /workbench → 点击 wb-menu-ledger →
  * 6 统计卡 + 月份导航 + 截图 + JSON 日志）基础上，扩展完整场景契约：
  *
- *  - 数据注入：在点击菜单触发 loadLedger 之前，直接向 IndexedDB（easy-web-tab v5，store 'ledger'，键 'items'）
- *    写入 6 个月（当前真实月 + 前 5 个月，跨年安全）的记账数据——每月 4 条（工资收入 + 房贷/餐饮/出行支出）。
- *    注意 income 取 `10000 + 月索引×2000`（最大值 20000 = nice 天花板，使最高柱顶与顶部网格线严格对齐，
- *    满足 S1 的对齐断言；若用 ×1000 则最大值 15000 → nice 天花板 20000，顶部对齐断言不成立）。
- *  - S1 趋势柱状图：12 柱 / 5 网格线 / 6 月标签 / max 标签 / 柱顶与顶部网格线对齐 ≤1px。
+ *  - 数据注入：在点击菜单触发 loadLedger 之前，直接向 IndexedDB（easy-web-tab v12，store 'ledger'，键 'items'）
+ *    写入 12 个月（当前真实月 + 前 11 个月，对齐组件 calcTrendSeries months=12，跨年安全）的记账数据——
+ *    每月 4 条（工资收入 + 房贷/餐饮/出行支出）。
+ *    注意 income 取 `6000 + 月索引×4000`（最大值 50000 = nice 天花板，使最高柱顶与顶部网格线严格对齐，
+ *    满足 S1 的对齐断言；若峰值不成 nice 值则顶部对齐断言不成立）。
+ *  - S1 趋势柱状图：24 柱 / 5 网格线 / 12 月标签 / max 标签 / 柱顶与顶部网格线对齐 ≤1px。*  - S3 趋势空态：注入「远未来月份（2999-01）」数据 → 近 12 月窗口全 0 → ld-trend-empty 可见、0 柱、卡仍在；
  *  - S2 环形图周长不变量：各段 dash 长度之和 ≈ 2π×90；每段 dash+rest ≈ 2π×90；首段 accent、后续段 hex 且互异；
  *    中心金额默认掩码 '****'。
  *  - S3 趋势空态：注入「远未来月份（2999-01）」数据 → 近 6 月窗口全 0 → ld-trend-empty 可见、0 柱、卡仍在；
@@ -134,7 +135,8 @@ const STAT_TESTIDS = [
 const MONTH_TESTIDS = ['ld-prev', 'ld-next', 'ld-month', 'ld-today']
 
 // ===== QA 注入数据 =====
-const RING_C = 2 * Math.PI * 90 // ≈ 565.4867，WorkbenchLedger.vue 环形图常量
+// WorkbenchLedger.vue 环形图常量：00e4ec7「环形图增粗」radius 90→80 → 2π×80 ≈ 502.6548
+const RING_C = 2 * Math.PI * 80
 const QA_CATEGORIES = [
   { id: 'salary', name: '工资', type: 'income', isBuiltIn: true },
   { id: 'mortgage', name: '房贷', type: 'expense', isBuiltIn: true },
@@ -150,20 +152,20 @@ function monthKeyOffset(offset) {
 }
 
 /**
- * 正常场景：当前月 + 前 5 个月，每月 4 条（salary/mortgage/food/travel）。
- * income = 10000 + 月索引×2000 → 最大 20000 = trendChartScale 的 nice 天花板（maxY），
+ * 正常场景：当前月 + 前 11 个月（共 12 月，对齐组件 calcTrendSeries months=12），每月 4 条（salary/mortgage/food/travel）。
+ * income = 6000 + 月索引×4000 → 最大 50000 = trendChartScale 的 nice 天花板（maxY），
  * 最高柱顶与顶部网格线（maxY 线）严格对齐，供 S1 对齐断言使用。
- * expense = 4000+m / 1500+m / 600+m（m=0..5），全部互异且为正。
+ * expense = 4000+m / 1500+m / 600+m（m=0..11），全部互异且为正。
  */
 function buildNormalLedgerData() {
   const entries = []
-  for (let offset = -5; offset <= 0; offset++) {
+  for (let offset = -11; offset <= 0; offset++) {
     const mk = monthKeyOffset(offset)
-    const m = offset + 5 // 0..5
+    const m = offset + 11 // 0..11
     const date = `${mk}-10`
     const ts = `${mk}-10T08:00:00.000Z`
     const specs = [
-      { id: 'salary', categoryId: 'salary', amount: 10000 + m * 2000 },
+      { id: 'salary', categoryId: 'salary', amount: 6000 + m * 4000 },
       { id: 'mortgage', categoryId: 'mortgage', amount: 4000 + m },
       { id: 'food', categoryId: 'food', amount: 1500 + m },
       { id: 'travel', categoryId: 'travel', amount: 600 + m }
@@ -183,7 +185,7 @@ function buildNormalLedgerData() {
   return { categories: QA_CATEGORIES, entries }
 }
 
-/** 空场景：全部流水在远未来 '2999-01' → 以当前月为末月的近 6 月窗口全 0 → 趋势空态。 */
+/** 空场景：全部流水在远未来 '2999-01' → 以当前月为末月的近 12 月窗口全 0 → 趋势空态。 */
 function buildFutureLedgerData() {
   const date = '2999-01-10'
   const ts = '2999-01-10T08:00:00.000Z'
@@ -203,7 +205,7 @@ function buildFutureLedgerData() {
 async function injectLedgerData(page, data) {
   return page.evaluate((payload) => {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open('easy-web-tab', 6)
+      const req = indexedDB.open('easy-web-tab')
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains('ledger')) req.result.createObjectStore('ledger')
       }
@@ -292,7 +294,7 @@ try {
   //     故在本页已打开、菜单点击前注入即可，注入 promise 返回后数据已落库）=====
   const normalData = buildNormalLedgerData()
   const injected = await injectLedgerData(page, normalData)
-  record('注入正常场景数据（6 个月 × 4 分类，含当前月，共 24 条）', injected === true, {
+  record('注入正常场景数据（12 个月 × 4 分类，含当前月，共 48 条）', injected === true, {
     categories: normalData.categories.length,
     entries: normalData.entries.length
   })
@@ -320,14 +322,14 @@ try {
   const allMonthNav = MONTH_TESTIDS.every((v) => monthResults[v])
   record('d) 月份导航（上月/下月/月份输入/本月）存在', allMonthNav, monthResults)
 
-  // ===== S1) 趋势柱状图：6 个月 × 2 柱 + 网格线 + 坐标对齐 =====
+  // ===== S1) 趋势柱状图：12 个月 × 2 柱 + 网格线 + 坐标对齐 =====
   const barCount = await page.locator('[data-testid^="ld-trend-bar-"]').count()
   const gridCount = await page.locator('[data-testid="ld-trend"] .ld-trend-gridline').count()
   const maxLabelVisible = await page.locator('[data-testid="ld-trend-max"]').isVisible()
   const maxLabelText = (await page.locator('[data-testid="ld-trend-max"]').textContent()).trim()
   const monthLabelCount = await page.locator('[data-testid^="ld-trend-month-"]').count()
   let wellFormedBars = true
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 12; i++) {
     for (const kind of ['income', 'expense']) {
       const c = await page.locator(`[data-testid="ld-trend-bar-${i}-${kind}"]`).count()
       if (c !== 1) wellFormedBars = false
@@ -346,17 +348,17 @@ try {
   )
   const topGridY = Math.min(...gridYs) // 顶部网格线 = maxY 线
   const maxBar = await page.evaluate(() => {
-    const b = document.querySelector('[data-testid="ld-trend-bar-5-income"]')
+    const b = document.querySelector('[data-testid="ld-trend-bar-11-income"]')
     return { h: Number(b.getAttribute('height')), y: Number(b.getAttribute('y')) }
   })
   const allBarsPositive = barGeos.every((b) => b.h > 0 && b.y >= 0)
   const topAligned = Math.abs(maxBar.y - topGridY) <= 1
   record(
-    'S1) 趋势柱状图 6 个月×2 柱 + 5 网格线 + 6 月标签 + 最高柱与顶部网格线对齐 ≤1px',
-    barCount === 12 &&
+    'S1) 趋势柱状图 12 个月×2 柱 + 5 网格线 + 12 月标签 + 最高柱与顶部网格线对齐 ≤1px',
+    barCount === 24 &&
       gridCount === 5 &&
       maxLabelVisible &&
-      monthLabelCount === 6 &&
+      monthLabelCount === 12 &&
       wellFormedBars &&
       allBarsPositive &&
       topAligned,
@@ -383,7 +385,7 @@ try {
     new Set(laterStrokes).size === laterStrokes.length
   const centerText = (await page.locator('[data-testid="ld-donut-center"]').textContent()).trim()
   record(
-    'S2) 环形图周长不变量（Σdash≈2π×90；每段 dash+rest≈2π×90）+ 首段 accent/后续 hex 互异 + 中心默认掩码 ****',
+    'S2) 环形图周长不变量（Σdash≈2π×80；每段 dash+rest≈2π×80）+ 首段 accent/后续 hex 互异 + 中心默认掩码 ****',
     segCountOk &&
       Math.abs(sumFirstTokens - RING_C) < 2 &&
       perSegSumOk &&
@@ -401,7 +403,7 @@ try {
     }
   )
 
-  // ===== S3) 趋势空态：注入远未来数据 → 近 6 月窗口全 0 =====
+  // ===== S3) 趋势空态：注入远未来数据 → 近 12 月窗口全 0 =====
   const futureInjected = await injectLedgerData(page, buildFutureLedgerData())
   await page.reload({ waitUntil: 'networkidle' })
   await page.waitForSelector('[data-testid="wb-menu-ledger"]', { state: 'visible', timeout: 15000 })
@@ -541,7 +543,7 @@ try {
     result: `${verdict} (${totalPassed}/${results.length})`,
     browser: 'chromium (playwright, headless)',
     dev_server: `vite on ${devBase} (${startedByUs ? 'started by script' : 'reused existing'})`,
-    injection: 'page.evaluate → IndexedDB easy-web-tab v5 / ledger / items（点击菜单挂载 loadLedger 前注入）',
+    injection: 'page.evaluate → IndexedDB easy-web-tab v12 / ledger / items（点击菜单挂载 loadLedger 前注入）',
     evidence_png: EVIDENCE_PNG,
     evidence_light: EVIDENCE_LIGHT,
     evidence_dark: EVIDENCE_DARK,
@@ -549,7 +551,7 @@ try {
   }
   writeFileSync(
     EVIDENCE_LOG,
-    JSON.stringify({ task: 'ledger-charts: QA 全量契约 S1-S7（近 6 月收支趋势柱状图 + 支出分类占比环形图 + 回归断言）', qa }, null, 2),
+    JSON.stringify({ task: 'ledger-charts: QA 全量契约 S1-S7（近 12 月收支趋势柱状图 + 支出分类占比环形图 + 回归断言）', qa }, null, 2),
     'utf8'
   )
   console.log(`[qa] QA evidence log written: ${EVIDENCE_LOG}`)

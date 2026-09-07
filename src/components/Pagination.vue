@@ -227,4 +227,51 @@ const handleSizeChange = (event: Event) => {
 :global(.dark) .page-info {
   color: var(--color-text-secondary, #d1d5db);
 }
+
+/* ===== 移动端优化（≤768px）=====
+   1) 页码区改横向滚动、不换行：页码多时不撑高容器（与工作台底部 Tab Bar 同一手法）
+   2) 触控目标放大到 44×44（WCAG 2.2 目标尺寸下限）
+   3) 正文放大到 15px，符合移动端可读性基线 */
+@media (max-width: 768px) {
+  .pagination-wrapper {
+    gap: 10px;
+  }
+
+  .pagination {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    /* 允许收缩 + 内部横向滚动，避免整条被内容顶宽溢出视口 */
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .pagination::-webkit-scrollbar {
+    display: none;
+  }
+
+  .page-btn {
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 15px;
+  }
+
+  .page-size-selector {
+    flex: 0 0 auto;
+  }
+
+  .page-size-select {
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .page-info {
+    font-size: 15px;
+  }
+}
 </style>

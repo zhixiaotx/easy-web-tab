@@ -616,6 +616,45 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
 
   .container {
     padding-top: 72px;
+    /* 左右内边距收窄，给卡片网格让出宽度 */
+    padding-left: 12px;
+    padding-right: 12px;
+    /* 为贴底分页条避让（分页约 66px 高 + 安全区） */
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 站点网格：小屏降为 150px 最小列宽，360px 屏可排两列，一屏看到更多站点 */
+  .sites-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .nav-filter-toggle {
+    margin-top: 12px;
+  }
+
+  .empty-state {
+    padding: 40px 16px;
+    font-size: 15px;
+  }
+
+  /* 底部固定分页：浮空胶囊在窄屏会换行撑高并遮挡内容，改为贴底全宽条 */
+  /* 选择器带 .container 提升特异性，覆盖 Pagination 组件内 .pagination-wrapper 的 margin/padding */
+  .container .bottom-pagination {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    transform: none;
+    margin-top: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  html.dark .container .bottom-pagination {
+    background-color: rgba(31, 41, 55, 0.95);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
   }
 }
 

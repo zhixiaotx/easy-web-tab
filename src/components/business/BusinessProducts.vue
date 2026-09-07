@@ -244,8 +244,8 @@ function drawerMarkupRate(): number | null {
         <div class="biz-field">
           <label>分类</label>
           <el-select v-model="formCategoryId" data-testid="bizprod-form-category">
-            <el-option value="">未分类</el-option>
-            <el-option v-for="cat in store.productCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</el-option>
+            <el-option value="" label="未分类" />
+            <el-option v-for="cat in store.productCategories" :key="cat.id" :value="cat.id" :label="cat.name" />
           </el-select>
         </div>
         <div class="biz-form-row">

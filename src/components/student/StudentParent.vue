@@ -14,6 +14,13 @@ import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import type { StudentParentTask } from '@/types'
 import { dateKeyOf } from '@/composables/diaryCore'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
+
+use([CanvasRenderer, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
 const props = defineProps<{
   /** 家长模式是否解锁：false 时整页锁态 + 居中按钮 → @open-pin 冒泡到父层 */
@@ -207,6 +214,68 @@ const weekTrendData = computed(() => {
     data.push({ date: key.slice(5), habitPct: avgHabit, hwPct })
   }
   return data
+})
+
+// ===== 近 7 天趋势图（ECharts 柱状图） =====
+const weekChartOption = computed(() => {
+  const days = weekTrendData.value.map(d => d.date)
+  const habitPcts = weekTrendData.value.map(d => Math.round(d.habitPct * 100))
+  const hwPcts = weekTrendData.value.map(d => Math.round(d.hwPct * 100))
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const date = params[0].axisValue
+        const lines = params.map((p: any) =>
+          `${p.marker}${p.seriesName}：${p.value}%`
+        )
+        return `${date}<br/>${lines.join('<br/>')}`
+      }
+    },
+    legend: {
+      data: ['习惯打卡率', '作业完成率'],
+      bottom: 0,
+      textStyle: { color: 'var(--color-text-secondary, #6b7280)', fontSize: 11 },
+      itemWidth: 12,
+      itemHeight: 12
+    },
+    grid: { left: 44, right: 16, top: 16, bottom: 36, containLabel: false },
+    xAxis: {
+      type: 'category',
+      data: days,
+      axisLine: { lineStyle: { color: 'var(--color-border, #e5e7eb)' } },
+      axisLabel: { color: 'var(--color-text-secondary, #6b7280)', fontSize: 10 }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      interval: 50,
+      axisLabel: {
+        color: 'var(--color-text-secondary, #6b7280)',
+        fontSize: 10,
+        formatter: '{value}%'
+      },
+      splitLine: { lineStyle: { color: 'var(--color-border, #e5e7eb)', type: 'dashed' } }
+    },
+    series: [
+      {
+        name: '习惯打卡率',
+        type: 'bar',
+        data: habitPcts,
+        itemStyle: { color: 'var(--color-primary, #10b981)', borderRadius: [3, 3, 0, 0] },
+        barWidth: 14
+      },
+      {
+        name: '作业完成率',
+        type: 'bar',
+        data: hwPcts,
+        itemStyle: { color: '#f59e0b', borderRadius: [3, 3, 0, 0] },
+        barWidth: 14
+      }
+    ]
+  }
 })
 
 // ===== Tab 3: 手动加分 =====
@@ -570,29 +639,12 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
           <div class="stp-report-block">
             <h4 class="stp-report-subtitle">近 7 天趋势</h4>
             <div class="stp-chart-wrap">
-              <svg class="stp-week-chart" viewBox="0 0 560 200" preserveAspectRatio="none" aria-label="近 7 天趋势图">
-                <g stroke="var(--color-border, #e5e7eb)" stroke-dasharray="3 4">
-                  <line x1="40" y1="40"  x2="540" y2="40" />
-                  <line x1="40" y1="90"  x2="540" y2="90" />
-                  <line x1="40" y1="140" x2="540" y2="140" />
-                </g>
-                <g fill="var(--color-text-secondary, #6b7280)" font-size="10" text-anchor="end">
-                  <text x="34" y="44">100%</text>
-                  <text x="34" y="94">50%</text>
-                  <text x="34" y="144">0%</text>
-                </g>
-                <g v-for="(d, i) in weekTrendData" :key="d.date">
-                  <rect :x="50 + i * 72" :y="140 - Math.round(d.habitPct * 100)" width="22" :height="Math.round(d.habitPct * 100)" fill="var(--color-primary, #10b981)" rx="3" />
-                  <rect :x="78 + i * 72" :y="140 - Math.round(d.hwPct * 100)" width="22" :height="Math.round(d.hwPct * 100)" fill="#f59e0b" rx="3" />
-                  <text :x="61 + i * 72" y="164" text-anchor="middle" font-size="10" fill="var(--color-text-secondary, #6b7280)">{{ d.date }}</text>
-                </g>
-                <g font-size="11" fill="var(--color-text-secondary, #6b7280)">
-                  <rect x="50"  y="178" width="12" height="12" rx="2" fill="var(--color-primary, #10b981)" />
-                  <text x="68" y="188">习惯打卡率</text>
-                  <rect x="160" y="178" width="12" height="12" rx="2" fill="#f59e0b" />
-                  <text x="178" y="188">作业完成率</text>
-                </g>
-              </svg>
+              <v-chart
+                class="stp-week-chart"
+                :option="weekChartOption"
+                autoresize
+                aria-label="近 7 天趋势图"
+              />
             </div>
           </div>
         </section>
@@ -1024,10 +1076,12 @@ html.dark .stp-pager-info {
 .stp-chart-wrap {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 10px; padding: 10px;
-  width: 100%; overflow-x: auto;
+  border-radius: 10px;
+  padding: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
-.stp-week-chart { width: 100%; min-width: 500px; height: 200px; }
+.stp-week-chart { width: 100%; height: 260px; }
 
 .stp-points-form {
   display: grid; grid-template-columns: 160px 1fr auto;

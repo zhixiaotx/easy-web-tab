@@ -257,11 +257,35 @@ onMounted(async () => {
         >
           <div class="se-card-head">
             <div class="se-card-title" :title="item.name">{{ item.name }}</div>
+            <span v-if="item.category" class="se-type-badge">{{ item.category }}</span>
             <span v-if="repeatLabel(item.repeat) !== '一次性'" class="se-repeat-badge">{{ repeatLabel(item.repeat) }}</span>
           </div>
-          <div class="se-remaining" :class="statusClass(item.remaining.status)">
-            <span class="se-remaining-label">{{ item.remaining.isExpired ? '已过期' : '剩余' }}</span>
-            <span class="se-remaining-value">{{ item.remaining.label }}</span>
+          <div class="se-hero" :class="statusClass(item.remaining.status)">
+            <template v-if="item.remaining.status === 'expired'">
+              <div class="se-hero-big se-hero-expired">{{ item.remaining.isExpired ? '已过期' : '时间无效' }}</div>
+              <div v-if="item.remaining.isExpired" class="se-hero-sub">{{ item.remaining.label }}</div>
+            </template>
+            <template v-else-if="item.remaining.label === '就是今天！'">
+              <div class="se-hero-big se-hero-today">今天</div>
+              <div class="se-hero-sub">加油！</div>
+            </template>
+            <template v-else>
+              <div class="se-hero-big" v-if="item.remaining.days > 0">
+                {{ item.remaining.days }}<span class="se-hero-unit">天</span>
+              </div>
+              <div class="se-hero-big" v-else-if="item.remaining.hours > 0">
+                {{ item.remaining.hours }}<span class="se-hero-unit">时</span>
+              </div>
+              <div class="se-hero-big" v-else>
+                {{ item.remaining.minutes }}<span class="se-hero-unit">分</span>
+              </div>
+              <div v-if="item.remaining.days > 0 && item.remaining.hours > 0" class="se-hero-sub">
+                {{ item.remaining.hours }}时{{ item.remaining.minutes }}分
+              </div>
+              <div v-else-if="item.remaining.days === 0 && item.remaining.hours > 0 && item.remaining.minutes > 0" class="se-hero-sub">
+                {{ item.remaining.minutes }}分钟
+              </div>
+            </template>
           </div>
           <div class="se-meta">
             <span class="se-datetime">{{ item.remaining.nextTime }}</span>
@@ -459,35 +483,48 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: 150px;
-  padding: 12px;
-  background: var(--color-surface, #fff);
+  padding: 12px 12px 10px;
+  background: color-mix(in srgb, var(--se-color) 6%, var(--color-surface, #fff));
   border: 1px solid var(--color-border, #e5e7eb);
   border-top: 3px solid var(--se-color);
   border-radius: 10px;
   cursor: pointer;
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 .se-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: color-mix(in srgb, var(--se-color) 45%, var(--color-border, #e2e8f0));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--se-color) 18%, rgba(0,0,0,0.06));
+  border-color: color-mix(in srgb, var(--se-color) 50%, var(--color-border, #e2e8f0));
+}
+.dark .se-card {
+  background: color-mix(in srgb, var(--se-color) 8%, var(--color-surface, #1a1a2e));
 }
 
 .se-card-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 5px;
+  margin-bottom: 4px;
 }
 .se-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
+  color: var(--color-text, #1f2937);
+}
+.se-type-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--se-color) 10%, transparent);
+  color: var(--se-color);
+  flex-shrink: 0;
+  line-height: 1.4;
 }
 .se-repeat-badge {
   font-size: 10px;
@@ -496,41 +533,59 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--se-color) 12%, transparent);
   color: var(--se-color);
   flex-shrink: 0;
+  line-height: 1.4;
 }
 
-.se-remaining {
+.se-hero {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
 }
-.se-remaining-label {
-  font-size: 16px;
-  font-weight: 700;
+.se-hero-big {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
-.se-remaining-value {
-  font-size: 16px;
-  font-weight: 700;
+.se-hero-unit {
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 1px;
+  opacity: 0.7;
 }
-.status-normal .se-remaining-label,
-.status-normal .se-remaining-value { color: var(--color-text, #1f2937); }
-.status-urgent .se-remaining-label,
-.status-urgent .se-remaining-value { color: #f59e0b; }
-.status-critical .se-remaining-label,
-.status-critical .se-remaining-value { color: #ef4444; }
-.status-expired .se-remaining-label,
-.status-expired .se-remaining-value { color: var(--color-text-muted, #9ca3af); }
+.se-hero-sub {
+  font-size: 11px;
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* status colors on the hero big number */
+.status-normal .se-hero-big { color: var(--se-color); }
+.status-urgent .se-hero-big { color: #f59e0b; }
+.status-critical .se-hero-big { color: #ef4444; }
+.status-expired .se-hero-big { color: var(--color-text-muted, #9ca3af); }
+
+/* expired / invalid / today special states */
+.se-hero-expired { opacity: 0.55; }
+.se-hero-today {
+  color: var(--color-primary, #10b981);
+  font-size: 28px;
+}
 
 .se-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  font-size: 11px;
-  color: var(--color-text-muted, #6b7280);
-  border-top: 1px dashed var(--color-border, #e5e7eb);
-  padding-top: 6px;
+  font-size: 10px;
+  color: var(--color-text-muted, #9ca3af);
+  border-top: 1px solid color-mix(in srgb, var(--se-color) 10%, var(--color-border, #e5e7eb));
+  padding-top: 5px;
+  letter-spacing: 0.02em;
 }
 .se-datetime { font-size: 10px; }
 
@@ -636,5 +691,7 @@ onMounted(async () => {
   .se-stats { grid-template-columns: repeat(2, 1fr); }
   .se-grid { grid-template-columns: 1fr; }
   .se-card { height: auto; min-height: 150px; }
+  .se-hero-big { font-size: 36px; }
+  .se-hero-today { font-size: 32px; }
 }
 </style>

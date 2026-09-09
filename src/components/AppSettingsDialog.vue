@@ -863,6 +863,7 @@ watch(
 const cloudSync = useCloudSync()
 const syncTestBusy = ref(false)
 const syncNowBusy = ref(false)
+const forcePullBusy = ref(false)
 
 const lastSyncText = computed(() => {
   const t = cloudSync.lastSyncAt.value
@@ -897,6 +898,18 @@ async function handleSyncNow(): Promise<void> {
   syncNowBusy.value = true
   await cloudSync.syncNow()
   syncNowBusy.value = false
+}
+
+/** 以云端覆盖本地：外部工具改过云端 JSON 后常规同步不生效时的兜底入口 */
+async function handleForcePull(): Promise<void> {
+  if (forcePullBusy.value) return
+  const confirmed = window.confirm(
+    '将忽略本地未推送的改动，无条件用云端数据覆盖本地。\n\n适用于：用备份编辑技能或手工改过云端文件后，「立即同步」未生效的情况。\n\n确定继续吗？'
+  )
+  if (!confirmed) return
+  forcePullBusy.value = true
+  await cloudSync.forcePullRemote()
+  forcePullBusy.value = false
 }
 
 // ESC 键关闭弹框
@@ -2221,8 +2234,19 @@ onUnmounted(() => {
               :disabled="syncNowBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
               @click="handleSyncNow"
             >立即同步</button>
+            <button
+              type="button"
+              class="wb-menu-btn"
+              data-testid="sync-force-pull"
+              title="忽略本地未推送的改动，无条件用云端数据覆盖本地。用于外部工具（备份编辑技能）改过云端 JSON 后同步不生效的情况"
+              :disabled="forcePullBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              @click="handleForcePull"
+            >以云端覆盖本地</button>
             <span data-testid="sync-last" class="wb-menu-hint" style="margin-left: auto;">上次同步：{{ lastSyncText }}</span>
           </div>
+          <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 6px;">
+            用外部工具改过云端文件后若「立即同步」未生效，点「以云端覆盖本地」强制采纳云端（本地未推送的改动会被覆盖）。
+          </p>
           <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
             <span class="remind-label">自动同步间隔（分钟，0=关闭）</span>
             <input

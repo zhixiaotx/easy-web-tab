@@ -1131,6 +1131,7 @@ async function pullNow(silent = false): Promise<void> {
     const localTs = Number(localStorage.getItem(LAST_SYNC_KEY) || '0')
     let hasConflict = false
     let appliedAny = false
+    let mergedAny = false
     let workbenchIdentityChanged = false
 
     for (const cfg of FILE_CONFIGS) {
@@ -1147,12 +1148,24 @@ async function pullNow(silent = false): Promise<void> {
       if (remoteHash === localHash) continue  // 内容一致 → noop
 
       // remoteTs：信封内嵌 pushedAt 与 Last-Modified 取较大值
-      const remoteTs = Math.max(
-        (remote as { pushedAt?: number }).pushedAt ?? 0,
-        remoteInfo.lastModifiedMs
-      )
+      //
+      // 关键：外部工具（备份编辑技能 add_entry.py）直接改写云端 JSON 时，
+      // 只会更新条目 updatedAt，**不会更新信封内的 pushedAt**（它不认识这个字段）。
+      // 此时判断"远端是否更新过"唯一可信的依据就是 WebDAV 的 Last-Modified。
+      // 若两者都拿不到（代理/服务端未透传 Last-Modified 且文件无 pushedAt），
+      // 不能判定为"远端更旧"而跳过——那会把外部修改静默丢弃。
+      // 退化策略：视为刚被外部修改（用当前时间），进入合并/冲突流程而非跳过。
+      const pushedAt = (remote as { pushedAt?: number }).pushedAt ?? 0
+      const lastModifiedMs = remoteInfo.lastModifiedMs
+      // 只有「信封内 pushedAt 与 WebDAV Last-Modified 两者都有」时，时间戳才可信。
+      // 缺任一 → 无法证明远端更旧，一律视为远端可能有外部修改（remoteTs 取当前时间）。
+      const timestampsReliable = pushedAt > 0 && lastModifiedMs > 0
+      const remoteTs = lastModifiedMs > 0 ? Math.max(pushedAt, lastModifiedMs) : Date.now()
 
-      if (dirty && remoteTs > localTs) {
+      // 注意：走到这里已确认远端与本地内容不同（hash 不相等）。
+      // 因此在时间戳不可信时绝不能走"跳过"分支——那会把外部修改静默丢弃，
+      // 表现就是"技能改了云端，点同步却没生效"。
+      if (dirty && (remoteTs > localTs || !timestampsReliable)) {
         // 本地 dirty 且远程更新 → 两端都有变更，合并或冲突
         const diff = cfg.diffSize(localExport, remote)
         if (diff < MODULE_DIFF_THRESHOLD) {
@@ -1160,6 +1173,7 @@ async function pullNow(silent = false): Promise<void> {
           const merged = cfg.merge(localExport, remote)
           await cfg.importRemote(merged)
           appliedAny = true
+          mergedAny = true
         } else {
           // 差异较大 → 冲突
           if (!conflictData.value) conflictData.value = {}
@@ -1167,8 +1181,9 @@ async function pullNow(silent = false): Promise<void> {
           hasConflict = true
         }
       } else if (dirty && remoteTs <= localTs) {
-        // 本地 dirty 但远程更旧或相同（本地改动尚未推送）→ 跳过此文件，保留本地新值
-        // 等待 pushNow 用本地内容覆盖远程
+        // 仅当两个时间戳都可信、且远端确实更旧/相同时才跳过：
+        // 本地改动尚未推送 → 跳过此文件，保留本地新值，等待 pushNow 用本地内容覆盖远程
+        // （时间戳不可信的情况已被上面的 !timestampsReliable 分支接走，不会走到这里）
       } else if (!dirty) {
         // 本地无变更 → 直接拉取覆盖本地
         const result = await applyFileRemote(cfg, remote)
@@ -1202,10 +1217,16 @@ async function pullNow(silent = false): Promise<void> {
       await reloadAllStores()
       // clearDirty 必须在 reloadAllStores 之后：reload 中的 save 会 markDirty
       clearDirty()
+      // 静默合并的结果只落在本地：若不回推，云端仍是旧版本（外部工具的修改与本次
+      // 合并结果都没上云），下次 pull 会重复触发合并，其他设备也永远拿不到合并结果。
+      // merged 已包含本地与远端两侧的条目（union），回推不会丢数据。
+      if (mergedAny) {
+        await pushNow(true)
+      }
       if (workbenchIdentityChanged) {
         useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
       } else if (!silent) {
-        useToast().success('云同步完成')
+        useToast().success(mergedAny ? '云同步完成（已合并云端变更并回传）' : '云同步完成')
       }
     }
     status.value = 'idle'
@@ -1335,6 +1356,64 @@ export async function syncNow(silent = false): Promise<void> {
   }
 }
 
+/**
+ * 强制以云端覆盖本地（忽略本地 dirty 标记与时间戳比较，无条件采纳远端 5 份信封）。
+ *
+ * 使用场景：用外部工具（备份编辑技能 add_entry.py、或手工编辑坚果云同步文件夹里的 JSON）
+ * 直接改写云端数据后，程序内的常规同步可能不生效——常规 pullNow 在
+ * 「本地 dirty 且判定远端更旧」的分支会直接跳过远端，而外部工具写入时不会更新信封内的
+ * pushedAt，远端时间戳未必能正确推进。此时用本函数可确保外部修改一定落地。
+ *
+ * 会丢失的部分：本地尚未推送的改动（这正是"以云端为准"的语义），请谨慎使用。
+ */
+export async function forcePullRemote(silent = false): Promise<void> {
+  const settings = useAppSettingsStore()
+  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
+    if (!silent) useToast().error('请先在设置中启用并配置云同步')
+    return
+  }
+  status.value = 'pulling'
+  errorMessage.value = ''
+  const dir = dirUrl(settings.cloudSyncUrl!)
+  const username = settings.cloudSyncUsername!
+  const password = settings.cloudSyncPassword!
+  try {
+    let applied = false
+    let workbenchIdentityChanged = false
+    // 兜底用 Date.now()：保证 lastSyncAt 一定向前推进，避免之后再次因
+    // 时间戳比较把同一批外部修改判成"远端更旧"而跳过
+    let maxTs = Math.max(Number(localStorage.getItem(LAST_SYNC_KEY) || '0'), Date.now())
+    for (const cfg of FILE_CONFIGS) {
+      const result = await webdavGet(`${dir}/${cfg.name}`, username, password)
+      if (!result.data) continue // 该信封云端不存在 → 保留本地
+      const appliedResult = await applyFileRemote(cfg, result.data)
+      if (appliedResult.identityChanged) workbenchIdentityChanged = true
+      applied = true
+      const ts = Math.max((result.data as { pushedAt?: number }).pushedAt ?? 0, result.lastModifiedMs)
+      if (ts > maxTs) maxTs = ts
+    }
+    if (!applied) {
+      status.value = 'idle'
+      if (!silent) useToast().info('云端暂无数据，未做任何覆盖')
+      return
+    }
+    localStorage.setItem(LAST_SYNC_KEY, String(maxTs))
+    lastSyncAt.value = maxTs
+    await reloadAllStores()
+    clearDirty()
+    status.value = 'idle'
+    if (workbenchIdentityChanged) {
+      useToast().success('已用云端覆盖本地，密码面板已锁定，请输入来源设备主密码解锁')
+    } else if (!silent) {
+      useToast().success('已用云端覆盖本地')
+    }
+  } catch (e) {
+    status.value = 'error'
+    errorMessage.value = e instanceof Error ? e.message : '强制拉取失败'
+    if (!silent) useToast().error(`以云端覆盖本地失败：${errorMessage.value}`)
+  }
+}
+
 // ========== 拉取栅栏：visibilitychange visible 时 pullNow 的 Promise ==========
 // 其他模块（如倒计时提醒）可 await waitForPull() 确保先拉取最新数据再 tick
 let pendingPull: Promise<void> | null = null
@@ -1416,6 +1495,7 @@ export function useCloudSync() {
     pushNow,
     pullNow,
     syncNow,
+    forcePullRemote,
     resolveConflict,
     testConnection,
     markDirty,

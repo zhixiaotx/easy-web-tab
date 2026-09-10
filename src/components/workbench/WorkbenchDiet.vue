@@ -2,12 +2,14 @@
 import Icon from '../Icon.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import { calcDailyAttainment } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import { MEAL_TYPES, type MealType } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 
-const store = useWorkbenchHealthStore()
+// store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
+const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
 
 // ===== 顶部目标卡 =====
 const todayStr = localToday()

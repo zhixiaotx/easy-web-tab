@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import { calcBmi, classifyBmi, dietCalories, weightChartScale, weightTarget } from '@/composables/healthCore'
 import type { WeightChartPoint } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import Icon from '@/components/Icon.vue'
 
-const store = useWorkbenchHealthStore()
+// store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
+const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
 
 // ===== BMI 状态徽章（四色，分类必须调 healthCore classifyBmi）=====
 type BmiClass = ReturnType<typeof classifyBmi>

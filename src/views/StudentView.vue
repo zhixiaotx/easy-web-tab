@@ -5,7 +5,6 @@
 // 学段首次进入未初始化时强制弹框选择学段（StageOnboarding 内嵌）
 
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
@@ -32,11 +31,11 @@ import StudentParentPinDialog from '@/components/student/StudentParentPinDialog.
 import StudentPanelPlaceholder from '@/components/student/StudentPanelPlaceholder.vue'
 import StudentOnboarding from '@/components/student/StudentOnboarding.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
+import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 
-const router = useRouter()
 const studentStore = useStudentSettingsStore()
 const settingsStore = useAppSettingsStore()
 const rewardsStore = useStudentRewardsStore()
@@ -173,9 +172,6 @@ function navigateTo(section: StudentSectionKey) {
 const stageBadge = computed(() => studentStore.stageBadgeInfo)
 const stageLabel = computed(() => studentStore.stageLabelName)
 
-// 页面显示名（来自全局 settings store）
-const studentPageDisplayName = computed(() => settingsStore.studentPageDisplayName)
-
 // ===== 右上角云同步按钮（与工作台复用同一套开关：cloudSyncEnabled 时在设置按钮左边显示） =====
 const cloudSync = useCloudSync()
 const syncBusy = ref(false)
@@ -263,10 +259,7 @@ async function onOnboardingComplete() {
   <div class="st-shell">
     <header class="st-header">
       <div class="st-header-left">
-        <button class="st-btn" @click="router.push('/')" title="返回管理页">
-          <Icon name="arrow-left" />
-        </button>
-        <h1>{{ studentPageDisplayName }}</h1>
+        <PageSwitcher current="student" />
         <span
           class="st-stage-badge"
           :style="{ backgroundColor: stageBadge.color }"

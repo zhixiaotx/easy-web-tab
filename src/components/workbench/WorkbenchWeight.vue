@@ -395,10 +395,10 @@ onUnmounted(() => {
             <div class="field-hint">请输入 100-250 之间的整数</div>
           </div>
           <div class="form-actions">
-            <el-button type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">
+            <el-button native-type="button" class="btn-cancel" data-testid="wt-height-cancel" @click="closeHeightDialog">
               取消
             </el-button>
-            <el-button type="submit" class="btn-save" :disabled="!isHeightValid" data-testid="wt-height-save">保存</el-button>
+            <el-button native-type="submit" class="btn-save" :disabled="!isHeightValid" data-testid="wt-height-save">保存</el-button>
           </div>
         </form>
       </div>
@@ -454,10 +454,10 @@ onUnmounted(() => {
           </div>
 
           <div class="form-actions">
-            <el-button type="button" class="btn-cancel" data-testid="wt-cancel-record" @click="cancelRecordForm">
+            <el-button native-type="button" class="btn-cancel" data-testid="wt-cancel-record" @click="cancelRecordForm">
               取消
             </el-button>
-            <el-button type="submit" class="btn-save" :disabled="!isRecordValid" data-testid="wt-save-record">
+            <el-button native-type="submit" class="btn-save" :disabled="!isRecordValid" data-testid="wt-save-record">
               {{ editingId ? '保存' : '添加' }}
             </el-button>
           </div>

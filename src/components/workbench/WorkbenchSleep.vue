@@ -355,7 +355,7 @@ onUnmounted(() => {
           <div class="form-actions">
             <el-button
               v-if="targetView"
-              type="button"
+              native-type="button"
               class="btn-clear"
               data-testid="sl-clear-target"
               @click="handleClearTarget"
@@ -363,10 +363,10 @@ onUnmounted(() => {
               清除目标
             </el-button>
             <span class="form-actions-spacer"></span>
-            <el-button type="button" class="btn-cancel" data-testid="sl-cancel-target" @click="closeTargetDialog">
+            <el-button native-type="button" class="btn-cancel" data-testid="sl-cancel-target" @click="closeTargetDialog">
               取消
             </el-button>
-            <el-button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="sl-save-target">保存</el-button>
+            <el-button native-type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="sl-save-target">保存</el-button>
           </div>
         </form>
       </div>
@@ -446,10 +446,10 @@ onUnmounted(() => {
           </div>
 
           <div class="form-actions">
-            <el-button type="button" class="btn-cancel" data-testid="sl-cancel-record" @click="cancelRecordForm">
+            <el-button native-type="button" class="btn-cancel" data-testid="sl-cancel-record" @click="cancelRecordForm">
               取消
             </el-button>
-            <el-button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="sl-save-record">
+            <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="sl-save-record">
               {{ editingId ? '保存' : '添加' }}
             </el-button>
           </div>

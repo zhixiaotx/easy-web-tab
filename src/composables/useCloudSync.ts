@@ -567,7 +567,7 @@ function mergeBusiness(l: BusinessData | undefined, r: BusinessData | undefined)
   const purchases = mergeById(l?.purchases ?? [], r?.purchases ?? [], 'id', 'createdAt')
   const dailyRecords = dedupeByDateKeepNewest(mergeById(l?.dailyRecords ?? [], r?.dailyRecords ?? [], 'id', 'updatedAt'))
   const expenses = mergeById(l?.expenses ?? [], r?.expenses ?? [], 'id', 'createdAt')
-  const settings = l?.settings ?? r?.settings ?? { stallName: '', lowStockThreshold: 20 }
+  const settings = l?.settings ?? r?.settings ?? { stallName: '', lowStockThreshold: 20, monthlyRevenueTarget: 0 }
   return { productCategories, expenseCategories, products, purchases, dailyRecords, expenses, settings }
 }
 

@@ -66,7 +66,7 @@ export function emptyBusinessData(): BusinessData {
     purchases: [],
     dailyRecords: [],
     expenses: [],
-    settings: { stallName: '', lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD }
+    settings: { stallName: '', lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD, monthlyRevenueTarget: 0 }
   }
 }
 
@@ -204,12 +204,15 @@ function normExpense(raw: unknown): BusinessExpense | null {
 }
 
 function normalizeSettings(raw: unknown): BusinessSettings {
-  const out: BusinessSettings = { stallName: '', lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD }
+  const out: BusinessSettings = { stallName: '', lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD, monthlyRevenueTarget: 0 }
   if (raw === null || typeof raw !== 'object') return out
   const s = raw as Record<string, unknown>
   if (typeof s.stallName === 'string') out.stallName = s.stallName.trim().slice(0, 30)
   if (typeof s.lowStockThreshold === 'number' && Number.isFinite(s.lowStockThreshold)) {
     out.lowStockThreshold = Math.max(0, Math.floor(s.lowStockThreshold))
+  }
+  if (typeof s.monthlyRevenueTarget === 'number' && Number.isFinite(s.monthlyRevenueTarget)) {
+    out.monthlyRevenueTarget = Math.max(0, Math.floor(s.monthlyRevenueTarget))
   }
   return out
 }

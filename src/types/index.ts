@@ -497,6 +497,7 @@ export interface BusinessExpense {
 export interface BusinessSettings {
   stallName: string // 摊位名称（仅展示）
   lowStockThreshold: number // 低库存预警阈值，默认 20
+  monthlyRevenueTarget: number // 本月营业额目标（0 = 未设定，不显示进度环）
 }
 
 /** 销售记账数据（IndexedDB store 'business'，键 'items'） */

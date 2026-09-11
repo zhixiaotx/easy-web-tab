@@ -35,7 +35,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
   const purchases = ref<BusinessPurchase[]>([])
   const dailyRecords = ref<BusinessDailyRecord[]>([])
   const expenses = ref<BusinessExpense[]>([])
-  const settings = ref<BusinessData['settings']>({ stallName: '', lowStockThreshold: 20 })
+  const settings = ref<BusinessData['settings']>({ stallName: '', lowStockThreshold: 20, monthlyRevenueTarget: 0 })
   // 首屏数据加载态：loadBusiness 完成（成功或失败）后置 true，驱动首页骨架屏
   const loaded = ref(false)
 
@@ -357,6 +357,11 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     await saveBusiness()
   }
 
+  async function setMonthlyRevenueTarget(n: number): Promise<void> {
+    settings.value.monthlyRevenueTarget = Math.max(0, Math.floor(n))
+    await saveBusiness()
+  }
+
   return {
     productCategories,
     expenseCategories,
@@ -391,6 +396,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     updateExpense,
     deleteExpense,
     setStallName,
-    setLowStockThreshold
+    setLowStockThreshold,
+    setMonthlyRevenueTarget
   }
 })

@@ -228,6 +228,7 @@ export interface AppSettingsData {
   cloudSyncUsername?: string           // WebDAV 用户名（空串 = 未配置）
   cloudSyncPassword?: string           // WebDAV 应用密码（空串 = 未配置，存 IDB 非 localStorage）
   cloudSyncInterval?: number           // 后台定时同步间隔（0 = 仅触发式，>0 = 分钟数）
+  cloudSyncSilentThreshold?: number    // 静默合并阈值（本地与云端差异字符数 < 此值时后台静默合并，0=永不静默，默认 1000）
   homeCardLayout?: Record<string, HomeCardLayout> // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）
 }
 
@@ -985,7 +986,7 @@ export interface StudentParentTasksData {
 /** AppSettingsData 去除 cloudSync* 5 字段后的类型（WorkbenchSyncData.settings 专用） */
 export type AppSettingsDataNoCloudSync = Omit<
   AppSettingsData,
-  'cloudSyncEnabled' | 'cloudSyncUrl' | 'cloudSyncUsername' | 'cloudSyncPassword' | 'cloudSyncInterval'
+  'cloudSyncEnabled' | 'cloudSyncUrl' | 'cloudSyncUsername' | 'cloudSyncPassword' | 'cloudSyncInterval' | 'cloudSyncSilentThreshold'
 >
 
 /** NavSyncData：导航（localStorage 偏好打包）同步信封 */

@@ -293,6 +293,12 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   } else {
     out.cloudSyncInterval = 0
   }
+  // 静默合并阈值：数字则 clamp >=0 取整，否则回退默认 1000
+  if (typeof data.cloudSyncSilentThreshold === 'number' && Number.isFinite(data.cloudSyncSilentThreshold)) {
+    out.cloudSyncSilentThreshold = Math.max(0, Math.floor(data.cloudSyncSilentThreshold))
+  } else {
+    out.cloudSyncSilentThreshold = 1000
+  }
   out.homeCardLayout = normalizeHomeCardLayout(data.homeCardLayout)
   return out
 }
@@ -338,12 +344,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）：默认空 = 全部用组件内置默认布局
   const homeCardLayout = ref<Record<string, HomeCardLayout>>({})
 
-  // 云同步配置（5 字段）：默认关闭/空串
+  // 云同步配置（6 字段）：默认关闭/空串/间隔0/静默阈值1000
   const cloudSyncEnabled = ref<boolean>(false)
   const cloudSyncUrl = ref<string>('')
   const cloudSyncUsername = ref<string>('')
   const cloudSyncPassword = ref<string>('')
   const cloudSyncInterval = ref<number>(0)
+  const cloudSyncSilentThreshold = ref<number>(1000)
 
   // ========================================
   // 持久化
@@ -380,6 +387,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       cloudSyncUsername: cloudSyncUsername.value,
       cloudSyncPassword: cloudSyncPassword.value,
       cloudSyncInterval: cloudSyncInterval.value,
+      cloudSyncSilentThreshold: cloudSyncSilentThreshold.value,
       homeCardLayout: toRaw(homeCardLayout.value)
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
@@ -506,6 +514,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
         cloudSyncInterval.value = Math.max(0, Math.floor(effective.cloudSyncInterval))
       } else {
         cloudSyncInterval.value = 0
+      }
+      if (typeof effective.cloudSyncSilentThreshold === 'number' && Number.isFinite(effective.cloudSyncSilentThreshold)) {
+        cloudSyncSilentThreshold.value = Math.max(0, Math.floor(effective.cloudSyncSilentThreshold))
+      } else {
+        cloudSyncSilentThreshold.value = 1000
       }
       // 主页卡片布局：整包归一（IDB 直读路径不经过 parseSettingsData，此处必须自行 clamp）
       homeCardLayout.value = normalizeHomeCardLayout(effective.homeCardLayout)
@@ -762,6 +775,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncInterval.value = Math.max(0, Math.floor(n))
     persist()
   }
+  function setCloudSyncSilentThreshold(n: number) {
+    cloudSyncSilentThreshold.value = Math.max(0, Math.floor(n))
+    persist()
+  }
 
   // 菜单开关判定（缺失键 = 显示）；home 恒显示（视图/设置弹窗锁定其开关）
   function isWorkbenchMenuEnabled(key: string): boolean {
@@ -822,6 +839,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     cloudSyncUsername,
     cloudSyncPassword,
     cloudSyncInterval,
+    cloudSyncSilentThreshold,
     homeCardLayout,
     initSettings,
     applySettings,
@@ -853,6 +871,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setCloudSyncUsername,
     setCloudSyncPassword,
     setCloudSyncInterval,
+    setCloudSyncSilentThreshold,
     setHomeCardLayout,
     resetHomeCardLayout,
     resetDefaults,

@@ -458,6 +458,31 @@ const handlePageChange = () => {
   border-color: var(--color-border, #e2e8f0);
 }
 
+/* 导航页「添加网站」主行动按钮 */
+.btn-add-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease), transform var(--motion-duration, 220ms) var(--motion-ease, ease);
+  white-space: nowrap;
+}
+
+.btn-add-site:hover {
+  background-color: var(--color-primary-hover, #2563eb);
+}
+
+.btn-add-site:active {
+  transform: var(--motion-press, scale(0.97));
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;

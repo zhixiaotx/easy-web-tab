@@ -885,10 +885,16 @@ async function reloadStudentStores(): Promise<void> {
 
 async function reloadNavStores(): Promise<void> {
   // Nav prefs 写入 localStorage 后刷新消费 store（loadSites 内部会 loadGames；
-  // categories/engines/theme 等无 reload 方法的 store 由页面刷新或下次渲染自然刷新）
+  // categories/engines 等无 reload 方法的 store 由页面刷新或下次渲染自然刷新）
   try {
-    const [{ useSitesStore }] = await Promise.all([import('../stores/sites')])
+    const [{ useSitesStore }, { useThemeStore }] = await Promise.all([
+      import('../stores/sites'),
+      import('../stores/theme')
+    ])
     await useSitesStore().loadSites()
+    // 主题选择经 nav.json 的 user-theme 同步；拉取写回 localStorage 后须重新应用，
+    // 否则跨设备 / 云同步拉取后主题不会切换（initTheme 仅在 App 启动调用一次，幂等可重复）
+    useThemeStore().initTheme()
   } catch {
     // store 未就绪（如首次同步早于组件树挂载）→ 静默跳过，下次访问会从 localStorage 自然读取
   }

@@ -759,10 +759,12 @@ function mergeStudent(local: StudentSyncData, remote: StudentSyncData): StudentS
     const lv = local[key]
     const rv = remote[key]
     if (lv === undefined && rv === undefined) continue
-    if (key === 'studentSettings') {
-      // settings 整对象取远程：进入 merge 即代表 remoteTs > localTs，远程是明确推送过的新版本
-      // settings 为轻量偏好对象，整端取避免字段级混杂（如新菜单顺序配旧菜单标签）
-      ;(out as unknown as Record<string, unknown>)[key] = rv ?? lv
+    if (key === 'studentSettings' || key === 'timetable') {
+      // 本地优先：进入合并时本地 dirty（用户刚改的学段/学生信息/学生菜单/课程表）必须保留，
+      // 否则会被云端旧版整份覆盖、再被回推上云，表现即「改了没同步」。
+      // 课程表 schedule 是按 day/period 定位的二维数组，无法走按 id 合并，整体取本地避免结构损坏。
+      // 远端独有字段在各自缺失时仍由下方 mergeStudentValue 补位。
+      ;(out as unknown as Record<string, unknown>)[key] = lv ?? rv
     } else {
       ;(out as unknown as Record<string, unknown>)[key] = mergeStudentValue(lv, rv)
     }
@@ -774,13 +776,13 @@ function mergeStudentValue(lv: unknown, rv: unknown): unknown {
   // 都是数组
   if (Array.isArray(lv) && Array.isArray(rv)) {
     // 基元数组（元素为 string/number/boolean/null 等非对象）：不能用 mergeById('id')，
-    // 直接取远程（进入 merge 时已保证 remoteTs > localTs，远程是明确推送的新版本）
+    // 本地优先（本地 dirty 时用户刚做的改动应保留）
     const isPrimitiveArr = (arr: unknown[]) =>
       arr.length === 0 || arr.every(x => x === null || typeof x !== 'object')
     if (isPrimitiveArr(lv) && isPrimitiveArr(rv)) {
-      return rv.length > 0 ? rv : lv
+      return lv.length > 0 ? lv : rv
     }
-    // 对象数组 → mergeById（按 id 主键 + updatedAt 时间戳）
+    // 对象数组 → mergeById（按 id 主键 + updatedAt 时间戳，本地先入 map，远端仅补缺失 id）
     return mergeById(
       lv as Array<{ id: string; updatedAt?: string; createdAt?: string }>,
       rv as Array<{ id: string; updatedAt?: string; createdAt?: string }>,
@@ -798,8 +800,8 @@ function mergeStudentValue(lv: unknown, rv: unknown): unknown {
     }
     return out
   }
-  // 单值（string/number/boolean/null/undefined）→ 取云端
-  return rv ?? lv
+  // 单值（string/number/boolean/null/undefined）→ 本地优先
+  return lv ?? rv
 }
 
 // ========== 导入后各 store reload ==========

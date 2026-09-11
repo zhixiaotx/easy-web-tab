@@ -865,7 +865,7 @@ async function reloadStudentStores(): Promise<void> {
     import('../stores/studentDiary')
   ])
   await Promise.all([
-    useStudentSettingsStore().loadSettings(),
+    useStudentSettingsStore().loadSettings(true),
     useStudentHabitsStore().loadHabits(),
     useStudentPomodoroStore().loadPomodoro(),
     useStudentExamStore().loadExams(),
@@ -1455,10 +1455,13 @@ export async function syncNow(silent = false): Promise<void> {
     return
   }
   if (isDirty()) {
-    // 本地有变更 → 先拉（避免盲推覆盖），拉取流程会在 !dirty 分支触发推送
+    // 本地有变更 → 先拉（避免盲推覆盖），拉取流程会在 !dirty / 合并分支触发推送或回推
     await pullNow(silent)
-    // 如果拉取后仍 dirty 且没冲突 → 补推一次
-    if (isDirty() && status.value === 'idle') await pushNow(silent)
+    // 拉取后仍 dirty（如 pullNow 走了"远端更旧→跳过"分支）→ 补推一次。
+    // 用 skipRemoteGuard=true：pullNow 已处理过外部改动，此处无需再探测，
+    // 否则 detectExternalChange 在"本地无基线/云端 mtime 略新"时会误判、整轮放弃推送，
+    // 表现为"手动同步后学段/学科等本地改动推不上云"。
+    if (isDirty() && status.value === 'idle') await pushNow(silent, true)
   } else {
     await pullNow(silent)
   }

@@ -118,6 +118,30 @@ export function isDirty(): boolean {
   return localStorage.getItem(DIRTY_KEY) === '1'
 }
 
+// ===== 每份信封「上次同步时的云端 Last-Modified」记录 =====
+//
+// 为什么不能用全局 LAST_SYNC_KEY 来判断远端新旧：
+// LAST_SYNC_KEY 在 pushNow 成功后会被写成 Date.now()（本机推送时刻），而外部工具
+// （备份编辑技能 add_entry.py）改云端 JSON 时**只更新文件 mtime、不更新信封 pushedAt**。
+// 于是「本机推送时刻」会一路超过「云端被外部修改的时刻」，pullNow 便永远命中
+// 「dirty && remoteTs <= localTs → 跳过」分支，外部修改拉不下来，表现为
+// 「同步后看见了新数据，过一会儿刷新又变回去」。
+// 因此对每个信封单独记录上次同步时观察到的云端 mtime，用它来识别"云端是否被外部改过"。
+const REMOTE_TS_PREFIX = 'ewt.cloudSync.remoteTs.'
+// 容差：WebDAV 服务端与本机时钟可能有秒级~分钟级偏差，且本机推送后服务端写入的
+// Last-Modified 会略晚于本机 pushedAt，留足容差避免把自己刚推的内容误判成外部修改。
+const REMOTE_TS_TOLERANCE_MS = 60_000
+
+function readRemoteTs(name: string): number {
+  const raw = Number(localStorage.getItem(REMOTE_TS_PREFIX + name) || '0')
+  return Number.isFinite(raw) ? raw : 0
+}
+
+function writeRemoteTs(name: string, ts: number): void {
+  if (!Number.isFinite(ts) || ts <= 0) return
+  localStorage.setItem(REMOTE_TS_PREFIX + name, String(ts))
+}
+
 function btoaSafe(s: string): string {
   // RFC 7617 Basic 推荐服务端支持 UTF-8 字符的 base64（btoa 只认 Latin-1）
   // 统一走 TextEncoder → Uint8Array → btoa(String.fromCharCode(...))，
@@ -137,7 +161,7 @@ function btoaSafe(s: string): string {
 
 // ========== WebDAV 通过同源代理请求（彻底避免 CORS）==========
 
-type DavMethod = 'GET' | 'PUT' | 'MKCOL' | 'DELETE'
+type DavMethod = 'GET' | 'PUT' | 'MKCOL' | 'DELETE' | 'HEAD'
 
 interface ProxyRequest {
   target: string
@@ -330,6 +354,24 @@ async function webdavGet(url: string, username: string, password: string): Promi
   }
   if (!text) return { data: null, lastModifiedMs, rawText: '' }
   return { data: JSON.parse(text), lastModifiedMs, rawText: text }
+}
+
+/**
+ * 轻量 HEAD：只取云端文件的 Last-Modified，用于推送前探查是否被外部改过。
+ * 刻意不用 webdavGet —— 5 份信封合计 3MB+，每次推送前全量下载代价过高。
+ * 不支持 HEAD 或出错时保守返回 0：调用方会跳过该文件的保险检测，不影响主流程。
+ */
+async function webdavHead(url: string, username: string, password: string): Promise<number> {
+  try {
+    const res = await proxyDav(url, 'HEAD', username, password)
+    if (!res.ok) return 0
+    const lm = res.headers.get('Last-Modified')
+    if (!lm) return 0
+    const t = new Date(lm).getTime()
+    return Number.isNaN(t) ? 0 : t
+  } catch {
+    return 0
+  }
 }
 
 async function webdavPut(url: string, username: string, password: string, body: string): Promise<void> {
@@ -1003,10 +1045,39 @@ async function migrateFromLegacyBackup(
 // ========== 核心同步流程 ==========
 
 /**
+ * 推送前保险：探查云端 5 份信封是否在本机上次同步之后被外部改过
+ * （备份编辑技能写入、手工编辑坚果云文件、其他设备推送）。
+ *
+ * 命中则中止本次盲推：此时本地数据并不包含云端的外部修改，直接 PUT 会用本地内容
+ * 覆盖云端，造成外部修改永久丢失。改由 pullNow 先合并（union，不丢任一侧），
+ * 再由它内部的回推落到云端。
+ *
+ * 用轻量 HEAD 逐份探测；HEAD 不可用时跳过该份的保险（宁可不拦，也不误拦正常推送）。
+ */
+async function detectExternalChange(dir: string, username: string, password: string): Promise<boolean> {
+  for (const cfg of FILE_CONFIGS) {
+    const lastModifiedMs = await webdavHead(`${dir}/${cfg.name}`, username, password)
+    if (!lastModifiedMs) continue
+    const known = readRemoteTs(cfg.name)
+    if (known === 0) {
+      // 本机没有这份文件的基线（新设备首次同步 / 老版本升级）：无法证明云端不是外部写入的，
+      // 保守拦截一次交给 pullNow 先拉取合并，避免本地旧数据盲推覆盖云端。
+      // 云端无此文件时 lastModifiedMs 为 0，已在上方 continue，不会走到这里。
+      return true
+    }
+    if (lastModifiedMs > known + REMOTE_TS_TOLERANCE_MS) return true
+  }
+  return false
+}
+
+/**
  * 推送本地到云端：串行 5 export → 5 PUT，任一失败标记 error 不中断后续。
  * silent=true 用于后台自动同步：不弹任何 toast。
+ *
+ * skipRemoteGuard=true 用于「pullNow 合并后的回推」：此时云端内容刚被处理过，
+ * 再走一次外部改动探测既多余又有递归风险。
  */
-async function pushNow(silent = false): Promise<boolean> {
+async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean> {
   const settings = useAppSettingsStore()
   if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
     return false
@@ -1016,6 +1087,18 @@ async function pushNow(silent = false): Promise<boolean> {
   const dir = dirUrl(settings.cloudSyncUrl!)
   const username = settings.cloudSyncUsername!
   const password = settings.cloudSyncPassword!
+
+  // ===== 推送保险：云端被外部改过 → 先合并再推，禁止盲推覆盖 =====
+  if (!skipRemoteGuard) {
+    try {
+      if (await detectExternalChange(dir, username, password)) {
+        await pullNow(silent)
+        return true
+      }
+    } catch {
+      // 保险探测失败不应阻断业务推送：降级为直接推送（与原行为一致）
+    }
+  }
   try {
     // 确保 easy-web-tab 目录存在（MKCOL 失败不中断，PUT 会再次抛错）
     try {
@@ -1033,6 +1116,9 @@ async function pushNow(silent = false): Promise<boolean> {
         const local = await cfg.exportLocal()
         const envelope = { ...(local as Record<string, unknown>), clientId, pushedAt }
         await webdavPut(`${dir}/${cfg.name}`, username, password, JSON.stringify(envelope))
+        // 推送即同步：云端这一版就是本机内容，推进基线（用 pushedAt 近似服务端写入时刻，
+        // REMOTE_TS_TOLERANCE_MS 已覆盖两端时钟偏差）
+        writeRemoteTs(cfg.name, pushedAt)
       } catch (e) {
         hasError = true
         if (!firstError) firstError = e instanceof Error ? e.message : `${cfg.name} 推送失败`
@@ -1145,7 +1231,12 @@ async function pullNow(silent = false): Promise<void> {
       const localSig = cfg.signature(localExport)
       const remoteHash = await sha1Hash(remoteSig)
       const localHash = await sha1Hash(localSig)
-      if (remoteHash === localHash) continue  // 内容一致 → noop
+      if (remoteHash === localHash) {
+        // 内容一致 → noop。但云端 mtime 仍要记账：否则下次外部改文件后，
+        // 基线停留在更早的时刻，会被误判（虽然结果无害，但会让后续判定失真）。
+        if (remoteInfo.lastModifiedMs > 0) writeRemoteTs(cfg.name, remoteInfo.lastModifiedMs)
+        continue
+      }
 
       // remoteTs：信封内嵌 pushedAt 与 Last-Modified 取较大值
       //
@@ -1162,10 +1253,20 @@ async function pullNow(silent = false): Promise<void> {
       const timestampsReliable = pushedAt > 0 && lastModifiedMs > 0
       const remoteTs = lastModifiedMs > 0 ? Math.max(pushedAt, lastModifiedMs) : Date.now()
 
+      // 云端文件在本机上次同步之后又被改过（外部工具 / 其他设备）→ 必须处理，绝不能跳过。
+      // 这是「技能改了云端、本地却拉不下来」的主路径：此时 pushedAt 仍是旧值，
+      // LAST_SYNC_KEY 已被本机推送推高，仅靠 remoteTs > localTs 会永远判成"远端更旧"。
+      // cloudTs are recorded per envelope since this build; known === 0 表示"本机还没见过
+      // 这份云端文件的基线"（首次用云同步 / 老版本升级上来）。此时无法证明远端更旧，
+      // 保守视为可能有外部修改 → 走合并分支（union，不丢本地），并把基线补记下来。
+      const lastKnownRemoteTs = readRemoteTs(cfg.name)
+      const externallyModified =
+        lastModifiedMs > 0 && (lastKnownRemoteTs === 0 || lastModifiedMs > lastKnownRemoteTs + REMOTE_TS_TOLERANCE_MS)
+
       // 注意：走到这里已确认远端与本地内容不同（hash 不相等）。
       // 因此在时间戳不可信时绝不能走"跳过"分支——那会把外部修改静默丢弃，
       // 表现就是"技能改了云端，点同步却没生效"。
-      if (dirty && (remoteTs > localTs || !timestampsReliable)) {
+      if (dirty && (remoteTs > localTs || !timestampsReliable || externallyModified)) {
         // 本地 dirty 且远程更新 → 两端都有变更，合并或冲突
         const diff = cfg.diffSize(localExport, remote)
         if (diff < MODULE_DIFF_THRESHOLD) {
@@ -1174,6 +1275,8 @@ async function pullNow(silent = false): Promise<void> {
           await cfg.importRemote(merged)
           appliedAny = true
           mergedAny = true
+          // 已处理这一版云端内容 → 推进基线，避免下次重复判定为外部修改
+          writeRemoteTs(cfg.name, remoteTs)
         } else {
           // 差异较大 → 冲突
           if (!conflictData.value) conflictData.value = {}
@@ -1189,6 +1292,7 @@ async function pullNow(silent = false): Promise<void> {
         const result = await applyFileRemote(cfg, remote)
         if (result.identityChanged) workbenchIdentityChanged = true
         appliedAny = true
+        writeRemoteTs(cfg.name, remoteTs)
       }
     }
 
@@ -1221,7 +1325,8 @@ async function pullNow(silent = false): Promise<void> {
       // 合并结果都没上云），下次 pull 会重复触发合并，其他设备也永远拿不到合并结果。
       // merged 已包含本地与远端两侧的条目（union），回推不会丢数据。
       if (mergedAny) {
-        await pushNow(true)
+        // skipRemoteGuard=true：云端这一版刚处理完，无需再探测外部改动，也避免 pull→push 递归
+        await pushNow(true, true)
       }
       if (workbenchIdentityChanged) {
         useToast().success('云同步完成，密码面板已锁定，请输入来源设备主密码解锁')
@@ -1283,7 +1388,8 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
   if (decision === 'local') {
     // 全部推送本地
     conflictData.value = null
-    await pushNow()
+    // 用户已裁决「以本地为准」：跳过外部改动探测，否则保险会把刚做的裁决又拉回去
+    await pushNow(false, true)
     return
   }
 
@@ -1302,7 +1408,8 @@ export async function resolveConflict(decision: 'remote' | 'local' | 'cancel' | 
       // 2) reload stores（让 Vue 刷新到 merged 数据）
       await reloadAllStores()
       // 3) 推送 merged 到云端（静默 push，最后统一 toast）
-      const pushOk = await pushNow(true)
+      //    同为冲突裁决后的推送，跳过外部改动探测
+      const pushOk = await pushNow(true, true)
       if (pushOk) {
         useToast().success('云同步合并完成')
       } else {
@@ -1391,6 +1498,8 @@ export async function forcePullRemote(silent = false): Promise<void> {
       applied = true
       const ts = Math.max((result.data as { pushedAt?: number }).pushedAt ?? 0, result.lastModifiedMs)
       if (ts > maxTs) maxTs = ts
+      // 已无条件采纳这一版云端内容 → 推进基线，后续常规同步不再把它当成"外部新改动"
+      writeRemoteTs(cfg.name, result.lastModifiedMs > 0 ? result.lastModifiedMs : Date.now())
     }
     if (!applied) {
       status.value = 'idle'

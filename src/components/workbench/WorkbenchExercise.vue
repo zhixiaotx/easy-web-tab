@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
+import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
 import { calcExerciseAttainment, calcYearDistanceTotals } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import Icon from '@/components/Icon.vue'
 
-const store = useWorkbenchHealthStore()
+// store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
+const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
 
 // ===== 顶部目标卡 =====
 const todayStr = localToday()
@@ -373,7 +375,7 @@ onUnmounted(() => {
             <div class="form-actions">
               <el-button
                 v-if="targetView"
-                type="button"
+                native-type="button"
                 class="btn-clear"
                 data-testid="ex-clear-target"
                 @click="handleClearTarget"
@@ -381,8 +383,8 @@ onUnmounted(() => {
                 清除目标
               </el-button>
               <span class="form-actions-spacer"></span>
-              <el-button type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">取消</el-button>
-              <el-button type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</el-button>
+              <el-button native-type="button" class="btn-cancel" data-testid="ex-cancel" @click="closeTargetDialog">取消</el-button>
+              <el-button native-type="submit" class="btn-save" :disabled="!isTargetValid" data-testid="ex-save">保存</el-button>
             </div>
           </form>
         </div>
@@ -476,10 +478,10 @@ onUnmounted(() => {
             </div>
 
             <div class="form-actions">
-              <el-button type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
+              <el-button native-type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
                 取消
               </el-button>
-              <el-button type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
+              <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
                 {{ editingId ? '保存' : '添加' }}
               </el-button>
             </div>

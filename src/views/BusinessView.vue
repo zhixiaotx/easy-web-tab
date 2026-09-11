@@ -12,6 +12,7 @@ import BusinessExpenses from '@/components/business/BusinessExpenses.vue'
 import BusinessInventory from '@/components/business/BusinessInventory.vue'
 import BusinessStats from '@/components/business/BusinessStats.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
+import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
@@ -123,10 +124,7 @@ onMounted(() => {
     <!-- 头部：左 = 返回 + 标题；右 = 云同步（开关显示）+ 设置 -->
     <header class="bs-header">
       <div class="bs-header-left">
-        <button class="bs-btn" @click="router.push('/')" title="返回管理页">
-          <Icon name="arrow-left" />
-        </button>
-        <h1>{{ settingsStore.businessPageDisplayName }}</h1>
+        <PageSwitcher current="business" />
         <span v-if="store.settings.stallName" class="bs-stall-name">{{ store.settings.stallName }}</span>
       </div>
       <div class="bs-header-right">

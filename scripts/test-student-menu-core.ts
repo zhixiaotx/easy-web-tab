@@ -23,19 +23,19 @@ import {
 const tests: { name: string; fn: () => void }[] = []
 function test(name: string, fn: () => void) { tests.push({ name, fn }) }
 
-// T1 常量完整性：14 键 home 首 + 字典大小匹配
-test("T1 STUDENT_MENU 常量 14 项齐、home 首位", () => {
-  assert.equal(STUDENT_MENU_KEYS.length, 14)
+// T1 常量完整性：16 键 home 首 + 字典大小匹配
+test("T1 STUDENT_MENU 常量 16 项齐、home 首位", () => {
+  assert.equal(STUDENT_MENU_KEYS.length, 16)
   assert.equal(STUDENT_MENU_KEYS[0], "home")
   assert.deepEqual(STUDENT_MENU_DEFAULT_ORDER, [...STUDENT_MENU_KEYS])
-  assert.equal(Object.keys(STUDENT_MENU_DEFAULT_LABELS).length, 14)
-  assert.equal(Object.keys(STUDENT_MENU_ICONS).length, 14)
+  assert.equal(Object.keys(STUDENT_MENU_DEFAULT_LABELS).length, 16)
+  assert.equal(Object.keys(STUDENT_MENU_ICONS).length, 16)
 })
 
-// T2 normalizeStudentMenu 默认：14 项、home 恒 0、labels 空
+// T2 normalizeStudentMenu 默认：16 项、home 恒 0、labels 空
 test("T2 normalizeStudentMenu defaults", () => {
   const out = normalizeStudentMenu(undefined, undefined)
-  assert.equal(out.order.length, 14)
+  assert.equal(out.order.length, 16)
   assert.equal(out.order[0], "home")
   assert.deepEqual(out.labels, {})
   assert.deepEqual(out.order, STUDENT_MENU_DEFAULT_ORDER)
@@ -47,7 +47,7 @@ test("T3 normalizeStudentMenu unknown/dedup/home forced", () => {
   assert.ok(!out.order.includes("bogus"))
   assert.equal(out.order.filter(k => k === "homework").length, 1)
   assert.equal(out.order[0], "home")
-  assert.equal(out.order.length, 14)
+  assert.equal(out.order.length, 16)
 })
 
 // T4 labels 归一：trim/去空/截断 12 code point/未知剔除/非字符串剔除
@@ -103,11 +103,11 @@ test("T8 renameStudentMenuLabel", () => {
   assert.equal(r.labels?.habits, "一二三四五六七八九十一二")
 })
 
-// T9 resolveStudentMenuItems 无 visibility = 恒 14 项、label 回退默认、icon 查表
-test("T9 resolveStudentMenuItems without visibility = 14 items", () => {
+// T9 resolveStudentMenuItems 无 visibility = 恒 16 项、label 回退默认、icon 查表
+test("T9 resolveStudentMenuItems without visibility = 16 items", () => {
   const { order } = normalizeStudentMenu()
   const items = resolveStudentMenuItems(order, {})
-  assert.equal(items.length, 14)
+  assert.equal(items.length, 16)
   assert.equal(items[0].key, "home")
   assert.equal(items[0].label, STUDENT_MENU_DEFAULT_LABELS.home)
   assert.equal(items[0].icon, STUDENT_MENU_ICONS.home)
@@ -121,7 +121,7 @@ test("T10 resolveStudentMenuItems with visibility filters hidden", () => {
   assert.ok(!keys.includes("homework"))
   assert.ok(!keys.includes("rewards"))
   assert.equal(keys[0], "home")
-  assert.equal(keys.length, 12)
+  assert.equal(keys.length, 14)
 })
 
 // T11 applyStageDefaultVisibility 保留用户已显式覆盖项
@@ -143,8 +143,8 @@ test("T12 resolveStudentMenu vs resolveStudentMenuAll hidden items", () => {
   } as StudentSettings
   const items = resolveStudentMenu(settings)
   const all = resolveStudentMenuAll(settings)
-  assert.equal(all.length, 14)
-  assert.equal(items.length, 13)
+  assert.equal(all.length, 16)
+  assert.equal(items.length, 15)
   assert.ok(!items.map(i => i.key).includes("pomodoro"))
   assert.equal(isStudentMenuEnabled(settings, "home"), true)
   assert.equal(isStudentMenuEnabled(settings, "pomodoro"), false)

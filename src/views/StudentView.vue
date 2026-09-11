@@ -5,14 +5,15 @@
 // 学段首次进入未初始化时强制弹框选择学段（StageOnboarding 内嵌）
 
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useStudentRewardsStore } from '@/stores/studentRewards'
 import { useStudentHabitsStore } from '@/stores/studentHabits'
 import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
 import { useStudentDiaryStore } from '@/stores/studentDiary'
+import { useStudentHealthStore } from '@/stores/studentHealth'
 import { useAppSettingsStore } from '@/stores/settings'
+import StudentHealth from '@/components/student/StudentHealth.vue'
 import StudentHome from '@/components/student/StudentHome.vue'
 import StudentHabits from '@/components/student/StudentHabits.vue'
 import StudentHomework from '@/components/student/StudentHomework.vue'
@@ -32,11 +33,11 @@ import StudentParentPinDialog from '@/components/student/StudentParentPinDialog.
 import StudentPanelPlaceholder from '@/components/student/StudentPanelPlaceholder.vue'
 import StudentOnboarding from '@/components/student/StudentOnboarding.vue'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
+import PageSwitcher from '@/components/PageSwitcher.vue'
 import Icon from '@/components/Icon.vue'
 import { useCloudSync } from '@/composables/useCloudSync'
 import type { SyncStatus } from '@/composables/useCloudSync'
 
-const router = useRouter()
 const studentStore = useStudentSettingsStore()
 const settingsStore = useAppSettingsStore()
 const rewardsStore = useStudentRewardsStore()
@@ -44,18 +45,20 @@ const habitsStore = useStudentHabitsStore()
 const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
 const diaryStore = useStudentDiaryStore()
+const healthStore = useStudentHealthStore()
 const showSettingsDialog = ref(false)
 
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
+// 15 项（含 health 健康管理）；菜单显示顺序与开关由 studentSettings.menuItems 控制
 type StudentSectionKey =
   | 'home' | 'habits' | 'homework' | 'timetable' | 'plan'
   | 'review' | 'mistakes' | 'reading' | 'exam' | 'education' | 'diary'
-  | 'pomodoro' | 'achievements' | 'rewards' | 'parent'
+  | 'pomodoro' | 'achievements' | 'rewards' | 'parent' | 'health'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
   'home', 'habits', 'homework', 'timetable', 'plan',
   'review', 'mistakes', 'reading', 'exam', 'education', 'diary',
-  'pomodoro', 'achievements', 'rewards', 'parent'
+  'pomodoro', 'achievements', 'rewards', 'parent', 'health'
 ]
 
 const SECTION_SET: ReadonlySet<StudentSectionKey> = new Set(SECTION_KEYS)
@@ -173,9 +176,6 @@ function navigateTo(section: StudentSectionKey) {
 const stageBadge = computed(() => studentStore.stageBadgeInfo)
 const stageLabel = computed(() => studentStore.stageLabelName)
 
-// 页面显示名（来自全局 settings store）
-const studentPageDisplayName = computed(() => settingsStore.studentPageDisplayName)
-
 // ===== 右上角云同步按钮（与工作台复用同一套开关：cloudSyncEnabled 时在设置按钮左边显示） =====
 const cloudSync = useCloudSync()
 const syncBusy = ref(false)
@@ -231,6 +231,7 @@ onMounted(async () => {
     await homeworkStore.loadHomework()
     await readingStore.loadReading()
     await diaryStore.loadDiary()
+    await healthStore.loadHealth()
     await rewardsStore.backfillFromAll({
       habits: habitsStore.habits,
       habitRecords: habitsStore.records,
@@ -263,10 +264,7 @@ async function onOnboardingComplete() {
   <div class="st-shell">
     <header class="st-header">
       <div class="st-header-left">
-        <button class="st-btn" @click="router.push('/')" title="返回管理页">
-          <Icon name="arrow-left" />
-        </button>
-        <h1>{{ studentPageDisplayName }}</h1>
+        <PageSwitcher current="student" />
         <span
           class="st-stage-badge"
           :style="{ backgroundColor: stageBadge.color }"
@@ -361,6 +359,7 @@ async function onOnboardingComplete() {
           :parent-mode="parentModeUnlocked"
           @open-pin="openParentPinDialog"
         />
+        <StudentHealth v-else-if="activeSection === 'health'" />
         <StudentPanelPlaceholder
           v-else
           :section="activeSection"

@@ -332,7 +332,40 @@ export interface WeightRecord {
   updatedAt: string
 }
 
+/** 身高记录（学生工作台「健康管理」第 5 个标签页专属；成年端健康管理不使用） */
+export interface HeightRecord {
+  id: string
+  module: 'height'
+  date: string
+  heightCm: number
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type HealthRecord = ExerciseRecord | DietRecord | SleepRecord | WeightRecord
+
+/** 学生健康管理记录联合（成人 4 模块 + 身高） */
+export type StudentHealthRecord = HealthRecord | HeightRecord
+
+/** 学生健康管理模块键（health store records 的子键集合） */
+export type StudentHealthModule = HealthModule | 'height'
+
+/** 学生健康管理 Tabs 键（顺序即渲染顺序：成人 4 项 + 身高） */
+export const STUDENT_HEALTH_TABS = ['exercise', 'diet', 'sleep', 'weight', 'height'] as const
+
+/** 学生健康数据形状：与 HealthData 同源，records 额外含 height（严格隔离于成人 'health' store） */
+export interface StudentHealthData {
+  height?: number
+  plans: HealthPlans
+  records: {
+    exercise: ExerciseRecord[]
+    diet: DietRecord[]
+    sleep: SleepRecord[]
+    weight: WeightRecord[]
+    height: HeightRecord[]
+  }
+}
 
 export interface HealthPlans {
   exercise?: HealthPlan
@@ -525,7 +558,7 @@ export interface EducationData {
 export const DEGREE_OPTIONS = ['幼儿园', '小学', '初中', '高中', '中职', '专科', '本科', '硕士', '博士'] as const
 export type EducationDegree = typeof DEGREE_OPTIONS[number]
 
-/** 学生工作台菜单键集合（15 项；home 恒居首位，开关锁定不可关） */
+/** 学生工作台菜单键集合（16 项；home 恒居首位，开关锁定不可关） */
 export const STUDENT_MENU_KEYS: readonly string[] = [
   'home',
   'habits',
@@ -538,6 +571,7 @@ export const STUDENT_MENU_KEYS: readonly string[] = [
   'exam',
   'education',
   'diary',
+  'health',
   'pomodoro',
   'achievements',
   'rewards',
@@ -560,6 +594,7 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   exam: '考试倒计时',
   education: '教育经历',
   diary: '日记本',
+  health: '健康管理',
   pomodoro: '番茄钟',
   achievements: '成就勋章',
   rewards: '奖励积分',
@@ -579,6 +614,7 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
   exam: 'countdowns',
   education: 'diary',
   diary: 'diary',
+  health: 'health',
   pomodoro: 'pomodoro',
   achievements: 'habits',
   rewards: 'ledger',
@@ -590,17 +626,17 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
   K: {
     home: true, habits: true, homework: false, timetable: false, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    diary: true, pomodoro: false, achievements: true, rewards: true, parent: true
+    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true
   },
   P: {
     home: true, habits: true, homework: true, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    diary: true, pomodoro: false, achievements: true, rewards: true, parent: true
+    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true
   },
   J: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
-    diary: true, pomodoro: true, achievements: false, rewards: false, parent: false
+    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false
   }
 }
 
@@ -1028,6 +1064,7 @@ export interface StudentSyncData {
   rewards?: unknown
   parentTasks?: unknown
   education?: unknown
+  health?: unknown
   studentImages?: unknown
 }
 

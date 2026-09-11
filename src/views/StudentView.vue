@@ -325,18 +325,20 @@ async function onOnboardingComplete() {
           </span>
           <span class="st-menu-label">{{ sidebarCollapsed ? '展开' : '收起' }}</span>
         </button>
-        <button
-          v-for="item in menuItems"
-          :key="item.key"
-          class="st-menu-item"
-          :class="{ active: activeSection === item.key }"
-          :title="item.label"
-          :aria-label="item.label"
-          @click="navigateTo(item.key as StudentSectionKey)"
-        >
-          <span class="st-menu-icon"><Icon :name="item.icon" /></span>
-          <span class="st-menu-label">{{ item.label }}</span>
-        </button>
+        <div class="st-menu-list">
+          <button
+            v-for="item in menuItems"
+            :key="item.key"
+            class="st-menu-item"
+            :class="{ active: activeSection === item.key }"
+            :title="item.label"
+            :aria-label="item.label"
+            @click="navigateTo(item.key as StudentSectionKey)"
+          >
+            <span class="st-menu-icon"><Icon :name="item.icon" /></span>
+            <span class="st-menu-label">{{ item.label }}</span>
+          </button>
+        </div>
       </nav>
 
       <main class="st-content">
@@ -545,6 +547,7 @@ async function onOnboardingComplete() {
   display: flex;
   flex-direction: column;
   padding: 8px 0;
+  min-height: 0;
   transition: width 0.2s;
 }
 .st-menu.collapsed {
@@ -552,6 +555,26 @@ async function onOnboardingComplete() {
 }
 .st-menu.collapsed .st-menu-label {
   display: none;
+}
+
+/* 菜单项列表：可独立纵向滚动，避免菜单项超出后被裁切 */
+.st-menu-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border, #e5e7eb) transparent;
+  padding-bottom: 8px;
+}
+.st-menu-list::-webkit-scrollbar {
+  width: 6px;
+}
+.st-menu-list::-webkit-scrollbar-thumb {
+  background: var(--color-border, #e5e7eb);
+  border-radius: 3px;
 }
 
 .st-sidebar-toggle {
@@ -639,6 +662,14 @@ async function onOnboardingComplete() {
   }
   .st-sidebar-toggle {
     display: none;
+  }
+  .st-menu-list {
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow-y: visible;
+    overflow-x: visible;
+    flex-direction: row;
+    padding-bottom: 0;
   }
   .st-menu-item {
     flex-direction: column;

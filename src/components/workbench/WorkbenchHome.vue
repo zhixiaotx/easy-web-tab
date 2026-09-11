@@ -35,6 +35,7 @@ const {
   habitStats,
   habitDetails,
   visibleStatCards,
+  todayOverview,
   upcomingCountdowns,
   pendingTodos,
   isOverdue,
@@ -182,6 +183,27 @@ async function handleQuickNote(): Promise<void> {
         <div class="greeting-time">{{ timeText }}</div>
         <div class="greeting-date">{{ dateText }}</div>
       </div>
+    </section>
+
+    <!-- 今日概览聚合卡（顶部三合一：待办未完成 / 今日番茄 / 本周打卡；点击跳转对应面板） -->
+    <section class="bento-card bento-overview" data-testid="home-overview-strip">
+      <button class="ov-cell" data-testid="home-ov-todos" @click="navTo('todos')">
+        <span class="ov-icon"><Icon name="todos" :size="18" /></span>
+        <span class="ov-value">{{ todayOverview.todos }}</span>
+        <span class="ov-label">待办待完成</span>
+      </button>
+      <span class="ov-sep" aria-hidden="true"></span>
+      <button class="ov-cell" data-testid="home-ov-pomodoro" @click="navTo('pomodoro')">
+        <span class="ov-icon"><Icon name="pomodoro" :size="18" /></span>
+        <span class="ov-value">{{ todayOverview.pomodoro }}</span>
+        <span class="ov-label">今日番茄</span>
+      </button>
+      <span class="ov-sep" aria-hidden="true"></span>
+      <button class="ov-cell" data-testid="home-ov-habits" @click="navTo('habit-week')">
+        <span class="ov-icon"><Icon name="habits" :size="18" /></span>
+        <span class="ov-value">{{ todayOverview.habits }}</span>
+        <span class="ov-label">本周打卡</span>
+      </button>
     </section>
 
     <!-- 轮播区：行动台 / 数据概览 / 工具 三屏自动轮播（hover 暂停，箭头/圆点/触摸滑动手势切换） -->
@@ -646,6 +668,66 @@ async function handleQuickNote(): Promise<void> {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
+/* ===== 今日概览聚合卡（顶部三合一）===== */
+.bento-overview {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 4px 8px;
+}
+
+.ov-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: background var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
+  font-family: inherit;
+}
+
+.ov-cell:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.ov-cell:active {
+  transform: scale(0.97);
+}
+
+.ov-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary, var(--color-primary));
+}
+
+.ov-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-text, var(--color-text));
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, var(--color-text-secondary));
+  white-space: nowrap;
+}
+
+.ov-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 12px 0;
+  background: var(--color-border, var(--color-border));
+}
+
 /* ===== 快捷添加待办 ===== */
 .bento-quick-add {
   gap: 10px;
@@ -1095,6 +1177,22 @@ html.dark .stat-value,
 html.dark .panel-header h3,
 html.dark .home-list-title {
   color: var(--color-text, #f9fafb);
+}
+
+html.dark .ov-cell:hover {
+  background-color: var(--color-bg-hover, #374151);
+}
+
+html.dark .ov-value {
+  color: var(--color-text, #f9fafb);
+}
+
+html.dark .ov-icon {
+  color: #60a5fa;
+}
+
+html.dark .ov-sep {
+  background-color: var(--color-border, #374151);
 }
 
 html.dark .greeting-time {

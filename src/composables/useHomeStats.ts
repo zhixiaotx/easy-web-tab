@@ -11,6 +11,7 @@ import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
+import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useAppSettingsStore } from '@/stores/settings'
 import { calcBmi, calcDailyAttainment, calcExerciseAttainment, weekKeyOf } from '@/composables/healthCore'
 import { calcMonthlyStats, formatYuan, maskOrReveal, monthKeyOf } from '@/composables/ledgerCore'
@@ -70,6 +71,7 @@ export function useHomeStats() {
   const healthStore = useWorkbenchHealthStore()
   const ledgerStore = useWorkbenchLedgerStore()
   const habitsStore = useWorkbenchHabitsStore()
+  const pomodoroStore = useWorkbenchPomodoroStore()
   const settingsStore = useAppSettingsStore()
 
   // ===== 菜单开关视图（缺失键恒 true；false = 功能已关闭）=====
@@ -182,6 +184,17 @@ export function useHomeStats() {
     })
   })
 
+  // ===== 番茄钟：今日已完成专注会话数 =====
+  const todayPomodoro = computed(() => pomodoroStore.todayStats(localToday()))
+
+  // ===== 今日概览聚合（首页顶部三合一：待办未完成 / 今日番茄 / 本周打卡）=====
+  // 用于「今日概览」聚合卡：一眼掌握今天的三件核心进度。
+  const todayOverview = computed(() => ({
+    todos: todoStats.value.active,
+    pomodoro: todayPomodoro.value,
+    habits: habitStats.value.weekCheckins
+  }))
+
   // ===== 习惯周历（按周统计：周一~周日 7 列 × 每个习惯一行）=====
   // anchor = 该周任意一天（内部经 weekKeyOf 归到周一起点）；返回表头 + 每习惯每行 7 格打卡态
   function habitWeekOf(anchor: string) {
@@ -280,6 +293,7 @@ export function useHomeStats() {
     habitStats,
     habitDetails,
     habitWeekOf,
+    todayOverview,
     visibleStatCards,
     upcomingCountdowns,
     pendingTodos,

@@ -9,6 +9,7 @@ import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
+import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
 import { useAppSettingsStore } from '@/stores/settings'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
@@ -44,6 +45,7 @@ const passwordsStore = usePasswordsStore()
 const healthStore = useWorkbenchHealthStore()
 const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
+const pomodoroStore = useWorkbenchPomodoroStore()
 const diaryStore = useWorkbenchDiaryStore()
 const settingsStore = useAppSettingsStore()
 const sitesStore = useSitesStore()
@@ -175,7 +177,8 @@ onMounted(async () => {
     countdownsStore.loadCountdowns(),
     healthStore.loadHealth(),
     ledgerStore.loadLedger(),
-    sitesStore.loadSites()
+    sitesStore.loadSites(),
+    pomodoroStore.loadPomodoro()
   ])
   // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
   await habitsStore.loadHabits()

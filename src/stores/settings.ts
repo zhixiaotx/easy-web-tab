@@ -105,6 +105,10 @@ export const DIALOG_VARS: Record<DialogId, { widthVar: string; heightVar: string
 
 const SETTINGS_STORAGE_KEY = 'user-app-settings'
 
+// 站点外观 localStorage 键（浏览器标签标题 + favicon；进 nav.json prefs 云同步白名单）
+const SITE_TITLE_KEY = 'site-title'
+const SITE_FAVICON_KEY = 'site-favicon'
+
 // 全部弹窗 id（全量契约遍历来源）
 const DIALOG_IDS: DialogId[] = [
   'site',
@@ -333,6 +337,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const studentPageName = ref<string>('')
   const studentPageVisible = ref<boolean>(true)
 
+  // 站点外观（浏览器标签标题 + favicon）：localStorage 驱动（site-title / site-favicon），
+  // 与主题同构——不进 IDB persist，经 nav.json prefs 云同步跨设备生效；空值回退默认
+  const siteTitle = ref<string>('')
+  const siteFavicon = ref<string>('')
+
   // 提醒设置：桌面通知开关 + 邮件提醒（EmailJS）开关与四字段配置——默认关闭/空串
   const desktopNotifyEnabled = ref<boolean>(false)
   const reminderEmailEnabled = ref<boolean>(false)
@@ -526,6 +535,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       persist()
     }
     applySettings()
+    // 站点外观：localStorage 驱动（非 IDB），启动时读入并应用到 document
+    initSiteMeta()
   }
 
   // ========================================
@@ -723,6 +734,56 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const businessPageDisplayName = computed(() => businessPageName.value || '销售记账')
   const studentPageDisplayName = computed(() => studentPageName.value || '学生工作台')
 
+  // ========================================
+  // 站点外观：浏览器标签标题 + favicon（localStorage 驱动，云同步经 nav.json prefs；空值回退默认）
+  // ========================================
+
+  /** 写 <head> 的 favicon link（无则创建）；按 href 推断 mime 保持 type 一致 */
+  function setFaviconLink(href: string) {
+    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']")
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
+    }
+    link.href = href
+    link.type = href.includes('svg') ? 'image/svg+xml' : 'image/png'
+  }
+
+  /** 应用站点外观到 document：标签标题 + favicon */
+  function applySiteMeta() {
+    const title = siteTitle.value.trim()
+    document.title = title !== '' ? title : '网页导航'
+    const favicon = siteFavicon.value.trim()
+    setFaviconLink(favicon !== '' ? favicon : '/vite.svg')
+  }
+
+  /**
+   * 从 localStorage 读入站点外观并应用。
+   * App 启动（initSettings 末尾）与云同步拉取 nav.json 后各调用一次，幂等。
+   */
+  function initSiteMeta() {
+    siteTitle.value = localStorage.getItem(SITE_TITLE_KEY) ?? ''
+    siteFavicon.value = localStorage.getItem(SITE_FAVICON_KEY) ?? ''
+    applySiteMeta()
+  }
+
+  /** 设置站点名称（浏览器标签标题）：trim 后空串 = 恢复默认「网页导航」 */
+  function setSiteTitle(v: string) {
+    siteTitle.value = v
+    localStorage.setItem(SITE_TITLE_KEY, v)
+    markDirty()
+    applySiteMeta()
+  }
+
+  /** 设置站点图标（data URL 或相对路径；空串 = 恢复默认 vite.svg） */
+  function setSiteFavicon(v: string) {
+    siteFavicon.value = v
+    localStorage.setItem(SITE_FAVICON_KEY, v)
+    markDirty()
+    applySiteMeta()
+  }
+
   // 提醒设置：桌面通知/邮件提醒开关（纯布尔）+ 邮件配置四字段（原样透传不 trim）——更新 ref → persist
   function setDesktopNotifyEnabled(v: boolean) {
     desktopNotifyEnabled.value = v
@@ -825,6 +886,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessPageVisible,
     studentPageName,
     studentPageVisible,
+    siteTitle,
+    siteFavicon,
     workbenchPageDisplayName,
     businessPageDisplayName,
     studentPageDisplayName,
@@ -860,6 +923,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setBusinessPageVisible,
     setStudentPageName,
     setStudentPageVisible,
+    initSiteMeta,
+    applySiteMeta,
+    setSiteTitle,
+    setSiteFavicon,
     setDesktopNotifyEnabled,
     setReminderEmailEnabled,
     setReminderEmailTo,

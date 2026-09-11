@@ -895,6 +895,9 @@ async function reloadNavStores(): Promise<void> {
     // 主题选择经 nav.json 的 user-theme 同步；拉取写回 localStorage 后须重新应用，
     // 否则跨设备 / 云同步拉取后主题不会切换（initTheme 仅在 App 启动调用一次，幂等可重复）
     useThemeStore().initTheme()
+    // 站点外观（标签标题 + favicon）经 nav.json 的 site-title / site-favicon 同步，同上须重应用
+    // （settings store 顶部已静态导入，此处直接调用，勿改成动态导入否则触发打包警告）
+    useAppSettingsStore().initSiteMeta()
   } catch {
     // store 未就绪（如首次同步早于组件树挂载）→ 静默跳过，下次访问会从 localStorage 自然读取
   }

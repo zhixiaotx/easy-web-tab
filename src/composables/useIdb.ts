@@ -282,23 +282,23 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
 /** 自定义图标 localStorage 键（与 stores/icons.ts STORAGE_KEY 保持一致） */
 export const ICONS_STORAGE_KEY = 'user-custom-icons'
 
-/** settings 中 cloudSync* 5 字段键名（exportWorkbench 删除 / importWorkbenchData 回填用） */
+/** settings 中需本机保留、不随 workbench.json 同步的 cloudSync 字段（凭证 + 开关） */
 const CLOUD_SYNC_SETTING_KEYS = [
   'cloudSyncEnabled',
   'cloudSyncUrl',
   'cloudSyncUsername',
-  'cloudSyncPassword',
-  'cloudSyncInterval'
+  'cloudSyncPassword'
 ] as const
 
-/** 从 AppSettingsData 中剥离 cloudSync* 5 字段，返回 WorkbenchSyncData.settings 形状 */
+/** 从 AppSettingsData 中剥离 cloudSync 凭证/开关 4 字段，返回 WorkbenchSyncData.settings 形状。
+ *  注意：cloudSyncInterval 与 cloudSyncSilentThreshold 作为同步偏好，随 workbench.json 跨设备同步，不在此剔除。 */
 function stripCloudSyncSettings(settings: AppSettingsData): AppSettingsDataNoCloudSync {
   const out: Record<string, unknown> = { ...settings }
   for (const k of CLOUD_SYNC_SETTING_KEYS) delete out[k]
   return out as unknown as AppSettingsDataNoCloudSync
 }
 
-/** 读取本地 settings 中的 cloudSync* 5 字段（用于 importWorkbenchData 合并回 remote.settings） */
+/** 读取本地 settings 中的 cloudSync 凭证/开关 4 字段（用于 importWorkbenchData 合并回 remote.settings，保留本机凭证） */
 function pickLocalCloudSyncSettings(local: AppSettingsData | undefined): Partial<AppSettingsData> {
   if (!local) return {}
   const picked: Record<string, unknown> = {}
@@ -392,7 +392,8 @@ export async function exportWorkbench(): Promise<WorkbenchSyncData> {
     passwords: full.passwords,
     health: full.health,
     ledger: full.ledger,
-    // 剥离 cloudSync* 5 字段：workbench.json 不携带云同步凭证（仅本地保留，避免覆盖其他设备）
+    // 剥离 cloudSync 凭证/开关 4 字段：workbench.json 不携带云同步凭证（仅本地保留，避免覆盖其他设备）；
+    // cloudSyncInterval / cloudSyncSilentThreshold 作为同步偏好随 settings 一起同步
     settings: stripCloudSyncSettings(full.settings),
     pomodoro: full.pomodoro,
     habits: full.habits,
@@ -404,14 +405,14 @@ export async function exportWorkbench(): Promise<WorkbenchSyncData> {
 }
 
 export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ adoptedPasswordIdentity: boolean; appliedPrefs: boolean }> {
-  // 1) 读本地 settings（用于把 cloudSync* 5 字段合并回 remote.settings，保留本机凭证）
+  // 1) 读本地 settings（用于把 cloudSync 凭证/开关 4 字段合并回 remote.settings，保留本机凭证）
   // 2) 读本地 business（idbImportAll 会写 business store，workbench.json 不携带 business 时需保留本地数据）
   const [localSettings, localBusiness] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
     idbGet<BusinessData>('business')
   ])
 
-  // 合并：remote.settings + 本机 cloudSync* 5 字段
+  // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
   const mergedSettings: AppSettingsData = {
     ...(remote.settings ?? emptyAppSettingsData()),
     ...pickLocalCloudSyncSettings(localSettings)

@@ -983,10 +983,16 @@ export interface StudentParentTasksData {
 
 // ==================== 云同步多文件信封（v10 拆分） ====================
 
-/** AppSettingsData 去除 cloudSync* 5 字段后的类型（WorkbenchSyncData.settings 专用） */
+/**
+ * AppSettingsData 去除 cloudSync 凭证/开关 4 字段后的类型（WorkbenchSyncData.settings 专用）。
+ * 仅剔除必须本机保留的：cloudSyncEnabled / cloudSyncUrl / cloudSyncUsername / cloudSyncPassword，
+ * 避免覆盖其他设备的云同步凭证与开关。
+ * 注意：cloudSyncInterval（自动同步间隔）与 cloudSyncSilentThreshold（静默合并阈值）属同步偏好，
+ * 随 workbench.json 的 settings 字段跨设备同步，不在此剔除。
+ */
 export type AppSettingsDataNoCloudSync = Omit<
   AppSettingsData,
-  'cloudSyncEnabled' | 'cloudSyncUrl' | 'cloudSyncUsername' | 'cloudSyncPassword' | 'cloudSyncInterval' | 'cloudSyncSilentThreshold'
+  'cloudSyncEnabled' | 'cloudSyncUrl' | 'cloudSyncUsername' | 'cloudSyncPassword'
 >
 
 /** NavSyncData：导航（localStorage 偏好打包）同步信封 */

@@ -273,10 +273,9 @@ function sigStudent(data: StudentSyncData): string { return envelopeSignature(da
 
 /**
  * 计算本地与远程的总差异量（Σ|local_len - remote_len|）。
- * 差异总量 < DIFF_THRESHOLD → 视为微小差异，静默合并不弹框。
+ * 差异总量 < 设置项 cloudSyncSilentThreshold（默认 1000）→ 视为微小差异，静默合并不弹框。
+ * 阈值由用户在云同步设置页配置，0 表示永不静默合并（差异一律进入冲突流程）。
  */
-const MODULE_DIFF_THRESHOLD = 500
-
 function totalDiffSize(local: unknown, remote: unknown): number {
   try {
     const l = local !== undefined && local !== null ? stableStringify(local).length : 0
@@ -1269,7 +1268,7 @@ async function pullNow(silent = false): Promise<void> {
       if (dirty && (remoteTs > localTs || !timestampsReliable || externallyModified)) {
         // 本地 dirty 且远程更新 → 两端都有变更，合并或冲突
         const diff = cfg.diffSize(localExport, remote)
-        if (diff < MODULE_DIFF_THRESHOLD) {
+        if (diff < (settings.cloudSyncSilentThreshold ?? 1000)) {
           // 微小差异 → 静默合并
           const merged = cfg.merge(localExport, remote)
           await cfg.importRemote(merged)
@@ -1578,6 +1577,8 @@ export function init(): void {
 
   document.addEventListener('visibilitychange', () => {
     if (status.value !== 'idle' && status.value !== 'error') return
+    // 间隔=0（关闭自动同步）时，不主动做任何同步，仅手动按钮生效
+    if ((Number(useAppSettingsStore().cloudSyncInterval) || 0) <= 0) return
     if (document.visibilityState === 'visible') {
       // 页面重新可见 → 拉取远程更新（技能改文件/其他设备推送都会被检测到）
       // 静默执行：切回标签页就弹「云同步完成」会严重打扰使用

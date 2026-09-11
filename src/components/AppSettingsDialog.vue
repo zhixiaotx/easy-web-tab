@@ -864,6 +864,7 @@ const cloudSync = useCloudSync()
 const syncTestBusy = ref(false)
 const syncNowBusy = ref(false)
 const forcePullBusy = ref(false)
+const pushLocalBusy = ref(false)
 
 const lastSyncText = computed(() => {
   const t = cloudSync.lastSyncAt.value
@@ -910,6 +911,18 @@ async function handleForcePull(): Promise<void> {
   forcePullBusy.value = true
   await cloudSync.forcePullRemote()
   forcePullBusy.value = false
+}
+
+/** 本地推送云端：跳过远端变更检测守卫，强制以本地数据覆盖云端 */
+async function handlePushLocal(): Promise<void> {
+  if (pushLocalBusy.value) return
+  const confirmed = window.confirm(
+    '将用本地数据覆盖云端（其他设备 / 外部工具对云端的改动会丢失）。\n\n适用于：要把本机最新改动强制推上云、且不在乎云端旧版本时。\n\n确定继续吗？'
+  )
+  if (!confirmed) return
+  pushLocalBusy.value = true
+  await cloudSync.pushNow(false, true)
+  pushLocalBusy.value = false
 }
 
 // ESC 键关闭弹框
@@ -2242,6 +2255,14 @@ onUnmounted(() => {
               :disabled="forcePullBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
               @click="handleForcePull"
             >以云端覆盖本地</button>
+            <button
+              type="button"
+              class="wb-menu-btn"
+              data-testid="sync-push-local"
+              title="用本地数据覆盖云端（跳过远端变更检测，强制以本地为准）"
+              :disabled="pushLocalBusy || !store.cloudSyncUrl || !store.cloudSyncUsername || !store.cloudSyncPassword"
+              @click="handlePushLocal"
+            >本地推送云端</button>
             <span data-testid="sync-last" class="wb-menu-hint" style="margin-left: auto;">上次同步：{{ lastSyncText }}</span>
           </div>
           <p v-if="store.cloudSyncEnabled" class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px; margin-top: 6px;">
@@ -2259,7 +2280,21 @@ onUnmounted(() => {
               :value="store.cloudSyncInterval"
               @input="store.setCloudSyncInterval(Number(($event.target as HTMLInputElement).value)); cloudSync.startInterval()"
             />
-            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">设为 0 则不自动同步，需手动点击「立即同步」</span>
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">设为 0 则完全关闭自动同步（含切换标签页时的自动拉取），所有同步需手动触发</span>
+          </div>
+          <div v-if="store.cloudSyncEnabled" class="remind-field" style="margin-top: 8px;">
+            <span class="remind-label">静默合并阈值（字符数，0=永不静默）</span>
+            <input
+              type="number"
+              class="wb-menu-name-input"
+              style="width: 100px;"
+              min="0"
+              placeholder="1000"
+              data-testid="sync-silent-threshold"
+              :value="store.cloudSyncSilentThreshold"
+              @input="store.setCloudSyncSilentThreshold(Number(($event.target as HTMLInputElement).value))"
+            />
+            <span class="wb-menu-hint" style="color: var(--color-text-muted); opacity: 0.7; font-size: 12px;">本地与云端内容差异小于此值时，后台自动静默合并而不弹冲突框</span>
           </div>
         </div>
 

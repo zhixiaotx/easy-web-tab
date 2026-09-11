@@ -32,7 +32,6 @@ export interface ThemeDef {
 
 export const THEMES: ThemeDef[] = [
   { id: 'light-blue', name: '浅色·蓝', mode: 'light', accent: 'blue' },
-  { id: 'dark-blue', name: '暗黑·蓝', mode: 'dark', accent: 'blue' },
   { id: 'eye', name: '护眼·米黄', mode: 'light', accent: 'brown' },
   { id: 'pink', name: '樱粉·浅', mode: 'light', accent: 'pink' },
   { id: 'purple', name: '科技紫·深', mode: 'dark', accent: 'purple' },
@@ -89,9 +88,9 @@ export const useThemeStore = defineStore('theme', () => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY)
     if (saved && THEMES.some(t => t.id === saved)) {
       currentThemeId.value = saved
-    } else if (saved === 'light' || saved === 'dark') {
-      // 兼容旧版只存 light/dark 的情况
-      currentThemeId.value = saved === 'dark' ? 'dark-blue' : 'light-blue'
+    } else if (saved === 'light' || saved === 'dark' || saved === 'dark-blue') {
+      // 兼容旧版只存 light/dark 的情况（dark-blue 已下架，暗色回退到科技紫·深）
+      currentThemeId.value = saved === 'light' ? 'light-blue' : 'purple'
     } else {
       // 无保存过：跟随系统
       currentThemeId.value = 'system'

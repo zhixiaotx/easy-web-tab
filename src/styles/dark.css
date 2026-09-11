@@ -1192,7 +1192,7 @@ html.dark .skill-note {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-html.dark .skill-note :deep(svg) {
+html.dark .skill-note svg {
   color: #60a5fa;
 }
 

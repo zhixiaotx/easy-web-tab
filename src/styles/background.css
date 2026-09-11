@@ -152,7 +152,7 @@ html.dark .bs-shell {
 }
 
 .background-preview.image {
-  background-image: var(--preview-image, url('/backgrounds/preset-1.jpg'));
+  background-image: var(--preview-image, url('/backgrounds/bg0.jpg'));
   background-size: cover;
   background-position: center;
 }

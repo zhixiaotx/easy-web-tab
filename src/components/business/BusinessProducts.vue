@@ -192,16 +192,21 @@ function drawerMarkupRate(): number | null {
         class="bizprod-card"
         :class="{ inactive: !p.active, highlighted: isHighlighted(p.id) }"
         :data-testid="`bizprod-card-${p.id}`"
+        role="button"
+        tabindex="0"
+        :title="`点击编辑「${p.name}」`"
+        @click="startEdit(p)"
+        @keydown.enter.prevent="startEdit(p)"
       >
         <div class="bizprod-head">
-          <span class="bizprod-name" @click="emit('navigate', 'purchases', p.id)">{{ p.name }}</span>
+          <span class="bizprod-name" @click.stop="emit('navigate', 'purchases', p.id)">{{ p.name }}</span>
           <span class="bizprod-cat">{{ catNameOf(p.categoryId) }}</span>
         </div>
         <div class="bizprod-prices">
           <span class="bizprod-price buy">进价 {{ formatYuanOf(p.purchasePrice) }}/{{ p.unit }}</span>
           <span class="bizprod-price sell">售价 {{ formatYuanOf(p.sellingPrice) }}/{{ p.unit }}</span>
         </div>
-        <div class="bizprod-foot">
+        <div class="bizprod-foot" @click.stop>
           <el-checkbox
             class="bizprod-active"
             :title="p.active ? '点击停售' : '点击恢复在售'"
@@ -211,7 +216,6 @@ function drawerMarkupRate(): number | null {
           >{{ p.active ? '在售' : '停售' }}</el-checkbox>
           <div class="bizprod-actions">
             <el-button size="small" :data-testid="`bizprod-detail-${p.id}`" @click="openDetail(p)">详情</el-button>
-            <el-button size="small" :data-testid="`bizprod-edit-${p.id}`" @click="startEdit(p)">编辑</el-button>
             <el-button size="small" type="danger" :data-testid="`bizprod-del-${p.id}`" @click="handleDelete(p)">删除</el-button>
           </div>
         </div>
@@ -505,11 +509,20 @@ function drawerMarkupRate(): number | null {
   border: 1px solid var(--color-border, var(--color-border));
   border-radius: var(--radius-md, 10px);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease);
+  cursor: pointer;
+  transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease), transform var(--transition-fast, 0.15s ease);
 }
 
 .bizprod-card:hover {
   border-color: var(--color-primary, var(--color-primary));
+  box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0, 0, 0, 0.12));
+  transform: translateY(-2px);
+}
+
+.bizprod-card:focus-visible {
+  outline: none;
+  border-color: var(--color-primary, var(--color-primary));
+  box-shadow: 0 0 0 3px var(--color-focus-ring, rgba(59, 130, 246, 0.35));
 }
 
 .bizprod-card.inactive {

@@ -146,10 +146,12 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
     <div class="bizexp-bar">
       <div class="bizexp-bar-left">
         <span class="bizexp-count">共 {{ dayGroups.length }} 天（{{ store.expenses.length }} 笔支出）</span>
-        <el-button size="small" data-testid="bizexp-cat-manager" @click="showCatManager = true"><Icon name="cog" :size="15" /> 支出分类管理</el-button>
+        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理" @click="showCatManager = true"><Icon name="cog" :size="15" /></el-button>
       </div>
-      <el-button data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesCsv">导出 CSV</el-button>
-      <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出记录</el-button>
+      <div class="bizexp-bar-actions">
+        <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增</el-button>
+        <el-button data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesCsv">导出 CSV</el-button>
+      </div>
     </div>
 
     <!-- el-table 表格列表：一天一行，展开行展示当日支出条目 -->
@@ -332,6 +334,13 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bizexp-bar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
 }
 

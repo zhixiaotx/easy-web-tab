@@ -3,6 +3,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { findExpenseCategory, formatYuanOf, localDateKey, sortExpenses } from '@/composables/businessCore'
+import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessExpense } from '@/types'
 import BusinessCategoryManager from './BusinessCategoryManager.vue'
 import Icon from '@/components/Icon.vue'
@@ -34,6 +35,18 @@ const dayGroups = computed<ExpenseDayGroup[]>(() => {
 
 function catNameOf(id: string): string {
   return findExpenseCategory(store.expenseCategories, id)?.name ?? '未知'
+}
+
+// ===== 一键导出 CSV（支出记录：逐笔展开）=====
+function exportExpensesCsv(): void {
+  const headers = ['日期', '分类', '金额', '备注']
+  const rows: (string | number)[][] = sortExpenses(store.expenses).map(e => [
+    e.date,
+    catNameOf(e.categoryId),
+    e.amount.toFixed(2),
+    e.note ?? ''
+  ])
+  downloadCsv(csvFileName('支出记录'), buildCsv(headers, rows))
 }
 
 // ===== el-pagination 分页（固定 10 条/页，每个日组一行） =====
@@ -135,6 +148,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
         <span class="bizexp-count">共 {{ dayGroups.length }} 天（{{ store.expenses.length }} 笔支出）</span>
         <el-button size="small" data-testid="bizexp-cat-manager" @click="showCatManager = true"><Icon name="cog" :size="15" /> 支出分类管理</el-button>
       </div>
+      <el-button data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesCsv">导出 CSV</el-button>
       <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增支出记录</el-button>
     </div>
 

@@ -16,6 +16,7 @@ import {
 } from '@/composables/ledgerCore'
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import type { LedgerCategory, LedgerEntry } from '@/types'
+import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 
 const store = useWorkbenchLedgerStore()
@@ -136,6 +137,16 @@ const monthEntries = computed(() =>
     .filter(e => monthKeyOf(e.date) === selectedMonth.value)
     .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1))
 )
+
+// ===== 一键导出 CSV（当前选中月记录）=====
+function exportLedgerCsv(): void {
+  const headers = ['日期', '分类', '类型', '金额', '备注']
+  const rows: (string | number)[][] = monthEntries.value.map(e => {
+    const cat = findCategory(store.categories, e.categoryId)
+    return [e.date, cat?.name ?? '未知', cat?.type === 'income' ? '收入' : '支出', e.amount.toFixed(2), e.note ?? '']
+  })
+  downloadCsv(csvFileName(`记账_${selectedMonth.value}`), buildCsv(headers, rows))
+}
 
 // ===== 记录弹框（点击「查看」弹出弹框，Element Plus Table + ElPagination，每页 10 条）=====
 const showRecordsModal = ref(false)
@@ -293,6 +304,7 @@ onUnmounted(() => {
         <el-button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
           查看（{{ monthEntries.length }}）
         </el-button>
+        <el-button class="btn-manage" data-testid="ld-export" :disabled="monthEntries.length === 0" @click="exportLedgerCsv">导出 CSV</el-button>
       </div>
     </div>
 

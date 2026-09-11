@@ -6,6 +6,7 @@ import Icon from '../Icon.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcDailyCost, calcDailyItemDetails, calcDailyLossAmount, calcDailyRevenue, calcInventory, findProduct, formatYuanOf, localDateKey, sortDailyRecords } from '@/composables/businessCore'
+import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessDailyRecord, DailyRecordItem } from '@/types'
 
 // P1-3：跨模块联动跳转 emit
@@ -27,6 +28,31 @@ watch(sorted, () => { listPage.value = 1 })
 /** 获取某条记录的结构化商品明细 */
 function dailyItemDetails(record: BusinessDailyRecord) {
   return calcDailyItemDetails(record, store.products)
+}
+
+// ===== 一键导出 CSV（收摊记录：按「日期 × 商品」展开，便于 Excel 透视）=====
+function exportDailyCsv(): void {
+  const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额']
+  const rows: (string | number)[][] = []
+  for (const rec of sorted.value) {
+    const details = dailyItemDetails(rec)
+    for (const d of details) {
+      rows.push([
+        rec.date,
+        d.name,
+        d.broughtOut,
+        d.sold,
+        d.loss,
+        d.sellingPrice.toFixed(2),
+        d.subtotal.toFixed(2),
+        rec.totalRevenue.toFixed(2)
+      ])
+    }
+    if (details.length === 0) {
+      rows.push([rec.date, '（无商品明细）', '', '', '', '', '', rec.totalRevenue.toFixed(2)])
+    }
+  }
+  downloadCsv(csvFileName('收摊记录'), buildCsv(headers, rows))
 }
 
 // ===== 编辑弹框（动态商品行） =====
@@ -146,7 +172,10 @@ async function handleDelete(id: string): Promise<void> {
   <div class="bizday">
     <div class="bizday-bar">
       <span class="bizday-count">共 {{ store.dailyRecords.length }} 条（同一天自动覆盖）</span>
-      <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
+      <div class="bizday-bar-actions">
+        <el-button data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyCsv">导出 CSV</el-button>
+        <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
+      </div>
     </div>
 
     <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击右上角记下今天的第一笔</div>
@@ -376,6 +405,12 @@ async function handleDelete(id: string): Promise<void> {
 .bizday-count {
   font-size: 13px;
   color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.bizday-bar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .bizday-empty {

@@ -3,7 +3,8 @@
 // P1-2：库存卡片增加展开溯源功能（进货明细 + 收摊带出记录）
 import { computed, nextTick, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
-import { calcBroughtOutTotals, calcInventory, calcInventorySources, calcPurchaseTotals, formatYuanOf, lowStockProducts, sortProducts } from '@/composables/businessCore'
+import { calcBroughtOutTotals, calcInventory, calcInventorySources, calcPurchaseTotals, findProductCategory, formatYuanOf, lowStockProducts, sortProducts } from '@/composables/businessCore'
+import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
@@ -75,6 +76,21 @@ function openTraceModal(productId: string): void {
 function closeTraceModal(): void {
   traceModalProductId.value = null
 }
+
+// ===== 一键导出 CSV（库存总览：全部商品，含当前库存）=====
+function exportInventoryCsv(): void {
+  const headers = ['商品名称', '分类', '单位', '进货价', '售价', '当前库存', '状态']
+  const rows: (string | number)[][] = sortProducts(store.products).map(p => [
+    p.name,
+    (p.categoryId ? findProductCategory(store.productCategories, p.categoryId)?.name : undefined) ?? '未分类',
+    p.unit,
+    p.purchasePrice.toFixed(2),
+    p.sellingPrice.toFixed(2),
+    stockMap.value[p.id] ?? 0,
+    p.active ? '在售' : '停售'
+  ])
+  downloadCsv(csvFileName('库存总览'), buildCsv(headers, rows))
+}
 </script>
 
 <template>
@@ -83,7 +99,9 @@ function closeTraceModal(): void {
     <div class="bizinv-alert" data-testid="bizinv-alert">
       <div class="bizinv-alert-head">
         <span class="bizinv-alert-title"><Icon name="alert" :size="15" /> 低库存预警</span>
-        <label class="bizinv-threshold">
+        <div class="bizinv-alert-actions">
+          <el-button size="small" data-testid="bizinv-export" :disabled="store.products.length === 0" @click="exportInventoryCsv">导出 CSV</el-button>
+          <label class="bizinv-threshold">
           阈值
           <el-input
             type="number"
@@ -98,6 +116,7 @@ function closeTraceModal(): void {
             @keydown.enter="commitThreshold"
           />
         </label>
+        </div>
       </div>
       <p v-if="lowStock.length === 0" class="bizinv-empty" data-testid="bizinv-low-empty">库存充足，暂无预警商品</p>
       <div v-else class="bizinv-low-grid">
@@ -227,6 +246,12 @@ function closeTraceModal(): void {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-secondary, var(--color-text-secondary));
+}
+
+.bizinv-alert-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .bizinv-threshold {

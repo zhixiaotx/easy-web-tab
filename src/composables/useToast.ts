@@ -14,7 +14,7 @@ const toasts = shallowRef<ToastItem[]>([])
 let nextId = 1
 
 export function useToast() {
-  const showToast = (type: ToastType, message: string, duration = 3000) => {
+  const showToast = (type: ToastType, message: string, duration = 2500) => {
     const id = nextId++
     toasts.value = [...toasts.value, { id, type, message, duration }]
     

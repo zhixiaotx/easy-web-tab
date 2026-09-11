@@ -103,3 +103,49 @@ html[data-accent='purple'] {
   --color-primary-light: #ede9fe;
   --color-border-focus: #8b5cf6;
 }
+
+/* 中国红（浅色专属：经典正红主色，喜庆中国风，呼应传统朱红） */
+html[data-accent='red'] {
+  --color-primary: #c8102e;
+  --color-primary-hover: #a60d24;
+  --color-primary-50:  #fdecec;
+  --color-primary-100: #f9d4d4;
+  --color-primary-200: #f2a9a9;
+  --color-primary-300: #ea7e7e;
+  --color-primary-400: #e05353;
+  --color-primary-500: #c8102e;
+  --color-primary-600: #a60d24;
+  --color-primary-700: #840a1d;
+  --color-primary-800: #630816;
+  --color-primary-900: #420510;
+  --color-primary-light: #fdecec;
+  --color-border-focus: #c8102e;
+}
+
+/* 莫兰迪灰（浅色专属：低饱和灰蓝主色 + 暖灰表面，中性优雅高级灰调） */
+html[data-accent='gray'] {
+  --color-primary: #6c7a8c;
+  --color-primary-hover: #5a6779;
+  --color-primary-50:  #f1f3f4;
+  --color-primary-100: #dfe4e7;
+  --color-primary-200: #c2cbd1;
+  --color-primary-300: #9fadb6;
+  --color-primary-400: #81909c;
+  --color-primary-500: #6c7a8c;
+  --color-primary-600: #5a6779;
+  --color-primary-700: #495463;
+  --color-primary-800: #3b4552;
+  --color-primary-900: #2f3640;
+  --color-primary-light: #eef1f2;
+  --color-border-focus: #6c7a8c;
+  /* 莫兰迪暖灰表面系 */
+  --color-bg: #eceae6;
+  --color-bg-card: #f6f5f2;
+  --color-bg-hover: #e3e1dc;
+  --color-bg-input: #efece7;
+  --color-border: #d9d6d0;
+  --color-border-hover: #c8c4bc;
+  --color-text: #4a4844;
+  --color-text-secondary: #6c6964;
+  --color-text-muted: #908c85;
+}

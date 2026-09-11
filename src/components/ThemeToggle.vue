@@ -15,6 +15,8 @@ const accentColor: Record<string, string> = {
   pink: '#ec4899',
   green: '#22c55e',
   purple: '#8b5cf6',
+  red: '#c8102e',
+  gray: '#6c7a8c',
   system: '#94a3b8'
 }
 const dotColor = (accent: ThemeAccent | null) => accentColor[accent ?? 'system']

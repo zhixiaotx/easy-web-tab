@@ -48,6 +48,12 @@ html[data-accent='brown'] {
   --color-text: #44403a;
   --color-text-secondary: #6b6354;
   --color-text-muted: #8a8170;
+  /* 米黄表面系（卡片/柔光底随主题统一为米黄调，避免白卡突兀） */
+  --color-surface: #faf6ee;
+  --color-surface-2: #f3ede2;
+  --color-hover: #ece3d3;
+  --color-primary-soft: rgba(164, 117, 81, 0.14);
+  --color-border-strong: #d9c8ad;
 }
 
 /* 樱粉（浅色专属） */
@@ -148,4 +154,10 @@ html[data-accent='gray'] {
   --color-text: #4a4844;
   --color-text-secondary: #6c6964;
   --color-text-muted: #908c85;
+  /* 莫兰迪表面系（卡片/柔光底随主题统一为暖灰调） */
+  --color-surface: #f6f5f2;
+  --color-surface-2: #eeece8;
+  --color-hover: #e3e1dc;
+  --color-primary-soft: rgba(108, 122, 140, 0.14);
+  --color-border-strong: #c8c4bc;
 }

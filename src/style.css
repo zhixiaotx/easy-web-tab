@@ -40,6 +40,15 @@
   --color-bg-hover: #f1f5f9;
   --color-bg-active: #e2e8f0;
   --color-bg-input: #f1f5f9;
+
+  /* 表面与交互态（组件级卡片/hover/柔光底，与 --color-bg-card 同族；
+     此前缺失，暗色下靠 fallback 白底导致文字不可见） */
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-hover: #f1f5f9;
+  --color-primary-soft: rgba(59, 130, 246, 0.10);
+  --color-border-strong: #cbd5e1;
+
   --color-shadow: rgba(0, 0, 0, 0.08);
 
   /* 文字色 */

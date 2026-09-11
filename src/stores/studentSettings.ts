@@ -126,8 +126,8 @@ export const useStudentSettingsStore = defineStore('studentSettings', () => {
     void saveSettings().catch(err => console.error('[studentSettings] save failed:', err))
   }
 
-  async function loadSettings() {
-    if (loaded.value) return
+  async function loadSettings(force = false) {
+    if (loaded.value && !force) return
     const raw = await idbGet<StudentSettings>(STORE_KEY)
     settings.value = normalizeStudentSettings(raw)
     // 学段默认值播种：若 stageSeeded !== stage 则应用学段默认学科/番茄钟（M1 仅学科；

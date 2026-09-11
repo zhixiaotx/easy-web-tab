@@ -45,4 +45,6 @@ onMounted(() => {
 @import './styles/animations.css';
 /* 暗色模式样式 */
 @import './styles/dark.css';
+/* 多主题强调色覆盖（须在 dark.css 之后，覆盖其 primary 变量） */
+@import './styles/themes.css';
 </style>

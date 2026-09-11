@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { markDirty } from '@/composables/useCloudSync'
 
 const THEME_STORAGE_KEY = 'user-theme'
@@ -16,58 +16,113 @@ export interface CustomBackground {
   name: string
 }
 
+// ========================================
+// 多主题皮肤：外观模式(mode) × 强调色(accent)
+// data-accent 驱动主色系（themes.css），html.dark 驱动明度（dark.css）
+// ========================================
+export type ThemeAccent = 'blue' | 'brown' | 'pink' | 'green' | 'purple'
+
+export interface ThemeDef {
+  id: string
+  name: string
+  mode: 'light' | 'dark'
+  accent: ThemeAccent | null // null = 跟随系统时用默认蓝
+  system?: boolean
+}
+
+export const THEMES: ThemeDef[] = [
+  { id: 'light-blue', name: '浅色·蓝', mode: 'light', accent: 'blue' },
+  { id: 'dark-blue', name: '暗黑·蓝', mode: 'dark', accent: 'blue' },
+  { id: 'eye', name: '护眼·米黄', mode: 'light', accent: 'brown' },
+  { id: 'pink', name: '樱粉·浅', mode: 'light', accent: 'pink' },
+  { id: 'purple', name: '科技紫·深', mode: 'dark', accent: 'purple' },
+  { id: 'lime', name: '青柠·浅', mode: 'light', accent: 'green' },
+  { id: 'system', name: '跟随系统', mode: 'light', accent: null, system: true },
+]
+
+const DEFAULT_THEME_ID = 'light-blue'
+
 export const useThemeStore = defineStore('theme', () => {
   // ========================================
   // 主题相关
   // ========================================
-  
+  const currentThemeId = ref<string>(DEFAULT_THEME_ID)
+
+  // 系统明暗偏好（仅 system 主题使用）
+  const systemPrefersDark = ref(false)
+  const updateSystemPrefers = () => {
+    systemPrefersDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+  }
+
+  // 解析当前主题定义
+  const currentTheme = computed<ThemeDef>(() => {
+    return THEMES.find(t => t.id === currentThemeId.value) ?? THEMES[0]
+  })
+
+  // 兼容性输出：当前外观模式 light/dark（供 ECharts 等 isDark 逻辑使用）
+  const theme = computed<'light' | 'dark'>(() => {
+    const t = currentTheme.value
+    if (t.system) return systemPrefersDark.value ? 'dark' : 'light'
+    return t.mode
+  })
+
+  // 当前强调色
+  const accent = computed<ThemeAccent>(() => {
+    const t = currentTheme.value
+    if (t.accent) return t.accent
+    return 'blue'
+  })
+
+  // 应用主题到 document
+  function applyTheme() {
+    const root = document.documentElement
+    root.classList.toggle('dark', theme.value === 'dark')
+    root.setAttribute('data-accent', accent.value)
+    root.setAttribute('data-theme', currentThemeId.value)
+  }
+
   // 初始化主题
   const initTheme = () => {
-    // 1. 先从 localStorage 读取
+    updateSystemPrefers()
     const saved = localStorage.getItem(THEME_STORAGE_KEY)
-    if (saved) {
-      theme.value = saved as 'light' | 'dark'
+    if (saved && THEMES.some(t => t.id === saved)) {
+      currentThemeId.value = saved
+    } else if (saved === 'light' || saved === 'dark') {
+      // 兼容旧版只存 light/dark 的情况
+      currentThemeId.value = saved === 'dark' ? 'dark-blue' : 'light-blue'
     } else {
-      // 2. 没有保存过，检查系统偏好
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      theme.value = prefersDark ? 'dark' : 'light'
+      // 无保存过：跟随系统
+      currentThemeId.value = 'system'
     }
     applyTheme()
   }
 
-  // 主题状态
-  const theme = ref<'light' | 'dark'>('light')
-
-  // 应用主题到 document
-  function applyTheme() {
-    if (theme.value === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }
-
-  // 切换主题
-  function toggleTheme() {
-    theme.value = theme.value === 'light' ? 'dark' : 'light'
-    localStorage.setItem(THEME_STORAGE_KEY, theme.value)
+  // 设置指定主题
+  function setTheme(id: string) {
+    if (!THEMES.some(t => t.id === id)) return
+    currentThemeId.value = id
+    localStorage.setItem(THEME_STORAGE_KEY, id)
     markDirty()
     applyTheme()
   }
 
-  // 监听主题变化
-  watch(theme, () => {
-    applyTheme()
-  })
+  // 跟随系统
+  function setSystem() {
+    setTheme('system')
+  }
 
-  // 监听系统主题变化
+  // 循环切换（供 ⌘D / Ctrl+D 快捷键）
+  function toggleTheme() {
+    const idx = THEMES.findIndex(t => t.id === currentThemeId.value)
+    const next = THEMES[(idx + 1) % THEMES.length]
+    setTheme(next.id)
+  }
+
+  // 监听系统主题变化（system 主题实时跟随）
   if (typeof window !== 'undefined') {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      // 只有用户没有手动设置过主题时才跟随系统
-      if (!localStorage.getItem(THEME_STORAGE_KEY)) {
-        theme.value = e.matches ? 'dark' : 'light'
-        applyTheme()
-      }
+      systemPrefersDark.value = e.matches
+      if (currentTheme.value.system) applyTheme()
     })
   }
 
@@ -166,7 +221,7 @@ export const useThemeStore = defineStore('theme', () => {
     const root = document.documentElement
     const body = document.body
     const app = document.getElementById('app')
-    
+
     if (backgroundType.value === 'none' || !backgroundValue.value) {
       root.style.removeProperty('--app-bg-type')
       root.style.removeProperty('--app-bg-value')
@@ -193,7 +248,7 @@ export const useThemeStore = defineStore('theme', () => {
     if (app) {
       app.classList.add('app-has-background')
     }
-    
+
     if (backgroundType.value === 'image') {
       root.style.setProperty('--app-bg-image', `url(${backgroundValue.value})`)
       root.classList.add('image')
@@ -262,7 +317,13 @@ export const useThemeStore = defineStore('theme', () => {
   return {
     // 主题相关
     theme,
+    currentThemeId,
+    currentTheme,
+    accent,
+    themes: THEMES,
     initTheme,
+    setTheme,
+    setSystem,
     toggleTheme,
     applyTheme,
     // 背景相关

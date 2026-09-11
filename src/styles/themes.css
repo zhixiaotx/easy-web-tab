@@ -1,0 +1,105 @@
+/* ============================================================
+   多主题强调色覆盖 (accent)
+   驱动 --color-primary 系列；Element Plus 主色经 element-theme.css
+   引用 --color-primary-* 自动跟随，消除暗黑绿蓝割裂。
+   加载顺序须在 dark.css 之后（main.ts 末行 import），确保覆盖其 primary。
+   ============================================================ */
+
+/* 蓝（默认，浅/暗通用；与 :root / dark.css 一致，显式声明确保切换回蓝正确） */
+html[data-accent='blue'] {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-50:  #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-light: #eff6ff;
+}
+
+/* 护眼·米黄（浅色专属：柔和棕强调 + 米黄表面，降低冷蓝、提升长时间阅读舒适度） */
+html[data-accent='brown'] {
+  --color-primary: #a47551;
+  --color-primary-hover: #8c5e3f;
+  --color-primary-50:  #faf5ef;
+  --color-primary-100: #f3e7da;
+  --color-primary-200: #e7d3bf;
+  --color-primary-300: #d6b693;
+  --color-primary-400: #c29872;
+  --color-primary-500: #a47551;
+  --color-primary-600: #8c5e3f;
+  --color-primary-700: #6f4a30;
+  --color-primary-800: #5a3d29;
+  --color-primary-900: #4a3222;
+  --color-primary-light: #faf5ef;
+  --color-border-focus: #a47551;
+  /* 米黄表面系 */
+  --color-bg: #f3ede2;
+  --color-bg-card: #faf6ee;
+  --color-bg-hover: #ece3d3;
+  --color-bg-input: #f1e9da;
+  --color-border: #e3d8c4;
+  --color-border-hover: #d4c6ad;
+  --color-text: #44403a;
+  --color-text-secondary: #6b6354;
+  --color-text-muted: #8a8170;
+}
+
+/* 樱粉（浅色专属） */
+html[data-accent='pink'] {
+  --color-primary: #ec4899;
+  --color-primary-hover: #db2777;
+  --color-primary-50:  #fdf2f6;
+  --color-primary-100: #fce7f3;
+  --color-primary-200: #fbcfe8;
+  --color-primary-300: #f9a8d4;
+  --color-primary-400: #f472b6;
+  --color-primary-500: #ec4899;
+  --color-primary-600: #db2777;
+  --color-primary-700: #be185d;
+  --color-primary-800: #9d174d;
+  --color-primary-900: #831843;
+  --color-primary-light: #fce7f3;
+  --color-border-focus: #ec4899;
+}
+
+/* 青柠（浅色专属，呼应成功绿） */
+html[data-accent='green'] {
+  --color-primary: #22c55e;
+  --color-primary-hover: #16a34a;
+  --color-primary-50:  #f0fdf4;
+  --color-primary-100: #dcfce7;
+  --color-primary-200: #bbf7d0;
+  --color-primary-300: #86efac;
+  --color-primary-400: #4ade80;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+  --color-primary-800: #166534;
+  --color-primary-900: #14532d;
+  --color-primary-light: #dcfce7;
+  --color-border-focus: #22c55e;
+}
+
+/* 科技紫（深色专属） */
+html[data-accent='purple'] {
+  --color-primary: #8b5cf6;
+  --color-primary-hover: #7c3aed;
+  --color-primary-50:  #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+  --color-primary-light: #ede9fe;
+  --color-border-focus: #8b5cf6;
+}

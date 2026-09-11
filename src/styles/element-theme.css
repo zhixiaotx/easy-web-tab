@@ -7,16 +7,16 @@
 
 :root,
 html.dark {
-  /* Element Plus 主色 → 项目绿 #10b981 */
-  --el-color-primary: #10b981;
-  --el-color-primary-light-3: #34d399; /* hover / 次级 */
-  --el-color-primary-light-5: #6ee7b7; /* 选中底 */
-  --el-color-primary-light-7: #a7f3d0; /* 悬停底 */
-  --el-color-primary-light-8: #d1fae5; /* 激活底 */
-  --el-color-primary-light-9: #ecfdf5; /* 最浅底 */
-  --el-color-primary-dark-2: #059669; /* 按下 */
+  /* Element Plus 主色跟随项目 --color-primary（多主题 accent 驱动），消除暗黑绿蓝割裂 */
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: var(--color-primary-400);
+  --el-color-primary-light-5: var(--color-primary-300);
+  --el-color-primary-light-7: var(--color-primary-200);
+  --el-color-primary-light-8: var(--color-primary-100);
+  --el-color-primary-light-9: var(--color-primary-50);
+  --el-color-primary-dark-2: var(--color-primary-600);
 
-  /* success 统一到品牌绿，避免双绿不一致 */
+  /* success 保留语义绿（独立于主色，功能色） */
   --el-color-success: #10b981;
   --el-color-success-light-3: #34d399;
   --el-color-success-light-5: #6ee7b7;

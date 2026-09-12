@@ -415,5 +415,40 @@ docker stop easywebtab && docker rm easywebtab
 pm2 start "docker run -p 16718:16718 easywebtab" --name easywebtab
 ```
 
+### 方式五：Nginx 静态托管
+
+用 Nginx 托管 `dist/` 时，页面本身是纯静态的，但**云同步（WebDAV）会撞浏览器跨域限制**，需要额外跑一个同源代理。
+
+```bash
+npm run build          # 产出 dist/
+npm run webdav-proxy   # 启动 WebDAV 同源代理，默认 127.0.0.1:16719
+# 或常驻：pm2 start scripts/webdav-proxy-only.cjs --name easy-webdav-proxy
+```
+
+Nginx 侧把 `/api/webdav-proxy` 反代到该进程：
+
+```nginx
+server {
+  listen 443 ssl;
+  server_name your-domain.com;
+
+  root /var/www/easy-web-tab/dist;
+  location / { try_files $uri $uri/ /index.html; }
+
+  location /api/webdav-proxy {
+    proxy_pass http://127.0.0.1:16719;
+    proxy_set_header Host $host;
+  }
+}
+```
+
+代理协议：`POST /api/webdav-proxy`，请求头 `X-Webdav-Auth: Basic <base64(用户名:密码)>`，
+body 为 `{ target, method, body? }`。用户凭据由前端运行时输入，代理进程不落盘、不记录。
+监听地址与端口可用 `WEBDAV_PROXY_HOST` / `WEBDAV_PROXY_PORT` 覆盖；
+`GET /healthz` 可作健康检查。
+
+> 开发环境不需要这个进程 —— `vite.config.js` 已内置同协议 dev proxy；
+> `npm run serve` 启动的 `scripts/serve-with-rewrites.cjs` 也已内置。
+
 
 

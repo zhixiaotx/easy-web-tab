@@ -20,7 +20,7 @@ const DEFAULT_GAP = 12
 export interface PanelPagingOptions<T> {
   /** 完整「已筛选/已排序」列表 getter（每次读取返回最新列表；返回的数组引用变化时触发页码钳制）。 */
   items: () => T[]
-  /** 每行（卡片/行条目）最大外高 px（来自 .omo/evidence/workbench-onescreen/row-heights.json 实测，MAX + 2px margin，R4）。 */
+  /** 每行（卡片/行条目）最大外高 px。取值口径为「实测行高 MAX + 2px margin」（历史曾用 Playwright 一屏布局脚本批量测量，该脚本已移除；现由各面板自行传入常量）。 */
   rowHeight: number
   /** 行间距 px，默认 12。 */
   gap?: number

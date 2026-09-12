@@ -8,6 +8,7 @@
     "build": "node scripts/generate-preset-icons.cjs && vue-tsc -b && vite build",
     "preview": "vite preview",
     "serve": "node scripts/serve-with-rewrites.cjs",
+    "webdav-proxy": "node scripts/webdav-proxy-only.cjs",
     "start": "npm run build && npm run serve",
     "test:countdown": "node --experimental-strip-types scripts/test-countdown-core.ts",
     "test:reminder": "node --experimental-strip-types scripts/test-reminder-core.ts",

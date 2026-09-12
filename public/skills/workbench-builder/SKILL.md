@@ -280,12 +280,17 @@ export interface WorkbenchData {
 }
 ```
 
-### 步骤 8：实测行高 (`.omo/evidence/workbench-onescreen/row-heights.json`)
+### 步骤 8：确定 rowHeight 常量
 
-运行 `node scripts/qa-workbench-onescreen.mjs`，测量 MAX+2px，添加到 JSON：
-```json
-{ "foo": 152 }
+`rowHeight` 口径为「列表单行的最大外高 + 2px margin」。测量方式：在浏览器里渲染若干条真实数据，
+用 DevTools 量首条卡片的**外层**高度（含 margin），取最大值 +2，作为常量直接写在面板组件里
+（参考同类面板的既有取值，如待办 214 / 便签 287 / 日记 192 / 倒计时 158 / 习惯 82）。
+
+```typescript
+rowHeight: 152,   // 实测 MAX + 2px，写在面板常量里
 ```
+
+> 历史上曾用一次性 Playwright 脚本批量测量并导出 JSON，该脚本已移除，现以面板内常量为准。
 
 ### 步骤 9：编译验证
 
@@ -315,7 +320,7 @@ const paging = usePanelPaging({
 
 ### 关键陷阱
 1. **gridRef 必须绑定到 grid 元素**，不是外层 flex 容器。否则 colsPerRow 恒等于 1
-2. **rowHeight 来自实测**：`.omo/evidence/workbench-onescreen/row-heights.json`
+2. **rowHeight 必须实测**（单行最大外高 + 2px），不可拍脑袋估 —— 估小了会一屏塞不下
 3. **条件渲染列表**（折叠/锁态）containerRef 为 null → 分页惰性直到渲染
 4. **面板根必须 flex 列**（桌面端加 `flex:1; min-height:0`）
 5. **!fitsOnePage 时**列表区回退 `overflow-y:auto`
@@ -387,7 +392,7 @@ const paging = usePanelPaging({
 | 5 | `src/composables/workbenchMenuCore.ts` | 编辑 | MENU_KEYS + DEFAULT_ORDER + LABELS + ICONS |
 | 6 | `src/views/WorkbenchView.vue` | 编辑 | SECTION_KEYS + onMounted load + 模板渲染 |
 | 7 | `src/composables/useIdb.ts` | 编辑 | idbExportAll + idbImportAll + 旧版兼容 |
-| 8 | `.omo/evidence/workbench-onescreen/row-heights.json` | 实测 | 行高 MAX+2px |
+| 8 | `src/components/workbench/WorkbenchFoo.vue` | 编辑 | rowHeight 常量（实测 MAX+2px） |
 | 9 | `src/composables/useCloudSync.ts` | 编辑 | businessSignature 排除不稳定字段 |
 | 10 | `package.json` | 编辑 | test:foo 脚本（可选） |
 
@@ -398,5 +403,7 @@ npm install          # 安装依赖
 npm run dev          # 开发服务器 http://localhost:16718
 npm run build        # 编译（generate-preset-icons → vue-tsc → vite build）
 npm run test:foo     # 纯函数测试
-node scripts/qa-workbench-onescreen.mjs  # 一屏布局 QA + 行高测量
+npm run test:student # 学生工作台 core 测试聚合
 ```
+
+> 内存紧张的机器上构建需 `NODE_OPTIONS=--max-old-space-size=3072 npm run build`。

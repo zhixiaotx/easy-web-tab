@@ -11,25 +11,39 @@ import {
 const tests = []
 function test(n, f) { tests.push({ name: n, fn: f }) }
 
-test("T1 常量集合长度/内容：10 内置 / 0 手动 / 4 指标", () => {
-  assert.equal(BUILTIN_ACHIEVEMENT_IDS.length, 10)
-  assert.equal(BUILTIN_ACHIEVEMENT_IDS[0], "streak-7")
-  assert.equal(BUILTIN_ACHIEVEMENT_IDS[9], "hw-rate-95")
+test("T1 常量集合长度/内容：26 内置 / 0 手动 / 10 指标", () => {
+  assert.equal(BUILTIN_ACHIEVEMENT_IDS.length, 26)
+  assert.equal(BUILTIN_ACHIEVEMENT_IDS[0], "streak-1")
+  assert.equal(BUILTIN_ACHIEVEMENT_IDS[25], "all-built-unlocked")
   assert.deepEqual(MANUAL_ACHIEVEMENT_IDS, [])
-  assert.deepEqual(KNOWN_METRICS, ["max-streak", "reading-count", "pomo-count", "hw-rate"])
+  assert.deepEqual(KNOWN_METRICS, [
+    "max-streak", "reading-count", "pomo-count", "hw-rate", "hw-total",
+    "review-count", "review-total", "review-mastered-count", "achievement-count", "all-built-unlocked"
+  ])
 })
 
-test("T2 buildBuiltinAchievements：10 条；分类 streak=habit、book=reading、pomo=pomodoro、hw-rate=study；id/metric/target 与常量一致；幂等返回副本", () => {
+test("T2 buildBuiltinAchievements：26 条；分类 streak=habit、book=reading、pomo=pomodoro、hw/review=study；id/metric/target 与常量一致；幂等返回副本", () => {
   const a = buildBuiltinAchievements(); const b = buildBuiltinAchievements()
   assert.notEqual(a, b)
-  assert.equal(a.length, 10)
+  assert.equal(a.length, 26)
   a[0].name = "X"
-  assert.equal(buildBuiltinAchievements()[0].name, "一周坚持")
-  for (let i = 0; i < 10; i++) assert.equal(a[i].id, BUILTIN_ACHIEVEMENT_IDS[i])
+  assert.equal(buildBuiltinAchievements()[0].name, "1 天小红花")
+  for (let i = 0; i < 26; i++) assert.equal(a[i].id, BUILTIN_ACHIEVEMENT_IDS[i])
   assert.equal(a.find(d => d.id === "hw-rate-95")!.category, "study")
   assert.equal(a.find(d => d.id === "pomo-50")!.category, "pomodoro")
   assert.equal(a.find(d => d.id === "book-10")!.category, "reading")
   assert.equal(a.find(d => d.id === "streak-7")!.category, "habit")
+  assert.equal(a.find(d => d.id === "review-first")!.category, "study")
+})
+
+test("T2b 分类分布：habit 12 / reading 4 / pomodoro 4 / study 6", () => {
+  const a = buildBuiltinAchievements()
+  const count = (c: string) => a.filter(d => d.category === c).length
+  assert.equal(count("habit"), 12)
+  assert.equal(count("reading"), 4)
+  assert.equal(count("pomodoro"), 4)
+  assert.equal(count("study"), 6)
+  assert.equal(count("habit") + count("reading") + count("pomodoro") + count("study"), 26)
 })
 
 test("T3 emptyAchievementsData / normalizeAchievementDef：非法必填/枚举/target<1 → null；合法 id 映射", () => {
@@ -69,8 +83,8 @@ test("T5 mergeBuiltinAchievements：缺失内置补齐；未知 id 保留在末�
     { id: "custom-1", name: "C", description: "c", emoji: "C", category: "study", metric: "hw-rate", target: 1 },
   ]
   const m = mergeBuiltinAchievements(existing)
-  // 首条 streak-7（内置顺序首，缺失补齐）
-  assert.equal(m[0].id, "streak-7")
+  // 首条为内置顺序首（缺失补齐）
+  assert.equal(m[0].id, BUILTIN_ACHIEVEMENT_IDS[0])
   // custom-1 末尾
   assert.equal(m[m.length - 1].id, "custom-1")
   // streak-30 内置也补齐
@@ -152,16 +166,17 @@ test("T11 视图辅助：filterByCategory / categoryLabel / calcAchievementStats
   const defs = buildBuiltinAchievements()
   assert.equal(filterByCategory(defs, "all").length, defs.length)
   assert.notEqual(filterByCategory(defs, "all"), defs)
-  assert.equal(filterByCategory(defs, "habit").length, 3)
-  assert.equal(filterByCategory(defs, "reading").length, 3)
-  assert.equal(filterByCategory(defs, "study").length, 1)
+  assert.equal(filterByCategory(defs, "habit").length, 12)
+  assert.equal(filterByCategory(defs, "reading").length, 4)
+  assert.equal(filterByCategory(defs, "study").length, 6)
+  assert.equal(filterByCategory(defs, "pomodoro").length, 4)
   assert.equal(categoryLabel("habit"), "习惯")
   assert.equal(categoryLabel("reading"), "阅读")
   assert.equal(categoryLabel("pomodoro"), "专注")
   const unlocked = { "streak-7": "t", "book-10": "t" }
   const s = calcAchievementStats(defs, unlocked)
-  assert.equal(s.total, 10); assert.equal(s.unlocked, 2); assert.equal(s.locked, 8)
-  assert.equal(s.rate, 20); assert.equal(s.allUnlocked, false)
+  assert.equal(s.total, 26); assert.equal(s.unlocked, 2); assert.equal(s.locked, 24)
+  assert.equal(s.rate, Math.round(2 / 26 * 100)); assert.equal(s.allUnlocked, false)
   const all = Object.fromEntries(BUILTIN_ACHIEVEMENT_IDS.map(i => [i, "t"]))
   assert.equal(calcAchievementStats(defs, all).allUnlocked, true)
   // formatUnlockTime

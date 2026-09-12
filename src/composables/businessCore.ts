@@ -181,6 +181,7 @@ function normDailyRecord(raw: unknown): BusinessDailyRecord | null {
     date: d.date,
     items,
     totalRevenue: Math.max(0, numOf(d.totalRevenue)),
+    transactionCount: typeof d.transactionCount === 'number' && Number.isFinite(d.transactionCount) ? Math.max(0, Math.floor(d.transactionCount)) : undefined,
     note: typeof d.note === 'string' && d.note.trim() ? d.note.trim().slice(0, 200) : undefined,
     createdAt: typeof d.createdAt === 'string' ? d.createdAt : new Date(0).toISOString(),
     updatedAt: typeof d.updatedAt === 'string' ? d.updatedAt : new Date(0).toISOString()
@@ -580,6 +581,7 @@ export interface TrendPoint {
   revenue: number
   cost: number
   profit: number
+  transactionCount?: number // 当日交易笔数（Σ 各收摊记录 transactionCount）
 }
 
 /** 近 days 天趋势（含 endDate 当天，升序）：按收摊记录口径——revenue=当日收摊收入；cost=当日收摊 COGS（售出×进货价，缺失商品计 0）；profit=差；进货/支出不入趋势（无收摊记录日全 0） */
@@ -593,16 +595,17 @@ export function calcBusinessTrend(data: BusinessData, endDate: string, days = 30
     const dayRecords = data.dailyRecords.filter(r => r.date === key)
     const revenue = dayRecords.reduce((s, r) => s + r.totalRevenue, 0)
     const cost = dayRecords.reduce((s, r) => s + calcDailyCost(r.items, data.products), 0)
+    const count = dayRecords.reduce((s, r) => s + (typeof r.transactionCount === 'number' && Number.isFinite(r.transactionCount) ? r.transactionCount : 0), 0)
     const revenueR = Math.round(revenue * 100) / 100
     const costR = Math.round(cost * 100) / 100
-    out.push({ date: key, revenue: revenueR, cost: costR, profit: Math.round((revenueR - costR) * 100) / 100 })
+    out.push({ date: key, revenue: revenueR, cost: costR, profit: Math.round((revenueR - costR) * 100) / 100, transactionCount: count })
   }
   return out
 }
 
 /** 每日一柱堆叠分段几何（仅非零值生成；loss=亏损悬挂零下红段） */
 export interface TrendSegment {
-  key: 'revenue' | 'cost' | 'profit' | 'loss'
+  key: 'revenue' | 'cost' | 'profit' | 'loss' | 'count' | 'count'
   x: number
   y: number
   w: number
@@ -632,7 +635,7 @@ export interface TrendBarsScale {
   allZero: boolean
 }
 
-export type TrendBarMode = 'all' | 'revenue' | 'profit'
+export type TrendBarMode = 'all' | 'revenue' | 'profit' | 'count'
 
 /** 金额紧凑格式（柱顶标签）：≥1万 → X.X万、≥1千 → X.Xk、其余四舍五入取整 */
 export function compactAmount(n: number): string {
@@ -666,7 +669,9 @@ export function businessTrendBars(
   const values =
     mode === 'all'
       ? series.flatMap(p => [p.revenue, p.profit])
-      : series.map(p => (mode === 'revenue' ? p.revenue : p.profit))
+      : mode === 'count'
+        ? series.map(p => p.transactionCount ?? 0)
+        : series.map(p => (mode === 'revenue' ? p.revenue : p.profit))
   const maxVal = Math.max(0, ...values)
   const minVal = Math.min(0, ...values)
   const allZero = maxVal <= 0 && minVal >= 0
@@ -681,7 +686,8 @@ export function businessTrendBars(
   const r2 = (v: number) => Math.round(v * 100) / 100
   const gridlines = Array.from({ length: 5 }, (_, i) => {
     const value = minY + (span * i) / 4
-    return { y: r2(yOf(value)), label: formatYuan(value) }
+    const label = mode === 'count' ? `${Math.round(value)}笔` : formatYuan(value)
+    return { y: r2(yOf(value)), label }
   })
   const n = series.length
   const dayW = innerW / n
@@ -713,13 +719,24 @@ export function businessTrendBars(
     } else if (mode === 'revenue') {
       if (p.revenue !== 0)
         segs.push({ key: 'revenue', x: r2(x), y: r2(yOf(p.revenue)), w: r2(barW), h: r2(zeroY - yOf(p.revenue)), value: p.revenue })
+    } else if (mode === 'count') {
+      const cnt = p.transactionCount ?? 0
+      if (cnt !== 0)
+        segs.push({ key: 'count', x: r2(x), y: r2(yOf(cnt)), w: r2(barW), h: r2(zeroY - yOf(cnt)), value: cnt })
     } else if (p.profit > 0) {
       segs.push({ key: 'profit', x: r2(x), y: r2(yOf(p.profit)), w: r2(barW), h: r2(zeroY - yOf(p.profit)), value: p.profit })
     } else if (p.profit < 0) {
       segs.push({ key: 'loss', x: r2(x), y: r2(zeroY), w: r2(barW), h: r2(yOf(p.profit) - zeroY), value: p.profit })
     }
-    // 单标签：亏损日显负利润，其余显营业额（利润模式显利润）；空日无标签
-    const labelValue = segs.length === 0 ? 0 : mode === 'revenue' || (mode === 'all' && p.profit >= 0) ? p.revenue : p.profit
+    // 单标签：count 模式显笔数；亏损日显负利润，其余显营业额（利润模式显利润）；空日无标签
+    const labelValue =
+      segs.length === 0
+        ? 0
+        : mode === 'count'
+          ? (p.transactionCount ?? 0)
+          : mode === 'revenue' || (mode === 'all' && p.profit >= 0)
+            ? p.revenue
+            : p.profit
     let labelY = zeroY
     if (segs.length > 0) {
       if (labelValue < 0) {

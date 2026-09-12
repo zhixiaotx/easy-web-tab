@@ -30,7 +30,7 @@ const data = computed(() => ({
 const TREND_W = 900
 const TREND_H = 320
 const trendDays = ref(30)
-const trendMode = ref<'all' | 'revenue' | 'profit'>('all')
+const trendMode = ref<'all' | 'revenue' | 'profit' | 'count'>('all')
 
 const trendSeries = computed(() => calcBusinessTrend(data.value, localDateKey(), trendDays.value))
 const trendScale = computed(() => businessTrendBars(trendSeries.value, TREND_W, TREND_H, trendMode.value))
@@ -105,6 +105,7 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
               <el-radio-button value="all" data-testid="bizstats-mode-all">全部</el-radio-button>
               <el-radio-button value="revenue" data-testid="bizstats-mode-revenue">营业额</el-radio-button>
               <el-radio-button value="profit" data-testid="bizstats-mode-profit">利润</el-radio-button>
+              <el-radio-button value="count" data-testid="bizstats-mode-count">交易笔数</el-radio-button>
             </el-radio-group>
           </div>
         </div>
@@ -142,11 +143,11 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
               :y="d.labelY"
               font-size="10"
               text-anchor="middle"
-            >{{ compactAmount(d.labelValue) }}</text>
+            >{{ trendMode === 'count' ? (d.labelValue + '笔') : compactAmount(d.labelValue) }}</text>
           </g>
           <!-- P2-1：支出趋势折线叠加 -->
           <polyline
-            v-if="expenseLinePoints"
+            v-if="expenseLinePoints && trendMode !== 'count'"
             class="bizstats-expense-line"
             :points="expenseLinePoints"
             fill="none"
@@ -155,11 +156,16 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
           <text v-for="(l, li) in trendScale.dayLabels" :key="'d' + li" class="bizstats-axis" :x="l.x" :y="TREND_H - 6" font-size="11" text-anchor="middle">{{ l.label }}</text>
         </svg>
         <div class="bizstats-legend">
-          <span class="bizstats-legend-item"><i class="dot revenue"></i>营业额</span>
-          <span class="bizstats-legend-item"><i class="dot cost"></i>成本</span>
-          <span class="bizstats-legend-item"><i class="dot profit"></i>利润</span>
-          <span class="bizstats-legend-item"><i class="dot loss"></i>亏损</span>
-          <span class="bizstats-legend-item"><i class="dot expense"></i>支出</span>
+          <template v-if="trendMode === 'count'">
+            <span class="bizstats-legend-item"><i class="dot count"></i>交易笔数</span>
+          </template>
+          <template v-else>
+            <span class="bizstats-legend-item"><i class="dot revenue"></i>营业额</span>
+            <span class="bizstats-legend-item"><i class="dot cost"></i>成本</span>
+            <span class="bizstats-legend-item"><i class="dot profit"></i>利润</span>
+            <span class="bizstats-legend-item"><i class="dot loss"></i>亏损</span>
+            <span class="bizstats-legend-item"><i class="dot expense"></i>支出</span>
+          </template>
         </div>
       </div>
       <p v-else class="bizstats-empty" data-testid="bizstats-trend-empty">暂无趋势数据，先添加进货与收摊记录吧</p>
@@ -361,6 +367,10 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
   fill: var(--danger-color, #ef4444);
 }
 
+.bizstats-bar.count {
+  fill: var(--color-primary, #3b82f6);
+}
+
 .bizstats-bar-label {
   fill: var(--color-text-muted, #94a3b8);
   font-variant-numeric: tabular-nums;
@@ -401,6 +411,10 @@ const expenseBreakdown = computed(() => calcExpenseCategoryBreakdown(data.value)
 
 .dot.loss {
   background: var(--danger-color, #ef4444);
+}
+
+.dot.count {
+  background: var(--color-primary, #3b82f6);
 }
 
 /* P2-1：支出趋势折线 */
@@ -510,6 +524,10 @@ html.dark .bizstats-bar.cost {
 
 html.dark .bizstats-bar.profit {
   fill: #4ade80;
+}
+
+html.dark .bizstats-bar.count {
+  fill: #60a5fa;
 }
 
 html.dark .bizstats-bar.loss {

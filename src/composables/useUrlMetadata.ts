@@ -10,7 +10,7 @@ export function useUrlMetadata() {
     try {
       const urlObj = new URL(url)
       const jinaUrl = 'https://r.jina.ai/' + urlObj.protocol.replace(':', '') + '://' + urlObj.host + urlObj.pathname
-      const response = await fetch(jinaUrl)
+      const response = await fetch(jinaUrl, { signal: AbortSignal.timeout(8000) })
       
       if (!response.ok) {
         throw new Error('Failed to fetch')
@@ -137,18 +137,50 @@ export function useUrlMetadata() {
     }
   }
 
+  // 方案0: 同源后端代理（国内服务器出网，解决海外服务不可达 + CORS）
+  async function fetchViaSelfProxy(url: string): Promise<UrlMetadata | null> {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 20000)
+      const resp = await fetch('/api/fetch-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        signal: controller.signal
+      })
+      clearTimeout(timer)
+      if (!resp.ok) return null
+      const data = await resp.json()
+      if (data && (data.title || data.description || data.icon)) {
+        return {
+          title: data.title || '',
+          description: data.description || '',
+          icon: data.icon || ''
+        }
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   async function fetchMetadata(url: string): Promise<UrlMetadata | null> {
     if (!url) return null
 
     try {
-      // 先尝试 jina.ai
-      let metadata = await fetchViaJina(url)
-      
-      // 如果失败，使用 fallback
+      // 优先走同源后端代理（国内可达、无 CORS）
+      let metadata = await fetchViaSelfProxy(url)
+
+      // 代理不可用时回退到 jina.ai
+      if (!metadata) {
+        metadata = await fetchViaJina(url)
+      }
+
+      // 再不行用 allorigins 代理兜底
       if (!metadata) {
         metadata = await fetchViaProxy(url)
       }
-      
+
       return metadata
     } catch (error) {
       console.error('Failed to fetch metadata:', error)

@@ -572,6 +572,7 @@ export const STUDENT_MENU_KEYS: readonly string[] = [
   'mistakes',
   'reading',
   'exam',
+  'grades',
   'education',
   'diary',
   'health',
@@ -595,6 +596,7 @@ export const STUDENT_MENU_DEFAULT_LABELS: Record<string, string> = {
   mistakes: '错题本',
   reading: '阅读记录',
   exam: '考试倒计时',
+  grades: '成绩记录',
   education: '教育经历',
   diary: '日记本',
   health: '健康管理',
@@ -615,6 +617,7 @@ export const STUDENT_MENU_ICONS: Record<string, string> = {
   mistakes: 'passwords',
   reading: 'notes',
   exam: 'countdowns',
+  grades: 'ledger',
   education: 'diary',
   diary: 'diary',
   health: 'health',
@@ -629,17 +632,20 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
   K: {
     home: true, habits: true, homework: false, timetable: false, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true
+    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
+    grades: false
   },
   P: {
     home: true, habits: true, homework: true, timetable: true, plan: false,
     review: false, mistakes: false, reading: true, exam: false, education: true,
-    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true
+    diary: true, health: true, pomodoro: false, achievements: true, rewards: true, parent: true,
+    grades: true
   },
   J: {
     home: true, habits: false, homework: true, timetable: true, plan: true,
     review: true, mistakes: true, reading: true, exam: true, education: true,
-    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false
+    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    grades: true
   }
 }
 
@@ -983,6 +989,40 @@ export interface StudentParentTasksData {
   tasks: StudentParentTask[]
 }
 
+// ==================== 学生成绩记录 ====================
+
+/** 成绩考试类型（录入下拉预设；用户可自由输入自定义类型） */
+export const GRADE_EXAM_TYPES: readonly string[] = ['期中', '期末', '月考', '单元测试', '随堂测验']
+
+/** 单条成绩（某次考试中某一科目的分数） */
+export interface StudentGradeSubject {
+  /** 学科名（对齐 settings.subjects） */
+  subject: string
+  /** 得分 */
+  score: number
+  /** 满分，缺省 100 */
+  fullScore?: number
+}
+
+/** 一次考试的成绩记录（含多科目分数） */
+export interface StudentGradeRecord {
+  id: string
+  /** 考试名称，如「2026春季期中考试」 */
+  examName: string
+  /** 考试类型：GRADE_EXAM_TYPES 之一或自定义 */
+  examType: string
+  /** 考试日期 'YYYY-MM-DD' */
+  date: string
+  subjects: StudentGradeSubject[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** 成绩数据信封（IDB store 'student_grades'） */
+export interface StudentGradesData {
+  grades: StudentGradeRecord[]
+}
+
 // ==================== 云同步多文件信封（v10 拆分） ====================
 
 /**
@@ -1075,5 +1115,6 @@ export interface StudentSyncData {
   education?: unknown
   health?: unknown
   studentImages?: unknown
+  studentGrades?: unknown
 }
 

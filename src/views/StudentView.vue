@@ -12,8 +12,10 @@ import { useStudentHomeworkStore } from '@/stores/studentHomework'
 import { useStudentReadingStore } from '@/stores/studentReading'
 import { useStudentDiaryStore } from '@/stores/studentDiary'
 import { useStudentHealthStore } from '@/stores/studentHealth'
+import { useStudentGradesStore } from '@/stores/studentGrades'
 import { useAppSettingsStore } from '@/stores/settings'
 import StudentHealth from '@/components/student/StudentHealth.vue'
+import StudentGrades from '@/components/student/StudentGrades.vue'
 import StudentHome from '@/components/student/StudentHome.vue'
 import StudentHabits from '@/components/student/StudentHabits.vue'
 import StudentHomework from '@/components/student/StudentHomework.vue'
@@ -46,18 +48,19 @@ const homeworkStore = useStudentHomeworkStore()
 const readingStore = useStudentReadingStore()
 const diaryStore = useStudentDiaryStore()
 const healthStore = useStudentHealthStore()
+const gradesStore = useStudentGradesStore()
 const showSettingsDialog = ref(false)
 
 // 学生菜单键白名单（与 STUDENT_MENU_KEYS 对齐；home 恒居首位）
 // 15 项（含 health 健康管理）；菜单显示顺序与开关由 studentSettings.menuItems 控制
 type StudentSectionKey =
   | 'home' | 'habits' | 'homework' | 'timetable' | 'plan'
-  | 'review' | 'mistakes' | 'reading' | 'exam' | 'education' | 'diary'
+  | 'review' | 'mistakes' | 'reading' | 'exam' | 'grades' | 'education' | 'diary'
   | 'pomodoro' | 'achievements' | 'rewards' | 'parent' | 'health'
 
 const SECTION_KEYS: readonly StudentSectionKey[] = [
   'home', 'habits', 'homework', 'timetable', 'plan',
-  'review', 'mistakes', 'reading', 'exam', 'education', 'diary',
+  'review', 'mistakes', 'reading', 'exam', 'grades', 'education', 'diary',
   'pomodoro', 'achievements', 'rewards', 'parent', 'health'
 ]
 
@@ -232,6 +235,7 @@ onMounted(async () => {
     await readingStore.loadReading()
     await diaryStore.loadDiary()
     await healthStore.loadHealth()
+    await gradesStore.loadGrades()
     await rewardsStore.backfillFromAll({
       habits: habitsStore.habits,
       habitRecords: habitsStore.records,
@@ -362,6 +366,7 @@ async function onOnboardingComplete() {
           @open-pin="openParentPinDialog"
         />
         <StudentHealth v-else-if="activeSection === 'health'" />
+        <StudentGrades v-else-if="activeSection === 'grades'" />
         <StudentPanelPlaceholder
           v-else
           :section="activeSection"

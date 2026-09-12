@@ -37,7 +37,7 @@ export const IDB_STUDENT_STORES = [
   // 11 独立模块 store（v9 +student_parent_tasks, v12 +student_education, v13 +student_health）
   'student_homework', 'student_timetable', 'student_plans', 'student_review',
   'student_mistakes', 'student_reading', 'student_achievements', 'student_rewards',
-  'student_parent_tasks', 'student_education', 'student_health',
+  'student_parent_tasks', 'student_education', 'student_health', 'student_grades',
   // 图片 Blob 独立 store（错题本拍照，导出时 base64 编码）
   'student_images'
 ] as const
@@ -488,7 +488,7 @@ export async function exportStudent(): Promise<StudentSyncData> {
   const [
     studentSettings, studentHabits, studentPomodoro, studentDiary, studentCountdowns,
     homework, timetable, plans, review, mistakes, reading,
-    achievements, rewards, parentTasks, education, health, studentImages
+    achievements, rewards, parentTasks, education, health, studentImages, studentGrades
   ] = await Promise.all([
     idbGet('student_settings'),
     idbGet('student_habits'),
@@ -506,6 +506,7 @@ export async function exportStudent(): Promise<StudentSyncData> {
     idbGet('student_parent_tasks'),
     idbGet('student_education'),
     idbGet('student_health'),
+    idbGet('student_grades'),
     idbGet('student_images')
   ])
   return {
@@ -527,7 +528,8 @@ export async function exportStudent(): Promise<StudentSyncData> {
     parentTasks,
     education,
     health,
-    studentImages
+    studentImages,
+    studentGrades
   }
 }
 

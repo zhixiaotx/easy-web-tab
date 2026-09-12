@@ -179,7 +179,19 @@ async function handleWebdavProxy(req, res) {
  * 解析 <title> / og:description / favicon 后返回 JSON。
  * 强制 Accept-Encoding: identity，避免服务端自动 gzip 导致正文乱码无法解析。
  */
-function parseMeta(html, origin) {
+// metascraper（ESM-only）在 CJS 内通过动态 import 加载，并缓存实例避免每次请求重复加载
+let _metaScraper = null
+async function loadMetascraper() {
+  if (_metaScraper) return _metaScraper
+  const metascraper = (await import('metascraper')).default
+  const ruleTitle = (await import('metascraper-title')).default
+  const ruleDesc = (await import('metascraper-description')).default
+  _metaScraper = metascraper([ruleTitle(), ruleDesc()])
+  return _metaScraper
+}
+
+// 解析 <title> / og:description 的正则兜底（metascraper 不可用或拿不到时使用）
+function parseMetaRegex(html, origin) {
   let title = ''
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
   if (titleMatch) title = titleMatch[1].replace(/\s+/g, ' ').trim()
@@ -192,23 +204,44 @@ function parseMeta(html, origin) {
     if (desc) description = desc[1].trim()
   }
 
-  let icon = ''
+  return { title, description }
+}
+
+// 正则解析 favicon（比 og:image 更适合做站点图标，因此不交给 metascraper-image）
+function parseIcon(html, origin) {
   const iconMatch =
     html.match(/<link[^>]+rel=["'](?:icon|shortcut icon)["'][^>]*href=["']([^"']+)["']/i) ||
     html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["'](?:icon|shortcut icon)["']/i)
   if (iconMatch) {
-    const href = iconMatch[1]
-    icon = href.startsWith('http') ? href
+    const href = iconMatch[1].trim()
+    // 过滤空值 / data: / javascript: 等非法协议，回退到站点 favicon
+    if (!href || /^data:/i.test(href) || /^(javascript|vbscript):/i.test(href)) {
+      return `${origin}/favicon.ico`
+    }
+    return href.startsWith('http') ? href
       : href.startsWith('//') ? 'https:' + href
       : `${origin}${href.startsWith('/') ? '' : '/'}${href}`
-  } else {
-    icon = `${origin}/favicon.ico`
+  }
+  return `${origin}/favicon.ico`
+}
+
+async function parseMeta(html, origin) {
+  let { title, description } = parseMetaRegex(html, origin)
+
+  // 优先用 metascraper 提准（覆盖 og:title、twitter:title、<title>、h1 等优先级规则）
+  try {
+    const scrape = await loadMetascraper()
+    const m = await scrape({ html, url: origin })
+    if (m.title) title = m.title.trim()
+    if (m.description) description = m.description.trim()
+  } catch {
+    // metascraper 未安装或异常：保留正则结果
   }
 
   return {
     title: title.slice(0, 200),
     description: description.slice(0, 300),
-    icon
+    icon: parseIcon(html, origin)
   }
 }
 
@@ -288,13 +321,17 @@ async function handleFetchMeta(req, res) {
         chunks.push(c.slice(0, want))
         total += want
       })
-      upRes.on('end', () => {
+      upRes.on('end', async () => {
         clearTimeout(timer)
         if (aborted) return sendMetaError(res, 'timeout')
         const html = Buffer.concat(chunks).toString('utf8')
-        const meta = parseMeta(html, parsed.origin)
-        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-        res.end(JSON.stringify(meta))
+        try {
+          const meta = await parseMeta(html, parsed.origin)
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify(meta))
+        } catch (err) {
+          sendMetaError(res, err.message || 'parse error')
+        }
       })
       upRes.on('error', () => { clearTimeout(timer); sendMetaError(res, 'upstream error') })
     } else {

@@ -15,6 +15,7 @@ const PROXY_META_PATH = '/api/fetch-meta'
 const MAX_META_BYTES = 512 * 1024
 const META_TIMEOUT_MS = 8000
 const META_UA = 'Mozilla/5.0 (compatible; easywebtab/1.0; +https://codehelp.com.cn)'
+const MAX_REDIRECTS = 5
 
 function maskAuth(h) {
   if (!h) return '(none)'
@@ -250,6 +251,103 @@ function sendMetaError(res, msg) {
   res.end(JSON.stringify({ error: msg, title: '', description: '', icon: '' }))
 }
 
+// 递归抓取目标 URL：自动跟随 3xx 重定向与 <meta http-equiv=refresh> 软跳转
+function fetchWithRedirect(targetUrl, depth) {
+  return new Promise((resolve) => {
+    if (depth > MAX_REDIRECTS) return resolve({ title: '', description: '', icon: '' })
+    let parsed
+    try {
+      parsed = new URL(targetUrl)
+    } catch {
+      return resolve({ title: '', description: '', icon: '' })
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return resolve({ title: '', description: '', icon: '' })
+    }
+
+    const client = parsed.protocol === 'https:' ? https : http
+    const opts = {
+      method: 'GET',
+      hostname: parsed.hostname,
+      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path: (parsed.pathname || '/') + parsed.search,
+      headers: { 'User-Agent': META_UA, 'Accept': 'text/html,application/xhtml+xml', 'Accept-Encoding': 'identity' }
+    }
+
+    const chunks = []
+    let total = 0
+    let settled = false
+    const timer = setTimeout(() => { try { upstream.destroy() } catch { /* noop */ } }, META_TIMEOUT_MS)
+
+    const upstream = client.request(opts, (upRes) => {
+      const status = upRes.statusCode || 0
+      const ctype = (upRes.headers['content-type'] || '').toLowerCase()
+      const loc = upRes.headers['location']
+
+      // 3xx 重定向：跟随最多 MAX_REDIRECTS 跳
+      if ((status === 301 || status === 302 || status === 303 || status === 307 || status === 308) && loc) {
+        clearTimeout(timer)
+        upRes.resume()
+        const next = new URL(loc, targetUrl).href
+        return resolve(fetchWithRedirect(next, depth + 1))
+      }
+
+      if (status >= 200 && status < 300 && (ctype.includes('html') || ctype.includes('text/'))) {
+        upRes.on('data', (c) => {
+          if (total >= MAX_META_BYTES) { try { upstream.destroy() } catch { /* noop */ } return }
+          const want = Math.min(MAX_META_BYTES - total, c.length)
+          chunks.push(c.slice(0, want))
+          total += want
+        })
+        upRes.on('end', async () => {
+          clearTimeout(timer)
+          if (settled) return
+          settled = true
+          const html = Buffer.concat(chunks).toString('utf8')
+          let meta
+          try {
+            meta = await parseMeta(html, parsed.origin)
+          } catch {
+            meta = { title: '', description: '', icon: `${parsed.origin}/favicon.ico` }
+          }
+          // 软跳转（meta refresh）：title/desc 都为空时尝试跟随一次
+          if ((!meta.title && !meta.description) && depth < MAX_REDIRECTS) {
+            const mr = html.match(/<meta[^>]+http-equiv=["']?refresh["']?[^>]*content=["'][^"']*url=([^"']+)["']/i) ||
+                       html.match(/<meta[^>]+content=["'][^"']*url=([^"']+)["'][^>]*http-equiv=["']?refresh["']?/i)
+            if (mr) {
+              try {
+                const next = new URL(mr[1].trim(), targetUrl).href
+                const r2 = await fetchWithRedirect(next, depth + 1)
+                if (r2.title || r2.description) return resolve(r2)
+              } catch { /* 软跳转失败则用当前结果 */ }
+            }
+          }
+          resolve(meta)
+        })
+        upRes.on('error', () => {
+          clearTimeout(timer)
+          if (settled) return
+          settled = true
+          resolve({ title: '', description: '', icon: `${parsed.origin}/favicon.ico` })
+        })
+      } else {
+        // 非文本或异常状态码：兜底返回站点 favicon
+        clearTimeout(timer)
+        if (settled) return
+        settled = true
+        resolve({ title: '', description: '', icon: `${parsed.origin}/favicon.ico` })
+      }
+    })
+    upstream.on('error', () => {
+      clearTimeout(timer)
+      if (settled) return
+      settled = true
+      resolve({ title: '', description: '', icon: `${parsed.origin}/favicon.ico` })
+    })
+    upstream.end()
+  })
+}
+
 async function handleFetchMeta(req, res) {
   if (req.method !== 'POST') {
     res.writeHead(405, { 'Allow': 'POST' })
@@ -287,67 +385,13 @@ async function handleFetchMeta(req, res) {
     return
   }
 
-  const useHttps = parsed.protocol === 'https:'
-  const client = useHttps ? https : http
-  const opts = {
-    method: 'GET',
-    hostname: parsed.hostname,
-    port: parsed.port || (useHttps ? 443 : 80),
-    path: (parsed.pathname || '/') + parsed.search,
-    headers: {
-      'User-Agent': META_UA,
-      'Accept': 'text/html,application/xhtml+xml',
-      'Accept-Encoding': 'identity'
-    }
+  try {
+    const meta = await fetchWithRedirect(target, 0)
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify(meta))
+  } catch (err) {
+    sendMetaError(res, err.message || 'fetch error')
   }
-
-  const chunks = []
-  let total = 0
-  let aborted = false
-  const timer = setTimeout(() => {
-    aborted = true
-    try { upstream.destroy() } catch { /* noop */ }
-  }, META_TIMEOUT_MS)
-
-  const upstream = client.request(opts, (upRes) => {
-    const status = upRes.statusCode || 502
-    const ctype = (upRes.headers['content-type'] || '').toLowerCase()
-
-    if (status >= 200 && status < 300 && (ctype.includes('html') || ctype.includes('text/'))) {
-      upRes.on('data', (c) => {
-        if (aborted) return
-        if (total >= MAX_META_BYTES) { try { upstream.destroy() } catch { /* noop */ } return }
-        const want = Math.min(MAX_META_BYTES - total, c.length)
-        chunks.push(c.slice(0, want))
-        total += want
-      })
-      upRes.on('end', async () => {
-        clearTimeout(timer)
-        if (aborted) return sendMetaError(res, 'timeout')
-        const html = Buffer.concat(chunks).toString('utf8')
-        try {
-          const meta = await parseMeta(html, parsed.origin)
-          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-          res.end(JSON.stringify(meta))
-        } catch (err) {
-          sendMetaError(res, err.message || 'parse error')
-        }
-      })
-      upRes.on('error', () => { clearTimeout(timer); sendMetaError(res, 'upstream error') })
-    } else {
-      // 非文本或异常状态码：兜底返回站点 favicon，前端仍能拿到图标
-      clearTimeout(timer)
-      const meta = { title: '', description: '', icon: `${parsed.origin}/favicon.ico` }
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-      res.end(JSON.stringify(meta))
-    }
-  })
-  upstream.on('error', (err) => {
-    clearTimeout(timer)
-    if (aborted) return sendMetaError(res, 'timeout')
-    sendMetaError(res, err.message || 'upstream error')
-  })
-  upstream.end()
 }
 
 function serveStatic(filePath, res) {

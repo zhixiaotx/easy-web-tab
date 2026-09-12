@@ -265,9 +265,11 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
     date: string
     items: DailyRecordItem[]
     note?: string
+    transactionCount?: number
   }): Promise<void> {
     const now = new Date().toISOString()
     const totalRevenue = calcDailyRevenue(input.items, toRaw(products.value))
+    const transactionCount = typeof input.transactionCount === 'number' && Number.isFinite(input.transactionCount) ? Math.max(0, Math.floor(input.transactionCount)) : undefined
     const existing = dailyRecords.value.findIndex(r => r.date === input.date)
     if (existing !== -1) {
       const old = toRaw(dailyRecords.value[existing])
@@ -275,6 +277,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
         ...old,
         items: input.items.map(it => ({ ...it })),
         totalRevenue,
+        transactionCount,
         note: input.note?.trim() || undefined,
         updatedAt: now
       }
@@ -284,6 +287,7 @@ export const useWorkbenchBusinessStore = defineStore('workbenchBusiness', () => 
         date: input.date,
         items: input.items.map(it => ({ ...it })),
         totalRevenue,
+        transactionCount,
         note: input.note?.trim() || undefined,
         createdAt: now,
         updatedAt: now

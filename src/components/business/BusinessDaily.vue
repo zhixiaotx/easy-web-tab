@@ -32,7 +32,7 @@ function dailyItemDetails(record: BusinessDailyRecord) {
 
 // ===== 一键导出 CSV（收摊记录：按「日期 × 商品」展开，便于 Excel 透视）=====
 function exportDailyCsv(): void {
-  const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额']
+  const headers = ['日期', '商品', '带出', '售出', '损耗', '单价', '小计', '当日营业额', '交易笔数']
   const rows: (string | number)[][] = []
   for (const rec of sorted.value) {
     const details = dailyItemDetails(rec)
@@ -45,11 +45,12 @@ function exportDailyCsv(): void {
         d.loss,
         d.sellingPrice.toFixed(2),
         d.subtotal.toFixed(2),
-        rec.totalRevenue.toFixed(2)
+        rec.totalRevenue.toFixed(2),
+        rec.transactionCount ?? ''
       ])
     }
     if (details.length === 0) {
-      rows.push([rec.date, '（无商品明细）', '', '', '', '', '', rec.totalRevenue.toFixed(2)])
+      rows.push([rec.date, '（无商品明细）', '', '', '', '', '', rec.totalRevenue.toFixed(2), rec.transactionCount ?? ''])
     }
   }
   downloadCsv(csvFileName('收摊记录'), buildCsv(headers, rows))
@@ -59,6 +60,7 @@ function exportDailyCsv(): void {
 const showDialog = ref(false)
 const editingDate = ref(localDateKey())
 const formNote = ref('')
+const formTransactionCount = ref(0)
 const rows = reactive<{ productId: string; broughtOut: number; remaining: number; loss: number }[]>([])
 
 // P0-3：当前库存 map（编辑弹框用）
@@ -125,6 +127,7 @@ function emptyRow(): { productId: string; broughtOut: number; remaining: number;
 function startAdd(): void {
   editingDate.value = localDateKey()
   formNote.value = ''
+  formTransactionCount.value = 0
   rows.splice(0, rows.length, emptyRow())
   showDialog.value = true
 }
@@ -132,6 +135,7 @@ function startAdd(): void {
 function startEdit(record: BusinessDailyRecord): void {
   editingDate.value = record.date
   formNote.value = record.note ?? ''
+  formTransactionCount.value = typeof record.transactionCount === 'number' && Number.isFinite(record.transactionCount) ? record.transactionCount : 0
   rows.splice(
     0,
     rows.length,
@@ -158,7 +162,12 @@ async function handleSave(): Promise<void> {
       remaining: Math.max(0, Math.floor(r.remaining)),
       loss: Math.max(0, Math.floor(r.loss))
     }))
-  await store.upsertDailyRecord({ date: editingDate.value, items, note: formNote.value.trim() || undefined })
+  await store.upsertDailyRecord({
+    date: editingDate.value,
+    items,
+    note: formNote.value.trim() || undefined,
+    transactionCount: Number.isFinite(formTransactionCount.value) ? Math.max(0, Math.floor(formTransactionCount.value)) : undefined
+  })
   showDialog.value = false
 }
 
@@ -372,6 +381,10 @@ async function handleDelete(id: string): Promise<void> {
           <span class="bizday-preview-sep">损耗 <strong data-testid="bizday-form-loss">{{ formatYuanOf(formLossAmount) }}</strong></span>
         </div>
 
+        <div class="biz-field">
+          <label>交易笔数（可选，当天顾客买单次数）</label>
+          <el-input-number v-model="formTransactionCount" :min="0" :step="1" size="small" controls-position="right" data-testid="bizday-form-transaction-count" />
+        </div>
         <div class="biz-field">
           <label>备注（可选）</label>
           <el-input v-model="formNote" size="small" maxlength="200" data-testid="bizday-form-note" />

@@ -478,6 +478,7 @@ export interface BusinessDailyRecord {
   date: string // YYYY-MM-DD 本地日期
   items: DailyRecordItem[]
   totalRevenue: number
+  transactionCount?: number // 当日交易笔数（顾客买单次数）；新增字段，旧数据缺省按 0 处理
   note?: string
   createdAt: string
   updatedAt: string

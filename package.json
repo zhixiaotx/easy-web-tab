@@ -72,8 +72,9 @@
     "vite": "^8.0.0",
     "vue-tsc": "^3.2.6"
   },
-  "main": "vite.config.js",
-  "types": "./vite.config.d.ts",
+  "engines": {
+    "node": ">=22.12"
+  },
   "repository": {
     "type": "git",
     "url": "https://gitee.com/sifujiang/easy-web-tab.git"

@@ -13,7 +13,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import { subjectUniverse } from '@/composables/studentGradesCore'
-import { GRADE_EXAM_TYPES, STUDENT_GRADE_LEVELS, GRADE_LEVEL_ALL } from '@/types'
+import { GRADE_EXAM_TYPES, STUDENT_GRADE_LEVELS, GRADE_LEVEL_ALL, GRADE_STAGE_GROUPS } from '@/types'
 import type { StudentGradeSubject, StudentGradeRecord } from '@/types'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import Icon from '@/components/Icon.vue'
@@ -32,6 +32,15 @@ const toast = useToast()
 
 const subjectOptions = computed<string[]>(() => settingsStore.subjects)
 const gradeLevels = computed<string[]>(() => [...STUDENT_GRADE_LEVELS])
+/** 学段分组（一级导航），来自 GRADE_STAGE_GROUPS */
+const stageGroups = GRADE_STAGE_GROUPS
+/** 二级导航「总览」tab 文案：全学段时=全部年级，选定学段时=该学段全部 */
+const overviewLabel = computed(() => (store.activeStage ? '该学段全部' : '全部年级'))
+/** 当前学段显示名（用于空状态文案） */
+const activeStageLabel = computed(() => {
+  const g = stageGroups.find(x => x.key === store.activeStage)
+  return g ? g.label : ''
+})
 
 // ============ 统计（当前年级作用域） ============
 const latestExam = computed(() => store.levelStats.latestExam)
@@ -167,7 +176,11 @@ function setSortMode(mode: 'date' | 'name'): void {
   store.setSort(mode)
 }
 
-// ============ 年级标签页切换 ============
+// ============ 学段 / 年级标签页切换 ============
+function onStageChange(name: string | number | boolean): void {
+  store.setActiveStage(String(name))
+}
+
 function onTabChange(name: string | number): void {
   store.setActiveLevel(String(name))
 }
@@ -278,16 +291,34 @@ onMounted(async () => {
       </el-button>
     </StudentToolbar>
 
-    <!-- 年级标签页 -->
+    <!-- 学段分组（一级导航） -->
+    <el-radio-group
+      :model-value="store.activeStage"
+      class="sg-stage-group"
+      size="small"
+      data-testid="sg-stage-group"
+      @change="onStageChange"
+    >
+      <el-radio-button label="全部" value="" data-testid="sg-stage-all" />
+      <el-radio-button
+        v-for="g in stageGroups"
+        :key="g.key"
+        :label="g.label"
+        :value="g.key"
+        :data-testid="`sg-stage-${g.key}`"
+      />
+    </el-radio-group>
+
+    <!-- 年级标签页（二级导航，按学段收敛） -->
     <el-tabs
       :model-value="store.activeLevel"
       class="sg-level-tabs"
       data-testid="sg-level-tabs"
       @tab-change="onTabChange"
     >
-      <el-tab-pane name="" label="全部" data-testid="sg-tab-all" />
+      <el-tab-pane name="" :label="overviewLabel" data-testid="sg-tab-overview" />
       <el-tab-pane
-        v-for="lv in gradeLevels"
+        v-for="lv in store.visibleGradeTabs"
         :key="lv"
         :name="lv"
         :label="lv"
@@ -341,7 +372,7 @@ onMounted(async () => {
 
     <!-- 空状态 -->
     <div v-if="store.pagedLevelGrades.total === 0" class="sg-empty" data-testid="sg-empty">
-      {{ store.activeLevel ? `「${store.activeLevel}」还没有成绩记录` : '还没有成绩记录' }}，点右上角「新增成绩」开始吧
+      {{ store.activeStage ? `「${activeStageLabel}」还没有成绩记录` : (store.activeLevel ? `「${store.activeLevel}」还没有成绩记录` : '还没有成绩记录') }}，点右上角「新增成绩」开始吧
     </div>
 
     <!-- 成绩表格 + 分页 -->
@@ -540,6 +571,12 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* ===== 学段分组（一级导航） ===== */
+.sg-stage-group {
+  flex-wrap: wrap;
+  row-gap: 6px;
 }
 
 /* ===== 年级标签页 ===== */

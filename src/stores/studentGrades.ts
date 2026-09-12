@@ -11,7 +11,7 @@ import {
   validateNewGrade,
   calcGradeStats,
   sortGrades,
-  filterGradesByLevel,
+  gradeToStageKey,
   paginate,
   type NewGradeInput,
   type GradeUpdatePatch,
@@ -23,7 +23,7 @@ import {
 } from '@/composables/studentGradesCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
-import { GRADE_LEVEL_ALL } from '@/types'
+import { GRADE_LEVEL_ALL, GRADE_STAGE_GROUPS, STUDENT_GRADE_LEVELS } from '@/types'
 import type { StudentGradeRecord } from '@/types'
 
 const STORE_KEY = 'student_grades'
@@ -47,8 +47,10 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
   const grades = ref<StudentGradeRecord[]>([])
   const sortMode = ref<GradeSortMode>('date')
   const sortDirection = ref<GradeSortDirection>('desc')
-  /** 当前年级标签页：'' = 全部 */
+  /** 当前年级标签页：'' = 全部（该学段/全部学段总览） */
   const activeLevel = ref<string>(GRADE_LEVEL_ALL)
+  /** 当前学段分组：'' = 全部学段，否则 GRADE_STAGE_GROUPS 的 key（K/P/J/H/U） */
+  const activeStage = ref<string>('')
   /** 当前页码（从 1 起） */
   const page = ref<number>(1)
 
@@ -135,7 +137,15 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   }
 
-  // ===== 年级标签页 / 分页 =====
+  // ===== 学段 / 年级标签页 / 分页 =====
+
+  /** 切换学段分组（重置年级标签页与页码，回到该学段总览） */
+  function setActiveStage(stage: string): void {
+    if (stage === activeStage.value) return
+    activeStage.value = stage
+    activeLevel.value = GRADE_LEVEL_ALL
+    page.value = 1
+  }
 
   /** 切换年级标签页（重置到第 1 页） */
   function setActiveLevel(level: string): void {
@@ -157,10 +167,20 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
   /** 总览统计：记录数 / 总均分 / 各科均分 / 最近一次考试（跨全部年级） */
   const stats = computed<GradeStats>(() => calcGradeStats(grades.value))
 
-  /** 当前年级标签页下的成绩（已按排序模式/方向排好） */
-  const levelGrades = computed<StudentGradeRecord[]>(() =>
-    sortGrades(filterGradesByLevel(grades.value, activeLevel.value), sortMode.value, sortDirection.value)
-  )
+  /** 当前学段分组下的年级标签页列表（'' 时返回全部 19 个年级） */
+  const visibleGradeTabs = computed<string[]>(() => {
+    if (!activeStage.value) return [...STUDENT_GRADE_LEVELS]
+    const g = GRADE_STAGE_GROUPS.find(x => x.key === activeStage.value)
+    return g ? [...g.grades] : []
+  })
+
+  /** 当前作用域下的成绩：先按学段收敛，再按年级收敛，最后排序 */
+  const levelGrades = computed<StudentGradeRecord[]>(() => {
+    let list = grades.value
+    if (activeStage.value) list = list.filter(g => gradeToStageKey(g.grade) === activeStage.value)
+    if (activeLevel.value) list = list.filter(g => g.grade === activeLevel.value)
+    return sortGrades(list, sortMode.value, sortDirection.value)
+  })
 
   /** 当前年级标签页下的分页结果（每页 GRADE_PAGE_SIZE 条） */
   const pagedLevelGrades = computed<Paginated<StudentGradeRecord>>(() =>
@@ -176,6 +196,7 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
     sortMode,
     sortDirection,
     activeLevel,
+    activeStage,
     page,
     // 加载/保存
     loadGrades,
@@ -187,9 +208,11 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
     // 排序
     setSort,
     toggleDirection,
-    // 年级标签页 / 分页
+    // 学段 / 年级标签页 / 分页
+    setActiveStage,
     setActiveLevel,
     setPage,
+    visibleGradeTabs,
     // 只读
     sortedGrades,
     stats,

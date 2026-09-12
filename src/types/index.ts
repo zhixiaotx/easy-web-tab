@@ -1006,6 +1006,28 @@ export const STUDENT_GRADE_LEVELS: readonly string[] = [
 /** 「全部年级」总览标签（activeLevel 取此值表示不限年级，空串） */
 export const GRADE_LEVEL_ALL = ''
 
+/**
+ * 成绩年级所属学段分组（仅用于成绩记录 tabs 分组展示，独立于全局 StudentStage 体系）。
+ * key 仅作分组标识，不进入 StudentStage 枚举；grades 取自 STUDENT_GRADE_LEVELS 的子集。
+ */
+export interface GradeStageGroup {
+  /** 分组标识：K=幼儿园 / P=小学 / J=初中 / H=高中 / U=大学 */
+  key: string
+  /** 分组显示名 */
+  label: string
+  /** 该学段下的年级列表（顺序即 tabs 顺序） */
+  grades: string[]
+}
+
+/** 成绩记录 tabs 的学段分组（与 STUDENT_GRADE_LEVELS 对应） */
+export const GRADE_STAGE_GROUPS: readonly GradeStageGroup[] = [
+  { key: 'K', label: '幼儿园', grades: ['小班', '中班', '大班'] },
+  { key: 'P', label: '小学', grades: ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'] },
+  { key: 'J', label: '初中', grades: ['初一', '初二', '初三'] },
+  { key: 'H', label: '高中', grades: ['高一', '高二', '高三'] },
+  { key: 'U', label: '大学', grades: ['大一', '大二', '大三', '大四'] }
+]
+
 /** 单条成绩（某次考试中某一科目的分数） */
 export interface StudentGradeSubject {
   /** 学科名（对齐 settings.subjects） */

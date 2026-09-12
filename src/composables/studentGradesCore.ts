@@ -3,6 +3,7 @@
 // 严格隔离成人数据；统计/趋势/排序均为纯函数，store 禁止内联重算。
 
 import type { StudentGradeRecord, StudentGradeSubject, StudentGradesData } from '@/types'
+import { GRADE_STAGE_GROUPS } from '@/types'
 
 /** 单科默认满分 */
 export const DEFAULT_FULL_SCORE = 100
@@ -222,6 +223,14 @@ export function sortGrades(
 export function filterGradesByLevel(grades: StudentGradeRecord[], level: string): StudentGradeRecord[] {
   if (!level) return grades
   return grades.filter(g => g.grade === level)
+}
+
+/** 年级 → 学段分组 key（用于成绩 tabs 分组；不在任何分组内的年级返回 ''） */
+export function gradeToStageKey(grade: string): string {
+  for (const g of GRADE_STAGE_GROUPS) {
+    if (g.grades.includes(grade)) return g.key
+  }
+  return ''
 }
 
 export interface Paginated<T> {

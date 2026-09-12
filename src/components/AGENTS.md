@@ -19,7 +19,6 @@ components/
 ├── CountdownReminder.vue # 全局提醒弹框（z-index 2000，读 useCountdownReminder 单例，仅「关闭」可关）
 ├── BeianFooter.vue      # 全站备案页脚（ICP+公安双段，号码写死 src/config/beian.ts 空串休眠，App.vue 第 4 兄弟挂载覆盖四视图，双空整行不渲染，公安徽标 @error 降级隐藏，testid beian-footer/beian-icp-link/beian-psb-link）
 ├── IconManager.vue       # Custom icon upload & management (617 lines)
-├── SearchBar.vue         # Search input
 ├── SearchEngineManager.vue # Search engine CRUD
 ├── SiteCard.vue          # Bookmark card (hover → edit/delete)
 ├── TagFilter.vue         # Tag filter bar
@@ -35,8 +34,6 @@ components/
 ├── ThemeToggle.vue       # Dark mode toggle
 ├── HelpModal.vue         # Keyboard shortcuts help
 ├── Pagination.vue        # Page navigation
-├── SkeletonCard.vue      # Loading skeleton (card)
-├── SkeletonGrid.vue      # Loading skeleton (grid)
 ├── Toast.vue             # Notification toast (receives `toasts` array as prop)
 ├── workbench/            # 个人工作台 20 SFC: 13 面板 + PanelPager 共享分页条 + 健康管理 tabs 容器 + 定时提醒只读区块 + WeatherCard/CalendarAnchorCard/HomeLayoutCard 主页内嵌卡 + WorkbenchHabitWeek 习惯周视图 (data persisted to IndexedDB via `useIdb.ts`)
     ├── WorkbenchHome.vue        # 工作台首页（问候条 + 三屏轮播 home-carousel：行动台 home-slide-action（即将到期提醒 + 未完成待办）/数据概览 home-slide-overview（9 张统计卡，home-stats-* testid 保留）/工具 home-slide-tools（快捷添加 + 天气 + 日历锚点）；6s 自动轮播 AUTOPLAY_MS、hover 暂停（pauseCarousel/resumeCarousel）、箭头 home-carousel-prev/next + 圆点 home-carousel-dot-<i> 手动切换、track transform translateX；卡按 visibleStatCards computed 纯占位隐藏且随菜单开关联动（menuOn = settingsStore.workbenchMenuEnabled，关闭的功能其面板/快捷添加/统计卡全隐藏）；全空概览屏显 home-overview-empty、行动屏双关显 home-action-empty；统计卡视觉瘦身（.bento-stat padding 12px 14px、.stat-value 20px、.nav-btn 12px 等保留）；home-greeting/home-quick-add-* 静态 testid 全保留，旧 home-overview-toggle/chevron 折叠区已由轮播取代）
@@ -91,7 +88,6 @@ components/
 | Countdown display | `CountdownModal.vue` | 前台展示（`frontCountdowns`），repeat-badge + cat-badge（work=蓝/life=绿/study=紫/exercise=橙/diet=琥珀/sleep=青，亮暗双主题；自定义分类统一默认灰 `cat-default`）；卡片底部可交互邮件提醒开关 `cd-email-toggle`（label）/`cd-email-switch`（checkbox），`:checked="item.emailReminder === true"` 缺省关，@change → `store.updateCountdown(id, { emailReminder })` 即时持久化 IndexedDB，开启 toast「已开启邮件提醒，需在设置-提醒设置中配置邮箱后生效」/关闭 toast「已关闭邮件提醒」 |
 | Reminder popup | `CountdownReminder.vue` | 全屏遮罩弹框，到点时间显示 `⏰ MM-DD HH:mm`；z-index 2000，点击遮罩不关闭 |
 | Tag filtering | `TagFilter.vue` + `CategoryTabs.vue` | Tags extracted from all sites |
-| Loading states | `SkeletonCard.vue` + `SkeletonGrid.vue` | Shimmer placeholders |
 | Toast notifications | `Toast.vue` | Receives `toasts` array as prop from `useToast()` |
 | 工作台便签 | `workbench/WorkbenchNotes.vue` | 顶部工具栏（左：新增便签 `note-add-button` / 分类管理 `nt-cat-manager`；右：搜索表单 关键词 `nt-search-input` + 类型下拉 `nt-type-select`（全部类型默认 'all'/普通便签/时光轴便签）+ 查询 `nt-search-btn` / 重置 `nt-reset-btn`，草稿→应用模式：控件绑草稿 ref，查询/回车才生效，重置一键清空回默认）+ 操作栏下方分类筛选 tabs `nt-cat-all`/`nt-cat-uncategorized`/`nt-cat-<id>`（全部/未分类/可见分类=showInTabs!==false，即时过滤，公式走 `noteCore.tabCategoriesOf`）+ 表单 overlay 内 radio `nt-form-type-normal`/`nt-form-type-timeline`（切换保留 content+entries 数据）+ 分类管理弹窗（首区「标签页显示」勾选 `nt-catmgr-tab-<id>` 控制标签页可见性，取消勾选正激活的分类回退全部；改名/上移下移/删除、名称唯一、删除后该分类便签归未分类、正被筛选的分类重置为全部）+ 时光轴卡片（竖排时间轴 `nt-timeline-card`，快速追加 `nt-entry-add`，条目行内编辑/删除 `nt-entry-edit-<id>`/`nt-entry-del-<id>`）；datetime 校验 `^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$` + 范围检查（月 1-12/日 1-31/时 0-23/分 0-59，纯正则拒绝不了 '2026-13-99 25:61'）；条目排序走 `noteCore.sortTimelineEntries`，筛选走 `filterNotes`；'all' 双段渲染（普通网格 + 时光轴网格，经 `noteCore.partitionNotesByType` 拆分，仅含数据的段才渲染）；`hasActiveNoteFilter` 激活判定：默认 'all' 与显式 'normal' 均不算类型激活（仅 'timeline' 算类型激活），categoryId/keyword 非空仍计激活 |
 | 工作台日记 | `workbench/WorkbenchDiary.vue` | 每日一篇（date 本地唯一）：工具栏 日期输入 `dj-date-input`（默认今天）+ 今日 `dj-today-btn` + 保存 `dj-save-btn` + 删除 `dj-delete-btn`（仅选中条目时渲染）+ 编辑/预览切换 `dj-preview-toggle` + 字数 `dj-char-count`；编辑器 `dj-content-input` / Markdown 预览 `dj-preview`（走 `noteMarkdown.renderMarkdown` + `:deep()` 排版镜像 WorkbenchNotes，锚点点击不冒泡）；历史卡片网格（auto-fill minmax(240px,1fr)，8 条/页）+ 分页 `dj-page-prev`/`dj-page-info`（「第 X / Y 页」，边界禁用）/`dj-page-next`，新增条目回第 1 页、删除页码自动钳制；卡片 `dj-card-<id>` + 日期 `dj-card-date-<id>`（含中文星期 周X）+ 今天徽标 `dj-card-today-<id>` + 6 行 clamp 预览 `dj-card-preview-<id>`；空态 `dj-empty`「还没有日记，写下今天的第一篇吧」；日期切换脏检查 confirm；trim 空保存 → toast.warning「内容为空，未保存」；成功 → toast.success「日记已保存」；只消费 store（sortedEntries/upsertEntry/deleteEntry），不自加载（view 调 loadDiary）、不内联重排 |

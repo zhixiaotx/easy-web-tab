@@ -15,7 +15,8 @@ import datetime
 import random
 import sys
 
-DEFAULT_DIR = r"C:\Users\YangLiJuan\Nutstore\1\easy-web-tab"
+# 默认数据目录：优先读环境变量 EASY_WEBTAB_DIR，未设置时必须显式传 --dir
+DEFAULT_DIR = os.environ.get("EASY_WEBTAB_DIR", "")
 PW_FIELDS = ("passwords", "passwordsSalt", "passwordVerification")
 
 # 子命令 → 目标文件名映射
@@ -51,6 +52,11 @@ def resolve_file(args):
     edit 子命令按 --target 顶层键推断目标文件。"""
     if args.file:
         return args.file
+    if not args.dir:
+        raise SystemExit(
+            "未指定数据目录：请用 --dir 传入备份目录，或设置环境变量 EASY_WEBTAB_DIR。\n"
+            "示例：export EASY_WEBTAB_DIR=/path/to/easy-web-tab"
+        )
     if args.cmd == "edit" and getattr(args, "target", None):
         top = args.target.split(".")[0]
         route = {"prefs": "nav.json", "business": "business.json",
@@ -438,7 +444,7 @@ def add_common(p):
 def build_parser():
     # --dir / --file 放到公共 parent，使子命令前后都能写
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--dir", default=DEFAULT_DIR, help=f"备份目录路径（默认 {DEFAULT_DIR}）")
+    common.add_argument("--dir", default=DEFAULT_DIR, help="备份目录路径（默认取环境变量 EASY_WEBTAB_DIR，未设置则必填）")
     common.add_argument("--file", default=None, help="直接指定文件路径（覆盖 --dir 自动路由）")
 
     p = argparse.ArgumentParser(description="easy-web-tab 备份新增/修改脚本（v2 五文件版）", parents=[common])

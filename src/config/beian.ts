@@ -7,7 +7,8 @@
  * 空串语义：空串 = 页脚对应段落不显示（两段都空 = 整个页脚不渲染）
  * 变更后需 npm run build 重新构建部署才生效
  */
-export const ICP_NUMBER = '冀ICP备2026035690号'
+// 开源仓库中留空：请填入你自己站点的备案号
+export const ICP_NUMBER = ''
 
 /**
  * 公安备案号

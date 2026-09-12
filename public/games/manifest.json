@@ -1,13 +1,5 @@
 [
 {
-    "id": "openCodeStudy",
-    "name": "OpenCode指南",
-    "path": "/games/openCodeStudy/index.html",
-    "description": "OpenCode指南",
-    "icon": "/icons/szbf.svg",
-    "category": "books"
-  },
-{
     "id": "szbf",
     "name": "孙子兵法",
     "path": "/games/sunzibingfa/index.html",

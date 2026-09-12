@@ -12,7 +12,8 @@ echo Working directory: %CD%
 echo.
 
 :: Set Node.js path - CHANGE THIS TO YOUR NODE.JS LOCATION
-set PATH=%PATH%;E:\installSoftware\nodejs\
+:: 如果你的 node 已在系统 PATH 中，可注释掉下一行
+:: set PATH=%PATH%;C:\Program Files\nodejs\
 
 :: Check if node is available
 node --version >nul 2>&1

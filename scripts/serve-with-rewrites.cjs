@@ -14,7 +14,8 @@ const MAX_ERROR_BYTES = 1024
 const PROXY_META_PATH = '/api/fetch-meta'
 const MAX_META_BYTES = 512 * 1024
 const META_TIMEOUT_MS = 8000
-const META_UA = 'Mozilla/5.0 (compatible; easywebtab/1.0; +https://codehelp.com.cn)'
+// UA 里的站点地址仅用于对方站点识别来源，部署时建议换成自己的域名
+const META_UA = process.env.META_UA || 'Mozilla/5.0 (compatible; easywebtab/1.0)'
 const MAX_REDIRECTS = 5
 
 function maskAuth(h) {
@@ -505,14 +506,6 @@ if (filePath === '/games/tetris') {
 } else if (filePath === '/games/tetris/') {
   // Already has trailing slash, serve the index.html
   filePath = '/games/tetris/index.html'
-} else if (filePath === '/games/schulte-grid') {
-  // Redirect to index.html with trailing slash for proper relative path resolution
-  res.writeHead(302, { 'Location': '/games/schulte-grid/' })
-  res.end()
-  return
-} else if (filePath === '/games/schulte-grid/') {
-  // Already has trailing slash, serve the index.html
-  filePath = '/games/schulte-grid/index.html'
 } else if (filePath === '/games/id-generator') {
   // Redirect to index.html with trailing slash
   res.writeHead(302, { 'Location': '/games/id-generator/' })

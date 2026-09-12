@@ -1,7 +1,7 @@
 {
   "name": "easywebtab",
   "version": "1.0.0",
-  "private": true,
+  "description": "简洁的个人网址导航页，支持分类管理、全文搜索、键盘快捷键、暗色模式，以及导入/导出为 Markdown 文件。",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -60,27 +60,31 @@
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@types/crypto-js": "^4.2.2",
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.1.2",
     "@vitejs/plugin-vue": "^6.0.5",
-    "playwright-core": "^1.62.1",
     "pm2": "^5.3.0",
     "serve": "^14.2.6",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vue-tsc": "^3.2.6"
   },
-  "description": "简洁的个人网址导航页，支持分类管理、全文搜索、键盘快捷键、暗色模式，以及导入/导出为 Markdown 文件。",
   "main": "vite.config.js",
+  "types": "./vite.config.d.ts",
   "repository": {
     "type": "git",
     "url": "https://gitee.com/sifujiang/easy-web-tab.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "types": "./vite.config.d.ts"
+  "keywords": [
+    "bookmarks",
+    "navigation",
+    "new-tab",
+    "vue3",
+    "typescript",
+    "markdown",
+    "网址导航"
+  ],
+  "license": "MIT"
 }

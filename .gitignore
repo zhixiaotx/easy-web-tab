@@ -41,6 +41,9 @@ nul
 .playwright-mcp
 site.md
 .opencode 
+.workbuddy
+.github
+dist
 
 # Playwright
 /test-results/

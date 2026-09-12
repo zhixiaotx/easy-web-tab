@@ -1,6 +1,6 @@
 ﻿---
 name: "easy-webtab-backup-editor"
-description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 备份时触发。支持：新增网站、待办、便签、倒计时、记账、运动/体重、习惯、商品/进货/收摊/支出；修改上述已有条目（按 id 定位、只更新指定字段）。禁止：删除已有数据。数据目录位于 C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\（5 个独立 JSON 文件：nav.json / icons.json / workbench.json / business.json / student.json）"
+description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 备份时触发。支持：新增网站、待办、便签、倒计时、记账、运动/体重、习惯、商品/进货/收摊/支出；修改上述已有条目（按 id 定位、只更新指定字段）。禁止：删除已有数据。数据目录由环境变量 EASY_WEBTAB_DIR 或 --dir 指定（5 个独立 JSON 文件：nav.json / icons.json / workbench.json / business.json / student.json）"
 ---
 
 # easy-web-tab 备份数据编辑器
@@ -18,7 +18,9 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
 ## 一、默认目录与文件路由
 
 ```
-默认目录：C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\
+数据目录：由环境变量 EASY_WEBTAB_DIR 指定，或每条命令用 --dir 显式传入
+示例（Windows）：setx EASY_WEBTAB_DIR "D:\sync\easy-web-tab"
+示例（macOS/Linux）：export EASY_WEBTAB_DIR="$HOME/sync/easy-web-tab"
 ```
 
 云同步已拆分为 **5 个独立 JSON 文件**，各文件独立同步、独立冲突处理：
@@ -478,7 +480,7 @@ description: "当用户要\"记录/新增/添加/修改\"数据到 easy-web-tab 
 
 **位置**：`~/.workbuddy/skills/easy-webtab-backup-editor/add_entry.py`
 **运行**：`python add_entry.py <子命令> [--dir 目录路径] [字段...]`
-- `--dir` 省略时用默认目录 `C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\`；脚本根据子命令自动路由到对应的 JSON 文件。
+- `--dir` 省略时用环境变量 `EASY_WEBTAB_DIR`；两者都没有时脚本会报错退出。运行前请先设置该环境变量，脚本根据子命令自动路由到对应的 JSON 文件。
 - 也可用 `--file` 直接指定任意文件路径（覆盖 `--dir` 的自动路由）。
 - 金额/数量都是数字（`16.5`、`150`），不要加引号；日期用本地 `YYYY-MM-DD`。
 
@@ -514,7 +516,7 @@ python add_entry.py product --name 烤冷面 --purchase 3 --selling 8
 python add_entry.py purchase --product bp_xxx --quantity 50 --unit-price 3 --date 2026-08-25
 
 # 兜底：任意结构直接传 JSON（自动补 id/时间戳），需手动指定文件
-python add_entry.py generic --file C:\Users\YangLiJuan\Nutstore\1\easy-web-tab\student.json --target homework --json "{\"title\":\"数学练习\",\"status\":\"pending\"}"
+python add_entry.py generic --file "$EASY_WEBTAB_DIR/student.json" --target homework --json "{\"title\":\"数学练习\",\"status\":\"pending\"}"
 
 # 修改：把某条待办标题改为「写周报(改)」并标记完成（id 从对应 JSON 查得）
 python add_entry.py edit --target todos --id td_20260823_120000_a1b2 --set-json "{\"title\":\"写周报(改)\",\"completed\":true}"

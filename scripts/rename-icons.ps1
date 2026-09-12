@@ -1,5 +1,9 @@
 # 重命名脚本 - 将中文文件名改为英文
-$iconDir = "D:\IDEA\easyWebTab\public\icons"
+# 默认取脚本所在目录的 ../public/icons，可用 -IconDir 覆盖
+param(
+    [string]$IconDir = (Join-Path $PSScriptRoot "..\public\icons")
+)
+$iconDir = $IconDir
 
 # 中文到英文的映射 (唯一键)
 $mappings = @{
@@ -56,8 +60,6 @@ $mappings = @{
     "华为商城.ico" = "vmall.ico"
     "小米.svg" = "xiaomi.svg"
     "小米商城.ico" = "mi-mall.ico"
-    "高伟达LOGO.svg" = "git-logo.svg"
-    "高伟达邮箱.ico" = "git-mail.ico"
     "c语言中文网.ico" = "biancheng.ico"
     "xxl开源项目.ico" = "xxl-job.ico"
     "人民网.ico" = "people-com-cn.ico"

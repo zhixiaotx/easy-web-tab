@@ -9,9 +9,9 @@
 ```
 用户浏览器
     │
-    ├── https://47.96.103.204:443  ──→  nginx (SSL 终止)  ──→  proxy_pass 127.0.0.1:16718  ──→  Vue SPA
+    ├── https://<服务器IP>:443  ──→  nginx (SSL 终止)  ──→  proxy_pass 127.0.0.1:16718  ──→  Vue SPA
     │
-    └── http://47.96.103.204:80    ──→  nginx (301 重定向) ──→  https://$host
+    └── http://<服务器IP>:80    ──→  nginx (301 重定向) ──→  https://$host
 ```
 
 | 端口 | 协议 | 作用 |
@@ -19,6 +19,8 @@
 | 443 | HTTPS | SSL 终止，反向代理到本地 16718 服务 |
 | 80 | HTTP | 301 跳转到 HTTPS |
 | 16718 | HTTP | 后端内部服务（PM2 / Node 直接提供静态文件） |
+
+> 下文所有 `<服务器IP>` / `<你的域名>` 请替换为你自己的实际值。
 
 ---
 
@@ -34,7 +36,7 @@ sudo mkdir -p /etc/pki/nginx/private
 sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
   -keyout /etc/pki/nginx/private/server.key \
   -out /etc/pki/nginx/server.crt \
-  -subj "/CN=47.96.103.204"
+  -subj "/CN=<服务器IP>"
 ```
 
 > `/CN=` 后面填你服务器的 IP 或域名。
@@ -78,7 +80,7 @@ http {
     server {
         listen       80;
         listen       [::]:80;
-        server_name  www.codehelp.com.cn;
+        server_name  <你的域名>;
         return 301 https://$host$request_uri;
     }
 
@@ -86,7 +88,7 @@ http {
     server {
         listen       443 ssl http2;
         listen       [::]:443 ssl http2;
-        server_name  47.96.103.204;
+        server_name  <服务器IP>;
 
         ssl_certificate "/etc/pki/nginx/server.crt";
         ssl_certificate_key "/etc/pki/nginx/private/server.key";
@@ -127,10 +129,10 @@ http {
 
 ### 3. 将配置上传到服务器
 
-方式一：从本地 SCP 上传（在本机 PowerShell 执行）
+方式一：从本地 SCP 上传（在本机终端执行）
 
 ```bash
-scp ./nginx.conf root@47.96.103.204:/etc/nginx/nginx.conf
+scp ./nginx.conf <用户名>@<服务器IP>:/etc/nginx/nginx.conf
 ```
 
 方式二：在服务器上直接用 vi/nano 粘贴内容
@@ -175,7 +177,7 @@ npm run build && npm run serve    # 或者 pm2 start pm2.config.cjs
 
 ## 验证
 
-浏览器访问 `https://47.96.103.204`：
+浏览器访问 `https://<服务器IP>`：
 
 1. 第一次会提示 **"您的连接不是私密连接"**（自签名证书的警告）
 2. 点击 **"高级(Advanced)"** → **"继续前往(Proceed)"**
@@ -196,7 +198,7 @@ Let's Encrypt 需要域名才能签发证书。如果只有 IP，只能用自签
 
 ```bash
 sudo dnf install certbot python3-certbot-nginx   # CentOS
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d <你的域名>
 ```
 
 ### Q: 密码管理器还是报错？
@@ -204,11 +206,3 @@ sudo certbot --nginx -d your-domain.com
 - 页面协议是否为 `https://`
 - `window.crypto.subtle` 是否为 `undefined`
 - 如果两者都正常，检查 `localStorage` 中是否有损坏的数据，清除后重试
-
----
-
-## 更新记录
-
-| 日期 | 内容 |
-|------|------|
-| 2026-07-30 | 初始版本 |

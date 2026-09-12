@@ -31,7 +31,7 @@ easy-web-tab/
 │   ├── icons/                    # 14 .svg brand icons (scanned at build) + icons.json export artifact
 │   ├── backgrounds/              # 30 wallpaper images
 │   ├── beian/ghs.png             # 公安备案徽标（BeianFooter @error 兜底隐藏）
-│   └── games/                    # 4 apps: tetris, gushi, cron-generator, id-generator (+ leftover schulte-grid dir)
+│   └── games/                    # 5 apps: szbf(孙子兵法), tetris, gushi, cron-generator, id-generator
 ├── scripts/                      # Build helpers + 纯逻辑 test runners + Playwright QA (see scripts/AGENTS.md)
 ├── server.cjs / pm2.config.cjs   # PM2 path: npx serve -s dist, port 16718 (NO game rewrites)
 ├── Dockerfile                    # serve -s, port 16718 (no serve.json copied → no game rewrites)
@@ -179,10 +179,10 @@ easy-web-tab/
 - Data stored as YAML frontmatter Markdown (`myself-sites.md`), parsed by `useMarkdown.ts`
 - Icon resolution chain: custom icon → localStorage cache → Google Favicon API → async background cache from page HTML
 - Dual server strategy: `server.cjs` (PM2, uses `serve` package, NO game rewrites) vs `scripts/serve-with-rewrites.cjs` (custom, has game rewrites) — **divergent serving**
-- Games are standalone HTML files in `public/games/`, registered via `manifest.json`, loaded by `useGames.ts`
+- Games are standalone HTML files in `public/games/`, registered via `manifest.json`, loaded by `src/stores/sites.ts`
 - Password storage uses crypto-js (AES-CBC + PBKDF2, pure JS — works without HTTPS), not Web Crypto API or plaintext localStorage
 - Categories have a legacy migration system: old hardcoded categories (office, tech, etc.) are seeded once then become user-deletable custom categories
-- `serve.json` provides partial game rewrites for `serve -s` (tetris, schulte-grid only) — less comprehensive than the custom server
+- 推荐用 `npm run serve`（`scripts/serve-with-rewrites.cjs`）启动，它内置游戏路由重写；直接用 `serve -s dist` 会因缺少重写导致部分小游戏资源 404
 
 ## COMMANDS
 
@@ -227,15 +227,14 @@ pm2 start pm2.config.cjs  # PM2 production (uses server.cjs, NO game rewrites, u
 ## KEY GOTCHAS
 
 - `pm2.config.cjs` → `server.cjs` → `npx serve -s dist -l 16718` (no game rewrites); `server.cjs` auto-runs `npm run build` if `dist/` is missing. Dockerfile is the same (`serve -s`, serve.json never copied).
-- `npm run serve` → `scripts/serve-with-rewrites.cjs` — rewrites `/games/{tetris,schulte-grid,id-generator,cron-generator}` to `/{game}/index.html` (302 → trailing slash). **`gushi` is in manifest.json but has NO rewrite here** — its relative assets can break via this server.
-- `serve.json` maps only tetris (stale: → `/games/tetris.html`, but tetris is now a dir) and schulte-grid — other games 404 or lose assets under plain `serve -s`.
+- `npm run serve` → `scripts/serve-with-rewrites.cjs` — rewrites `/games/{tetris,id-generator,cron-generator}` to `/{game}/index.html` (302 → trailing slash). **`gushi` / `szbf` 在 manifest.json 中但没有 rewrite** — 其相对资源在此服务器下可能加载失败。
 - Real Vite config is `vite.config.js` (not `.ts`); `tsconfig.node.json` still includes a non-existent `vite.config.ts` — harmless, don't "fix" by renaming the config.
 - `public/data/sites.md` was **removed from the repo** (exists only in git history); `.gitignore` now ignores `sites.md` + `public/data/sites.md` — do not re-add a seed file there.
-- `run.bat` hardcodes Node.js path (`E:\installSoftware\nodejs\`); `start-pm2.ps1` hardcodes project path (`D:\IDEA\easyWebTab`) — both stale for this checkout.
+- `run.bat` / `start-pm2.ps1` no longer hardcode machine-specific paths (Node path line is commented out; pm2 script uses `$PSScriptRoot`) — keep them path-agnostic.
 - `presetIcons.ts` is code-generated — edit `scripts/generate-preset-icons.cjs` or add files to `public/icons/` instead.
 - `searchEngines.ts` stores engine state across 3 separate localStorage keys.
 - `sites.ts` is the largest store (628 lines) — avoid adding more responsibilities.
-- `public/games/schulte-grid/` is a leftover dir — NOT in manifest.json (4 registered games); rewrites still reference it.
+- 小游戏需同时登记 `public/games/manifest.json`；`scripts/serve-with-rewrites.cjs` 里的 rewrite 需与之一致，否则相对资源会 404。
 - 用户数据现主要存 IndexedDB（DB `easy-web-tab` v12），localStorage 仅剩迁移备份与偏好/密钥等（如 `user-sites`、`password-verification-v2`、`user-countdown-sort`）。
 - 倒计时/密码 store 已切换 IndexedDB（store 'countdowns' / 'passwords'），`user-countdowns` / `user-passwords` 旧 localStorage key 仅作一次性非破坏迁移来源，勿再直接读写。
 - 备份版本号：IdxDB `DB_VERSION=12`；工作台备份 `WORKBENCH_DATA_VERSION=9`（`idbImportAll` 范围守卫 `<1 || >9`）；学生备份独立 `STUDENT_DATA_VERSION=1`（`student-backup` 信封，随云端 `student.json`，**不随工作台备份**）——改版本号需同步 `useIdb.ts` 导入守卫与迁移分支。

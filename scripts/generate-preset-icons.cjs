@@ -33,8 +33,6 @@ const NAME_TRANSLATIONS = {
   '小红书': 'xiaohongshu',
   '智谱': 'zhipu',
   '飞书': 'feishu',
-  '高伟达LOGO': 'git-logo',
-  '高伟达邮箱': 'git-mail',
   '高德地图': 'amap',
   '阿里云官方-中文LOGO': 'aliyun-logo',
   '阿里云': 'aliyun',
@@ -137,7 +135,6 @@ const KNOWN_URLS = {
   deepin: 'https://www.deepin.org',
   'c语言中文网': 'https://c.biancheng.net',
   'xxl开源项目': 'https://www.xuxueli.com',
-  '高伟达邮箱': 'http://mail.git.com.cn',
   vue: 'https://vuejs.org',
   react: 'https://react.dev',
   typescript: 'https://typescriptlang.org',
@@ -203,7 +200,7 @@ function getCategory(name) {
   const n = name.toLowerCase()
   if (['github', 'stack_overflow', 'zhihu', 'zhihu-square', 'weibo', 'xiaohongshu', 'douban', 'jianshu', 'toutiao', 'kuaishou', 'xianyu', 'zhuanzhuan', 'dianping', 'x', 'twitter', 'discord', 'goofish'].includes(n)) return '社交与社区'
   if (['baidu', '百度一下_你就知道', 'taobao', 'tmall', 'jd', '京东', 'pinduoduo', 'alipay', '支付宝', 'meituan', '美团', 'eleme', '淘宝闪购', 'ctrip', '携程', '12306', '高德地图', 'qq', 'wechat', 'douyin', 'bilibili', '哔哩哔哩', 'wangyi', '网易云音乐', '360', '迅雷', '天气网', '人民网', '小米商城', '华为商城', 'openclaw_icon-logo'].includes(n)) return '国内常用网站'
-  if (['browser', 'vscode', 'jetbrains', 'nodejs', 'npm', 'gitlab', '码云_gitee_', 'gitcode', 'csdn', 'juejin', '开源中国', 'processon', 'wps', '飞书', '智联招聘', '链家', 'deepin', 'c语言中文网', 'xxl开源项目', '高伟达邮箱'].includes(n)) return '工具与开发'
+  if (['browser', 'vscode', 'jetbrains', 'nodejs', 'npm', 'gitlab', '码云_gitee_', 'gitcode', 'csdn', 'juejin', '开源中国', 'processon', 'wps', '飞书', '智联招聘', '链家', 'deepin', 'c语言中文网', 'xxl开源项目'].includes(n)) return '工具与开发'
   if (['vue', 'react', 'typescript', 'javascript', 'python', 'html', 'css', 'antdesign'].includes(n)) return '前端技术'
   if (['java', 'mysql', 'postgresql', 'redis', 'mongodb', 'elasticsearch', 'sqlite', 'supabase', 'spring', 'nacos', 'seata', 'apache_tomcat', 'apache_skywalking', 'arthas', 'dataease'].includes(n)) return '后端与数据库'
   if (['aws', '阿里云', 'oceanbase', 'maven_central', 'mdn', 'css_tricks', 'clawhub', 'trae', 'opencode', 'tavily', 'core_s_bitcoin_staking', 'halo_建站工具', 'microsoft'].includes(n)) return '云服务与平台'
@@ -223,7 +220,6 @@ function getLabel(name) {
     'halo_建站工具': 'Halo 建站',
     'c语言中文网': 'C语言中文网',
     'xxl开源项目': 'XXL开源',
-    '高伟达邮箱': '高伟达邮箱',
     core_s_bitcoin_staking: 'Core BTC',
     apache_tomcat: 'Tomcat',
     apache_skywalking: 'SkyWalking',

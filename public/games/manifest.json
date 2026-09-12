@@ -41,8 +41,8 @@
   },
   {
     "id": "opencode",
-    "name": "OpenCode 指南",
-    "path": "/games/opencodestudy/index.html",
+    "name": "OpenCode指南",
+    "path": "/games/openCodeStudy/index.html",
     "description": "OpenCode AI 编程助手中文学习手册",
     "icon": "/icons/opencode.svg",
     "category": "books"

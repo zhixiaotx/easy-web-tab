@@ -141,7 +141,7 @@ export function useUrlMetadata() {
   async function fetchViaSelfProxy(url: string): Promise<UrlMetadata | null> {
     try {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 10000)
+      const timer = setTimeout(() => controller.abort(), 20000)
       const resp = await fetch('/api/fetch-meta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

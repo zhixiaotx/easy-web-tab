@@ -348,6 +348,46 @@ function fetchWithRedirect(targetUrl, depth) {
   })
 }
 
+// Headless 兜底：HTTP 抓取拿不到标题/描述时，用 Playwright 执行 JS 渲染抓取（解决百度等 JS 反爬壳）
+let _playwright = null
+function loadPlaywright() {
+  if (!_playwright) _playwright = require('playwright')
+  return _playwright
+}
+
+async function fetchWithHeadless(targetUrl) {
+  let browser
+  try {
+    const { chromium } = loadPlaywright()
+    browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+    const page = await browser.newPage({ userAgent: META_UA })
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 10000 })
+    await page.waitForTimeout(1200)
+    const data = await page.evaluate(() => {
+      const title = (document.title || '').trim()
+      let description = ''
+      const og = document.querySelector('meta[property="og:description"], meta[name="og:description"]')
+      const desc = document.querySelector('meta[name="description"]')
+      if (og && og.getAttribute('content')) description = og.getAttribute('content')
+      else if (desc && desc.getAttribute('content')) description = desc.getAttribute('content')
+      let icon = ''
+      const link = document.querySelector('link[rel~="icon"]')
+      if (link && link.href) icon = link.href
+      else icon = location.origin + '/favicon.ico'
+      return { title, description: description.trim(), icon }
+    })
+    return {
+      title: data.title.slice(0, 200),
+      description: data.description.slice(0, 300),
+      icon: data.icon
+    }
+  } catch {
+    return null
+  } finally {
+    if (browser) await browser.close().catch(() => {})
+  }
+}
+
 async function handleFetchMeta(req, res) {
   if (req.method !== 'POST') {
     res.writeHead(405, { 'Allow': 'POST' })
@@ -387,6 +427,17 @@ async function handleFetchMeta(req, res) {
 
   try {
     const meta = await fetchWithRedirect(target, 0)
+    // 反爬站点（JS 渲染/空壳）HTTP 抓取拿不到标题/描述时，用 Headless 兜底；仅此类站点触发，正常站点走快速 HTTP
+    if (!meta.title && !meta.description) {
+      try {
+        const h = await fetchWithHeadless(parsed.href)
+        if (h && (h.title || h.description)) {
+          meta.title = h.title || meta.title
+          meta.description = h.description || meta.description
+          if (!meta.icon && h.icon) meta.icon = h.icon
+        }
+      } catch { /* Headless 不可用（未装浏览器等）时忽略，保留 HTTP 结果 */ }
+    }
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify(meta))
   } catch (err) {

@@ -16,6 +16,8 @@ export type GradeOpError = 'empty' | 'invalid-date' | 'no-subjects' | 'invalid-s
 export interface NewGradeInput {
   examName: string
   examType: string
+  /** 年级分类：STUDENT_GRADE_LEVELS 之一，'' 表示未分类 */
+  grade: string
   date: string // 'YYYY-MM-DD' 本地日期
   subjects: StudentGradeSubject[]
 }
@@ -24,6 +26,7 @@ export interface NewGradeInput {
 export interface GradeUpdatePatch {
   examName?: string
   examType?: string
+  grade?: string
   date?: string
   subjects?: StudentGradeSubject[]
 }
@@ -75,6 +78,7 @@ export function normalizeGradeRecord(raw: unknown): StudentGradeRecord | null {
     id: o.id,
     examName,
     examType,
+    grade: typeof o.grade === 'string' ? o.grade : '',
     date: String(o.date),
     subjects,
     createdAt: typeof o.createdAt === 'string' && o.createdAt ? o.createdAt : now,
@@ -210,4 +214,30 @@ export function sortGrades(
     return dir === 'asc' ? cmp : -cmp
   })
   return arr
+}
+
+// ============ 年级过滤 / 分页 ============
+
+/** 按年级过滤；level 为空串时返回全部（含未分类） */
+export function filterGradesByLevel(grades: StudentGradeRecord[], level: string): StudentGradeRecord[] {
+  if (!level) return grades
+  return grades.filter(g => g.grade === level)
+}
+
+export interface Paginated<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+/** 分页（页码从 1 起；越界页码自动收敛到最后一页） */
+export function paginate<T>(list: T[], page: number, pageSize: number): Paginated<T> {
+  const total = list.length
+  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1
+  const safePage = Math.min(Math.max(1, Math.floor(page) || 1), totalPages)
+  const start = (safePage - 1) * pageSize
+  const items = pageSize > 0 ? list.slice(start, start + pageSize) : list
+  return { items, total, page: safePage, pageSize, totalPages }
 }

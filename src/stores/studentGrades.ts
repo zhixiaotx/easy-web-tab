@@ -11,18 +11,25 @@ import {
   validateNewGrade,
   calcGradeStats,
   sortGrades,
+  filterGradesByLevel,
+  paginate,
   type NewGradeInput,
   type GradeUpdatePatch,
   type GradeOpError,
   type GradeSortMode,
   type GradeSortDirection,
-  type GradeStats
+  type GradeStats,
+  type Paginated
 } from '@/composables/studentGradesCore'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
+import { GRADE_LEVEL_ALL } from '@/types'
 import type { StudentGradeRecord } from '@/types'
 
 const STORE_KEY = 'student_grades'
+
+/** 每页展示条数 */
+export const GRADE_PAGE_SIZE = 10
 
 export type GradeOp = { ok: boolean; reason?: GradeOpError }
 
@@ -40,6 +47,10 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
   const grades = ref<StudentGradeRecord[]>([])
   const sortMode = ref<GradeSortMode>('date')
   const sortDirection = ref<GradeSortDirection>('desc')
+  /** 当前年级标签页：'' = 全部 */
+  const activeLevel = ref<string>(GRADE_LEVEL_ALL)
+  /** 当前页码（从 1 起） */
+  const page = ref<number>(1)
 
   // ===== 加载/保存 =====
 
@@ -71,6 +82,7 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
     const now = isoNow()
     const record = normalizeGradeRecord({
       id: genId(),
+      grade: input.grade.trim(),
       examName: input.examName.trim(),
       examType: input.examType.trim() || '期中',
       date: input.date,
@@ -123,19 +135,48 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   }
 
+  // ===== 年级标签页 / 分页 =====
+
+  /** 切换年级标签页（重置到第 1 页） */
+  function setActiveLevel(level: string): void {
+    if (level === activeLevel.value) return
+    activeLevel.value = level
+    page.value = 1
+  }
+
+  /** 切换页码 */
+  function setPage(p: number): void {
+    page.value = p
+  }
+
   // ===== 只读薄委托 =====
 
-  /** 排序后的成绩列表（按当前排序模式/方向） */
+  /** 排序后的成绩列表（按当前排序模式/方向，跨全部年级） */
   const sortedGrades = computed<StudentGradeRecord[]>(() => sortGrades(grades.value, sortMode.value, sortDirection.value))
 
-  /** 总览统计：记录数 / 总均分 / 各科均分 / 最近一次考试 */
+  /** 总览统计：记录数 / 总均分 / 各科均分 / 最近一次考试（跨全部年级） */
   const stats = computed<GradeStats>(() => calcGradeStats(grades.value))
+
+  /** 当前年级标签页下的成绩（已按排序模式/方向排好） */
+  const levelGrades = computed<StudentGradeRecord[]>(() =>
+    sortGrades(filterGradesByLevel(grades.value, activeLevel.value), sortMode.value, sortDirection.value)
+  )
+
+  /** 当前年级标签页下的分页结果（每页 GRADE_PAGE_SIZE 条） */
+  const pagedLevelGrades = computed<Paginated<StudentGradeRecord>>(() =>
+    paginate(levelGrades.value, page.value, GRADE_PAGE_SIZE)
+  )
+
+  /** 当前年级标签页下的统计 */
+  const levelStats = computed<GradeStats>(() => calcGradeStats(levelGrades.value))
 
   return {
     // 状态
     grades,
     sortMode,
     sortDirection,
+    activeLevel,
+    page,
     // 加载/保存
     loadGrades,
     saveGrades,
@@ -146,8 +187,14 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
     // 排序
     setSort,
     toggleDirection,
+    // 年级标签页 / 分页
+    setActiveLevel,
+    setPage,
     // 只读
     sortedGrades,
-    stats
+    stats,
+    levelGrades,
+    pagedLevelGrades,
+    levelStats
   }
 })

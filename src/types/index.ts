@@ -994,6 +994,18 @@ export interface StudentParentTasksData {
 /** 成绩考试类型（录入下拉预设；用户可自由输入自定义类型） */
 export const GRADE_EXAM_TYPES: readonly string[] = ['期中', '期末', '月考', '单元测试', '随堂测验']
 
+/** 年级分类（标签页顺序）：幼儿园小班/中班/大班 → 小学一年级~六年级 → 初中初一~初三 → 高中高一~高三 → 大学大一~大四 */
+export const STUDENT_GRADE_LEVELS: readonly string[] = [
+  '小班', '中班', '大班',
+  '一年级', '二年级', '三年级', '四年级', '五年级', '六年级',
+  '初一', '初二', '初三',
+  '高一', '高二', '高三',
+  '大一', '大二', '大三', '大四'
+]
+
+/** 「全部年级」总览标签（activeLevel 取此值表示不限年级，空串） */
+export const GRADE_LEVEL_ALL = ''
+
 /** 单条成绩（某次考试中某一科目的分数） */
 export interface StudentGradeSubject {
   /** 学科名（对齐 settings.subjects） */
@@ -1011,6 +1023,8 @@ export interface StudentGradeRecord {
   examName: string
   /** 考试类型：GRADE_EXAM_TYPES 之一或自定义 */
   examType: string
+  /** 年级分类：STUDENT_GRADE_LEVELS 之一，'' 表示未分类/全部 */
+  grade: string
   /** 考试日期 'YYYY-MM-DD' */
   date: string
   subjects: StudentGradeSubject[]

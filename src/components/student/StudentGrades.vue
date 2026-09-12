@@ -1,19 +1,20 @@
 <script setup lang="ts">
 // 学生工作台成绩记录面板
-// 布局：工具条 + 统计卡 + 考试卡片网格 + 录入/编辑弹框 + 按科目 ECharts 趋势折线
+// 布局：工具条 + 年级标签页(el-tabs) + 统计卡 + 表格(el-table, 每页10条分页) + 录入/编辑弹框 + 按科目 ECharts 趋势折线
 // 数据：useStudentGradesStore（独立 IDB store 'student_grades'，严格隔离成人数据）
-// 复用 studentGradesCore 的归一化/校验/统计/排序纯函数；ECharts 走 echarts/core + vue-echarts（仿 StudentHealthHeight）
+// 复用 studentGradesCore 的归一化/校验/统计/排序/过滤/分页纯函数；ECharts 走 echarts/core + vue-echarts（仿 StudentHealthHeight）
+// 年级维度：每条记录带 grade（STUDENT_GRADE_LEVELS 之一），每个年级一个标签页，全部页保留跨年级总览
 // data-testid 前缀：sg-
 
 import { computed, onMounted, ref } from 'vue'
-import { useStudentGradesStore } from '@/stores/studentGrades'
+import { useStudentGradesStore, GRADE_PAGE_SIZE } from '@/stores/studentGrades'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useThemeStore } from '@/stores/theme'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import { subjectUniverse } from '@/composables/studentGradesCore'
-import { GRADE_EXAM_TYPES } from '@/types'
-import type { StudentGradeSubject } from '@/types'
+import { GRADE_EXAM_TYPES, STUDENT_GRADE_LEVELS, GRADE_LEVEL_ALL } from '@/types'
+import type { StudentGradeSubject, StudentGradeRecord } from '@/types'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import Icon from '@/components/Icon.vue'
 import { use } from 'echarts/core'
@@ -30,14 +31,15 @@ const themeStore = useThemeStore()
 const toast = useToast()
 
 const subjectOptions = computed<string[]>(() => settingsStore.subjects)
+const gradeLevels = computed<string[]>(() => [...STUDENT_GRADE_LEVELS])
 
-// ============ 统计 ============
-const stats = computed(() => store.stats)
-const latestExam = computed(() => stats.value.latestExam)
+// ============ 统计（当前年级作用域） ============
+const latestExam = computed(() => store.levelStats.latestExam)
 
 // ============ 录入/编辑弹框 ============
 const showDialog = ref(false)
 const editingId = ref<string | null>(null)
+const formGrade = ref<string>('')
 const formExamName = ref('')
 const formExamType = ref<string>('期中')
 const formDate = ref<string>(localToday())
@@ -47,6 +49,8 @@ const examTypeOptions = computed<string[]>(() => [...GRADE_EXAM_TYPES])
 
 function openAddDialog(): void {
   editingId.value = null
+  // 在具体的年级标签页上时，默认带入该年级
+  formGrade.value = (store.activeLevel && store.activeLevel !== GRADE_LEVEL_ALL) ? store.activeLevel : ''
   formExamName.value = ''
   formExamType.value = '期中'
   formDate.value = localToday()
@@ -58,6 +62,7 @@ function openEditDialog(id: string): void {
   const g = store.grades.find(x => x.id === id)
   if (!g) return
   editingId.value = g.id
+  formGrade.value = g.grade
   formExamName.value = g.examName
   formExamType.value = g.examType
   formDate.value = g.date
@@ -80,6 +85,10 @@ function removeSubjectRow(index: number): void {
 
 async function saveDialog(): Promise<void> {
   const name = formExamName.value.trim()
+  if (!formGrade.value) {
+    toast.error('请选择年级')
+    return
+  }
   if (!name) {
     toast.error('考试名称不能为空')
     return
@@ -103,7 +112,13 @@ async function saveDialog(): Promise<void> {
     toast.error('至少录入一科成绩')
     return
   }
-  const payload = { examName: name, examType: formExamType.value.trim() || '期中', date: formDate.value, subjects }
+  const payload = {
+    examName: name,
+    examType: formExamType.value.trim() || '期中',
+    grade: formGrade.value,
+    date: formDate.value,
+    subjects
+  }
   if (editingId.value !== null) {
     const r = await store.updateGrade(editingId.value, payload)
     if (r.ok) {
@@ -152,8 +167,30 @@ function setSortMode(mode: 'date' | 'name'): void {
   store.setSort(mode)
 }
 
-// ============ 趋势图 ============
-const allSubjects = computed<string[]>(() => subjectUniverse(store.grades))
+// ============ 年级标签页切换 ============
+function onTabChange(name: string | number): void {
+  store.setActiveLevel(String(name))
+}
+
+// ============ 表格行 ============
+function onRowClick(row: StudentGradeRecord): void {
+  openEditDialog(row.id)
+}
+
+/** 单行平均分（各科得分均值） */
+function rowAverage(g: StudentGradeRecord): number | null {
+  if (!g.subjects.length) return null
+  const sum = g.subjects.reduce((s, x) => s + x.score, 0)
+  return Math.round((sum / g.subjects.length) * 100) / 100
+}
+
+function rowAvgText(g: StudentGradeRecord): string {
+  const a = rowAverage(g)
+  return a === null ? '—' : a.toFixed(1)
+}
+
+// ============ 趋势图（当前年级作用域） ============
+const allSubjects = computed<string[]>(() => subjectUniverse(store.levelGrades))
 const selectedTrendSubjects = ref<string[]>([])
 
 // 默认全选；当可选科目变化且无选择时回退全选
@@ -163,7 +200,7 @@ const trendSubjects = computed<string[]>(() => {
 })
 
 const chartExams = computed(() =>
-  [...store.grades].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  [...store.levelGrades].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 )
 
 function cssVar(name: string, fallback: string): string {
@@ -241,17 +278,34 @@ onMounted(async () => {
       </el-button>
     </StudentToolbar>
 
-    <!-- 统计卡 -->
+    <!-- 年级标签页 -->
+    <el-tabs
+      :model-value="store.activeLevel"
+      class="sg-level-tabs"
+      data-testid="sg-level-tabs"
+      @tab-change="onTabChange"
+    >
+      <el-tab-pane name="" label="全部" data-testid="sg-tab-all" />
+      <el-tab-pane
+        v-for="lv in gradeLevels"
+        :key="lv"
+        :name="lv"
+        :label="lv"
+        :data-testid="`sg-tab-${lv}`"
+      />
+    </el-tabs>
+
+    <!-- 统计卡（当前年级作用域） -->
     <div class="sg-summary">
       <div class="sg-summary-card sg-summary-primary">
         <div class="sg-summary-label">考试次数</div>
-        <div class="sg-summary-value">{{ stats.recordCount }}</div>
-        <div class="sg-summary-sub">{{ stats.recordCount ? '累计录入' : '还没有记录' }}</div>
+        <div class="sg-summary-value">{{ store.levelStats.recordCount }}</div>
+        <div class="sg-summary-sub">{{ store.levelStats.recordCount ? '累计录入' : '还没有记录' }}</div>
       </div>
       <div class="sg-summary-card sg-summary-soft">
         <div class="sg-summary-label">总均分</div>
         <div class="sg-summary-value">
-          {{ stats.overallAvg !== null ? stats.overallAvg.toFixed(1) : '—' }}
+          {{ store.levelStats.overallAvg !== null ? store.levelStats.overallAvg.toFixed(1) : '—' }}
         </div>
         <div class="sg-summary-sub">各科均分的平均</div>
       </div>
@@ -264,10 +318,10 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 各科均分 -->
-    <div v-if="stats.subjectAverages.length" class="sg-subj-averages" data-testid="sg-subj-averages">
+    <!-- 各科均分（当前年级作用域） -->
+    <div v-if="store.levelStats.subjectAverages.length" class="sg-subj-averages" data-testid="sg-subj-averages">
       <span
-        v-for="sa in stats.subjectAverages"
+        v-for="sa in store.levelStats.subjectAverages"
         :key="sa.subject"
         class="sg-subj-chip"
         :title="`${sa.subject}：平均 ${sa.avg.toFixed(1)} / ${sa.fullScore}，共 ${sa.count} 次`"
@@ -282,45 +336,60 @@ onMounted(async () => {
         <el-radio-button value="date">按日期</el-radio-button>
         <el-radio-button value="name">按名称</el-radio-button>
       </el-radio-group>
-      <span class="sg-count">{{ store.sortedGrades.length }} 次考试</span>
+      <span class="sg-count">{{ store.pagedLevelGrades.total }} 次考试</span>
     </div>
 
-    <!-- 考试卡片网格 -->
-    <div v-if="store.sortedGrades.length === 0" class="sg-empty" data-testid="sg-empty">
-      还没有成绩记录，点右上角「新增成绩」开始吧
+    <!-- 空状态 -->
+    <div v-if="store.pagedLevelGrades.total === 0" class="sg-empty" data-testid="sg-empty">
+      {{ store.activeLevel ? `「${store.activeLevel}」还没有成绩记录` : '还没有成绩记录' }}，点右上角「新增成绩」开始吧
     </div>
-    <div v-else class="sg-grid">
-      <div
-        v-for="g in store.sortedGrades"
-        :key="g.id"
-        class="sg-card"
-        :data-testid="`sg-card-${g.id}`"
-        role="button"
-        @click="openEditDialog(g.id)"
+
+    <!-- 成绩表格 + 分页 -->
+    <template v-else>
+      <el-table
+        :data="store.pagedLevelGrades.items"
+        size="small"
+        stripe
+        class="sg-table"
+        data-testid="sg-table"
+        row-key="id"
+        @row-click="onRowClick"
       >
-        <div class="sg-card-head">
-          <div class="sg-card-title" :title="g.examName">{{ g.examName }}</div>
-          <span class="sg-type-badge">{{ g.examType }}</span>
-        </div>
-        <div class="sg-card-date">{{ g.date }}</div>
-        <div class="sg-card-subs">
-          <span v-for="s in g.subjects" :key="s.subject" class="sg-subj-tag">
-            {{ s.subject }} <b>{{ s.score }}</b>
-            <i v-if="s.fullScore && s.fullScore !== 100">/{{ s.fullScore }}</i>
-          </span>
-        </div>
-        <button
-          class="sg-del-btn"
-          :data-testid="`sg-del-${g.id}`"
-          title="删除"
-          @click.stop="handleDelete(g.id)"
-        >
-          <Icon name="close" :size="14" />
-        </button>
-      </div>
-    </div>
+        <el-table-column prop="examName" label="考试名称" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="sg-t-name">{{ row.examName }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="examType" label="类型" width="92" />
+        <el-table-column prop="date" label="日期" width="112" />
+        <el-table-column label="科目数" width="74" align="center">
+          <template #default="{ row }">{{ row.subjects.length }}</template>
+        </el-table-column>
+        <el-table-column label="平均分" width="92" align="center">
+          <template #default="{ row }">
+            <b class="sg-t-avg">{{ rowAvgText(row) }}</b>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="128" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" :data-testid="`sg-edit-${row.id}`" @click.stop="openEditDialog(row.id)">编辑</el-button>
+            <el-button link type="danger" size="small" :data-testid="`sg-del-${row.id}`" @click.stop="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <!-- 趋势图 -->
+      <el-pagination
+        :current-page="store.pagedLevelGrades.page"
+        :page-size="GRADE_PAGE_SIZE"
+        :total="store.pagedLevelGrades.total"
+        layout="total, prev, pager, next"
+        class="sg-pagination"
+        data-testid="sg-pagination"
+        @current-change="store.setPage"
+      />
+    </template>
+
+    <!-- 趋势图（当前年级作用域） -->
     <div v-if="allSubjects.length" class="sg-chart-block" data-testid="sg-chart-block">
       <div class="sg-chart-head">
         <h4 class="sg-block-title">📈 成绩趋势</h4>
@@ -354,17 +423,13 @@ onMounted(async () => {
       @close="closeDialog"
     >
       <div class="sg-form">
-        <div class="sg-form-field">
-          <label>考试名称</label>
-          <el-input
-            v-model="formExamName"
-            placeholder="如：2026春季期中考试"
-            maxlength="30"
-            data-testid="sg-form-name"
-            @keyup.enter="saveDialog"
-          />
-        </div>
         <div class="sg-form-row">
+          <div class="sg-form-field">
+            <label>年级</label>
+            <el-select v-model="formGrade" placeholder="选择年级" data-testid="sg-form-grade">
+              <el-option v-for="lv in gradeLevels" :key="lv" :value="lv" :label="lv" />
+            </el-select>
+          </div>
           <div class="sg-form-field">
             <label>考试类型</label>
             <el-select
@@ -378,10 +443,20 @@ onMounted(async () => {
               <el-option v-for="t in examTypeOptions" :key="t" :value="t" :label="t" />
             </el-select>
           </div>
-          <div class="sg-form-field">
-            <label>考试日期</label>
-            <el-date-picker v-model="formDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" data-testid="sg-form-date" />
-          </div>
+        </div>
+        <div class="sg-form-field">
+          <label>考试名称</label>
+          <el-input
+            v-model="formExamName"
+            placeholder="如：2026春季期中考试"
+            maxlength="30"
+            data-testid="sg-form-name"
+            @keyup.enter="saveDialog"
+          />
+        </div>
+        <div class="sg-form-field">
+          <label>考试日期</label>
+          <el-date-picker v-model="formDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" data-testid="sg-form-date" />
         </div>
 
         <div class="sg-form-field">
@@ -467,6 +542,17 @@ onMounted(async () => {
   gap: 6px;
 }
 
+/* ===== 年级标签页 ===== */
+.sg-level-tabs {
+  --el-tabs-header-height: auto;
+}
+.sg-level-tabs :deep(.el-tabs__header) {
+  margin: 0;
+}
+.sg-level-tabs :deep(.el-tabs__nav-wrap) {
+  padding-bottom: 2px;
+}
+
 /* ===== 统计卡 ===== */
 .sg-summary {
   display: grid;
@@ -538,94 +624,28 @@ onMounted(async () => {
   color: var(--color-text-secondary, #64748b);
 }
 
-/* ===== 考试卡片网格 ===== */
-.sg-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-.sg-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
+/* ===== 表格 ===== */
+.sg-table {
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 10px;
-  background: var(--color-bg-card, #fff);
-  cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
-}
-.sg-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.16);
-  border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 45%, var(--color-border, #e2e8f0));
-}
-.sg-card-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.sg-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
+  border-radius: 12px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
+}
+.sg-table :deep(.el-table__row) {
+  cursor: pointer;
+}
+.sg-t-name {
+  font-weight: 500;
   color: var(--color-text, #0f172a);
 }
-.sg-type-badge {
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 8px;
-  background: var(--color-primary-soft, #eff6ff);
-  color: var(--color-primary, #3b82f6);
-  flex-shrink: 0;
-}
-.sg-card-date {
-  font-size: 11px;
-  color: var(--color-text-secondary, #94a3b8);
-}
-.sg-card-subs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  margin-top: 2px;
-}
-.sg-subj-tag {
-  font-size: 12px;
-  color: var(--color-text-secondary, #64748b);
-}
-.sg-subj-tag b {
+.sg-t-avg {
   color: var(--color-text, #0f172a);
   font-variant-numeric: tabular-nums;
 }
-.sg-subj-tag i {
-  font-style: normal;
-  color: var(--color-text-secondary, #94a3b8);
-  font-size: 11px;
-}
-.sg-del-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
+
+.sg-pagination {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--color-text-muted, #9ca3af);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  justify-content: flex-end;
 }
-.sg-card:hover .sg-del-btn { opacity: 1; }
-.sg-del-btn:hover { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 
 .sg-empty {
   padding: 28px;

@@ -20,13 +20,13 @@ searchEngines:
 
 sites:
   - name: DeepSeek
-    url: https://chat.deepseek.com
-    description: 深度求索推出的 AI 对话助手
-    category: ai
+    url: https://deepseek.com
+    description: 深度求索推出的AI大模型，提供智能对话、编程辅助、深度推理等服务
+    category: office
     tags: [大模型]
-    sort: 100
-    createdAt: 2024-01-01T00:00:00.000Z
-	icon: /icons/deepseek.svg
+    icon: /icons/deepseek.svg
+    sort: 21
+    createdAt: 2026-03-19T03:15:33.215Z
 
 ---
 

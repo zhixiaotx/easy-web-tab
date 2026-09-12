@@ -1,7 +1,7 @@
 /**
  * 预置图标列表 - 自动生成，请勿手动修改
  * 来源: public/icons/ 目录
- * 生成时间: 2026-09-12T14:45:46.209Z
+ * 生成时间: 2026-09-12T15:19:20.204Z
  * 
  * 用户只需将图标文件放入 public/icons/，build 时自动包含
  */
@@ -14,6 +14,9 @@ export interface PresetIcon {
 }
 
 export const PRESET_ICONS: PresetIcon[] = [
+  // 云服务与平台
+  { name: 'opencode', label: 'Opencode', ext: 'svg', category: '云服务与平台', url: 'https://opencode.ai' },
+
   // 大模型与 AI
   { name: 'deepseek', label: 'Deepseek', ext: 'svg', category: '大模型与 AI', url: 'https://deepseek.com' },
 

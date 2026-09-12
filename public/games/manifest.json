@@ -38,5 +38,13 @@
     "description": "身份证、手机号等号码生成工具",
     "icon": "/icons/haoma.svg",
     "category": "office"
+  },
+  {
+    "id": "opencode",
+    "name": "OpenCode 指南",
+    "path": "/games/opencodeStudy/opencode-学习手册.html",
+    "description": "OpenCode AI 编程助手中文学习手册",
+    "icon": "/icons/opencode.svg",
+    "category": "books"
   }
 ]

@@ -129,6 +129,8 @@ export const WORKBENCH_PREFS_KEYS = [
   'built-in-engine-default',
   'user-theme',
   'user-background',
+  'site-title',
+  'site-favicon',
   'user-countdown-categories',
   'user-countdown-tab-categories',
   'user-countdown-sort',

@@ -58,7 +58,7 @@ const DIALOG_IDS = Object.keys(DIALOG_DEFAULTS) as DialogId[]
 // 当前激活的设置分组 tab（导航设置 / 工作台设置 / 提醒设置 / 销售记账 / 学生工作台 / 云同步）
 type SettingsTabKey = 'nav' | 'wb' | 'remind' | 'business' | 'student' | 'sync'
 // 子 tab keys：每个主 tab 下的子分组（仅内容多的主 tab 定义）
-type NavSubTab = 'nav-display' | 'nav-site' | 'nav-size'
+type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-cat' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-menu'
@@ -94,6 +94,7 @@ interface SubTabDef { key: SubTabKey; label: string }
 /** 主 tab → 子 tab 列表（顺序即显示顺序，第一个 = 默认选中） */
 const SUB_TABS: Record<'nav' | 'wb' | 'business' | 'student', SubTabDef[]> = {
   nav: [
+    { key: 'nav-appearance', label: '站点外观' },
     { key: 'nav-display', label: '显示控制' },
     { key: 'nav-site',    label: '站点管理' },
     { key: 'nav-size',    label: '弹窗尺寸' }
@@ -188,6 +189,65 @@ type SiteActionModalKey = 'add' | 'engines' | 'background' | 'category' | 'backu
 function openSiteManagerViaQuery(key: SiteActionModalKey) {
   emit('close')
   router.push({ query: { modal: key } })
+}
+
+// ========================================
+// 站点外观（导航设置 tab）：浏览器标签标题 + favicon 上传/重置
+// ========================================
+const faviconFileInput = ref<HTMLInputElement | null>(null)
+
+function triggerFaviconPick() {
+  faviconFileInput.value?.click()
+}
+
+/** 读文件为 data URL（Promise 包装 FileReader） */
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.readAsDataURL(file)
+  })
+}
+
+/** 图片文件 → favicon data URL：SVG 原样保留，位图经 canvas 压缩至 ≤128px PNG 控体积 */
+async function readFaviconFile(file: File): Promise<string> {
+  if (file.type === 'image/svg+xml') return readFileAsDataUrl(file)
+  const dataUrl = await readFileAsDataUrl(file)
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image()
+    el.onload = () => resolve(el)
+    el.onerror = () => reject(new Error('decode failed'))
+    el.src = dataUrl
+  })
+  const MAX = 128
+  const longest = Math.max(img.width || 1, img.height || 1)
+  const scale = Math.min(1, MAX / longest)
+  const w = Math.max(1, Math.round((img.width || MAX) * scale))
+  const h = Math.max(1, Math.round((img.height || MAX) * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  canvas.getContext('2d')?.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/png')
+}
+
+async function onFaviconFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const dataUrl = await readFaviconFile(file)
+    store.setSiteFavicon(dataUrl)
+  } catch {
+    toast.error('图片读取失败，请换一张图片试试')
+  } finally {
+    input.value = ''
+  }
+}
+
+function resetSiteFavicon() {
+  store.setSiteFavicon('')
 }
 
 function triggerSiteImport() {
@@ -1309,6 +1369,49 @@ onUnmounted(() => {
 
         <!-- 弹窗尺寸提示：仅当导航/工作台 tab 且子 tab 切到"弹窗尺寸"时才显示 -->
         <p v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
+
+        <!-- 站点外观（导航设置 tab - 站点外观）：浏览器标签页标题与图标 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-appearance'" class="wb-menu-config">
+          <h3 class="wb-menu-title">站点外观</h3>
+
+          <!-- 站点名称（浏览器标签页标题） -->
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">站点名称</span>
+            <input
+              type="text"
+              class="wb-menu-name-input"
+              :value="store.siteTitle"
+              placeholder="网页导航"
+              maxlength="30"
+              data-testid="site-title-input"
+              @input="store.setSiteTitle(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+          <p class="wb-menu-hint">
+            显示在浏览器标签页的标题，留空使用默认「网页导航」，修改即时生效。
+          </p>
+
+          <!-- 站点图标（浏览器标签 favicon） -->
+          <div class="wb-menu-head">
+            <span class="wb-menu-label">站点图标</span>
+            <div class="site-favicon-row">
+              <img class="site-favicon-preview" :src="store.siteFavicon || '/vite.svg'" alt="站点图标预览" />
+              <input
+                ref="faviconFileInput"
+                type="file"
+                accept="image/*"
+                class="site-favicon-file"
+                data-testid="site-favicon-file"
+                @change="onFaviconFileChange"
+              />
+              <button type="button" class="site-action-btn" data-testid="site-favicon-upload" @click="triggerFaviconPick">上传图标</button>
+              <button type="button" class="site-action-btn" data-testid="site-favicon-reset" @click="resetSiteFavicon">恢复默认</button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">
+            浏览器标签页的图标，支持 PNG / JPG / SVG / ICO，自动压缩至 128px；「恢复默认」还原为内置图标。
+          </p>
+        </div>
 
         <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config nav-filter-config">
@@ -3064,6 +3167,28 @@ html.dark .site-action-btn:hover:not(:disabled) {
   background-color: var(--color-bg-hover, #374151);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-primary, #3b82f6);
+}
+
+/* ===== 站点外观（导航设置 tab）：favicon 上传行与预览 ===== */
+.site-favicon-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.site-favicon-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg-input, #f1f5f9);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.site-favicon-file {
+  display: none;
 }
 
 /* ===== 记账分类：类型徽标（支出蓝 / 收入绿）+ 内置徽标 ===== */

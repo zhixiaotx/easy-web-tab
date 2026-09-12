@@ -42,7 +42,7 @@
   {
     "id": "opencode",
     "name": "OpenCode 指南",
-    "path": "/games/opencodeStudy/opencode-学习手册.html",
+    "path": "/games/opencodestudy/index.html",
     "description": "OpenCode AI 编程助手中文学习手册",
     "icon": "/icons/opencode.svg",
     "category": "books"

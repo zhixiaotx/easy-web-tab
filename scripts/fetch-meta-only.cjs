@@ -8,7 +8,7 @@
 //
 //   逻辑与 scripts/serve-with-rewrites.cjs 的 handleFetchMeta 完全一致：
 //     - 自动跟随 3xx 重定向与 <meta http-equiv=refresh> 软跳转（最多 5 跳）
-//     - 强制 Accept-Encoding: identity，避免 gzip 乱码
+//     - 收齐字节后按 content-encoding 整体解压（gzip/br/deflate），避免乱码
 //     - metascraper 若已安装则优先提准（动态 import，未装自动回退正则解析）
 //     - 反爬站点（JS 壳）走 Playwright 兜底（未装自动忽略，保留 HTTP 结果）
 //
@@ -244,30 +244,41 @@ function fetchWithRedirect(targetUrl, depth) {
       }
 
       if (status >= 200 && status < 300 && (ctype.includes('html') || ctype.includes('text/'))) {
-        // 解压：部分 CDN 会无视 Accept-Encoding: identity 仍返回 gzip/br/deflate，
-        // 不解压则读到的正文是乱码 → <title> 正则匹配不上 → 间歇空值
-        const enc = (upRes.headers['content-encoding'] || '').toLowerCase()
-        let body = upRes
-        if (enc.includes('gzip')) body = upRes.pipe(zlib.createGunzip())
-        else if (enc.includes('br')) body = upRes.pipe(zlib.createBrotliDecompress())
-        else if (enc.includes('deflate')) body = upRes.pipe(zlib.createInflate())
-
-        body.on('data', (c) => {
+        // 先收齐原始字节，再按 content-encoding 整体解压（避免 pipe 到 zlib 后
+        // 在 data listener 注册前丢失首块 → 解压不完整 → <title> 匹配不上）
+        upRes.on('data', (c) => {
           if (total >= MAX_META_BYTES) { try { upstream.destroy() } catch { /* noop */ } return }
           const want = Math.min(MAX_META_BYTES - total, c.length)
           chunks.push(c.slice(0, want))
           total += want
         })
-        body.on('end', async () => {
+        upRes.on('end', async () => {
           clearTimeout(timer)
           if (settled) return
           settled = true
-          const html = Buffer.concat(chunks).toString('utf8')
+          const raw = Buffer.concat(chunks)
+          const enc = (upRes.headers['content-encoding'] || '').toLowerCase()
+          let html = ''
+          try {
+            if (enc.includes('gzip')) html = zlib.gunzipSync(raw).toString('utf8')
+            else if (enc.includes('br')) html = zlib.brotliDecompressSync(raw).toString('utf8')
+            else if (enc.includes('deflate')) html = zlib.inflateSync(raw).toString('utf8')
+            else html = raw.toString('utf8')
+          } catch {
+            // 声明压缩却解压失败（少数服务器乱标头）→ 退化为明文
+            html = raw.toString('utf8')
+          }
           let meta
           try {
             meta = await parseMeta(html, parsed.origin)
           } catch {
             meta = { title: '', description: '', icon: `${parsed.origin}/favicon.ico` }
+          }
+          // 诊断：title 仍空时打印编码/状态码/正文前 160 字符，
+          // 用于区分「挑战页 / 压缩异常 / 重定向壳」三种成因
+          if (!meta.title) {
+            // eslint-disable-next-line no-console
+            console.log(`[fetch-meta-only] empty title diag: enc=${enc || 'none'} status=${status} htmlHead=${JSON.stringify(html.slice(0, 160))}`)
           }
           // 软跳转（meta refresh）：title/desc 都为空时尝试跟随一次
           if ((!meta.title && !meta.description) && depth < MAX_REDIRECTS) {
@@ -283,7 +294,7 @@ function fetchWithRedirect(targetUrl, depth) {
           }
           resolve(meta)
         })
-        body.on('error', () => {
+        upRes.on('error', () => {
           clearTimeout(timer)
           if (settled) return
           settled = true
@@ -351,18 +362,18 @@ async function handleFetchMeta(req, res) {
     return
   }
 
-// 空结果重试：上游（如百度对机房 IP）偶发甩挑战页/压缩异常导致解析为空，
-// 同一次请求内重试一次能显著提升命中率（gzip 修复后多数首请求即可命中）
-async function fetchWithRetry(target, maxAttempts = 2) {
+// 空结果重试：上游（如百度对机房 IP）偶发甩挑战页/压缩异常导致解析为空。
+// 以 title 为命中判据（UI 主要展示 title），最多 3 次、间隔 400ms，显著提升命中率
+async function fetchWithRetry(target, maxAttempts = 3) {
   let last = { title: '', description: '', icon: `${new URL(target).origin}/favicon.ico` }
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const m = await fetchWithRedirect(target, 0)
-    if (m.title || m.description) return m
+    if (m.title) return m
     last = m
     if (attempt < maxAttempts - 1) {
       // eslint-disable-next-line no-console
-      console.log(`[fetch-meta-only] empty result, retry ${attempt + 1}/${maxAttempts - 1}`)
-      await new Promise((r) => setTimeout(r, 300))
+      console.log(`[fetch-meta-only] empty title, retry ${attempt + 1}/${maxAttempts - 1}`)
+      await new Promise((r) => setTimeout(r, 400))
     }
   }
   return last
@@ -372,8 +383,8 @@ async function fetchWithRetry(target, maxAttempts = 2) {
     // eslint-disable-next-line no-console
     console.log(`[fetch-meta-only] -> ${parsed.protocol}//${parsed.hostname}${parsed.pathname}`)
     const meta = await fetchWithRetry(target)
-    // 反爬站点（JS 渲染/空壳）HTTP 抓取拿不到标题/描述时，用 Headless 兜底
-    if (!meta.title && !meta.description) {
+    // 反爬站点（JS 渲染/空壳）HTTP 抓取拿不到标题时，用 Headless 兜底
+    if (!meta.title) {
       try {
         const h = await fetchWithHeadless(parsed.href)
         if (h && (h.title || h.description)) {

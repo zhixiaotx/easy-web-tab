@@ -2,6 +2,13 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { URL } from 'node:url';
 import { Buffer } from 'node:buffer';
+import os from 'node:os';
+
+// 低内存环境（<2GB）限制 Rolldown 并行线程，避免渲染 chunks 时 OOM panic
+// （高内存机器不受影响；本机约 1GB 时必现 out-of-memory，串行渲染可稳定通过）
+if (os.totalmem() < 2 * 1024 * 1024 * 1024) {
+  process.env.RAYON_NUM_THREADS = process.env.RAYON_NUM_THREADS || '1';
+}
 
 /**
  * WebDAV 同源代理处理（Vite dev/preview）：

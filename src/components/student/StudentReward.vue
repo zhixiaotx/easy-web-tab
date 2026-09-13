@@ -559,4 +559,36 @@ onMounted(async () => {
   font-weight: 600;
   color: #f59e0b;
 }
+
+/* ===== 移动端：统计卡换行、奖励网格降为 2 列、表格横向滚动 ===== */
+@media (max-width: 768px) {
+  .sr-stats-row {
+    gap: 6px;
+  }
+  .sr-stat-card {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .sr-stat-text strong {
+    font-size: 16px;
+  }
+  .sr-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .sr-reward-card {
+    height: 132px;
+    min-height: 132px;
+  }
+  /* 交易记录表格在窄屏横向滚动，避免挤压变形 */
+  .sr-history-list {
+    overflow-x: auto;
+  }
+  .sr-history-list > :global(.el-table) {
+    min-width: 560px;
+  }
+  .sr-history-pager > :deep(.el-pagination) {
+    flex-wrap: wrap;
+  }
+}
 </style>

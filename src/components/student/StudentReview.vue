@@ -547,4 +547,25 @@ function daysClass(days: number): string {
   color: var(--color-text-secondary, #6b7280);
   font-size: 14px;
 }
+
+/* ===== 移动端：统计卡与复习卡片降列、按钮换行 ===== */
+@media (max-width: 768px) {
+  .sr-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .sr-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .sr-card {
+    height: 140px;
+    min-height: 140px;
+  }
+  .sr-tabs {
+    flex-wrap: wrap;
+  }
+  .sr-card-foot {
+    flex-wrap: wrap;
+  }
+}
 </style>

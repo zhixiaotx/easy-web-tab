@@ -431,4 +431,42 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 600;
 }
+
+/* ===== 移动端：取消整体居中、环形自适应、触控目标达标 ===== */
+@media (max-width: 768px) {
+  .spm-shell {
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+  .spm-stage-hint {
+    flex-wrap: wrap;
+    font-size: 11px;
+  }
+  .spm-timer-card {
+    aspect-ratio: auto;
+    max-height: none;
+    flex: 0 0 auto;
+    padding: 16px 12px;
+  }
+  .spm-ring-wrap {
+    width: 180px;
+    height: 180px;
+  }
+  .spm-ring-svg {
+    width: 180px;
+    height: 180px;
+  }
+  .spm-time {
+    font-size: 30px;
+  }
+  .spm-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .spm-controls :deep(.el-button) {
+    flex: 1 1 auto;
+    min-height: 40px;
+  }
+}
 </style>

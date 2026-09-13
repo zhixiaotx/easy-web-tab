@@ -481,9 +481,9 @@ async function onOnboardingComplete() {
   user-select: none;
 }
 .st-parent-bar.unlocked {
-  border-color: var(--color-primary, #10b981);
-  background: rgba(16, 185, 129, 0.10);
-  color: #065f46;
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 .st-parent-bar.no-pin {
   border-style: dashed;
@@ -656,6 +656,32 @@ async function onOnboardingComplete() {
 }
 
 @media (max-width: 768px) {
+  /* 顶栏纵向堆叠：避免家长横条 + 同步 + 设置按钮在窄屏一行挤爆溢出（移动端「完全没法用」主因） */
+  .st-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .st-header-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .st-header-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .st-parent-bar {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .st-btn {
+    min-height: 40px;
+  }
+
+  /* 菜单横排滚动 + 触控目标 ≥44px（复刻销售记账移动端） */
   .st-menu {
     width: 100%;
     height: auto;
@@ -678,11 +704,63 @@ async function onOnboardingComplete() {
   }
   .st-menu-item {
     flex-direction: column;
-    padding: 6px 10px;
+    padding: 8px 12px;
     gap: 2px;
+    min-height: 44px;
+    min-width: 56px;
   }
   .st-menu-label {
     font-size: 11px;
   }
+  .st-content {
+    padding: 12px;
+  }
+}
+
+/* ===== 暗色模式覆盖（组件全程使用 --color-* token，此处仅兜底非 token 硬编码与表意色） ===== */
+html.dark .st-shell {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+html.dark .st-header {
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+}
+html.dark .st-menu {
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+}
+html.dark .st-menu-item {
+  color: var(--color-text);
+}
+html.dark .st-menu-item:hover {
+  background: var(--color-hover);
+}
+html.dark .st-menu-item.active {
+  background: var(--color-primary-soft);
+}
+html.dark .st-btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+html.dark .st-btn:hover {
+  background: var(--color-hover);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+html.dark .st-parent-bar {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+html.dark .st-parent-bar-btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+html.dark .st-parent-bar-btn:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
 }
 </style>

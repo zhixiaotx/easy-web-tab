@@ -545,4 +545,25 @@ const degreeOptions = DEGREE_OPTIONS
 .edu-panel :deep(.el-switch) {
   margin-top: 2px;
 }
+
+/* ===== 移动端：表格横向滚动、分页条换行 ===== */
+@media (max-width: 768px) {
+  .edu-toolbar {
+    padding: 0 12px 6px;
+  }
+  .edu-list {
+    padding: 0 12px;
+    overflow-x: auto;
+  }
+  .edu-list > :global(.el-table) {
+    min-width: 720px;
+  }
+  .edu-list-pager {
+    margin: 0 12px 8px;
+    padding: 12px 8px;
+  }
+  .edu-list-pager > :deep(.el-pagination) {
+    flex-wrap: wrap;
+  }
+}
 </style>

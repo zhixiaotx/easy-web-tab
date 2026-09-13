@@ -470,4 +470,72 @@ function onActionClick(section: string) {
   color: var(--color-primary, #3b82f6);
   margin-left: 6px;
 }
+
+/* ===== 移动端：轮播改为竖向堆叠（去掉 height:100%/overflow:hidden 锁死，整体随页面滚动） ===== */
+@media (max-width: 768px) {
+  .student-home {
+    height: auto;
+    overflow: visible;
+  }
+  .carousel {
+    flex: none;
+    overflow: visible;
+  }
+  .carousel-track {
+    flex-direction: column;
+    transform: none !important;
+  }
+  .slide {
+    flex: none;
+    height: auto;
+    overflow: visible;
+    padding: 16px;
+  }
+  /* 堆叠后无需翻页箭头/圆点 */
+  .carousel-bar {
+    display: none;
+  }
+  .action-grid,
+  .tools-grid,
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .action-grid,
+  .tools-grid,
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 暗色模式兜底（组件已全程使用 --color-* token，暗色由 dark.css 统一重定义） ===== */
+html.dark .greeting-card,
+html.dark .carousel,
+html.dark .action-card,
+html.dark .overview-card,
+html.dark .tool-card {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+html.dark .greeting-text,
+html.dark .overview-value {
+  color: var(--color-text);
+}
+html.dark .greeting-sub,
+html.dark .overview-label,
+html.dark .action-count,
+html.dark .action-label,
+html.dark .tool-label {
+  color: var(--color-text-secondary);
+}
+html.dark .action-card:hover,
+html.dark .tool-card:hover {
+  background-color: var(--color-hover);
+}
+html.dark .action-cta {
+  background-color: var(--color-primary);
+  color: #fff;
+}
 </style>

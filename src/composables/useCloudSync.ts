@@ -389,10 +389,28 @@ async function webdavDelete(url: string, username: string, password: string): Pr
   throw new Error(davErrorLabel('DELETE', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
 }
 
-/** 创建目录（MKCOL）；代理返回 2xx/405 视作成功 */
+/**
+ * 创建目录（MKCOL）
+ *
+ * 关于 405：坚果云在「目录已存在」时会对 MKCOL 回 405，属正常，故视作成功。
+ * 但 Nginx 纯静态部署（未反代 /api/webdav-proxy，详情见 nginx.conf 注释）也会对
+ * POST 回 405 —— 两者状态码相同，若无区分手段就会「假成功」：设置页测试连接打绿勾、
+ * 云同步看起来正常，实际 GET/PUT 全链路失败。
+ *
+ * 判据：三个代理实现（vite dev / serve-with-rewrites / webdav-proxy-only）在**任何**
+ * 响应里都会带 X-Upstream-Status 头；Nginx 自己生成的 405 绝不会带。据此区分来源。
+ */
 async function webdavMkcol(url: string, username: string, password: string): Promise<void> {
   const res = await proxyDav(url, 'MKCOL', username, password)
-  if (res.ok || res.status === 405) return
+  if (res.ok) return
+  if (res.status === 405) {
+    if (res.headers.has('X-Upstream-Status')) return // 真·WebDAV 说目录已存在
+    throw new Error(
+      '云同步代理未生效：POST /api/webdav-proxy 返回 405，且缺少 X-Upstream-Status 响应头，' +
+      '说明请求被静态服务器（Nginx）拒绝而非到达 WebDAV 服务。' +
+      '请在 Nginx 中反代 /api/webdav-proxy 到 webdav 代理服务（默认 127.0.0.1:16719）。'
+    )
+  }
   const diag = await readDavDiagnostics(res)
   throw new Error(davErrorLabel('MKCOL', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
 }

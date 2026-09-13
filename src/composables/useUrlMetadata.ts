@@ -149,7 +149,15 @@ export function useUrlMetadata() {
         signal: controller.signal
       })
       clearTimeout(timer)
-      if (!resp.ok) return null
+      if (!resp.ok) {
+        // 405 说明请求打到了纯静态服务器（Nginx 未配 /api/fetch-meta 反代）
+        // 401/403 一般是反代到错误的后端；502/504 是反代后端未启动
+        console.warn(
+          `[fetch-meta] ${resp.status} ${resp.statusText || ''}` +
+          (resp.status === 405 ? ' —— 同源代理未生效，请检查 Nginx 是否反代 /api/fetch-meta 到 fetch-meta-only 服务' : '')
+        )
+        return null
+      }
       const data = await resp.json()
       if (data && (data.title || data.description || data.icon)) {
         return {
@@ -159,7 +167,20 @@ export function useUrlMetadata() {
         }
       }
       return null
-    } catch {
+    } catch (e) {
+      // 走到这里说明连 HTTP 响应都没拿到（DevTools Network 里显示红色 X / (failed)），
+      // 与 405/502 这类「有状态码」的失败不是一回事，常见于：
+      //   - 超时被 AbortController 打断（20s）
+      //   - 页面是 HTTPS 但 443 server 未配置 / 证书异常 → ERR_CONNECTION_REFUSED / ERR_SSL_*
+      //   - 请求被浏览器扩展拦截
+      const msg = e instanceof Error ? e.message : String(e)
+      const isAbort = e instanceof Error && e.name === 'AbortError'
+      console.error(
+        `[fetch-meta] 请求失败：` +
+        (isAbort
+          ? '等待 /api/fetch-meta 超过 20s 被中断（检查 Nginx 是否真把请求转给了 fetch-meta 服务、该服务是否卡住）'
+          : `${msg}（网络层失败：检查页面协议与 Nginx 监听端口是否匹配，例如 HTTPS 页面却只配了 80）`)
+      )
       return null
     }
   }

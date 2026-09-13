@@ -40,6 +40,7 @@
 
 const http = require('http')
 const https = require('https')
+const zlib = require('zlib')
 const { URL } = require('url')
 
 const HOST = process.env.FETCH_META_HOST || '127.0.0.1'
@@ -47,8 +48,8 @@ const PORT = Number(process.env.FETCH_META_PORT) || 16720
 
 const MAX_META_BYTES = 512 * 1024
 const META_TIMEOUT_MS = 8000
-// UA 里的站点标识仅用于对方站点识别来源，部署时建议换成自己的域名
-const META_UA = process.env.META_UA || 'Mozilla/5.0 (compatible; easywebtab/1.0)'
+// UA 用真实浏览器标识，降低机房 IP 被反爬甩挑战页（无 <title>）的概率
+const META_UA = process.env.META_UA || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 const MAX_REDIRECTS = 5
 
 function readBody(req) {
@@ -81,18 +82,43 @@ async function loadMetascraper() {
   return _metaScraper
 }
 
+// 解析 HTML 实体（标题/描述里常见 &amp; &#x... 等），避免回显乱码
+function decodeEntities(s) {
+  if (!s) return s
+  return s
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+}
+
 // 解析 <title> / og:description 的正则兜底（metascraper 不可用或拿不到时使用）
 function parseMetaRegex(html, origin) {
   let title = ''
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
-  if (titleMatch) title = titleMatch[1].replace(/\s+/g, ' ').trim()
+  if (titleMatch) title = decodeEntities(titleMatch[1].replace(/\s+/g, ' ').trim())
 
   let description = ''
   const ogDesc = html.match(/property=["']og:description["'][^>]*content=["']([^"']+)["']/i)
-  if (ogDesc) description = ogDesc[1].trim()
+  if (ogDesc) description = decodeEntities(ogDesc[1].trim())
   else {
     const desc = html.match(/name=["']description["'][^>]*content=["']([^"']+)["']/i)
-    if (desc) description = desc[1].trim()
+    if (desc) description = decodeEntities(desc[1].trim())
+  }
+
+  // 标题兜底：og:title / twitter:title（部分站点 <title> 为空但社交标签有值）
+  if (!title) {
+    const ogTitle = html.match(/property=["']og:title["'][^>]*content=["']([^"']+)["']/i)
+    if (ogTitle) title = decodeEntities(ogTitle[1].trim())
+    else {
+      const twTitle = html.match(/name=["']twitter:title["'][^>]*content=["']([^"']+)["']/i)
+      if (twTitle) title = decodeEntities(twTitle[1].trim())
+    }
   }
 
   return { title, description }
@@ -196,7 +222,7 @@ function fetchWithRedirect(targetUrl, depth) {
       hostname: parsed.hostname,
       port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
       path: (parsed.pathname || '/') + parsed.search,
-      headers: { 'User-Agent': META_UA, 'Accept': 'text/html,application/xhtml+xml', 'Accept-Encoding': 'identity' }
+      headers: { 'User-Agent': META_UA, 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8', 'Accept-Encoding': 'identity' }
     }
 
     const chunks = []
@@ -218,13 +244,21 @@ function fetchWithRedirect(targetUrl, depth) {
       }
 
       if (status >= 200 && status < 300 && (ctype.includes('html') || ctype.includes('text/'))) {
-        upRes.on('data', (c) => {
+        // 解压：部分 CDN 会无视 Accept-Encoding: identity 仍返回 gzip/br/deflate，
+        // 不解压则读到的正文是乱码 → <title> 正则匹配不上 → 间歇空值
+        const enc = (upRes.headers['content-encoding'] || '').toLowerCase()
+        let body = upRes
+        if (enc.includes('gzip')) body = upRes.pipe(zlib.createGunzip())
+        else if (enc.includes('br')) body = upRes.pipe(zlib.createBrotliDecompress())
+        else if (enc.includes('deflate')) body = upRes.pipe(zlib.createInflate())
+
+        body.on('data', (c) => {
           if (total >= MAX_META_BYTES) { try { upstream.destroy() } catch { /* noop */ } return }
           const want = Math.min(MAX_META_BYTES - total, c.length)
           chunks.push(c.slice(0, want))
           total += want
         })
-        upRes.on('end', async () => {
+        body.on('end', async () => {
           clearTimeout(timer)
           if (settled) return
           settled = true
@@ -249,7 +283,7 @@ function fetchWithRedirect(targetUrl, depth) {
           }
           resolve(meta)
         })
-        upRes.on('error', () => {
+        body.on('error', () => {
           clearTimeout(timer)
           if (settled) return
           settled = true
@@ -317,10 +351,27 @@ async function handleFetchMeta(req, res) {
     return
   }
 
+// 空结果重试：上游（如百度对机房 IP）偶发甩挑战页/压缩异常导致解析为空，
+// 同一次请求内重试一次能显著提升命中率（gzip 修复后多数首请求即可命中）
+async function fetchWithRetry(target, maxAttempts = 2) {
+  let last = { title: '', description: '', icon: `${new URL(target).origin}/favicon.ico` }
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const m = await fetchWithRedirect(target, 0)
+    if (m.title || m.description) return m
+    last = m
+    if (attempt < maxAttempts - 1) {
+      // eslint-disable-next-line no-console
+      console.log(`[fetch-meta-only] empty result, retry ${attempt + 1}/${maxAttempts - 1}`)
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  }
+  return last
+}
+
   try {
     // eslint-disable-next-line no-console
     console.log(`[fetch-meta-only] -> ${parsed.protocol}//${parsed.hostname}${parsed.pathname}`)
-    const meta = await fetchWithRedirect(target, 0)
+    const meta = await fetchWithRetry(target)
     // 反爬站点（JS 渲染/空壳）HTTP 抓取拿不到标题/描述时，用 Headless 兜底
     if (!meta.title && !meta.description) {
       try {

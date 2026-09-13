@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watchEffect } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -259,6 +259,29 @@ const handlePageChange = () => {
     grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
+
+// ===== 移动端分页：≤768px 默认显示全部、隐藏底部分页条 =====
+// 桌面断点与 usePanelPaging 保持一致：(min-width: 769px) 为桌面；≤768px 视为移动端。
+// 移动端把 pageSize 设为 99999（Pagination 的「全部」模式），页码按钮随 isAllMode 自动隐藏，列表渲染全量；
+// 桌面端恢复此前桌面每页条数，避免覆盖用户在设置里选过的每页条数。
+const pagingMql = window.matchMedia('(min-width: 769px)')
+let desktopPageSize = 18
+function syncMobilePaging(): void {
+  if (pagingMql.matches) {
+    store.setPageSize(desktopPageSize)
+  } else {
+    if (store.pageSize !== 99999) desktopPageSize = store.pageSize
+    store.setPageSize(99999)
+    store.setPage(1)
+  }
+}
+onMounted(() => {
+  syncMobilePaging()
+  pagingMql.addEventListener('change', syncMobilePaging)
+})
+onUnmounted(() => {
+  pagingMql.removeEventListener('change', syncMobilePaging)
+})
 </script>
 
 <template>
@@ -644,8 +667,13 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
     /* 左右内边距收窄，给卡片网格让出宽度 */
     padding-left: 12px;
     padding-right: 12px;
-    /* 为贴底分页条避让（分页约 66px 高 + 安全区） */
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    /* 移动端底部分页条已隐藏（默认显示全部），仅保留安全区与少量留白 */
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 移动端：默认显示全部，隐藏底部分页条（页码按钮随 isAllMode 自动消失，这里连每页条数下拉一并收起） */
+  .bottom-pagination {
+    display: none;
   }
 
   /* 站点网格：小屏降为 150px 最小列宽，360px 屏可排两列，一屏看到更多站点 */

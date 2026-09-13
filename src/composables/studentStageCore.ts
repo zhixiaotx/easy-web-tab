@@ -13,9 +13,9 @@ import {
 } from '@/types'
 import { applyStageDefaultVisibility, type StudentMenuVisibility } from './studentMenuCore'
 
-/** 学段判定：'K'|'P'|'J' 之外一律回退 'P' */
+/** 学段判定：'K'|'P'|'J'|'H'|'U' 之外一律回退 'P' */
 export function normalizeStage(value: unknown): StudentStage {
-  if (value === 'K' || value === 'P' || value === 'J') return value
+  if (value === 'K' || value === 'P' || value === 'J' || value === 'H' || value === 'U') return value
   return 'P'
 }
 
@@ -25,6 +25,8 @@ export function stageLabel(stage: StudentStage): string {
     case 'K': return '幼儿园'
     case 'P': return '小学'
     case 'J': return '初中'
+    case 'H': return '高中'
+    case 'U': return '大学'
   }
 }
 

@@ -112,7 +112,9 @@ export function buildExamItems(countdowns: Countdown[]): CountdownItem[] {
 export const STUDENT_EXAM_TYPE_BUILTINS: Record<StudentStage, string[]> = {
   K: [],
   P: ['单元测', '期中考试', '期末考试'],
-  J: ['随堂测', '单元测', '月考', '期中考试', '期末考试']
+  J: ['随堂测', '单元测', '月考', '期中考试', '期末考试'],
+  H: ['月考', '期中考试', '期末考试', '模拟考'],
+  U: ['期中', '期末', '月考', '测验', '模拟考']
 }
 
 /** 学段考试题型建议清单（返回新数组） */

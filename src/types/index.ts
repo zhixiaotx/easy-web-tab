@@ -532,8 +532,8 @@ export const DEFAULT_BUSINESS_PRODUCT_CATEGORIES: BusinessProductCategory[] = [
 
 // ==================== 学生工作台 ====================
 
-/** 学段：K=幼儿园 / P=小学 / J=初中 */
-export type StudentStage = 'K' | 'P' | 'J'
+/** 学段：K=幼儿园 / P=小学 / J=初中 / H=高中 / U=大学 */
+export type StudentStage = 'K' | 'P' | 'J' | 'H' | 'U'
 
 /** 教育经历条目 */
 export interface EducationEntry {
@@ -646,14 +646,28 @@ export const STAGE_MENU_VISIBILITY: Record<StudentStage, Record<string, boolean>
     review: true, mistakes: true, reading: true, exam: true, education: true,
     diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
     grades: true
+  },
+  H: {
+    home: true, habits: false, homework: true, timetable: true, plan: true,
+    review: true, mistakes: true, reading: true, exam: true, education: true,
+    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    grades: true
+  },
+  U: {
+    home: true, habits: false, homework: false, timetable: true, plan: true,
+    review: true, mistakes: false, reading: true, exam: true, education: true,
+    diary: true, health: true, pomodoro: true, achievements: false, rewards: false, parent: false,
+    grades: true
   }
 }
 
-/** 学段默认学科清单（小学 3 科 / 初中 9 科；K 无学科） */
+/** 学段默认学科清单（小学 3 科 / 初中·高中 9 科 / 大学 3 类；K 无学科） */
 export const STAGE_DEFAULT_SUBJECTS: Record<StudentStage, string[]> = {
   K: [],
   P: ['语文', '数学', '英语'],
-  J: ['语文', '数学', '英语', '政治', '历史', '地理', '生物', '物理', '化学']
+  J: ['语文', '数学', '英语', '政治', '历史', '地理', '生物', '物理', '化学'],
+  H: ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'],
+  U: ['专业课', '公共课', '选修课']
 }
 
 /** 学段默认习惯种子（K 7 项 / P 6 项 / J 5 项） */
@@ -681,21 +695,38 @@ export const STAGE_DEFAULT_HABITS: Record<StudentStage, { name: string; category
     { name: '运动', category: 'exercise' },
     { name: '阅读', category: 'study' },
     { name: '早睡', category: 'life' }
+  ],
+  H: [
+    { name: '自主学习', category: 'study' },
+    { name: '复习错题', category: 'study' },
+    { name: '运动', category: 'exercise' },
+    { name: '阅读', category: 'study' },
+    { name: '早睡', category: 'life' }
+  ],
+  U: [
+    { name: '自主学习', category: 'study' },
+    { name: '阅读', category: 'study' },
+    { name: '运动', category: 'exercise' },
+    { name: '早睡', category: 'life' }
   ]
 }
 
-/** 学段默认番茄钟时长（分钟）：小学 25+5 / 初中 50+10 */
+/** 学段默认番茄钟时长（分钟）：小学 25+5 / 初中·高中 50+10 / 大学 45+10 */
 export const STAGE_DEFAULT_POMODORO: Record<StudentStage, { focus: number; break: number }> = {
   K: { focus: 15, break: 5 },
   P: { focus: 25, break: 5 },
-  J: { focus: 50, break: 10 }
+  J: { focus: 50, break: 10 },
+  H: { focus: 50, break: 10 },
+  U: { focus: 45, break: 10 }
 }
 
 /** 学段徽标配置 */
 export const STAGE_BADGE: Record<StudentStage, { label: string; color: string }> = {
   K: { label: 'K', color: '#f59e0b' },
   P: { label: 'P', color: '#3b82f6' },
-  J: { label: 'J', color: '#a855f7' }
+  J: { label: 'J', color: '#a855f7' },
+  H: { label: 'H', color: '#ef4444' },
+  U: { label: 'U', color: '#10b981' }
 }
 
 /** 学生工作台设置（IDB store 'student_settings' 单对象） */

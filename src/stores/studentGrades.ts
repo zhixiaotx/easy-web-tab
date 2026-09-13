@@ -25,6 +25,7 @@ import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 import { GRADE_LEVEL_ALL, GRADE_STAGE_GROUPS, STUDENT_GRADE_LEVELS } from '@/types'
 import type { StudentGradeRecord } from '@/types'
+import { useStudentSettingsStore } from '@/stores/studentSettings'
 
 const STORE_KEY = 'student_grades'
 
@@ -64,6 +65,11 @@ export const useStudentGradesStore = defineStore('studentGrades', () => {
       console.error('[studentGrades] load failed', e)
       grades.value = emptyGradesData().grades
     }
+    // 默认学段跟随设置里选择的学段（仅当该学段在成绩分组中存在）
+    const stage = useStudentSettingsStore().stage
+    activeStage.value = GRADE_STAGE_GROUPS.some(g => g.key === stage) ? stage : GRADE_LEVEL_ALL
+    activeLevel.value = GRADE_LEVEL_ALL
+    page.value = 1
   }
 
   async function saveGrades(): Promise<void> {

@@ -831,7 +831,9 @@ async function handleBizImportFile(event: Event): Promise<void> {
 const studentStageOptions: { key: StudentStage; label: string; desc: string }[] = [
   { key: 'K', label: '幼儿园', desc: '游戏化任务 · 家长主导 · 图标卡片' },
   { key: 'P', label: '小学', desc: '作业管理 · 习惯养成 · 阅读记录' },
-  { key: 'J', label: '初中', desc: '学科管理 · 复习计划 · 错题本' }
+  { key: 'J', label: '初中', desc: '学科管理 · 复习计划 · 错题本' },
+  { key: 'H', label: '高中', desc: '九科并重 · 复习计划 · 成绩追踪' },
+  { key: 'U', label: '大学', desc: '专业课为主 · 自主学习 · GPA 管理' }
 ]
 const studentStageBadgeColor = computed(() => STAGE_BADGE[studentStore.stage].color)
 const studentStageBadgeLabel = computed(() => STAGE_BADGE[studentStore.stage].label)

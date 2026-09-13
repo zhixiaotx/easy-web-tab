@@ -58,8 +58,15 @@ const examTypeOptions = computed<string[]>(() => [...GRADE_EXAM_TYPES])
 
 function openAddDialog(): void {
   editingId.value = null
-  // 在具体的年级标签页上时，默认带入该年级
-  formGrade.value = (store.activeLevel && store.activeLevel !== GRADE_LEVEL_ALL) ? store.activeLevel : ''
+  // 默认年级：优先取当前学段首年级（与设置所选学段一致），其次当前具体年级标签页
+  const stageKey = store.activeStage
+  const stageFirstGrade =
+    stageKey && stageKey !== GRADE_LEVEL_ALL
+      ? (stageGroups.find(g => g.key === stageKey)?.grades[0] ?? '')
+      : ''
+  formGrade.value =
+    stageFirstGrade ||
+    (store.activeLevel && store.activeLevel !== GRADE_LEVEL_ALL ? store.activeLevel : '')
   formExamName.value = ''
   formExamType.value = '期中'
   formDate.value = localToday()

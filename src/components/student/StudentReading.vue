@@ -250,6 +250,7 @@ onMounted(async () => {
       v-model="showEditDialog"
       :title="editingId ? '编辑阅读记录' : '新增阅读记录'"
       width="480px"
+      class="sr-dialog"
       @close="closeEditDialog"
     >
       <div class="dialog-body">
@@ -548,5 +549,18 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .sr-shell { padding: 12px; }
   .sr-stats { grid-template-columns: repeat(2, 1fr); }
+  .form-row { flex-direction: column; }
+  /* 小屏精简分页条：隐藏总数与跳转输入框 */
+  .sr-list-pager :deep(.el-pagination__total),
+  .sr-list-pager :deep(.el-pagination__jump) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .sr-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

@@ -603,4 +603,15 @@ async function handleDelete(): Promise<void> {
     overflow-y: auto;
   }
 }
+
+/* 超窄屏：日期输入与工具栏按钮占满整行，避免溢出 */
+@media (max-width: 480px) {
+  .dj-date-input {
+    width: 100%;
+  }
+  .dj-toolbar-left,
+  .dj-toolbar-right {
+    width: 100%;
+  }
+}
 </style>

@@ -835,6 +835,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
       v-model="taskFormVisible"
       :title="taskFormMode === 'add' ? '新增任务' : '编辑任务'"
       width="440px"
+      class="stp-task-dialog"
       @close="taskFormVisible = false"
     >
       <div class="stp-modal-body">
@@ -858,6 +859,7 @@ watch(() => props.parentMode, (v) => { if (v) ensureAllLoaded() }, { immediate: 
       v-model="rewardFormVisible"
       :title="rewardFormMode === 'add' ? '新增奖励项' : '编辑奖励项'"
       width="440px"
+      class="stp-reward-dialog"
       @close="rewardFormVisible = false"
     >
       <div class="stp-modal-body">
@@ -1258,5 +1260,11 @@ html.dark .stp-pager-info {
 @media (max-width: 480px) {
   .stp-stats-grid { grid-template-columns: 1fr; }
   .stp-task-grid, .stp-reward-grid, .stp-badge-grid, .stp-summary-grid { grid-template-columns: 1fr; }
+  /* 弹框在小屏改为视口宽度，避免 440px 固定宽度溢出 */
+  .stp-task-dialog :deep(.el-dialog),
+  .stp-reward-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

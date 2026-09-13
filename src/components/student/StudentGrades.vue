@@ -814,5 +814,16 @@ html.dark .sg-summary-soft {
   .sg-form-row { flex-direction: column; }
   .sg-chart-wrap { height: 240px; }
   .sg-trend-select { width: 140px; }
+  /* 科目行允许换行，避免窄屏挤压 */
+  .sg-subj-row { flex-wrap: wrap; }
+  /* 分页居中，避免小屏贴右溢出 */
+  .sg-pagination { justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .sg-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

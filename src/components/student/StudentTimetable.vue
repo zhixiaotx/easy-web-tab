@@ -227,7 +227,7 @@ onMounted(async () => {
     </div>
 
     <!-- 配置弹框 -->
-    <el-dialog v-model="showConfigDialog" title="课程表配置" width="460px" append-to-body>
+    <el-dialog v-model="showConfigDialog" title="课程表配置" width="460px" class="stt-config-dialog" append-to-body>
       <div class="dialog-body">
         <div class="form-field">
           <label>学周数（1-52）</label>
@@ -250,7 +250,7 @@ onMounted(async () => {
     </el-dialog>
 
     <!-- cell 编辑弹框 -->
-    <el-dialog v-model="showCellDialog" :title="getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程'" width="460px" append-to-body>
+    <el-dialog v-model="showCellDialog" :title="getCell(editingDay, editingPeriod) ? '编辑课程' : '新增课程'" width="460px" class="stt-cell-dialog" append-to-body>
       <div class="dialog-body">
         <div class="stt-dialog-meta">
           {{ weekdayLabel(editingDay) }} · 第 {{ editingPeriod }} 节
@@ -456,5 +456,14 @@ onMounted(async () => {
   .stt-shell { padding: 12px; }
   .stt-grid { min-width: 500px; }
   .stt-body-cell { min-height: 56px; }
+  .form-row { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .stt-config-dialog :deep(.el-dialog),
+  .stt-cell-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

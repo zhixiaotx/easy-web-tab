@@ -337,6 +337,7 @@ onMounted(async () => {
       v-model="showEditDialog"
       :title="editingId ? '编辑作业' : '新增作业'"
       width="480px"
+      class="shw-dialog"
       @close="closeEditDialog"
     >
       <div class="dialog-body">
@@ -681,5 +682,17 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .shw-shell { padding: 12px; }
+  /* 小屏精简分页条：隐藏总数与跳转输入框 */
+  .shw-pager :deep(.el-pagination__total),
+  .shw-pager :deep(.el-pagination__jump) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .shw-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

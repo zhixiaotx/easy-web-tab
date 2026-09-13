@@ -663,5 +663,16 @@ onMounted(() => {
   .sm-status-tabs {
     justify-content: center;
   }
+  /* 错题卡改为单列，避免 4 列在小屏挤压 */
+  .sm-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .sm-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

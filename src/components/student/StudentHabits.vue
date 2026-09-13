@@ -295,6 +295,7 @@ onMounted(async () => {
       v-model="showEditDialog"
       :title="editingId ? '编辑习惯' : '新增习惯'"
       width="480px"
+      class="sh-dialog"
       @close="closeEditDialog"
     >
       <div class="dialog-body">
@@ -531,6 +532,13 @@ onMounted(async () => {
   }
   .st-habits {
     padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sh-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
   }
 }
 </style>

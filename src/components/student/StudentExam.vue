@@ -693,5 +693,17 @@ onMounted(async () => {
   .se-card { height: auto; min-height: 150px; }
   .se-hero-big { font-size: 36px; }
   .se-hero-today { font-size: 32px; }
+  /* 触屏无 hover：删除按钮改为常显，保证可达 */
+  .se-del-btn {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.08);
+  }
+}
+
+@media (max-width: 480px) {
+  .se-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

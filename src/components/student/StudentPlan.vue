@@ -347,6 +347,7 @@ onMounted(() => {
       v-model="showEditDialog"
       :title="editingId !== null ? '编辑计划' : '新增计划'"
       width="480px"
+      class="sp-dialog"
       @close="closeEditDialog"
     >
       <div class="dialog-body">
@@ -767,5 +768,18 @@ onMounted(() => {
 @media (max-width: 768px) {
   .sp-shell { padding: 12px; }
   .sp-stats { grid-template-columns: repeat(2, 1fr); }
+  .sp-field-row { flex-direction: column; }
+  /* 小屏精简分页条：隐藏总数与跳转输入框 */
+  .sp-list-pager :deep(.el-pagination__total),
+  .sp-list-pager :deep(.el-pagination__jump) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .sp-dialog :deep(.el-dialog) {
+    width: 92vw !important;
+    max-width: 92vw;
+  }
 }
 </style>

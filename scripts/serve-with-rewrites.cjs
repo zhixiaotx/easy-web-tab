@@ -5,7 +5,7 @@ const path = require('path')
 const url = require('url')
 const { URL } = require('url')
 
-const PORT = 16718
+const PORT = Number(process.env.PORT) || 16718
 const DIST_DIR = path.join(__dirname, '..', 'dist')
 const PROXY_PATH = '/api/webdav-proxy'
 const MAX_ERROR_BYTES = 1024

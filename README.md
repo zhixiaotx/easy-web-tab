@@ -101,17 +101,25 @@ docker run -d -p 16718:16718 --name easywebtab easywebtab
 docker logs easywebtab
 ```
 
-### 方式四：Nginx 静态托管 + WebDAV 代理
+### 方式四：Nginx 静态托管 + 同源代理
 
-用 Nginx 托管 `dist/` 时，页面本身纯静态，但**云同步（WebDAV）会撞浏览器跨域限制**，需要额外跑一个同源代理。
+用 Nginx 托管 `dist/` 时，页面本身纯静态，但有两个接口需要同源代理（否则浏览器跨域或静态 location 返回 405）：
+
+1. **云同步（WebDAV）**：`POST /api/webdav-proxy`
+2. **添加网站自动抓取元数据**：`POST /api/fetch-meta`（纯静态下 POST 落到静态 location 会返回 405，导致添加网站查询失败）
+
+推荐用两个轻量单职责代理（各占一个端口，pm2 常驻）：
 
 ```bash
-npm run build          # 产出 dist/
-npm run webdav-proxy   # 启动 WebDAV 同源代理，默认 127.0.0.1:16719
-# 或常驻：pm2 start scripts/webdav-proxy-only.cjs --name easy-webdav-proxy
+npm run build                          # 产出 dist/
+npm run webdav-proxy                   # WebDAV 同源代理，默认 127.0.0.1:16719
+npm run fetch-meta-proxy               # fetch-meta 同源代理，默认 127.0.0.1:16720
+# 常驻：
+# pm2 start scripts/webdav-proxy-only.cjs --name easy-webdav-proxy
+# pm2 start scripts/fetch-meta-only.cjs --name easy-fetch-meta
 ```
 
-Nginx 侧把 `/api/webdav-proxy` 反代到该进程：
+Nginx 侧把两个 `/api/` 接口**精确反代**到对应进程：
 
 ```nginx
 server {
@@ -119,21 +127,44 @@ server {
   server_name your-domain.com;
 
   root /var/www/easy-web-tab/dist;
+  index index.html;
+
+  # SPA fallback：刷新 /student 等子路由不 404
   location / { try_files $uri $uri/ /index.html; }
 
-  location /api/webdav-proxy {
+  # 云同步 WebDAV 代理
+  location = /api/webdav-proxy {
     proxy_pass http://127.0.0.1:16719;
+    proxy_http_version 1.1;
     proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 30s;
+  }
+
+  # 添加网站：元数据抓取代理（解决 405）
+  location = /api/fetch-meta {
+    proxy_pass http://127.0.0.1:16720;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 30s;
   }
 }
 ```
 
-代理协议：`POST /api/webdav-proxy`，请求头 `X-Webdav-Auth: Basic <base64(用户名:密码)>`，
-body 为 `{ target, method, body? }`。用户凭据由前端运行时输入，代理进程不落盘、不记录。
-监听地址与端口可用 `WEBDAV_PROXY_HOST` / `WEBDAV_PROXY_PORT` 覆盖；`GET /healthz` 可作健康检查。
+> ⚠️ 必须用 `location = /api/fetch-meta` **精确匹配**，不能用 `location /api/`（否则会把两个代理混到一起、且静态文件请求也会命中，导致 405 / 502）。
 
-> 开发环境不需要这个进程 —— `vite.config.js` 已内置同协议 dev proxy；`npm run serve` 启动的
-> `scripts/serve-with-rewrites.cjs` 也已内置。
+代理协议：
+- WebDAV：`POST /api/webdav-proxy`，请求头 `X-Webdav-Auth: Basic <base64(用户名:密码)>`，body 为 `{ target, method, body? }`。监听地址 / 端口可用 `WEBDAV_PROXY_HOST` / `WEBDAV_PROXY_PORT` 覆盖；`GET /healthz` 可作健康检查。
+- fetch-meta：`POST /api/fetch-meta`，body 为 `{ url }`，返回 `{ title, description, icon }`。监听地址 / 端口可用 `FETCH_META_HOST` / `FETCH_META_PORT` 覆盖；`GET /healthz` 可作健康检查。
+
+> 两个代理**零运行时依赖**（仅 Node 内置模块），`metascraper` / `playwright` 未安装时自动回退正则解析，无需 `npm install`。
+> 开发环境不需要这两个进程 —— `vite.config.js` 已内置同协议 dev proxy；`npm run serve` 启动的
+> `scripts/serve-with-rewrites.cjs` 也已内置（单进程即可，端口 16718）。
 
 ---
 
@@ -284,6 +315,7 @@ npm run build        # generate-preset-icons → vue-tsc -b → vite build
 npm run preview      # 预览生产构建
 npm run serve        # 生产静态服务（含游戏重写）
 npm run webdav-proxy # 独立 WebDAV 同源代理（16719）
+npm run fetch-meta-proxy # 独立 fetch-meta 同源代理（16720，解决添加网站查询 405）
 
 # 纯函数单测（node --experimental-strip-types）
 npm run test:countdown   # countdownCore.ts
@@ -336,8 +368,9 @@ easy-web-tab/
 │   └── games/                    # 5 个小游戏 + manifest.json
 ├── scripts/                      # 构建/服务脚本 + 纯函数测试 + WebDAV 代理
 │   ├── generate-preset-icons.cjs # 构建第一步，扫描 public/icons → presetIcons.ts
-│   ├── serve-with-rewrites.cjs   # npm run serve 生产服务器（游戏重写 + WebDAV 代理）
-│   ├── webdav-proxy-only.cjs     # 独立 WebDAV 同源代理
+│   ├── serve-with-rewrites.cjs   # npm run serve 生产服务器（游戏重写 + WebDAV / fetch-meta 代理）
+│   ├── webdav-proxy-only.cjs     # 独立 WebDAV 同源代理（16719）
+│   ├── fetch-meta-only.cjs       # 独立 fetch-meta 同源代理（16720，解决添加网站查询 405）
 │   └── resolve-extensionless.mjs # 学生测试 loader
 ├── server.cjs / pm2.config.cjs   # PM2 路径（serve -s dist，端口 16718）
 ├── Dockerfile                    # serve -s，端口 16718

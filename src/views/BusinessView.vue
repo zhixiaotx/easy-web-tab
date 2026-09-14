@@ -457,15 +457,31 @@ html.dark .bs-stall-name {
     flex-direction: column;
   }
 
+  /* 菜单降级为底部固定 Tab Bar（与「个人工作台」一致）：常驻拇指区，
+     图标+名称常显，菜单项过多时整条横向滚动 */
   .bs-menu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
     width: 100%;
+    flex: 0 0 auto;
     flex-direction: row;
+    gap: 4px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
     border-right: none;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    border-bottom: none;
+    background-color: var(--color-bg-card, #ffffff);
+    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
   }
 
-  /* 移动端横排布局：忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
+  /* 移动端忽略折叠态（始终全宽 + 显示 label），隐藏折叠按钮 */
   .bs-menu.collapsed {
     width: 100%;
   }
@@ -483,8 +499,16 @@ html.dark .bs-stall-name {
     display: none;
   }
 
+  /* 不收缩：图标+名称完整显示，超出由底部栏横向滚动 */
   .bs-menu-item {
+    flex: 0 0 auto;
     white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .bs-menu-label {
+    overflow: visible;
+    text-overflow: clip;
   }
 
   /* P3-14 移动端触控目标 ≥40px（侧栏菜单项 / 头部按钮） */
@@ -497,9 +521,18 @@ html.dark .bs-stall-name {
     min-height: 40px;
   }
 
-  /* P3-13 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧 */
+  /* P3-13 窄屏间距压缩：内容区内边距收窄、首页卡片间距收紧；
+     底部留白避让固定 Tab Bar（40px 触控 + 内边距 + 安全区） */
   .bs-content {
-    padding: 12px;
+    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* 移动端底部 Tab Bar 暗色兜底：边框改顶部 + 加深阴影（与 WorkbenchView 一致） */
+@media (max-width: 768px) {
+  html.dark .bs-menu {
+    border-top-color: var(--color-border, #374151);
+    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
   }
 }
 

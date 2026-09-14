@@ -173,7 +173,6 @@ function daysClass(days: number): string {
           :data-testid="`sr-tab-${tab.key}`"
         >{{ tab.label }}</el-radio-button>
       </el-radio-group>
-      <span class="sr-count">{{ viewEntries.length }} 条</span>
     </div>
 
     <div class="sr-stats">
@@ -271,6 +270,7 @@ function daysClass(days: number): string {
       v-if="totalPages > 1"
       :page="currentPage"
       :total="totalPages"
+      :total-items="viewEntries.length"
       @prev="prev"
       @next="next"
     />
@@ -350,11 +350,6 @@ function daysClass(days: number): string {
   padding: 0 4px;
 }
 
-.sr-count {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--color-text-secondary, #6b7280);
-}
 
 .sr-stats {
   display: grid;

@@ -204,7 +204,6 @@ onMounted(() => {
           :data-testid="`sm-subject-${tab.key}`"
         >{{ tab.label }}</el-radio-button>
       </el-radio-group>
-      <span class="sm-count">{{ viewEntries.length }} 条</span>
     </div>
 
     <div class="sm-filter-bar">
@@ -333,6 +332,7 @@ onMounted(() => {
       v-if="totalPages > 1"
       :page="currentPage"
       :total="totalPages"
+      :total-items="viewEntries.length"
       @prev="prev"
       @next="next"
     />
@@ -423,11 +423,6 @@ onMounted(() => {
   gap: 4px;
   flex-wrap: wrap;
   flex-shrink: 0;
-}
-.sm-count {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--color-text-soft, #6b7280);
 }
 
 .sm-filter-bar {

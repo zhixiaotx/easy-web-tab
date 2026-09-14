@@ -248,7 +248,7 @@ onUnmounted(() => {
       <div v-if="showListDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeListDialog">
         <div class="dialog list-dialog" data-testid="dt-list-dialog">
           <div class="dialog-header">
-            <h3>饮食记录（{{ store.records.diet.length }} 条）</h3>
+            <h3>饮食记录</h3>
             <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
           </div>
           <div class="dt-list">

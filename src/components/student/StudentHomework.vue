@@ -217,7 +217,6 @@ onMounted(async () => {
 <template>
   <div class="shw-shell">
     <StudentToolbar title="作业管理">
-      <div class="shw-count">共 {{ viewEntries.length }} 条</div>
       <el-button type="primary" size="small" class="shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
         ＋ 新增作业
       </el-button>
@@ -413,11 +412,6 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.shw-count {
-  font-size: 13px;
-  color: var(--color-text-muted, #6b7280);
-  white-space: nowrap;
-}
 
 .shw-filters {
   display: flex;
@@ -682,11 +676,6 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .shw-shell { padding: 12px; }
-  /* 小屏精简分页条：隐藏总数与跳转输入框 */
-  .shw-pager :deep(.el-pagination__total),
-  .shw-pager :deep(.el-pagination__jump) {
-    display: none;
-  }
 }
 
 @media (max-width: 480px) {

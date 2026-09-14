@@ -117,3 +117,70 @@
     white-space: nowrap !important;
   }
 }
+
+/* ============================================
+   移动端表格分页条统一精简（学生工作台 + 健康弹框）
+   需求：① 表格上方不再重复显示总条数，总条数统一收进底部分页；
+        ② 移动端分页精简为「总条数 · 上一页 · 下一页」并居中，
+           隐藏页码数字与跳转框（窄屏放不下且意义不大）。
+   说明：各组件 scoped 样式特异性更高，故此处一律 !important 才能生效；
+        .sg-pagination 直接挂在 el-pagination 上，其余为外层包裹 div。
+   ============================================ */
+@media (max-width: 767px) {
+  .shw-pager,
+  .edu-list-pager,
+  .sp-list-pager,
+  .sr-list-pager,
+  .sr-history-pager,
+  .ex-list-pager,
+  .dt-list-pager,
+  .wt-list-pager {
+    display: flex !important;
+    justify-content: center !important;
+  }
+  .shw-pager .el-pagination,
+  .edu-list-pager .el-pagination,
+  .sp-list-pager .el-pagination,
+  .sr-list-pager .el-pagination,
+  .sr-history-pager .el-pagination,
+  .ex-list-pager .el-pagination,
+  .dt-list-pager .el-pagination,
+  .wt-list-pager .el-pagination,
+  .sg-pagination {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  /* 隐藏页码数字与跳转框，仅保留「总条数 / 上一页 / 下一页」 */
+  .shw-pager .el-pager,
+  .shw-pager .el-pagination__jump,
+  .edu-list-pager .el-pager,
+  .edu-list-pager .el-pagination__jump,
+  .sp-list-pager .el-pager,
+  .sp-list-pager .el-pagination__jump,
+  .sr-list-pager .el-pager,
+  .sr-list-pager .el-pagination__jump,
+  .sr-history-pager .el-pager,
+  .sr-history-pager .el-pagination__jump,
+  .ex-list-pager .el-pager,
+  .ex-list-pager .el-pagination__jump,
+  .dt-list-pager .el-pager,
+  .dt-list-pager .el-pagination__jump,
+  .wt-list-pager .el-pager,
+  .wt-list-pager .el-pagination__jump,
+  .sg-pagination .el-pager,
+  .sg-pagination .el-pagination__jump {
+    display: none !important;
+  }
+  /* 总条数始终可见（覆盖各组件旧规则中隐藏 total 的逻辑） */
+  .shw-pager .el-pagination__total,
+  .edu-list-pager .el-pagination__total,
+  .sp-list-pager .el-pagination__total,
+  .sr-list-pager .el-pagination__total,
+  .sr-history-pager .el-pagination__total,
+  .ex-list-pager .el-pagination__total,
+  .dt-list-pager .el-pagination__total,
+  .wt-list-pager .el-pagination__total,
+  .sg-pagination .el-pagination__total {
+    display: inline-flex !important;
+  }
+}

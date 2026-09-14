@@ -3,7 +3,8 @@
 // 消费方（Wave-2 面板）：
 //   <PanelPager :page="paging.currentPage" :total="paging.totalPages" @prev="paging.prev()" @next="paging.next()" />
 // 无 props 默认值/校验、无业务逻辑；testid 被 Wave-3 QA 脚本断言，勿改名。
-defineProps<{ page: number; total: number }>()
+// totalItems 可选：传入时在前缀展示「共 N 条」，便于把表格上方的总条数移到底部分页（移动端统一）。
+defineProps<{ page: number; total: number; totalItems?: number }>()
 
 defineEmits<{ prev: []; next: [] }>()
 </script>
@@ -17,7 +18,7 @@ defineEmits<{ prev: []; next: [] }>()
       aria-label="上一页"
       @click="$emit('prev')"
     >←</el-button>
-    <span class="pp-info" data-testid="panel-pager-info">第 {{ page }} / {{ total }} 页</span>
+    <span class="pp-info" data-testid="panel-pager-info"><template v-if="totalItems != null">共 {{ totalItems }} 条 · </template>第 {{ page }} / {{ total }} 页</span>
     <el-button
       size="small"
       data-testid="panel-pager-next"

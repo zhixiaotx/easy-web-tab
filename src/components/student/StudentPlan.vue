@@ -207,7 +207,6 @@ onMounted(() => {
 <template>
   <div class="sp-shell">
     <StudentToolbar title="学习计划">
-      <div class="sp-count">共 {{ viewEntries.length }} 个</div>
       <el-button type="primary" size="small" class="sp-add-btn" data-testid="sp-add-btn" @click="openAddDialog">
         ＋ 新增计划
       </el-button>
@@ -441,11 +440,6 @@ onMounted(() => {
   padding: 16px;
 }
 
-.sp-count {
-  font-size: 13px;
-  color: var(--color-text-muted, #6b7280);
-  white-space: nowrap;
-}
 
 .sp-tabs {
   display: flex;
@@ -769,11 +763,6 @@ onMounted(() => {
   .sp-shell { padding: 12px; }
   .sp-stats { grid-template-columns: repeat(2, 1fr); }
   .sp-field-row { flex-direction: column; }
-  /* 小屏精简分页条：隐藏总数与跳转输入框 */
-  .sp-list-pager :deep(.el-pagination__total),
-  .sp-list-pager :deep(.el-pagination__jump) {
-    display: none;
-  }
 }
 
 @media (max-width: 480px) {

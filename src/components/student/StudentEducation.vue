@@ -157,7 +157,6 @@ const degreeOptions = DEGREE_OPTIONS
     <!-- 顶部工具条 -->
     <div class="edu-toolbar">
       <el-button type="primary" data-testid="edu-add" @click="openAdd">＋ 新增</el-button>
-      <div class="edu-count">共 {{ store.totalCount }} 条记录</div>
     </div>
 
     <!-- 表格区（Element Plus Table） -->

@@ -471,7 +471,7 @@ onUnmounted(() => {
     <div v-if="showRecordsDialog" class="dialog-overlay list-dialog-overlay" @click.self="closeRecordsDialog">
       <div class="dialog list-dialog" data-testid="wt-records-dialog">
         <div class="dialog-header">
-          <h3>体重记录（{{ store.records.weight.length }} 条）</h3>
+          <h3>体重记录</h3>
           <el-button class="close-btn" data-testid="wt-records-close" text @click="closeRecordsDialog"><Icon name="close" /></el-button>
         </div>
         <div class="wt-list">

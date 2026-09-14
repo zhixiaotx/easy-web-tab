@@ -374,7 +374,6 @@ onMounted(async () => {
         <el-radio-button value="date">按日期</el-radio-button>
         <el-radio-button value="name">按名称</el-radio-button>
       </el-radio-group>
-      <span class="sg-count">{{ store.pagedLevelGrades.total }} 次考试</span>
     </div>
 
     <!-- 空状态 -->
@@ -662,10 +661,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-.sg-count {
-  font-size: 12px;
-  color: var(--color-text-secondary, #64748b);
 }
 
 /* ===== 表格 ===== */

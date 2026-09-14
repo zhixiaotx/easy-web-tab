@@ -142,7 +142,6 @@ onMounted(async () => {
 <template>
   <div class="sr-shell">
     <StudentToolbar title="阅读记录">
-      <span class="sr-count">共 {{ viewEntries.length }} 条</span>
       <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
         ＋ 新增记录
       </el-button>
@@ -339,11 +338,6 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.sr-count {
-  font-size: 13px;
-  color: var(--color-text-muted, #6b7280);
-  white-space: nowrap;
-}
 
 .sr-stats {
   display: grid;
@@ -550,11 +544,6 @@ onMounted(async () => {
   .sr-shell { padding: 12px; }
   .sr-stats { grid-template-columns: repeat(2, 1fr); }
   .form-row { flex-direction: column; }
-  /* 小屏精简分页条：隐藏总数与跳转输入框 */
-  .sr-list-pager :deep(.el-pagination__total),
-  .sr-list-pager :deep(.el-pagination__jump) {
-    display: none;
-  }
 }
 
 @media (max-width: 480px) {

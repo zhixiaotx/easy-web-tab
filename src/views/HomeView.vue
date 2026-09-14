@@ -646,15 +646,29 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
   .app-bar {
     padding: 8px 10px;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .app-bar-left,
   .app-bar-right {
     gap: 4px;
+    flex: 1 1 100%;
+  }
+
+  /* 窄屏左入口（图标+名称）与右侧按钮各占一行，名称常显，避免互相挤压溢出 */
+  .app-bar-left {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-bar-left::-webkit-scrollbar {
+    display: none;
+  }
+  .app-bar-right {
+    justify-content: flex-start;
   }
 
   .nav-entry-label {
-    display: none; /* 窄屏仅保留图标，避免与右侧按钮互相挤压 */
+    display: inline; /* 移动端恢复显示名称，与「学生工作台」一致（图标+文字） */
   }
 
   .btn-help,
@@ -663,7 +677,7 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
   }
 
   .container {
-    padding-top: 72px;
+    padding-top: 112px;
     /* 左右内边距收窄，给卡片网格让出宽度 */
     padding-left: 12px;
     padding-right: 12px;

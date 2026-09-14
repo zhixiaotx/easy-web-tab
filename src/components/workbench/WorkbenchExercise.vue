@@ -646,6 +646,19 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+/* 移动端：取消 560px 最小宽度，避免对话框宽于视口、关闭按钮落到屏幕外无法关闭 */
+@media (max-width: 768px) {
+  .dialog-overlay.list-dialog-overlay {
+    padding: 8px;
+  }
+  .dialog.list-dialog {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 90vh !important;
+  }
+}
+
 .ex-list {
   padding: 16px 20px 0 20px;
   flex: 1;
@@ -1072,6 +1085,19 @@ html.dark input.form-input {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* 移动端：取消 560px 最小宽度，避免对话框宽于视口、关闭按钮落到屏幕外无法关闭 */
+@media (max-width: 768px) {
+  .dialog-overlay.list-dialog-overlay {
+    padding: 8px;
+  }
+  .dialog.list-dialog {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 90vh !important;
+  }
 }
 
 .ex-list {

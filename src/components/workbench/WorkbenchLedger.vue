@@ -1235,6 +1235,16 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   flex-direction: column;
 }
 
+/* 移动端：取消 560px 最小宽度，避免对话框宽于视口、关闭按钮落到屏幕外无法关闭 */
+@media (max-width: 768px) {
+  .dialog[data-testid="ld-records-dialog"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 90vh !important;
+  }
+}
+
 /* el-table 容器：填满剩余空间，overflow 交给 el-table internal */
 .ld-records-body {
   padding: 16px 20px 0 20px;

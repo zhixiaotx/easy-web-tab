@@ -530,8 +530,21 @@ onMounted(async () => {
   .sh-list {
     grid-template-columns: 1fr;
   }
+  /* 移动端解除高度约束，让面板随内容自然撑开，由外层 .st-content 统一滚动
+     （避免记录被 .sh-main overflow:hidden 裁切、且 .sh-list 无高度约束致 overflow-y:auto 失效、无法下滑） */
   .st-habits {
+    height: auto;
+    min-height: 0;
     padding: 12px;
+  }
+  .sh-main {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+  }
+  .sh-list {
+    overflow: visible;
+    max-height: none;
   }
 }
 

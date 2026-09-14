@@ -671,9 +671,13 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
     display: inline; /* 移动端恢复显示名称，与「学生工作台」一致（图标+文字） */
   }
 
-  .btn-help,
-  .btn-front {
+  .btn-help {
     padding: 8px 10px;
+  }
+
+  /* 移动端隐藏右上角「前台」按钮（PC 端保留，不动） */
+  .btn-front {
+    display: none;
   }
 
   .container {

@@ -617,8 +617,16 @@ html.dark .wb-content {
   }
 
   .wb-menu-item {
+    flex: 0 0 auto; /* 不收缩：名称完整显示，超出由底部 Tab Bar 横向滚动 */
     white-space: nowrap;
     scroll-snap-align: start;
+  }
+
+  /* 移动端取消 label 省略号截断，确保菜单名称完整呈现（仿学生工作台图标+文字） */
+  .wb-menu-label {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
   }
 
   /* P3-14 移动端触控目标 ≥40px（侧栏菜单项 / 头部按钮） */

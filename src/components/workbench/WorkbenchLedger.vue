@@ -1640,6 +1640,14 @@ html.dark input.form-input {
   .ld-donut-legend {
     width: 100%;
   }
+
+  /* 窄屏：月操作区（本月/显示金额/＋新增/查看/导出CSV）换行，按钮不被压扁 */
+  .ld-month-actions {
+    flex-wrap: wrap;
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 /* ===== 桌面端 ≥769px：自适应分页契约（Wave-2 T11，R1/R2/R7）===== */

@@ -841,4 +841,15 @@ html.dark .biz-input {
 .bizday-num-input {
   width: 90px;
 }
+
+/* 移动端：顶部工具行（计数 + 导出/收摊）换行，按钮不被压扁变形 */
+@media (max-width: 767px) {
+  .bizday-bar {
+    flex-wrap: wrap;
+  }
+  .bizday-bar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
 </style>

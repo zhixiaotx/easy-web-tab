@@ -99,3 +99,21 @@
     min-height: 40px;
   }
 }
+
+/* 3) 工具行「新增/操作」按钮：≤767px 不被同行挤压变形（与 2) 同根因）
+   针对已确认不换行的工具行（记账月操作区、销售收摊栏）做双保险，
+   并保护通用 .btn-add 系不被压缩成不规则形状。 */
+@media (max-width: 767px) {
+  .ld-month-actions,
+  .bizday-bar,
+  .bizday-bar-actions {
+    flex-wrap: wrap !important;
+  }
+  .ld-month-actions > *,
+  .bizday-bar > *,
+  .bizday-bar-actions > *,
+  .btn-add {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+}

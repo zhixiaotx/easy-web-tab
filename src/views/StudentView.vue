@@ -656,6 +656,15 @@ async function onOnboardingComplete() {
 }
 
 @media (max-width: 768px) {
+  /* 关键修复：窄屏把 .st-body 主轴由「左菜单 + 右内容」横向分栏
+     改为「上菜单 + 下内容」纵向堆叠。
+     缺少此规则时，宽度 100% 的 .st-menu 会在横向 flex 中把 .st-content
+     挤压为 0 宽 → 点击菜单后面板内容渲染却不可见（本次修复的 bug）。
+     与 WorkbenchView 移动端 .wb-body { flex-direction: column } 保持一致。 */
+  .st-body {
+    flex-direction: column;
+  }
+
   /* 顶栏纵向堆叠：避免家长横条 + 同步 + 设置按钮在窄屏一行挤爆溢出（移动端「完全没法用」主因） */
   .st-header {
     flex-direction: column;
@@ -681,10 +690,12 @@ async function onOnboardingComplete() {
     min-height: 40px;
   }
 
-  /* 菜单横排滚动 + 触控目标 ≥44px（复刻销售记账移动端） */
+  /* 菜单横排滚动 + 触控目标 ≥44px（复刻销售记账移动端）
+     flex:0 0 auto 固定顶栏高度，让下方 .st-content 占满剩余空间并可滚动 */
   .st-menu {
     width: 100%;
     height: auto;
+    flex: 0 0 auto;
     flex-direction: row;
     overflow-x: auto;
     border-right: none;
@@ -709,11 +720,20 @@ async function onOnboardingComplete() {
     min-height: 44px;
     min-width: 56px;
   }
+  /* 顶栏横排：激活态由桌面侧栏的「左侧竖条」改为「底部下划线」，
+     用 inset box-shadow 避免 border 引起的布局抖动 */
+  .st-menu-item.active {
+    border-left: none;
+    padding-left: 12px;
+    box-shadow: inset 0 -3px 0 var(--color-primary, #3b82f6);
+  }
   .st-menu-label {
     font-size: 11px;
   }
   .st-content {
     padding: 12px;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

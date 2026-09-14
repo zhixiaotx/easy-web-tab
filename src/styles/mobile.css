@@ -66,3 +66,36 @@
     overflow-y: auto !important;
   }
 }
+
+/* ============================================
+   移动端按钮/切换器防变形（长中文标签 + 窄 flex 行）
+   根因：el-radio-group 默认 inline-flex 不换行，内部 el-radio-button
+   又强制 white-space:nowrap；分类名一长或选项一多就在窄屏横向溢出，
+   把同行的「＋ 新增」等按钮挤变形 / 推出屏幕。
+   全局兜底一次性覆盖约 17 个使用方，无需逐组件改。
+   ============================================ */
+
+/* 1) 分类 / 状态 / 分段切换器：≤767px 允许换行，长标签不再横向挤出 */
+@media (max-width: 767px) {
+  .el-radio-group {
+    flex-wrap: wrap !important;
+    row-gap: 6px;
+  }
+}
+
+/* 2) 弹窗 footer / 确认框按钮：≤480px 换行并均分，
+   长标签（如「保存并继续」「恢复本地数据」）不再被挤压或溢出 */
+@media (max-width: 480px) {
+  .el-dialog__footer {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .el-dialog__footer .el-button,
+  .el-message-box__btns .el-button {
+    flex: 1 1 auto !important;
+    margin: 0 !important;
+    min-height: 40px;
+  }
+}

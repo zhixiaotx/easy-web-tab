@@ -105,6 +105,9 @@ export const DIALOG_VARS: Record<DialogId, { widthVar: string; heightVar: string
 
 const SETTINGS_STORAGE_KEY = 'user-app-settings'
 
+// 云配置 localStorage 双写兜底键（华为浏览器清除 IDB 后仍能恢复云配置）
+const CLOUD_SYNC_LS_KEY = 'ewt-cloud-sync'
+
 // 站点外观 localStorage 键（浏览器标签标题 + favicon；进 nav.json prefs 云同步白名单）
 const SITE_TITLE_KEY = 'site-title'
 const SITE_FAVICON_KEY = 'site-favicon'
@@ -656,6 +659,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       // IDB 清除失败静默忽略（不抛错）
     })
     localStorage.removeItem(SETTINGS_STORAGE_KEY)
+    localStorage.removeItem(CLOUD_SYNC_LS_KEY)
   }
 
   // ========================================

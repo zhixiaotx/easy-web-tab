@@ -401,6 +401,17 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     })).catch(() => {
       // IDB 写入失败静默忽略（fire-and-forget，不抛错）
     })
+    // 云配置 localStorage 双写兜底：与 IDB 平行写入，华为浏览器清除 IDB 后仍能恢复云配置
+    try {
+      localStorage.setItem(CLOUD_SYNC_LS_KEY, JSON.stringify({
+        cloudSyncEnabled: cloudSyncEnabled.value,
+        cloudSyncUrl: cloudSyncUrl.value,
+        cloudSyncUsername: cloudSyncUsername.value,
+        cloudSyncPassword: cloudSyncPassword.value
+      }))
+    } catch {
+      // localStorage 写入失败（隐私模式/配额）静默忽略
+    }
     markDirty()
   }
 
@@ -462,7 +473,27 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     }
     // 3. 生效来源：IDB 优先，其次 localStorage 迁移结果；缺失/非法字段保持默认值。
     //    菜单两字段在应用前必经 normalizeWorkbenchMenu（两条来源统一归一化，home 恒居 index 0）
-    const effective = stored ?? migrated
+    let effective = stored ?? migrated
+    // 云配置 localStorage 兜底：IDB（及旧迁移）均空时，回退读取双写兜底的云配置，
+    // 使华为浏览器清除 IDB 后云配置仍能恢复、并通过「立即同步」拉回云端数据
+    if (!effective) {
+      try {
+        const lsCloud = localStorage.getItem(CLOUD_SYNC_LS_KEY)
+        if (lsCloud) {
+          const c = JSON.parse(lsCloud)
+          if (c && (c.cloudSyncEnabled || c.cloudSyncUrl || c.cloudSyncUsername || c.cloudSyncPassword)) {
+            effective = {
+              cloudSyncEnabled: c.cloudSyncEnabled === true,
+              cloudSyncUrl: typeof c.cloudSyncUrl === 'string' ? c.cloudSyncUrl : '',
+              cloudSyncUsername: typeof c.cloudSyncUsername === 'string' ? c.cloudSyncUsername : '',
+              cloudSyncPassword: typeof c.cloudSyncPassword === 'string' ? c.cloudSyncPassword : ''
+            } as unknown as AppSettingsData
+          }
+        }
+      } catch {
+        // 兜底读取失败静默忽略，走下方默认
+      }
+    }
     if (effective) {
       const menu = normalizeWorkbenchMenu(effective.workbenchMenuOrder, effective.workbenchMenuLabels)
       workbenchMenuOrder.value = menu.order

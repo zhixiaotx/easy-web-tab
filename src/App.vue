@@ -17,7 +17,23 @@ onMounted(() => {
   themeStore.initTheme()
   useCountdownReminder().init()
   cloudSync.init()
+  ensurePersistentStorage()
 })
+
+// 申请持久化存储：防止移动端浏览器（如华为浏览器）把 IndexedDB 当作 best-effort 源，
+// 在存储压力/退出时主动清除，导致云配置与全部数据丢失。persist 成功后浏览器承诺不主动清除，
+// 须经用户显式操作才会删除。带 persisted() 检查与异常兜底，失败不影响正常功能。
+async function ensurePersistentStorage() {
+  try {
+    const storage = navigator.storage
+    if (!storage || typeof storage.persist !== 'function') return
+    if (await storage.persisted()) return
+    const granted = await storage.persist()
+    console.info('[storage] persistent storage granted:', granted)
+  } catch (e) {
+    console.warn('[storage] request persist failed:', e)
+  }
+}
 </script>
 
 <template>

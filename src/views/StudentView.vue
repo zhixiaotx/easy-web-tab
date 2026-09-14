@@ -690,17 +690,36 @@ async function onOnboardingComplete() {
     min-height: 40px;
   }
 
-  /* 菜单横排滚动 + 触控目标 ≥44px（复刻销售记账移动端）
-     flex:0 0 auto 固定顶栏高度，让下方 .st-content 占满剩余空间并可滚动 */
+  /* 菜单降级为底部固定 Tab Bar（与「个人工作台」WorkbenchView 移动端一致）：
+     脱离文档流常驻拇指区，图标+名称常显，菜单项过多时整条横向滚动 */
   .st-menu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
     width: 100%;
     height: auto;
     flex: 0 0 auto;
     flex-direction: row;
+    gap: 4px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
     overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
     border-right: none;
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
-    padding: 4px;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    border-bottom: none;
+    background-color: var(--color-bg-card, #ffffff);
+    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
+  }
+  /* 移动端忽略折叠态：始终全宽 + 显示名称 */
+  .st-menu.collapsed .st-menu-label {
+    display: inline;
+  }
+  .st-menu.collapsed .st-menu-item {
+    justify-content: center;
   }
   .st-sidebar-toggle {
     display: none;
@@ -714,13 +733,15 @@ async function onOnboardingComplete() {
     padding-bottom: 0;
   }
   .st-menu-item {
+    flex: 0 0 auto;            /* 不收缩：图标+名称完整显示，超出由底部栏横滚 */
     flex-direction: column;
-    padding: 8px 12px;
+    padding: 6px 12px;
     gap: 2px;
     min-height: 44px;
-    min-width: 56px;
+    white-space: nowrap;
+    scroll-snap-align: start;
   }
-  /* 顶栏横排：激活态由桌面侧栏的「左侧竖条」改为「底部下划线」，
+  /* 激活态由桌面侧栏的「左侧竖条」改为「底部下划线」，
      用 inset box-shadow 避免 border 引起的布局抖动 */
   .st-menu-item.active {
     border-left: none;
@@ -728,10 +749,14 @@ async function onOnboardingComplete() {
     box-shadow: inset 0 -3px 0 var(--color-primary, #3b82f6);
   }
   .st-menu-label {
-    font-size: 11px;
+    font-size: 12px;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
   }
+  /* 内容区底部留白避让固定 Tab Bar（44px 触控 + 内边距 + 安全区） */
   .st-content {
-    padding: 12px;
+    padding: 12px 12px calc(64px + env(safe-area-inset-bottom, 0px));
     min-height: 0;
     -webkit-overflow-scrolling: touch;
   }
@@ -758,6 +783,14 @@ html.dark .st-menu-item:hover {
 }
 html.dark .st-menu-item.active {
   background: var(--color-primary-soft);
+}
+
+/* 移动端底部 Tab Bar 暗色兜底：边框改顶部 + 加深阴影（与 WorkbenchView 一致） */
+@media (max-width: 768px) {
+  html.dark .st-menu {
+    border-top-color: var(--color-border, #374151);
+    box-shadow: 0 -2px 12px var(--color-shadow, rgba(0, 0, 0, 0.4));
+  }
 }
 html.dark .st-btn {
   background: var(--color-surface);

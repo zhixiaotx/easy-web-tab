@@ -1,4 +1,26 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  const p = findProduct(store.products, row.productId)
+  const m = markupRateOf(row.productId, row.unitPrice)
+  return [
+    { label: '日期', value: row.date },
+    { label: '商品', value: productNameOf(row.productId) },
+    { label: '分类', value: catNameOf(row.productId) },
+    { label: '数量', value: '×' + row.quantity },
+    { label: '单价', value: '@' + formatYuanOf(row.unitPrice) },
+    { label: '合计', value: formatYuanOf(row.total) },
+    { label: '售价', value: p ? formatYuanOf(productSellingPrice(row.productId)!) + '/件' : '—' },
+    { label: '加价率', value: m != null ? m + '%' : '—' },
+    { label: '备注', value: row.note || '—' }
+  ]
+}
+
 import Icon from '../Icon.vue'
 // 进货记录：分类 tabs（全部+可见分类）+ el-table 行式列表 + 新增/编辑弹框
 // P0-2：进货行展示售价与加价率对照
@@ -144,8 +166,9 @@ async function handleDelete(id: string): Promise<void> {
 
     <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
     <template v-else>
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="bizpur-table-wrap">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageItems"
           data-testid="bizpur-table"
           stripe
@@ -210,7 +233,7 @@ async function handleDelete(id: string): Promise<void> {
               <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
             <template #default="{ row }">
               <div class="bizpur-actions" @click.stop>
                 <el-button size="small" :data-testid="`bizpur-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
@@ -219,6 +242,19 @@ async function handleDelete(id: string): Promise<void> {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in pageItems"
+            :key="item.id"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <el-button size="small" :data-testid="`bizpur-edit-${item.id}`" @click="startEdit(item)">编辑</el-button>
+              <el-button size="small" type="danger" :data-testid="`bizpur-del-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
       <div class="bizpur-list-pager">
         <el-pagination

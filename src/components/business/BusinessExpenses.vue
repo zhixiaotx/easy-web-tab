@@ -1,4 +1,19 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '日期', value: row.date },
+    { label: '支出合计', value: formatYuanOf(row.total) },
+    { label: '笔数', value: row.items.length + ' 笔' },
+    { label: '首笔分类', value: catNameOf(row.items[0].categoryId) }
+  ]
+}
+
 // 支出记录：按天分组 el-table（对齐收摊记录），展开行展示当日支出条目（分类+金额+备注）
 import { computed, reactive, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
@@ -157,8 +172,9 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
     <!-- el-table 表格列表：一天一行，展开行展示当日支出条目 -->
     <div v-if="dayGroups.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击右上角记下今天的第一笔</div>
     <template v-else>
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="bizexp-table-wrap">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageItems"
           data-testid="bizexp-table"
           stripe
@@ -211,7 +227,7 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
               <span v-if="row.items.length > 1" class="bizexp-more-cats">+{{ row.items.length - 1 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
             <template #default="{ row }">
               <div class="bizexp-actions" @click.stop>
                 <el-button size="small" :data-testid="`bizexp-edit-${row.date}`" @click="startEdit(row)">编辑</el-button>
@@ -220,6 +236,19 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in pageItems"
+            :key="item.date"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <el-button size="small" :data-testid="`bizexp-edit-${item.date}`" @click="startEdit(item)">编辑</el-button>
+              <el-button size="small" type="danger" :data-testid="`bizexp-del-${item.date}`" @click="handleDeleteGroup(item)">删除</el-button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
       <div class="bizexp-list-pager">
         <el-pagination

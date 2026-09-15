@@ -1,7 +1,7 @@
 <template>
   <div class="ewt-card">
     <dl class="ewt-card-fields">
-      <div v-for="f in fields" :key="f.label" class="ewt-card-field">
+      <div v-for="f in visibleFields" :key="f.label" class="ewt-card-field">
         <dt class="ewt-card-label">{{ f.label }}</dt>
         <dd class="ewt-card-value" :class="{ 'ewt-emphasis': f.emphasis }">{{ display(f.value) }}</dd>
       </div>
@@ -13,13 +13,21 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 export interface CardField {
   label: string
   value?: string | number | null
   emphasis?: boolean
 }
 
-defineProps<{ fields: CardField[] }>()
+const props = defineProps<{ fields: CardField[]; maxFields?: number }>()
+
+// 卡片仅展示前几个关键字段，固定高度下更紧凑；其余字段在列表视图中查看。
+const visibleFields = computed(() => {
+  const n = props.maxFields ?? 4
+  return props.fields.slice(0, n)
+})
 
 function display(v?: string | number | null): string {
   if (v === null || v === undefined || v === '') return '—'
@@ -36,6 +44,9 @@ function display(v?: string | number | null): string {
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
+  box-sizing: border-box;
+  height: 156px;
+  overflow: hidden;
 }
 :global(html.dark) .ewt-card {
   background: var(--color-surface, #1f2937);
@@ -46,6 +57,9 @@ function display(v?: string | number | null): string {
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .ewt-card-field {
   display: contents;

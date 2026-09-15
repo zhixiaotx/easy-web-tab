@@ -15,7 +15,7 @@
   align-items: center;
 }
 
-/* 4. 卡片视图网格容器：PC 自适应多列；移动端固定每行 2 个 */
+/* 4. 卡片视图网格容器：PC 自适应多列；移动端每行 1 个（超出屏幕可下滑） */
 .ewt-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -24,7 +24,7 @@
 }
 @media (max-width: 768px) {
   .ewt-card-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 }

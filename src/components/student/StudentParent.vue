@@ -997,6 +997,10 @@ html.dark .stp-tab.active {
   border-radius: 12px; padding: 16px;
   display: flex; flex-direction: column; gap: 18px;
   flex: 1; min-height: 0;
+  /* 各 Tab 内容独立滚动：桌面端 .st-content 为 overflow:hidden + 子元素 flex:1 min-height:0，
+     若此处不滚动则超长内容（如孩子报告的折线图）会被截断且无法下滑。 */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .stp-tab-pane { display: flex; flex-direction: column; gap: 16px; }
 

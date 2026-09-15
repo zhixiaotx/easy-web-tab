@@ -670,10 +670,10 @@ onUnmounted(() => {
           <el-table-column label="更新时间" width="140" align="center">
             <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="180" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="210" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)" style="margin-right:6px;">编辑</el-button>
-              <el-button text size="small" class="nt-pin-btn" :class="{ active: row.pinned }" :data-testid="`note-pin-${row.id}`" @click="handlePin(row)" style="margin-right:6px;">📌</el-button>
+              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
+              <el-button size="small" class="nt-pin-btn" :class="{ active: row.pinned }" :data-testid="`note-pin-${row.id}`" @click="handlePin(row)">置顶</el-button>
               <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -940,8 +940,8 @@ onUnmounted(() => {
 .nt-pin-badge { font-size: 14px; }
 .nt-edit-btn { color: var(--color-link, #3b82f6); }
 .nt-delete-btn { color: #ef4444; }
-.nt-pin-btn { opacity: 0.4; }
-.nt-pin-btn.active { opacity: 1; }
+.nt-pin-btn { opacity: 1; }
+.nt-pin-btn.active { color: var(--el-color-warning, #e6a23c); border-color: var(--el-color-warning, #e6a23c); }
 
 .color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .dot-yellow { background: #eab308; }

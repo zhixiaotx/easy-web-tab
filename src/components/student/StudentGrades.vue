@@ -372,26 +372,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 各科均分（当前年级作用域） -->
-    <div v-if="store.levelStats.subjectAverages.length" class="sg-subj-averages" data-testid="sg-subj-averages">
-      <span
-        v-for="sa in store.levelStats.subjectAverages"
-        :key="sa.subject"
-        class="sg-subj-chip"
-        :title="`${sa.subject}：平均 ${sa.avg.toFixed(1)} / ${sa.fullScore}，共 ${sa.count} 次`"
-      >
-        {{ sa.subject }} <b>{{ sa.avg.toFixed(1) }}</b>
-      </span>
-    </div>
-
-    <!-- 排序切换 -->
-    <div class="sg-toolbar-row">
-      <el-radio-group :model-value="store.sortMode" size="small" @update:model-value="setSortMode($event as 'date' | 'name')" data-testid="sg-sort">
-        <el-radio-button value="date">按日期</el-radio-button>
-        <el-radio-button value="name">按名称</el-radio-button>
-      </el-radio-group>
-    </div>
-
     <!-- 空状态 -->
     <div v-if="store.pagedLevelGrades.total === 0" class="sg-empty" data-testid="sg-empty">
       {{ store.activeStage ? `「${activeStageLabel}」还没有成绩记录` : (store.activeLevel ? `「${store.activeLevel}」还没有成绩记录` : '还没有成绩记录') }}，点右上角「新增成绩」开始吧
@@ -471,6 +451,24 @@ onMounted(async () => {
         >
           <el-option v-for="s in allSubjects" :key="s" :value="s" :label="s" />
         </el-select>
+      </div>
+      <div class="sg-chart-controls">
+        <div v-if="store.levelStats.subjectAverages.length" class="sg-subj-averages" data-testid="sg-subj-averages">
+          <span
+            v-for="sa in store.levelStats.subjectAverages"
+            :key="sa.subject"
+            class="sg-subj-chip"
+            :title="`${sa.subject}：平均 ${sa.avg.toFixed(1)} / ${sa.fullScore}，共 ${sa.count} 次`"
+          >
+            {{ sa.subject }} <b>{{ sa.avg.toFixed(1) }}</b>
+          </span>
+        </div>
+        <div class="sg-toolbar-row">
+          <el-radio-group :model-value="store.sortMode" size="small" @update:model-value="setSortMode($event as 'date' | 'name')" data-testid="sg-sort">
+            <el-radio-button value="date">按日期</el-radio-button>
+            <el-radio-button value="name">按名称</el-radio-button>
+          </el-radio-group>
+        </div>
       </div>
       <div class="sg-chart-wrap">
         <v-chart class="sg-chart" :option="chartOption" autoresize aria-label="成绩趋势折线图" />
@@ -596,6 +594,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: 14px;
   padding: 4px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sg-add-btn {
@@ -731,6 +732,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sg-chart-controls {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 10px;
 }

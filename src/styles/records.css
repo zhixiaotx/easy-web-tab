@@ -1,0 +1,44 @@
+/* ===== 统一记录表格（3 个工作台 el-table 通用优化） ===== */
+
+/* 1. 表头内容居中：所有 el-table 只要挂上 ewt-table 类即生效 */
+.ewt-table .el-table__header th .cell {
+  text-align: center;
+  justify-content: center;
+}
+
+/* 2. 操作列统一（固定右侧 + 内部按钮水平居中、等间距） */
+.ewt-table .ewt-op-col .cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 4. 卡片视图网格容器：PC 自适应多列；移动端固定每行 2 个 */
+.ewt-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 4px 0;
+}
+@media (max-width: 768px) {
+  .ewt-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+/* 切换按钮仅 PC 可见：移动端默认卡片、无需切换 */
+@media (max-width: 768px) {
+  .ewt-view-toggle {
+    display: none !important;
+  }
+}
+
+/* 非弹框面板：表格右上方放置切换按钮的工具条（PC 可见，移动端随按钮隐藏） */
+.ewt-table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}

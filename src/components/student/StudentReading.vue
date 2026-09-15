@@ -226,7 +226,7 @@ onMounted(async () => {
               <span v-else class="sr-unsigned">未签</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 size="small"

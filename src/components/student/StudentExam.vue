@@ -294,9 +294,9 @@ onMounted(async () => {
                 <span>{{ repeatLabel(row.repeat) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" class-name="ewt-op-col" width="120" align="center" fixed="right">
+            <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
               <template #default="{ row }">
-                <button class="btn-edit" :data-testid="`se-edit-${row.id}`" @click="openEditDialog(row.id)" style="margin-right:4px;">编辑</button>
+                <button class="btn-edit" :data-testid="`se-edit-${row.id}`" @click="openEditDialog(row.id)">编辑</button>
                 <button class="btn-delete" :data-testid="`se-del-${row.id}`" @click="handleDelete(row.id)">删除</button>
               </template>
             </el-table-column>

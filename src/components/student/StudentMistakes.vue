@@ -314,9 +314,9 @@ onMounted(() => {
                 <el-button v-if="row.status !== 'new'" size="small" class="sm-reset-btn" :data-testid="`sm-reset-${row.id}`" @click="handleReset(row.id)">重置未复习</el-button>
               </template>
             </el-table-column>
-            <el-table-column label="操作" class-name="ewt-op-col" width="120" align="center" fixed="right">
+            <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
               <template #default="{ row }">
-                <button class="btn-edit" :data-testid="`sm-edit-${row.id}`" @click="openEditDialog(row.id)" style="margin-right:4px;">编辑</button>
+                <button class="btn-edit" :data-testid="`sm-edit-${row.id}`" @click="openEditDialog(row.id)">编辑</button>
                 <button class="btn-delete" :data-testid="`sm-del-${row.id}`" @click="handleDelete(row.id)">删除</button>
               </template>
             </el-table-column>

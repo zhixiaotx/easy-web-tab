@@ -7,9 +7,9 @@ const vm = useViewMode()
 
 function cardFields(row: any) {
   const bmi = store.height !== undefined ? (calcBmi(row.weightKg, store.height)?.toFixed(1) ?? '—') : '未设身高'
-  const prog = adviceTarget !== null
-    ? (row.weightKg > adviceTarget ? '距目标 -' + (row.weightKg - adviceTarget).toFixed(1) + ' kg'
-      : row.weightKg < adviceTarget ? '距目标 +' + (adviceTarget - row.weightKg).toFixed(1) + ' kg' : '已达标 ✓')
+  const prog = adviceTarget.value !== null
+    ? (row.weightKg > adviceTarget.value ? '距目标 -' + (row.weightKg - adviceTarget.value).toFixed(1) + ' kg'
+      : row.weightKg < adviceTarget.value ? '距目标 +' + (adviceTarget.value - row.weightKg).toFixed(1) + ' kg' : '已达标 ✓')
     : '未设身高'
   return [
     { label: '日期', value: row.date },

@@ -23,7 +23,7 @@ function cardFields(row: any) {
     { label: '标题', value: row.title || '无标题' },
     { label: '内容', value: contentPreview(row.content) },
     { label: '分类', value: catNameOf(row) || '未分类' },
-    { label: '颜色', value: COLOR_LABELS[row.color] ?? row.color },
+    { label: '颜色', value: COLOR_LABELS[row.color as keyof typeof COLOR_LABELS] ?? row.color },
     { label: '置顶', value: row.pinned ? '📌' : '—' },
     { label: '更新时间', value: formatNoteTime(row.updatedAt) }
   ]

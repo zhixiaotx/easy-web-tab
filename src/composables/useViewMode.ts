@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 
 // 统一「列表 / 卡片」视图模式：
 // - 移动端（≤768px）强制卡片视图
@@ -35,5 +35,7 @@ export function useViewMode() {
     mode.value = mode.value === 'list' ? 'card' : 'list'
   }
 
-  return { mode, isMobile, toggle }
+  // 返回 reactive 对象：模板中通过 vm.mode 访问时会自动解包嵌套的 Ref，
+  // 否则 vm.mode 仍是 Ref 类型，会触发类型错误（TS2322 / TS2367）。
+  return reactive({ mode, isMobile, toggle })
 }

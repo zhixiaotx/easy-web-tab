@@ -336,17 +336,6 @@ onUnmounted(() => {
           height="100%"
           empty-text="没有符合查询条件的待办"
         >
-          <el-table-column label="完成" width="70" align="center">
-            <template #default="{ row: v }">
-              <el-checkbox
-                :model-value="v.todo.completed"
-                :data-testid="`td-toggle-${v.todo.id}`"
-                :title="v.todo.completed ? '标记为未完成' : '标记为已完成'"
-                @click.stop
-                @change="handleToggle(v.todo)"
-              />
-            </template>
-          </el-table-column>
           <el-table-column label="标题" min-width="200" show-overflow-tooltip>
             <template #default="{ row: v }">
               <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
@@ -391,9 +380,16 @@ onUnmounted(() => {
               <span v-else class="td-col-empty">未分类</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="110" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="220" align="center" fixed="right">
             <template #default="{ row: v }">
               <div class="td-actions" @click.stop>
+                <el-button
+                  size="small"
+                  :type="v.todo.completed ? 'success' : 'default'"
+                  :data-testid="`td-toggle-${v.todo.id}`"
+                  :title="v.todo.completed ? '点击标记为未完成' : '点击标记为已完成'"
+                  @click="handleToggle(v.todo)"
+                >{{ v.todo.completed ? '已完成' : '未完成' }}</el-button>
                 <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
                 <el-button size="small" class="btn-delete" :data-testid="`td-delete-${v.todo.id}`" @click="handleDelete(v.todo.id)">删除</el-button>
               </div>

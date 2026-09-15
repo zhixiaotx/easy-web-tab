@@ -1,23 +1,23 @@
 <script setup lang="ts">
 // 学生工作台错题本面板（M3 批次1）
-// 布局：工具条 + 学科/状态 tabs + 搜索 + 统计卡 + 错题卡片列表 + 分页 + 编辑弹框
+// 布局：工具条 + 学科/状态 tabs + 搜索 + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
 // 数据：useStudentMistakesStore（独立 IDB store 'student_mistakes'，严格隔离成人数据）
-// 行高 156px（M3 估值，待 row-heights.json 实测后校准）
 // M3 决策：纯文字录入，不支持图片上传（imageIds 恒为 []）
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentMistakesStore } from '@/stores/studentMistakes'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
 import type { StudentMistake, StudentMistakeStatus } from '@/types'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
+import { useViewMode } from '@/composables/useViewMode'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import Icon from '@/components/Icon.vue'
 
 const store = useStudentMistakesStore()
 const settingsStore = useStudentSettingsStore()
 const toast = useToast()
+const vm = useViewMode()
 
 // 状态 tabs
 const STATUS_TABS: { key: 'all' | StudentMistakeStatus; label: string }[] = [
@@ -52,16 +52,17 @@ const viewEntries = computed<StudentMistake[]>(() => {
   return list
 })
 
-// 自适应分页（4 列卡片网格，行高 152px，参考学习计划 150 + 2）
-const mainEl = ref<HTMLElement | null>(null)
-const listEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => viewEntries.value,
-  rowHeight: 152,
-  containerRef: mainEl,
-  gridRef: listEl
+// 固定每页分页（与学习计划一致：el-pagination）
+const LIST_PAGE_SIZE = 10
+const currentPage = ref(1)
+const pageItems = computed<StudentMistake[]>(() => {
+  const start = (currentPage.value - 1) * LIST_PAGE_SIZE
+  return viewEntries.value.slice(start, start + LIST_PAGE_SIZE)
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev } = paging
+watch(
+  () => [activeStatusTab.value, activeSubject.value, keyword.value],
+  () => { currentPage.value = 1 }
+)
 
 // 统计卡数据（薄委托 core）
 const stats = computed(() => store.stats())
@@ -157,12 +158,14 @@ async function saveEditDialog(): Promise<void> {
   }
   toast.success(editingId.value !== null ? '错题已更新' : '错题已新增')
   closeEditDialog()
+  currentPage.value = 1
 }
 
 async function handleDelete(id: string): Promise<void> {
   if (!confirm('确定删除该错题？')) return
   await store.deleteMistake(id)
   toast.success('错题已删除')
+  currentPage.value = 1
 }
 
 async function handleAdvance(id: string): Promise<void> {
@@ -257,85 +260,149 @@ onMounted(() => {
       </div>
     </div>
 
-    <div ref="mainEl" class="sm-main">
+    <div class="sm-main">
       <div v-if="viewEntries.length === 0" class="empty-state" data-testid="sm-empty">
         <p>还没有错题，点上方「新增错题」开始吧</p>
       </div>
 
-      <div v-else ref="listEl" class="sm-list" :class="{ 'sm-list-scroll': !fitsOnePage }">
-        <div
-          v-for="item in pageItems"
-          :key="item.id"
-          class="sm-card"
-          :data-testid="`sm-card-${item.id}`"
-          @click="openEditDialog(item.id)"
-        >
-          <div class="sm-card-head">
-            <span class="sm-subject-badge">{{ item.subject }}</span>
-            <span v-if="item.title" class="sm-card-title" :title="item.title">{{ item.title }}</span>
-            <span class="sm-status-badge" :class="statusClass(item.status)">{{ store.statusText(item.status) }}</span>
-            <el-button
-              class="sm-del-btn"
-              :data-testid="`sm-del-${item.id}`"
-              title="删除"
-              text
-              size="small"
-              @click.stop="handleDelete(item.id)"
+      <template v-else>
+        <div class="ewt-table-toolbar">
+          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+        </div>
+
+        <div class="sm-list-area">
+          <el-table v-if="vm.mode === 'list'" class="ewt-table"
+            :data="pageItems"
+            stripe
+            border
+            size="default"
+            style="width: 100%"
+            height="100%"
+            empty-text="还没有错题，点上方「新增错题」开始吧"
+          >
+            <el-table-column label="学科" width="90" align="center">
+              <template #default="{ row }">
+                <span class="sm-subject-badge">{{ row.subject }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="标题" min-width="160" align="left" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span v-if="row.title" style="font-weight: 600;">{{ row.title }}</span>
+                <span v-else style="color: var(--color-text-soft, #9ca3af);">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="题干" min-width="200" align="left" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.question }}</template>
+            </el-table-column>
+            <el-table-column label="答案" min-width="160" align="left" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.answer }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="100" align="center">
+              <template #default="{ row }">
+                <span class="sm-status-badge" :class="statusClass(row.status)">{{ store.statusText(row.status) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="标签" min-width="120" align="left" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span v-if="row.tags.length">{{ row.tags.join('、') }}</span>
+                <span v-else style="color: var(--color-text-soft, #9ca3af);">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态操作" width="170" align="center">
+              <template #default="{ row }">
+                <el-button v-if="row.status !== 'mastered'" size="small" class="sm-advance-btn" :data-testid="`sm-advance-${row.id}`" @click="handleAdvance(row.id)">{{ row.status === 'new' ? '标记复习中' : '标记已掌握' }}</el-button>
+                <el-button v-if="row.status !== 'new'" size="small" class="sm-reset-btn" :data-testid="`sm-reset-${row.id}`" @click="handleReset(row.id)">重置未复习</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" class-name="ewt-op-col" width="120" align="center" fixed="right">
+              <template #default="{ row }">
+                <button class="btn-edit" :data-testid="`sm-edit-${row.id}`" @click="openEditDialog(row.id)" style="margin-right:4px;">编辑</button>
+                <button class="btn-delete" :data-testid="`sm-del-${row.id}`" @click="handleDelete(row.id)">删除</button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div v-else class="sm-list">
+            <div
+              v-for="item in pageItems"
+              :key="item.id"
+              class="sm-card"
+              :data-testid="`sm-card-${item.id}`"
+              @click="openEditDialog(item.id)"
             >
-              <Icon name="close" :size="14" />
-            </el-button>
-          </div>
-          <div class="sm-card-body">
-            <div class="sm-q-block">
-              <div class="sm-q-label">题干</div>
-              <div class="sm-q-content">{{ item.question }}</div>
+              <div class="sm-card-head">
+                <span class="sm-subject-badge">{{ item.subject }}</span>
+                <span v-if="item.title" class="sm-card-title" :title="item.title">{{ item.title }}</span>
+                <span class="sm-status-badge" :class="statusClass(item.status)">{{ store.statusText(item.status) }}</span>
+                <el-button
+                  class="sm-del-btn"
+                  :data-testid="`sm-del-${item.id}`"
+                  title="删除"
+                  text
+                  size="small"
+                  @click.stop="handleDelete(item.id)"
+                >
+                  <Icon name="close" :size="14" />
+                </el-button>
+              </div>
+              <div class="sm-card-body">
+                <div class="sm-q-block">
+                  <div class="sm-q-label">题干</div>
+                  <div class="sm-q-content">{{ item.question }}</div>
+                </div>
+                <div class="sm-a-block">
+                  <div class="sm-a-label">答案</div>
+                  <div class="sm-a-content">{{ item.answer }}</div>
+                </div>
+                <div v-if="item.analysis" class="sm-an-block">
+                  <div class="sm-an-label">解析</div>
+                  <div class="sm-an-content">{{ item.analysis }}</div>
+                </div>
+              </div>
+              <div v-if="item.tags.length > 0" class="sm-card-tags">
+                <span v-for="t in item.tags" :key="t" class="sm-tag">{{ t }}</span>
+              </div>
+              <div class="sm-card-foot">
+                <el-button
+                  v-if="item.status !== 'mastered'"
+                  size="small"
+                  class="sm-advance-btn"
+                  :data-testid="`sm-advance-${item.id}`"
+                  @click.stop="handleAdvance(item.id)"
+                >{{ item.status === 'new' ? '标记复习中' : '标记已掌握' }}</el-button>
+                <el-button
+                  v-if="item.status !== 'new'"
+                  size="small"
+                  class="sm-reset-btn"
+                  :data-testid="`sm-reset-${item.id}`"
+                  @click.stop="handleReset(item.id)"
+                >重置未复习</el-button>
+                <el-button
+                  size="small"
+                  class="sm-edit-btn"
+                  :data-testid="`sm-edit-${item.id}`"
+                  @click.stop="openEditDialog(item.id)"
+                >编辑</el-button>
+              </div>
             </div>
-            <div class="sm-a-block">
-              <div class="sm-a-label">答案</div>
-              <div class="sm-a-content">{{ item.answer }}</div>
-            </div>
-            <div v-if="item.analysis" class="sm-an-block">
-              <div class="sm-an-label">解析</div>
-              <div class="sm-an-content">{{ item.analysis }}</div>
-            </div>
-          </div>
-          <div v-if="item.tags.length > 0" class="sm-card-tags">
-            <span v-for="t in item.tags" :key="t" class="sm-tag">{{ t }}</span>
-          </div>
-          <div class="sm-card-foot">
-            <el-button
-              v-if="item.status !== 'mastered'"
-              size="small"
-              class="sm-advance-btn"
-              :data-testid="`sm-advance-${item.id}`"
-              @click.stop="handleAdvance(item.id)"
-            >{{ item.status === 'new' ? '标记复习中' : '标记已掌握' }}</el-button>
-            <el-button
-              v-if="item.status !== 'new'"
-              size="small"
-              class="sm-reset-btn"
-              :data-testid="`sm-reset-${item.id}`"
-              @click.stop="handleReset(item.id)"
-            >重置未复习</el-button>
-            <el-button
-              size="small"
-              class="sm-edit-btn"
-              :data-testid="`sm-edit-${item.id}`"
-              @click.stop="openEditDialog(item.id)"
-            >编辑</el-button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <PanelPager
-      v-if="totalPages > 1"
-      :page="currentPage"
-      :total="totalPages"
-      :total-items="viewEntries.length"
-      @prev="prev"
-      @next="next"
-    />
+        <div v-if="viewEntries.length > 0" class="sm-list-pager">
+          <el-pagination
+            v-model:current-page="currentPage"
+            :page-size="LIST_PAGE_SIZE"
+            :page-sizes="[LIST_PAGE_SIZE]"
+            layout="total, prev, pager, next, jumper"
+            :total="viewEntries.length"
+            background
+            small
+            prev-text="上一页"
+            next-text="下一页"
+          />
+        </div>
+      </template>
+    </div>
 
     <!-- 编辑弹框 -->
     <el-dialog
@@ -401,8 +468,11 @@ onMounted(() => {
         </div>
       </div>
       <template #footer>
-        <el-button @click="closeEditDialog">取消</el-button>
-        <el-button type="primary" data-testid="sm-form-save" @click="saveEditDialog">保存</el-button>
+        <div class="ewt-dialog-footer">
+          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button type="primary" data-testid="sm-form-save" @click="saveEditDialog">保存</el-button>
+          <el-button v-if="editingId" type="danger" data-testid="sm-form-delete" @click="handleDelete(editingId)">删除</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -474,6 +544,99 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* ===== 双视图容器 ===== */
+.sm-list-area {
+  flex: 1 1 auto;
+  min-height: 240px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.sm-list-area > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sm-list-area > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-soft, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.sm-list-area > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .sm-list-area > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .sm-list-area > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-soft, #d1d5db);
+}
+:global(html.dark) .sm-list-area > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.sm-list-area > :global(.el-table .el-table__body-wrapper .cell),
+.sm-list-area > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+}
+
+/* ===== 分页条 ===== */
+.sm-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+:global(html.dark) .sm-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.sm-list-pager > :global(.el-pagination) {
+  --el-pagination-bg-color: transparent;
+}
+.sm-list-pager > :global(.el-pagination button),
+.sm-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-soft, #6b7280) !important;
+}
+.sm-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .sm-list-pager > :global(.el-pagination button),
+:global(html.dark) .sm-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-soft, #d1d5db) !important;
+}
+:global(html.dark) .sm-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.sm-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-soft, #6b7280);
+  font-size: 13px;
+}
+
 .empty-state {
   display: flex;
   align-items: center;
@@ -489,9 +652,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  overflow-y: auto;
-}
-.sm-list-scroll {
   overflow-y: auto;
 }
 
@@ -627,6 +787,35 @@ onMounted(() => {
 }
 .sm-edit-btn {
   color: var(--color-text-soft, #6b7280);
+}
+
+/* ===== 表格内编辑/删除按钮（与学习计划一致） ===== */
+.btn-edit, .btn-delete {
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transition-fast, 0.15s ease);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.btn-edit {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--color-link, #3b82f6);
+}
+.btn-edit:hover {
+  background: rgba(59, 130, 246, 0.18);
+}
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.18);
 }
 
 .sm-dialog-body {

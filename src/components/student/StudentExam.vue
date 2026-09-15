@@ -1,11 +1,10 @@
 <script setup lang="ts">
 // 学生工作台考试倒计时面板（M2）
-// 布局：顶部工具条 + 题型筛选 tabs + 统计卡 + 卡片网格 + 分页 + 编辑弹框
+// 布局：顶部工具条 + 题型筛选 tabs + 统计卡 + 表格/卡片双视图（与学习计划一致）+ el-pagination + 编辑弹框
 // 数据：useStudentExamStore（独立 IDB store 'student_countdowns'，严格隔离成人数据）
 // 复用 countdownCore 的 calcRemaining/sortCountdowns/filterCountdowns/repeatLabel/categoryLabel
-// 卡片网格 5 列 × maxRows 2 = 每页 10 个，超出翻页（行高 150，与成人 countdown 一致）
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentExamStore } from '@/stores/studentExam'
 import { useStudentSettingsStore } from '@/stores/studentSettings'
 import { useToast } from '@/composables/useToast'
@@ -16,14 +15,15 @@ import {
 } from '@/composables/studentExamCore'
 import type { CountdownItem, CountdownCategory, CountdownRepeat } from '@/types'
 import { COUNTDOWN_COLOR_PRESETS, DEFAULT_COUNTDOWN_COLOR } from '@/types'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from '@/components/workbench/PanelPager.vue'
+import { useViewMode } from '@/composables/useViewMode'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 
 const store = useStudentExamStore()
 const settingsStore = useStudentSettingsStore()
 const toast = useToast()
+const vm = useViewMode()
 
 const stage = computed(() => settingsStore.stage)
 
@@ -67,16 +67,17 @@ const stats = computed(() => {
   return { upcoming, expired, thisWeek, total: items.length }
 })
 
-const mainEl = ref<HTMLElement | null>(null)
-const gridEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => filteredItems.value,
-  rowHeight: 152,
-  gap: 10,
-  containerRef: mainEl,
-  gridRef: gridEl
+// 固定每页分页（与学习计划一致：el-pagination）
+const LIST_PAGE_SIZE = 10
+const currentPage = ref(1)
+const pageItems = computed<CountdownItem[]>(() => {
+  const start = (currentPage.value - 1) * LIST_PAGE_SIZE
+  return filteredItems.value.slice(start, start + LIST_PAGE_SIZE)
 })
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+function goto(page: number): void {
+  currentPage.value = page
+}
+watch(activeCategoryTab, () => { currentPage.value = 1 })
 
 const EXAM_ERROR_MESSAGES: Record<string, string> = {
   empty: '考试名称不能为空',
@@ -196,6 +197,15 @@ function statusClass(status: string): string {
   return `status-${status}`
 }
 
+// 表格倒计时文本（与卡片 hero 口径一致）
+function countdownText(item: CountdownItem): string {
+  const r = item.remaining
+  if (r.status === 'expired') return '已过期'
+  if (r.days > 0) return `${r.days} 天`
+  if (r.hours > 0) return `${r.hours} 时`
+  return `${r.minutes} 分`
+}
+
 onMounted(async () => {
   await store.loadExams()
 })
@@ -240,75 +250,130 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div ref="mainEl" class="se-main">
+    <div class="se-main">
       <div v-if="filteredItems.length === 0" class="empty-state" data-testid="se-empty">
         <p>{{ store.countdowns.length === 0 ? '还没有考试，点上方「新增考试」开始吧' : '当前题型下暂无考试' }}</p>
       </div>
 
-      <div v-else ref="gridEl" class="se-grid" :class="{ 'se-grid-scroll': !fitsOnePage }">
-        <div
-          v-for="item in pageItems"
-          :key="item.id"
-          class="se-card"
-          :style="{ '--se-color': item.color ?? DEFAULT_COUNTDOWN_COLOR }"
-          :data-testid="`se-card-${item.id}`"
-          role="button"
-          @click="openEditDialog(item.id)"
-        >
-          <div class="se-card-head">
-            <div class="se-card-title" :title="item.name">{{ item.name }}</div>
-            <span v-if="item.category" class="se-type-badge">{{ item.category }}</span>
-            <span v-if="repeatLabel(item.repeat) !== '一次性'" class="se-repeat-badge">{{ repeatLabel(item.repeat) }}</span>
-          </div>
-          <div class="se-hero" :class="statusClass(item.remaining.status)">
-            <template v-if="item.remaining.status === 'expired'">
-              <div class="se-hero-big se-hero-expired">{{ item.remaining.isExpired ? '已过期' : '时间无效' }}</div>
-              <div v-if="item.remaining.isExpired" class="se-hero-sub">{{ item.remaining.label }}</div>
-            </template>
-            <template v-else-if="item.remaining.label === '就是今天！'">
-              <div class="se-hero-big se-hero-today">今天</div>
-              <div class="se-hero-sub">加油！</div>
-            </template>
-            <template v-else>
-              <div class="se-hero-big" v-if="item.remaining.days > 0">
-                {{ item.remaining.days }}<span class="se-hero-unit">天</span>
-              </div>
-              <div class="se-hero-big" v-else-if="item.remaining.hours > 0">
-                {{ item.remaining.hours }}<span class="se-hero-unit">时</span>
-              </div>
-              <div class="se-hero-big" v-else>
-                {{ item.remaining.minutes }}<span class="se-hero-unit">分</span>
-              </div>
-              <div v-if="item.remaining.days > 0 && item.remaining.hours > 0" class="se-hero-sub">
-                {{ item.remaining.hours }}时{{ item.remaining.minutes }}分
-              </div>
-              <div v-else-if="item.remaining.days === 0 && item.remaining.hours > 0 && item.remaining.minutes > 0" class="se-hero-sub">
-                {{ item.remaining.minutes }}分钟
-              </div>
-            </template>
-          </div>
-          <div class="se-meta">
-            <span class="se-datetime">{{ item.remaining.nextTime }}</span>
-          </div>
-          <button
-            class="se-del-btn"
-            :data-testid="`se-del-${item.id}`"
-            title="删除"
-            @click.stop="handleDelete(item.id)"
-          >
-            <Icon name="close" :size="14" />
-          </button>
+      <template v-else>
+        <div class="ewt-table-toolbar">
+          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
         </div>
-      </div>
-    </div>
 
-    <PanelPager
-      v-if="totalPages > 1"
-      :page="currentPage"
-      :total="totalPages"
-      @prev="prev"
-      @next="next"
-    />
+        <div class="se-list-area">
+          <el-table v-if="vm.mode === 'list'" class="ewt-table"
+            :data="pageItems"
+            stripe
+            border
+            size="default"
+            style="width: 100%"
+            height="100%"
+            empty-text="还没有考试，点上方「新增考试」开始吧"
+          >
+            <el-table-column label="名称" min-width="180" align="left" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span style="font-weight: 600;">{{ row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="题型" width="110" align="center">
+              <template #default="{ row }">
+                <span v-if="row.category" class="se-type-badge">{{ row.category }}</span>
+                <span v-else style="color: var(--color-text-muted, #9ca3af);">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="倒计时" width="110" align="center">
+              <template #default="{ row }">
+                <span class="se-countdown-cell" :class="statusClass(row.remaining.status)">{{ countdownText(row) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="考试日期" min-width="150" align="center">
+              <template #default="{ row }">{{ row.remaining.nextTime }}</template>
+            </el-table-column>
+            <el-table-column label="重复" width="100" align="center">
+              <template #default="{ row }">
+                <span>{{ repeatLabel(row.repeat) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" class-name="ewt-op-col" width="120" align="center" fixed="right">
+              <template #default="{ row }">
+                <button class="btn-edit" :data-testid="`se-edit-${row.id}`" @click="openEditDialog(row.id)" style="margin-right:4px;">编辑</button>
+                <button class="btn-delete" :data-testid="`se-del-${row.id}`" @click="handleDelete(row.id)">删除</button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div v-else class="se-grid">
+            <div
+              v-for="item in pageItems"
+              :key="item.id"
+              class="se-card"
+              :style="{ '--se-color': item.color ?? DEFAULT_COUNTDOWN_COLOR }"
+              :data-testid="`se-card-${item.id}`"
+              role="button"
+              @click="openEditDialog(item.id)"
+            >
+              <div class="se-card-head">
+                <div class="se-card-title" :title="item.name">{{ item.name }}</div>
+                <span v-if="item.category" class="se-type-badge">{{ item.category }}</span>
+                <span v-if="repeatLabel(item.repeat) !== '一次性'" class="se-repeat-badge">{{ repeatLabel(item.repeat) }}</span>
+              </div>
+              <div class="se-hero" :class="statusClass(item.remaining.status)">
+                <template v-if="item.remaining.status === 'expired'">
+                  <div class="se-hero-big se-hero-expired">{{ item.remaining.isExpired ? '已过期' : '时间无效' }}</div>
+                  <div v-if="item.remaining.isExpired" class="se-hero-sub">{{ item.remaining.label }}</div>
+                </template>
+                <template v-else-if="item.remaining.label === '就是今天！'">
+                  <div class="se-hero-big se-hero-today">今天</div>
+                  <div class="se-hero-sub">加油！</div>
+                </template>
+                <template v-else>
+                  <div class="se-hero-big" v-if="item.remaining.days > 0">
+                    {{ item.remaining.days }}<span class="se-hero-unit">天</span>
+                  </div>
+                  <div class="se-hero-big" v-else-if="item.remaining.hours > 0">
+                    {{ item.remaining.hours }}<span class="se-hero-unit">时</span>
+                  </div>
+                  <div class="se-hero-big" v-else>
+                    {{ item.remaining.minutes }}<span class="se-hero-unit">分</span>
+                  </div>
+                  <div v-if="item.remaining.days > 0 && item.remaining.hours > 0" class="se-hero-sub">
+                    {{ item.remaining.hours }}时{{ item.remaining.minutes }}分
+                  </div>
+                  <div v-else-if="item.remaining.days === 0 && item.remaining.hours > 0 && item.remaining.minutes > 0" class="se-hero-sub">
+                    {{ item.remaining.minutes }}分钟
+                  </div>
+                </template>
+              </div>
+              <div class="se-meta">
+                <span class="se-datetime">{{ item.remaining.nextTime }}</span>
+              </div>
+              <button
+                class="se-del-btn"
+                :data-testid="`se-del-${item.id}`"
+                title="删除"
+                @click.stop="handleDelete(item.id)"
+              >
+                <Icon name="close" :size="14" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredItems.length > 0" class="se-list-pager">
+          <el-pagination
+            v-model:current-page="currentPage"
+            :page-size="LIST_PAGE_SIZE"
+            :page-sizes="[LIST_PAGE_SIZE]"
+            layout="total, prev, pager, next, jumper"
+            :total="filteredItems.length"
+            background
+            small
+            prev-text="上一页"
+            next-text="下一页"
+          />
+        </div>
+      </template>
+    </div>
 
     <el-dialog
       v-model="showEditDialog"
@@ -370,14 +435,10 @@ onMounted(async () => {
         </div>
       </div>
       <template #footer>
-        <div class="dialog-footer">
-          <el-button v-if="editingId" type="danger" data-testid="se-form-delete" @click="handleDelete(editingId)">
-            删除
-          </el-button>
-          <div class="dialog-footer-right">
-            <el-button @click="closeEditDialog">取消</el-button>
-            <el-button type="primary" data-testid="se-form-save" @click="saveEditDialog">保存</el-button>
-          </div>
+        <div class="ewt-dialog-footer">
+          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button type="primary" data-testid="se-form-save" @click="saveEditDialog">保存</el-button>
+          <el-button v-if="editingId" type="danger" data-testid="se-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
     </el-dialog>
@@ -465,15 +526,111 @@ onMounted(async () => {
 .se-main {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
+
+/* ===== 双视图容器 ===== */
+.se-list-area {
+  flex: 1 1 auto;
+  min-height: 240px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.se-list-area > :global(.el-table) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  width: 100% !important;
+  --el-table-border-color: var(--color-border, #e5e7eb);
+  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.se-list-area > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #f3f4f6) !important;
+  color: var(--color-text-muted, #6b7280);
+  font-weight: 600;
+  user-select: none;
+}
+.se-list-area > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #111827);
+}
+:global(html.dark) .se-list-area > :global(.el-table) {
+  --el-table-border-color: var(--color-border, #374151);
+  --el-table-header-bg-color: var(--color-bg-hover, #111827);
+  --el-table-tr-bg-color: transparent;
+}
+:global(html.dark) .se-list-area > :global(.el-table th.el-table__cell) {
+  background-color: var(--color-bg-hover, #111827) !important;
+  color: var(--color-text-muted, #d1d5db);
+}
+:global(html.dark) .se-list-area > :global(.el-table td.el-table__cell) {
+  color: var(--color-text, #f9fafb);
+}
+.se-list-area > :global(.el-table .el-table__body-wrapper .cell),
+.se-list-area > :global(.el-table .el-table__header-wrapper .cell) {
+  min-width: 60px;
+}
+
+/* ===== 分页条 ===== */
+.se-list-pager {
+  flex: 0 0 auto;
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-input, #f9fafb);
+  border-radius: 0 0 14px 14px;
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+:global(html.dark) .se-list-pager {
+  border-top-color: var(--color-border, #374151);
+  background: var(--color-bg-hover, #111827);
+}
+.se-list-pager > :global(.el-pagination) {
+  --el-pagination-bg-color: transparent;
+}
+.se-list-pager > :global(.el-pagination button),
+.se-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-muted, #6b7280) !important;
+}
+.se-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .se-list-pager > :global(.el-pagination button),
+:global(html.dark) .se-list-pager > :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-muted, #d1d5db) !important;
+}
+:global(html.dark) .se-list-pager > :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.se-list-pager > :global(.el-pagination__total) {
+  color: var(--color-text-muted, #6b7280);
+  font-size: 13px;
+}
+
 .se-grid {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
-}
-.se-grid-scroll {
   overflow-y: auto;
 }
 
@@ -569,6 +726,13 @@ onMounted(async () => {
 .status-urgent .se-hero-big { color: #f59e0b; }
 .status-critical .se-hero-big { color: #ef4444; }
 .status-expired .se-hero-big { color: var(--color-text-muted, #9ca3af); }
+
+/* 表格倒计时单元格配色（与 hero 口径一致） */
+.se-countdown-cell { font-weight: 600; }
+.se-countdown-cell.status-normal { color: var(--color-primary, #3b82f6); }
+.se-countdown-cell.status-urgent { color: #f59e0b; }
+.se-countdown-cell.status-critical { color: #ef4444; }
+.se-countdown-cell.status-expired { color: var(--color-text-muted, #9ca3af); font-weight: 500; }
 
 /* expired / invalid / today special states */
 .se-hero-expired { opacity: 0.55; }
@@ -674,16 +838,33 @@ onMounted(async () => {
   transform: scale(1.1);
 }
 
-.dialog-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+/* ===== 表格内编辑/删除按钮（与学习计划一致） ===== */
+.btn-edit, .btn-delete {
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transition-fast, 0.15s ease);
+  line-height: 1.5;
+  white-space: nowrap;
 }
-.dialog-footer-right {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
+.btn-edit {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--color-link, #3b82f6);
+}
+.btn-edit:hover {
+  background: rgba(59, 130, 246, 0.18);
+}
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.18);
 }
 
 @media (max-width: 768px) {

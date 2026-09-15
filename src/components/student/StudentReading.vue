@@ -233,7 +233,6 @@ onMounted(async () => {
                 class="sr-edit-btn"
                 :data-testid="`sr-edit-${row.id}`"
                 @click="openEditDialog(row.id)"
-                style="margin-right:6px;"
               >编辑</el-button>
               <el-button
                 size="small"

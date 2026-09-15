@@ -14,6 +14,11 @@
   justify-content: center;
   align-items: center;
 }
+/* 抵消 Element Plus 默认 .el-button + .el-button { margin-left:12px }，
+   避免操作列内按钮因多出间距而在窄列（如 140px）里折成两排 */
+.ewt-table .ewt-op-col .el-button + .el-button {
+  margin-left: 0;
+}
 
 /* 4. 卡片视图网格容器：PC 自适应多列；移动端每行 1 个（超出屏幕可下滑） */
 .ewt-card-grid {

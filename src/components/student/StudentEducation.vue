@@ -256,14 +256,11 @@ const degreeOptions = DEGREE_OPTIONS
       </el-table>
       <div v-else class="ewt-card-grid">
         <RecordsCard
+          @edit="openEdit(item)"
           v-for="item in listPageItems"
           :key="item.id"
           :fields="cardFields(item)"
         >
-          <template #actions>
-            <el-button size="small" type="primary" link :data-testid="`edu-edit-${item.id}`" @click="openEdit(item)">编辑</el-button>
-            <el-button size="small" type="danger" link :data-testid="`edu-delete-${item.id}`" @click="askDelete(item)">删除</el-button>
-          </template>
         </RecordsCard>
       </div>
 
@@ -343,8 +340,11 @@ const degreeOptions = DEGREE_OPTIONS
         </div>
       </div>
       <template #footer>
-        <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <div class="ewt-dialog-footer">
+          <el-button @click="closeDialog">取消</el-button>
+          <el-button type="primary" @click="submitForm">保存</el-button>
+          <el-button v-if="editingId" type="danger" @click="askDelete(store.sortedEntries.find(e => e.id === editingId)!)">删除</el-button>
+        </div>
       </template>
     </el-dialog>
 

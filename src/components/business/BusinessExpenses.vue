@@ -238,14 +238,11 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
         </el-table>
         <div v-else class="ewt-card-grid">
           <RecordsCard
+            @edit="startEdit(item)"
             v-for="item in pageItems"
             :key="item.date"
             :fields="cardFields(item)"
           >
-            <template #actions>
-              <el-button size="small" :data-testid="`bizexp-edit-${item.date}`" @click="startEdit(item)">编辑</el-button>
-              <el-button size="small" type="danger" :data-testid="`bizexp-del-${item.date}`" @click="handleDeleteGroup(item)">删除</el-button>
-            </template>
           </RecordsCard>
         </div>
 
@@ -329,11 +326,12 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
           当天合计：<strong data-testid="bizexp-form-total">{{ formatYuanOf(rows.reduce((s, r) => s + (Number(r.amount) || 0), 0)) }}</strong>
         </div>
 
-        <div class="biz-form-actions">
+        <div class="biz-form-actions ewt-dialog-footer">
           <el-button size="small" @click="showDialog = false">取消</el-button>
           <el-button type="primary" size="small" native-type="submit" :disabled="!isFormValid" data-testid="bizexp-save">
             {{ editingDateOrig ? '保存' : '添加' }}
           </el-button>
+          <el-button v-if="editingDateOrig" size="small" type="danger" data-testid="bizexp-delete" @click="handleDeleteGroup(dayGroups.find(g => g.date === editingDateOrig)!)">删除</el-button>
         </div>
       </form>
     </el-dialog>

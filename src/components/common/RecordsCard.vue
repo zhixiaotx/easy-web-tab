@@ -1,14 +1,11 @@
 <template>
-  <div class="ewt-card">
+  <div class="ewt-card" @click="emit('edit')">
     <dl class="ewt-card-fields">
       <div v-for="f in visibleFields" :key="f.label" class="ewt-card-field">
         <dt class="ewt-card-label">{{ f.label }}</dt>
         <dd class="ewt-card-value" :class="{ 'ewt-emphasis': f.emphasis }">{{ display(f.value) }}</dd>
       </div>
     </dl>
-    <div v-if="$slots.actions" class="ewt-card-actions">
-      <slot name="actions" />
-    </div>
   </div>
 </template>
 
@@ -22,6 +19,7 @@ export interface CardField {
 }
 
 const props = defineProps<{ fields: CardField[]; maxFields?: number }>()
+const emit = defineEmits<{ edit: [] }>()
 
 // 卡片仅展示前几个关键字段，固定高度下更紧凑；其余字段在列表视图中查看。
 const visibleFields = computed(() => {
@@ -47,6 +45,15 @@ function display(v?: string | number | null): string {
   box-sizing: border-box;
   height: 156px;
   overflow: hidden;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.ewt-card:hover {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.ewt-card:active {
+  transform: scale(0.99);
 }
 :global(html.dark) .ewt-card {
   background: var(--color-surface, #1f2937);
@@ -81,13 +88,5 @@ function display(v?: string | number | null): string {
 }
 :global(html.dark) .ewt-card-value {
   color: var(--color-text, #e5e7eb);
-}
-.ewt-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--color-border, #e5e7eb);
 }
 </style>

@@ -244,14 +244,11 @@ async function handleDelete(id: string): Promise<void> {
         </el-table>
         <div v-else class="ewt-card-grid">
           <RecordsCard
+            @edit="startEdit(item)"
             v-for="item in pageItems"
             :key="item.id"
             :fields="cardFields(item)"
           >
-            <template #actions>
-              <el-button size="small" :data-testid="`bizpur-edit-${item.id}`" @click="startEdit(item)">编辑</el-button>
-              <el-button size="small" type="danger" :data-testid="`bizpur-del-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
-            </template>
           </RecordsCard>
         </div>
 
@@ -348,11 +345,12 @@ async function handleDelete(id: string): Promise<void> {
           <label>备注（可选）</label>
           <el-input v-model="formNote" size="small" maxlength="100" data-testid="bizpur-form-note" />
         </div>
-        <div class="biz-form-actions">
+        <div class="biz-form-actions ewt-dialog-footer">
           <el-button @click="showDialog = false">取消</el-button>
           <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizpur-save">
             {{ editingId ? '保存' : '添加' }}
           </el-button>
+          <el-button v-if="editingId" type="danger" native-type="button" data-testid="bizpur-record-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </form>
     </el-dialog>

@@ -334,14 +334,11 @@ onMounted(async () => {
         </el-table>
         <div v-else class="ewt-card-grid">
           <RecordsCard
+            @edit="openEditDialog(item.id)"
             v-for="item in listPageItems"
             :key="item.id"
             :fields="cardFields(item)"
           >
-            <template #actions>
-              <button class="shw-edit-btn" :data-testid="`shw-edit-${item.id}`" @click="openEditDialog(item.id)">编辑</button>
-              <button v-if="item.status !== 'done'" class="shw-advance-btn" :class="statusBadgeClass(item.status)" :data-testid="`shw-advance-${item.id}`" @click="handleAdvanceStatus(item.id)"><Icon name="check" :size="14" /><span>{{ nextStatusLabel(item.status) }}</span></button>
-            </template>
           </RecordsCard>
         </div>
 
@@ -419,14 +416,10 @@ onMounted(async () => {
         </div>
       </div>
       <template #footer>
-        <div class="dialog-footer">
-          <el-button v-if="editingId" type="danger" data-testid="shw-form-delete" @click="handleDelete(editingId)">
-            删除
-          </el-button>
-          <div class="dialog-footer-right">
-            <el-button @click="closeEditDialog">取消</el-button>
-            <el-button type="primary" data-testid="shw-form-save" @click="saveEditDialog">保存</el-button>
-          </div>
+        <div class="ewt-dialog-footer">
+          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button type="primary" data-testid="shw-form-save" @click="saveEditDialog">保存</el-button>
+          <el-button v-if="editingId" type="danger" data-testid="shw-form-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </template>
     </el-dialog>

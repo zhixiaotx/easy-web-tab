@@ -246,14 +246,11 @@ onMounted(async () => {
         </el-table>
         <div v-else class="ewt-card-grid">
           <RecordsCard
+            @edit="openEditDialog(item.id)"
             v-for="item in listPageItems"
             :key="item.id"
             :fields="cardFields(item)"
           >
-            <template #actions>
-              <el-button size="small" class="sr-edit-btn" :data-testid="`sr-edit-${item.id}`" @click="openEditDialog(item.id)">编辑</el-button>
-              <el-button size="small" class="sr-delete-btn" :data-testid="`sr-delete-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
-            </template>
           </RecordsCard>
         </div>
 
@@ -342,17 +339,15 @@ onMounted(async () => {
         </div>
       </div>
       <template #footer>
-        <div class="dialog-footer">
+        <div class="ewt-dialog-footer">
+          <el-button @click="closeEditDialog">取消</el-button>
+          <el-button type="primary" data-testid="sr-form-save" @click="saveEditDialog">保存</el-button>
           <el-button
             v-if="editingId"
             type="danger"
             data-testid="sr-form-delete"
             @click="handleDelete(editingId)"
           >删除</el-button>
-          <div class="dialog-footer-right">
-            <el-button @click="closeEditDialog">取消</el-button>
-            <el-button type="primary" data-testid="sr-form-save" @click="saveEditDialog">保存</el-button>
-          </div>
         </div>
       </template>
     </el-dialog>

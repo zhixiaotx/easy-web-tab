@@ -514,14 +514,11 @@ onUnmounted(() => {
         </el-table>
         <div v-else class="ewt-card-grid">
           <RecordsCard
+            @edit="startEdit(item)"
             v-for="item in timelineListPageItems"
             :key="item.id"
             :fields="timelineCardFields(item)"
           >
-            <template #actions>
-              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${item.id}`" @click="startEdit(item)">编辑</el-button>
-              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
-            </template>
           </RecordsCard>
         </div>
 
@@ -683,15 +680,11 @@ onUnmounted(() => {
         </el-table>
         <div v-else class="ewt-card-grid">
           <RecordsCard
+            @edit="startEdit(item)"
             v-for="item in normalListPageItems"
             :key="item.id"
             :fields="cardFields(item)"
           >
-            <template #actions>
-              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${item.id}`" @click="startEdit(item)">编辑</el-button>
-              <el-button text size="small" class="nt-pin-btn" :class="{ active: item.pinned }" :data-testid="`note-pin-${item.id}`" @click="handlePin(item)">📌</el-button>
-              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
-            </template>
           </RecordsCard>
         </div>
 
@@ -776,7 +769,7 @@ onUnmounted(() => {
           </el-radio-group>
         </div>
 
-        <div class="note-form-actions">
+        <div class="note-form-actions ewt-dialog-footer">
           <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">
             取消
           </el-button>
@@ -789,6 +782,7 @@ onUnmounted(() => {
           >
             {{ editingId ? '保存' : '添加' }}
           </el-button>
+          <el-button v-if="editingId" type="danger" native-type="button" data-testid="note-record-delete" @click="handleDelete(editingId)">删除</el-button>
         </div>
       </div>
     </div>

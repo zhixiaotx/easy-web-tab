@@ -342,14 +342,11 @@ onUnmounted(() => {
             </el-table>
             <div v-else class="ewt-card-grid">
               <RecordsCard
+                @edit="startEditRecord(item.id)"
                 v-for="item in listPageItems"
                 :key="item.id"
                 :fields="cardFields(item)"
               >
-                <template #actions>
-                  <el-button class="btn-edit" :data-testid="`ex-edit-${item.id}`" @click="startEditRecord(item.id)">编辑</el-button>
-                  <el-button class="btn-delete" :data-testid="`ex-delete-${item.id}`" @click="handleDeleteRecord(item.id)">删除</el-button>
-                </template>
               </RecordsCard>
             </div>
           </div>
@@ -505,13 +502,14 @@ onUnmounted(() => {
               />
             </div>
 
-            <div class="form-actions">
+            <div class="form-actions ewt-dialog-footer">
               <el-button native-type="button" class="btn-cancel" data-testid="ex-cancel-record" @click="cancelRecordForm">
                 取消
               </el-button>
               <el-button native-type="submit" class="btn-save" :disabled="!isFormValid" data-testid="ex-save-record">
                 {{ editingId ? '保存' : '添加' }}
               </el-button>
+              <el-button v-if="editingId" type="danger" native-type="button" data-testid="ex-record-delete" @click="handleDeleteRecord(editingId)">删除</el-button>
             </div>
           </form>
         </div>

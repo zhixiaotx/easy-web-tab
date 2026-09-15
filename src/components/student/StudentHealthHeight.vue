@@ -43,6 +43,7 @@ const formOpen = ref(false)
 const date = ref<string>(localToday())
 const heightCm = ref<number | undefined>(undefined)
 const note = ref('')
+const editingHeightId = ref<string | null>(null)
 
 /** 按日期升序（图表与列表统一口径）；列表展示时再倒序 */
 const sorted = computed(() =>
@@ -72,6 +73,7 @@ function resetForm(): void {
   date.value = localToday()
   heightCm.value = undefined
   note.value = ''
+  editingHeightId.value = null
 }
 
 async function submit(): Promise<void> {
@@ -101,6 +103,26 @@ async function submit(): Promise<void> {
 async function remove(id: string): Promise<void> {
   await store.deleteRecord('height', id)
   useToast().success('已删除该条记录')
+}
+
+// 卡片点击 → 预填表单进入编辑（提交按日期覆盖同日期记录）
+function editItem(item: { id: string; date: string; heightCm: number; note?: string }): void {
+  date.value = item.date
+  heightCm.value = item.heightCm
+  note.value = item.note ?? ''
+  editingHeightId.value = item.id
+  formOpen.value = true
+}
+
+// 点击「记录身高」展开新增表单（重置编辑态，确保不显示删除）
+function openAddForm(): void {
+  if (formOpen.value) {
+    formOpen.value = false
+    return
+  }
+  editingHeightId.value = null
+  resetForm()
+  formOpen.value = true
 }
 
 // ===== 成长曲线（ECharts 折线） =====
@@ -177,7 +199,7 @@ const chartOption = computed(() => {
 <template>
   <div class="sth-height">
     <StudentToolbar title="身高成长记录">
-      <button class="btn-primary sth-add-btn" data-testid="sth-height-add" @click="formOpen = !formOpen">
+      <button class="btn-primary sth-add-btn" data-testid="sth-height-add" @click="openAddForm">
         <Icon name="plus" :size="14" /> {{ formOpen ? '收起' : '记录身高' }}
       </button>
     </StudentToolbar>
@@ -301,13 +323,11 @@ const chartOption = computed(() => {
       </el-table>
       <div v-else class="ewt-card-grid">
         <RecordsCard
+          @edit="editItem(item)"
           v-for="item in listDesc"
           :key="item.id"
           :fields="cardFields(item)"
         >
-          <template #actions>
-            <el-button link type="danger" size="small" @click="remove(item.id)">删除</el-button>
-          </template>
         </RecordsCard>
       </div>
 

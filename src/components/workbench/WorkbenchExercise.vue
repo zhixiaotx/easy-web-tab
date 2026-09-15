@@ -7,9 +7,24 @@ import { localToday } from '@/composables/todoCore'
 import { EXERCISE_TYPES, type HealthPlanMetric } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
 import Icon from '@/components/Icon.vue'
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
+
+const vm = useViewMode()
+function cardFields(row: any) {
+  return [
+    { label: '日期', value: row.date },
+    { label: '类型', value: row.exerciseType },
+    { label: '时长', value: row.duration != null ? `${row.duration} 分钟` : '—' },
+    { label: '距离', value: DISTANCE_TYPES.has(row.exerciseType) && row.distanceKm !== undefined ? `${Number(row.distanceKm).toFixed(1)} km` : '—' },
+    { label: '消耗', value: row.calories != null ? `${row.calories} kcal` : '—' },
+    { label: '备注', value: row.note || '—' }
+  ]
+}
 
 // ===== 顶部目标卡 =====
 const todayStr = localToday()
@@ -273,10 +288,11 @@ onUnmounted(() => {
         <div class="dialog list-dialog" data-testid="ex-list-dialog">
           <div class="dialog-header">
             <h3>运动记录</h3>
+            <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
             <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
           </div>
           <div class="ex-list">
-            <el-table
+            <el-table v-if="vm.mode === 'list'" class="ewt-table"
               :data="listPageItems"
               stripe
               border
@@ -317,13 +333,25 @@ onUnmounted(() => {
                   <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" align="center" fixed="right">
+              <el-table-column label="操作" width="150" align="center" fixed="right" class-name="ewt-op-col">
                 <template #default="{ row }">
                   <el-button class="btn-edit" :data-testid="`ex-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right: 6px;">编辑</el-button>
                   <el-button class="btn-delete" :data-testid="`ex-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
+            <div v-else class="ewt-card-grid">
+              <RecordsCard
+                v-for="item in listPageItems"
+                :key="item.id"
+                :fields="cardFields(item)"
+              >
+                <template #actions>
+                  <el-button class="btn-edit" :data-testid="`ex-edit-${item.id}`" @click="startEditRecord(item.id)">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`ex-delete-${item.id}`" @click="handleDeleteRecord(item.id)">删除</el-button>
+                </template>
+              </RecordsCard>
+            </div>
           </div>
           <div class="ex-list-pager">
             <el-pagination

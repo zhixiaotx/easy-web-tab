@@ -1,4 +1,17 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+function cardFields(row: any) {
+  return [
+    { label: '日期', value: row.date },
+    { label: '餐别', value: row.mealType },
+    { label: '食物', value: row.content },
+    { label: '热量', value: row.calories != null ? `${row.calories} kcal` : '—' },
+    { label: '备注', value: row.note || '—' }  ]
+}
 import Icon from '../Icon.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -249,10 +262,11 @@ onUnmounted(() => {
         <div class="dialog list-dialog" data-testid="dt-list-dialog">
           <div class="dialog-header">
             <h3>饮食记录</h3>
+            <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
             <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
           </div>
           <div class="dt-list">
-            <el-table :data="listPageItems" stripe border size="default" style="width: 100%" height="100%" empty-text="暂无饮食记录">
+            <el-table v-if="vm.mode === 'list'" class="ewt-table" :data="listPageItems" stripe border size="default" style="width: 100%" height="100%" empty-text="暂无饮食记录">
               <el-table-column label="日期" width="130" align="center">
                 <template #default="{ row }">{{ row.date }}</template>
               </el-table-column>
@@ -268,10 +282,22 @@ onUnmounted(() => {
               <el-table-column label="备注" min-width="200" show-overflow-tooltip>
                 <template #default="{ row }"><span v-if="row.note">{{ row.note }}</span><span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span></template>
               </el-table-column>
-              <el-table-column label="操作" width="150" align="center" fixed="right">
+              <el-table-column label="操作" width="150" align="center" fixed="right" class-name="ewt-op-col">
                 <template #default="{ row }"><el-button class="btn-edit" :data-testid="`dt-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button><el-button class="btn-delete" :data-testid="`dt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button></template>
               </el-table-column>
             </el-table>
+            <div v-else class="ewt-card-grid">
+              <RecordsCard
+                v-for="item in listPageItems"
+                :key="item.id"
+                :fields="cardFields(item)"
+              >
+                <template #actions>
+                  <el-button class="btn-edit" :data-testid="`dt-edit-${item.id}`" @click="startEditRecord(item.id)">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`dt-delete-${item.id}`" @click="handleDeleteRecord(item.id)">删除</el-button>
+                </template>
+              </RecordsCard>
+            </div>
           </div>
           <div class="dt-list-pager">
             <el-pagination v-model:current-page="listPage" :page-size="LIST_PAGE_SIZE" :page-sizes="[LIST_PAGE_SIZE]" layout="total, prev, pager, next, jumper" :total="sortedRecords.length" background small prev-text="上一页" next-text="下一页" />

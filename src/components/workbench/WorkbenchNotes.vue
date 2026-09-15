@@ -1,4 +1,34 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function timelineCardFields(row: any) {
+  const ents = sortedEntriesOf(row)
+  const last = ents.length > 0 ? ents[ents.length - 1] : null
+  return [
+    { label: '标题', value: row.title || '时光轴便签' },
+    { label: '分类', value: catNameOf(row) || '未分类' },
+    { label: '条目数', value: ents.length + ' 条' },
+    { label: '最新条目', value: last ? last.datetime + ' · ' + contentPreview(last.content) : '暂无条目' },
+    { label: '更新时间', value: formatNoteTime(row.updatedAt) }
+  ]
+}
+
+
+function cardFields(row: any) {
+  return [
+    { label: '标题', value: row.title || '无标题' },
+    { label: '内容', value: contentPreview(row.content) },
+    { label: '分类', value: catNameOf(row) || '未分类' },
+    { label: '颜色', value: COLOR_LABELS[row.color] ?? row.color },
+    { label: '置顶', value: row.pinned ? '📌' : '—' },
+    { label: '更新时间', value: formatNoteTime(row.updatedAt) }
+  ]
+}
+
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
@@ -392,8 +422,9 @@ onUnmounted(() => {
 
     <!-- 时光轴便签（仅在类型=时光轴时渲染，'all' 视图只显示普通便签） -->
     <template v-if="activeType === 'timeline'">
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div v-if="filteredTimeline.length > 0" class="nt-table-wrap">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="timelineListPageItems"
           stripe
           border
@@ -474,13 +505,26 @@ onUnmounted(() => {
           <el-table-column label="更新时间" width="140" align="center">
             <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
             <template #default="{ row }">
               <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)" style="margin-right:6px;">编辑</el-button>
               <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in timelineListPageItems"
+            :key="item.id"
+            :fields="timelineCardFields(item)"
+          >
+            <template #actions>
+              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${item.id}`" @click="startEdit(item)">编辑</el-button>
+              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
       <div v-if="filteredTimeline.length > 0" class="nt-list-pager">
         <el-pagination
@@ -585,8 +629,9 @@ onUnmounted(() => {
 
     <!-- 普通便签：空态 / el-table 表格 -->
     <template v-if="activeType !== 'timeline'">
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div v-if="filteredNormal.length > 0" class="nt-table-wrap">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="normalListPageItems"
           stripe
           border
@@ -628,7 +673,7 @@ onUnmounted(() => {
           <el-table-column label="更新时间" width="140" align="center">
             <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="180" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="180" align="center" fixed="right">
             <template #default="{ row }">
               <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)" style="margin-right:6px;">编辑</el-button>
               <el-button text size="small" class="nt-pin-btn" :class="{ active: row.pinned }" :data-testid="`note-pin-${row.id}`" @click="handlePin(row)" style="margin-right:6px;">📌</el-button>
@@ -636,6 +681,20 @@ onUnmounted(() => {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in normalListPageItems"
+            :key="item.id"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${item.id}`" @click="startEdit(item)">编辑</el-button>
+              <el-button text size="small" class="nt-pin-btn" :class="{ active: item.pinned }" :data-testid="`note-pin-${item.id}`" @click="handlePin(item)">📌</el-button>
+              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
       <div v-if="filteredNormal.length > 0" class="nt-list-pager">
         <el-pagination

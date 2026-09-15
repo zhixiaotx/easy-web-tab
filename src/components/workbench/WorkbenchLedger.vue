@@ -1,4 +1,19 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '日期', value: row.entry.date },
+    { label: '分类', value: row.cat?.name ?? '未知' },
+    { label: '金额', value: (row.cat?.type === 'income' ? '+' : '-') + formatYuan(row.entry.amount) },
+    { label: '备注', value: row.entry.note || '—' }
+  ]
+}
+
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
@@ -580,10 +595,11 @@ onUnmounted(() => {
         <div class="dialog ld-records-dialog" data-testid="ld-records-dialog">
           <div class="dialog-header">
             <h3>本月记录（{{ monthEntries.length }} 条）</h3>
+            <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
             <el-button class="close-btn" text @click="closeRecordsModal"><Icon name="close" /></el-button>
           </div>
           <div class="ld-records-body">
-            <el-table
+            <el-table v-if="vm.mode === 'list'" class="ewt-table"
               :data="recordsPageItems"
               stripe
               border
@@ -621,13 +637,26 @@ onUnmounted(() => {
                   <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" align="center" fixed="right">
+              <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
                 <template #default="{ row }: { row: EntryView }">
                   <el-button class="btn-edit" :data-testid="`ld-edit-${row.entry.id}`" @click="startEdit(row)" style="margin-right: 6px;">编辑</el-button>
                   <el-button class="btn-delete" :data-testid="`ld-delete-${row.entry.id}`" @click="handleDelete(row.entry.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
+            <div v-else class="ewt-card-grid">
+              <RecordsCard
+                v-for="item in recordsPageItems"
+                :key="item.entry.id"
+                :fields="cardFields(item)"
+              >
+                <template #actions>
+                  <el-button class="btn-edit" :data-testid="`ld-edit-${item.entry.id}`" @click="startEdit(item)">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`ld-delete-${item.entry.id}`" @click="handleDelete(item.entry.id)">删除</el-button>
+                </template>
+              </RecordsCard>
+            </div>
+
           </div>
           <div class="ld-records-pager">
             <el-pagination

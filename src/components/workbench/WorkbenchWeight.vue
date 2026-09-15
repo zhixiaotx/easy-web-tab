@@ -1,4 +1,25 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  const bmi = store.height !== undefined ? (calcBmi(row.weightKg, store.height)?.toFixed(1) ?? '—') : '未设身高'
+  const prog = adviceTarget !== null
+    ? (row.weightKg > adviceTarget ? '距目标 -' + (row.weightKg - adviceTarget).toFixed(1) + ' kg'
+      : row.weightKg < adviceTarget ? '距目标 +' + (adviceTarget - row.weightKg).toFixed(1) + ' kg' : '已达标 ✓')
+    : '未设身高'
+  return [
+    { label: '日期', value: row.date },
+    { label: '体重', value: row.weightKg + ' kg' },
+    { label: 'BMI', value: bmi },
+    { label: '目标进度', value: prog },
+    { label: '备注', value: row.note || '—' }
+  ]
+}
+
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
 import { injectHealthStore, type HealthStoreLike } from '@/composables/healthStoreContext'
@@ -472,10 +493,11 @@ onUnmounted(() => {
       <div class="dialog list-dialog" data-testid="wt-records-dialog">
         <div class="dialog-header">
           <h3>体重记录</h3>
+          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
           <el-button class="close-btn" data-testid="wt-records-close" text @click="closeRecordsDialog"><Icon name="close" /></el-button>
         </div>
         <div class="wt-list">
-          <el-table
+          <el-table v-if="vm.mode === 'list'" class="ewt-table"
             :data="listPageItems"
             stripe
             border
@@ -520,13 +542,26 @@ onUnmounted(() => {
                 <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="150" align="center" fixed="right">
+            <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button class="btn-edit" :data-testid="`wt-edit-${row.id}`" @click="showRecordsDialog = false; startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button>
                 <el-button class="btn-delete" :data-testid="`wt-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
+          <div v-else class="ewt-card-grid">
+            <RecordsCard
+              v-for="item in listPageItems"
+              :key="item.id"
+              :fields="cardFields(item)"
+            >
+              <template #actions>
+                <el-button class="btn-edit" :data-testid="`wt-edit-${item.id}`" @click="showRecordsDialog = false; startEditRecord(item.id)">编辑</el-button>
+                <el-button class="btn-delete" :data-testid="`wt-delete-${item.id}`" @click="handleDeleteRecord(item.id)">删除</el-button>
+              </template>
+            </RecordsCard>
+          </div>
+
         </div>
         <div class="wt-list-pager">
           <el-pagination

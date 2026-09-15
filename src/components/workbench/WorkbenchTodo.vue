@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '完成', value: row.todo.completed ? '已完成' : '未完成' },
+    { label: '标题', value: row.todo.title },
+    { label: '描述', value: row.todo.description || '—' },
+    { label: '优先级', value: priorityMeta(row.todo.priority).label },
+    { label: '截止日期', value: row.todo.dueDate || '—' },
+    { label: '分类', value: row.todo.categoryId || '未分类' }
+  ]
+}
+
 import Icon from '../Icon.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
@@ -306,8 +323,9 @@ onUnmounted(() => {
     </div>
 
     <template v-else>
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="td-table-wrap">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageTodos"
           data-testid="td-table"
           @row-click="rowClick"
@@ -373,7 +391,7 @@ onUnmounted(() => {
               <span v-else class="td-col-empty">未分类</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="110" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="110" align="center" fixed="right">
             <template #default="{ row: v }">
               <div class="td-actions" @click.stop>
                 <el-button size="small" :data-testid="`td-edit-${v.todo.id}`" @click="startEdit(v.todo)">编辑</el-button>
@@ -382,6 +400,19 @@ onUnmounted(() => {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in pageTodos"
+            :key="item.todo.id"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <el-button size="small" :data-testid="`td-edit-${item.todo.id}`" @click="startEdit(item.todo)">编辑</el-button>
+              <el-button size="small" class="btn-delete" :data-testid="`td-delete-${item.todo.id}`" @click="handleDelete(item.todo.id)">删除</el-button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
       <div class="td-list-pager">
         <el-pagination

@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '日期', value: row.date },
+    { label: '入睡', value: row.sleepTime || '—' },
+    { label: '起床', value: row.wakeTime || '—' },
+    { label: '时长', value: row.durationHours != null ? Number(row.durationHours).toFixed(1) + ' h' : '—' },
+    { label: '质量', value: row.quality >= 4 ? '优' : row.quality === 3 ? '良' : row.quality === 2 ? '中' : '差' },
+    { label: '备注', value: row.note || '—' }
+  ]
+}
+
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
@@ -262,10 +279,11 @@ onUnmounted(() => {
         <div class="dialog list-dialog" data-testid="sl-list-dialog">
           <div class="dialog-header">
             <h3>睡眠记录</h3>
+            <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
             <el-button class="close-btn" text @click="closeListDialog"><Icon name="close" /></el-button>
           </div>
           <div class="ex-list">
-            <el-table
+            <el-table v-if="vm.mode === 'list'" class="ewt-table"
               :data="listPageItems"
               stripe
               border
@@ -303,13 +321,26 @@ onUnmounted(() => {
                   <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" align="center" fixed="right">
+              <el-table-column label="操作" class-name="ewt-op-col" width="150" align="center" fixed="right">
                 <template #default="{ row }">
                   <el-button class="btn-edit" :data-testid="`sl-edit-${row.id}`" @click="startEditRecord(row.id)" style="margin-right:6px;">编辑</el-button>
                   <el-button class="btn-delete" :data-testid="`sl-delete-${row.id}`" @click="handleDeleteRecord(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
+            <div v-else class="ewt-card-grid">
+              <RecordsCard
+                v-for="item in listPageItems"
+                :key="item.id"
+                :fields="cardFields(item)"
+              >
+                <template #actions>
+                  <el-button class="btn-edit" :data-testid="`sl-edit-${item.id}`" @click="startEditRecord(item.id)">编辑</el-button>
+                  <el-button class="btn-delete" :data-testid="`sl-delete-${item.id}`" @click="handleDeleteRecord(item.id)">删除</el-button>
+                </template>
+              </RecordsCard>
+            </div>
+
           </div>
           <div class="ex-list-pager">
             <el-pagination

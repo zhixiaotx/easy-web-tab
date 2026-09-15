@@ -1,4 +1,20 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  const d = deltaOf(row.id)
+  return [
+    { label: '日期', value: row.date },
+    { label: '身高', value: row.heightCm.toFixed(1) + ' cm' },
+    { label: '较上次', value: d != null ? (d >= 0 ? '+' : '') + d.toFixed(1) + ' cm' : '—' },
+    { label: '备注', value: row.note || '—' }
+  ]
+}
+
 // 学生健康管理 —— 身高成长记录标签页
 // 数据：useStudentHealthStore（IDB store 'student_health'，严格隔离成人 'health'）
 // 形态对齐 WorkbenchHealth 的 el-radio-button tab + 学生端 StudentToolbar / el-table / ECharts 风格：
@@ -243,9 +259,10 @@ const chartOption = computed(() => {
     </div>
 
     <!-- 记录列表 -->
+    <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
     <div class="sth-list-block">
       <h4 class="sth-block-title">🗂 全部记录</h4>
-      <el-table
+      <el-table v-if="vm.mode === 'list'" class="ewt-table"
         :data="listDesc"
         stripe
         border
@@ -276,12 +293,24 @@ const chartOption = computed(() => {
             <span class="sth-muted">{{ row.note || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="90" align="center">
+        <el-table-column label="操作" class-name="ewt-op-col" fixed="right" width="90" align="center">
           <template #default="{ row }">
             <el-button link type="danger" size="small" @click="remove(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <div v-else class="ewt-card-grid">
+        <RecordsCard
+          v-for="item in listDesc"
+          :key="item.id"
+          :fields="cardFields(item)"
+        >
+          <template #actions>
+            <el-button link type="danger" size="small" @click="remove(item.id)">删除</el-button>
+          </template>
+        </RecordsCard>
+      </div>
+
     </div>
   </div>
 </template>

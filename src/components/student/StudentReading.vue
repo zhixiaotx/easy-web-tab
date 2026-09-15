@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '书名', value: row.bookTitle },
+    { label: '日期', value: row.date },
+    { label: '页数', value: row.pages + ' 页' },
+    { label: '时长', value: store.formatReadingDuration(row.durationMin) },
+    { label: '读后感', value: row.impression || '—' },
+    { label: '家长签字', value: row.parentSigned ? '✓ 已签' : '未签' }
+  ]
+}
+
 // 学生工作台阅读记录面板（M2）
 // 布局：顶部工具条 + 统计卡 + el-table 表格列表 + el-pagination + 编辑弹框（含家长签字）
 // 数据：useStudentReadingStore（独立 IDB store 'student_reading'，严格隔离成人数据）
@@ -168,8 +185,9 @@ onMounted(async () => {
 
     <div class="sr-main">
       <!-- 表格区（Element Plus Table） -->
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="sr-list">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="listPageItems"
           stripe
           border
@@ -208,7 +226,7 @@ onMounted(async () => {
               <span v-else class="sr-unsigned">未签</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 size="small"
@@ -226,6 +244,19 @@ onMounted(async () => {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in listPageItems"
+            :key="item.id"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <el-button size="small" class="sr-edit-btn" :data-testid="`sr-edit-${item.id}`" @click="openEditDialog(item.id)">编辑</el-button>
+              <el-button size="small" class="sr-delete-btn" :data-testid="`sr-delete-${item.id}`" @click="handleDelete(item.id)">删除</el-button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
 
       <!-- 分页条 -->

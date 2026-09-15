@@ -1,4 +1,20 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '考试名称', value: row.examName },
+    { label: '类型', value: row.examType },
+    { label: '日期', value: row.date },
+    { label: '科目数', value: row.subjects.length },
+    { label: '平均分', value: rowAvgText(row) }
+  ]
+}
+
 // 学生工作台成绩记录面板
 // 布局：工具条 + 年级标签页(el-tabs) + 统计卡 + 表格(el-table, 每页10条分页) + 录入/编辑弹框 + 按科目 ECharts 趋势折线
 // 数据：useStudentGradesStore（独立 IDB store 'student_grades'，严格隔离成人数据）
@@ -383,11 +399,12 @@ onMounted(async () => {
 
     <!-- 成绩表格 + 分页 -->
     <template v-else>
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <el-table
         :data="store.pagedLevelGrades.items"
         size="small"
         stripe
-        class="sg-table"
+        class="sg-table ewt-table" v-if="vm.mode === 'list'"
         data-testid="sg-table"
         row-key="id"
         @row-click="onRowClick"
@@ -407,13 +424,26 @@ onMounted(async () => {
             <b class="sg-t-avg">{{ rowAvgText(row) }}</b>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="128" align="center" fixed="right">
+        <el-table-column label="操作" class-name="ewt-op-col" width="128" align="center" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" :data-testid="`sg-edit-${row.id}`" @click.stop="openEditDialog(row.id)">编辑</el-button>
             <el-button link type="danger" size="small" :data-testid="`sg-del-${row.id}`" @click.stop="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <div v-else class="ewt-card-grid">
+        <RecordsCard
+          v-for="item in store.pagedLevelGrades.items"
+          :key="item.id"
+          :fields="cardFields(item)"
+        >
+          <template #actions>
+            <el-button link type="primary" size="small" :data-testid="`sg-edit-${item.id}`" @click.stop="openEditDialog(item.id)">编辑</el-button>
+            <el-button link type="danger" size="small" :data-testid="`sg-del-${item.id}`" @click.stop="handleDelete(item.id)">删除</el-button>
+          </template>
+        </RecordsCard>
+      </div>
+
 
       <el-pagination
         :current-page="store.pagedLevelGrades.page"

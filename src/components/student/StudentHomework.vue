@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '学科', value: row.subject },
+    { label: '标题', value: row.title },
+    { label: '内容', value: row.content || '—' },
+    { label: '优先级', value: priorityLabel(row.priority) },
+    { label: '截止日期', value: row.dueDate },
+    { label: '状态', value: statusLabel(row.status) }
+  ]
+}
+
 // 学生工作台作业管理面板（M2）
 // 布局：顶部工具条 + 学科筛选 tabs + 状态筛选 tabs + el-table 表格列表 + el-pagination 分页
 // 数据：useStudentHomeworkStore（独立 IDB store 'student_homework'，严格隔离成人数据）
@@ -243,8 +260,9 @@ onMounted(async () => {
 
     <div class="shw-main">
       <!-- 表格区（Element Plus Table） -->
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="shw-list">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="listPageItems"
           stripe
           border
@@ -292,7 +310,7 @@ onMounted(async () => {
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="170" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="170" align="center" fixed="right">
             <template #default="{ row }">
               <button class="shw-edit-btn" :data-testid="`shw-edit-${row.id}`" @click="openEditDialog(row.id)">
                 编辑
@@ -314,6 +332,19 @@ onMounted(async () => {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in listPageItems"
+            :key="item.id"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <button class="shw-edit-btn" :data-testid="`shw-edit-${item.id}`" @click="openEditDialog(item.id)">编辑</button>
+              <button v-if="item.status !== 'done'" class="shw-advance-btn" :class="statusBadgeClass(item.status)" :data-testid="`shw-advance-${item.id}`" @click="handleAdvanceStatus(item.id)"><Icon name="check" :size="14" /><span>{{ nextStatusLabel(item.status) }}</span></button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
 
       <!-- 分页条（Element Plus Pagination） -->

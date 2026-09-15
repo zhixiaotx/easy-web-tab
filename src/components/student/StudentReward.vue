@@ -1,4 +1,19 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '时间', value: txnDateText(row.createdAt) },
+    { label: '类型', value: row.type === 'earn' ? '加分' : '兑换' },
+    { label: '积分变动', value: txnPointsText(row) },
+    { label: '事由', value: row.reason }
+  ]
+}
+
 // 学生工作台奖励积分面板（M3 批次2）
 // 布局：标题工具条 + 统计卡 + 视图 tabs（奖励项/交易记录）+ 奖励网格/历史列表 + 分页条
 // 数据：useStudentRewardsStore（独立 IDB store 'student_rewards'，单对象 {totalPoints, history, rewards}）
@@ -169,8 +184,9 @@ onMounted(async () => {
         <p>暂无交易记录</p>
       </div>
       <template v-else>
+        <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
         <div class="sr-history-list">
-          <el-table
+          <el-table v-if="vm.mode === 'list'" class="ewt-table"
             :data="historyPageItems"
             stripe
             border
@@ -200,6 +216,15 @@ onMounted(async () => {
               </template>
             </el-table-column>
           </el-table>
+          <div v-else class="ewt-card-grid">
+            <RecordsCard
+              v-for="item in historyPageItems"
+              :key="item.id"
+              :fields="cardFields(item)"
+            >
+            </RecordsCard>
+          </div>
+
         </div>
         <div class="sr-history-pager">
           <el-pagination

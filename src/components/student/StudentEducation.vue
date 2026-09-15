@@ -1,4 +1,25 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '学校名称', value: row.schoolName },
+    { label: '学段', value: row.degree },
+    { label: '专业', value: row.major || '—' },
+    { label: '入学时间', value: row.startDate },
+    { label: '毕业时间', value: row.endDate || (row.isActive ? '至今' : '—') },
+    { label: '班主任', value: row.classTeacher || '—' },
+    { label: '课老师', value: row.courseTeacher || '—' },
+    { label: '电话号码', value: row.phone || '—' },
+    { label: '备注', value: row.note || '—' },
+    { label: '状态', value: row.isActive ? '在读' : '已毕' }
+  ]
+}
+
 // 学生工作台教育经历面板
 // 布局：顶部工具条（+ 新增）+ 表格列表 + 分页
 // 数据：useStudentEducationStore（IDB store 'student_education'）
@@ -160,8 +181,9 @@ const degreeOptions = DEGREE_OPTIONS
     </div>
 
     <!-- 表格区（Element Plus Table） -->
+    <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
     <div class="edu-list">
-      <el-table
+      <el-table v-if="vm.mode === 'list'" class="ewt-table"
         :data="listPageItems"
         stripe
         border
@@ -225,13 +247,26 @@ const degreeOptions = DEGREE_OPTIONS
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" align="center" fixed="right">
+        <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" link :data-testid="`edu-edit-${row.id}`" @click="openEdit(row)" style="margin-right:6px;">编辑</el-button>
             <el-button size="small" type="danger" link :data-testid="`edu-delete-${row.id}`" @click="askDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <div v-else class="ewt-card-grid">
+        <RecordsCard
+          v-for="item in listPageItems"
+          :key="item.id"
+          :fields="cardFields(item)"
+        >
+          <template #actions>
+            <el-button size="small" type="primary" link :data-testid="`edu-edit-${item.id}`" @click="openEdit(item)">编辑</el-button>
+            <el-button size="small" type="danger" link :data-testid="`edu-delete-${item.id}`" @click="askDelete(item)">删除</el-button>
+          </template>
+        </RecordsCard>
+      </div>
+
     </div>
 
     <!-- 分页条（Element Plus Pagination） -->

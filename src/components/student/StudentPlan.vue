@@ -1,4 +1,22 @@
 <script setup lang="ts">
+import { useViewMode } from '@/composables/useViewMode'
+import RecordsCard from '@/components/common/RecordsCard.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+
+const vm = useViewMode()
+
+function cardFields(row: any) {
+  return [
+    { label: '类型', value: typeLabel(row.type) },
+    { label: '标题', value: row.title },
+    { label: '开始日期', value: row.startDate },
+    { label: '结束日期', value: row.endDate },
+    { label: '目标', value: row.goals.length + ' 个' },
+    { label: '总进度', value: store.planProgress(row) + '%' },
+    { label: '复盘', value: row.review || '—' }
+  ]
+}
+
 // 学生工作台学习计划面板（M3 批次1）
 // 布局：工具条 + 统计卡 + 类型筛选 + el-table（含 expand 行展示目标管理）+ el-pagination + 编辑弹框
 // 数据：useStudentPlanStore（独立 IDB store 'student_plans'，严格隔离成人数据）
@@ -246,8 +264,9 @@ onMounted(() => {
 
     <div class="sp-main">
       <!-- 表格区（Element Plus Table，含 expand 行管理目标） -->
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="sp-list">
-        <el-table
+        <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="listPageItems"
           stripe
           border
@@ -316,13 +335,26 @@ onMounted(() => {
               <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="140" align="center" fixed="right">
+          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
             <template #default="{ row }">
               <button class="btn-edit" :data-testid="`sp-edit-${row.id}`" @click="openEditDialog(row.id)" style="margin-right:6px;">编辑</button>
               <button class="btn-delete" :data-testid="`sp-del-${row.id}`" @click="handleDelete(row.id)">删除</button>
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="ewt-card-grid">
+          <RecordsCard
+            v-for="item in listPageItems"
+            :key="item.id"
+            :fields="cardFields(item)"
+          >
+            <template #actions>
+              <button class="btn-edit" :data-testid="`sp-edit-${item.id}`" @click="openEditDialog(item.id)">编辑</button>
+              <button class="btn-delete" :data-testid="`sp-del-${item.id}`" @click="handleDelete(item.id)">删除</button>
+            </template>
+          </RecordsCard>
+        </div>
+
       </div>
 
       <!-- 分页条 -->

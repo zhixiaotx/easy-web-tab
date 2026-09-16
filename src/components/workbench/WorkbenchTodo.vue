@@ -331,12 +331,12 @@ onUnmounted(() => {
           height="100%"
           empty-text="没有符合查询条件的待办"
         >
-          <el-table-column label="标题" min-width="200" show-overflow-tooltip>
+          <el-table-column label="标题" min-width="200" align="center" show-overflow-tooltip>
             <template #default="{ row: v }">
               <div class="td-title" :class="{ 'is-done': v.todo.completed }">{{ v.todo.title }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="描述" min-width="160" show-overflow-tooltip>
+          <el-table-column label="描述" min-width="160" align="center" show-overflow-tooltip>
             <template #default="{ row: v }">
               <span v-if="v.todo.description" class="td-desc">{{ v.todo.description }}</span>
               <span v-else class="td-col-empty">—</span>
@@ -351,7 +351,7 @@ onUnmounted(() => {
               >{{ priorityMeta(v.todo.priority).label }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="截止日期" width="150">
+          <el-table-column label="截止日期" width="150" align="center">
             <template #default="{ row: v }">
               <div v-if="v.todo.dueDate" class="td-meta">
                 <span
@@ -369,7 +369,7 @@ onUnmounted(() => {
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="分类" width="130">
+          <el-table-column label="分类" width="130" align="center">
             <template #default="{ row: v }">
               <span v-if="v.todo.categoryId" class="td-cat-badge" :data-testid="`td-cat-badge-${v.todo.id}`">{{ v.todo.categoryId }}</span>
               <span v-else class="td-col-empty">未分类</span>

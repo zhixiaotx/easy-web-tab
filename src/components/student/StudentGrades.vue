@@ -389,13 +389,13 @@ onMounted(async () => {
         row-key="id"
         @row-click="onRowClick"
       >
-        <el-table-column prop="examName" label="考试名称" min-width="160" show-overflow-tooltip>
+        <el-table-column prop="examName" label="考试名称" min-width="160" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="sg-t-name">{{ row.examName }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="examType" label="类型" width="92" />
-        <el-table-column prop="date" label="日期" width="112" />
+        <el-table-column prop="examType" label="类型" width="92" align="center" />
+        <el-table-column prop="date" label="日期" width="112" align="center" />
         <el-table-column label="科目数" width="74" align="center">
           <template #default="{ row }">{{ row.subjects.length }}</template>
         </el-table-column>

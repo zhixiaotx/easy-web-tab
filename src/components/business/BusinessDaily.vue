@@ -198,16 +198,17 @@ async function handleDelete(id: string): Promise<void> {
 <template>
   <div class="bizday">
     <div class="bizday-bar">
-      <span class="bizday-count">共 {{ store.dailyRecords.length }} 条（同一天自动覆盖）</span>
       <div class="bizday-bar-actions">
-        <el-button data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyCsv">导出 CSV</el-button>
         <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
       </div>
     </div>
 
     <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击右上角记下今天的第一笔</div>
     <template v-else>
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <div class="ewt-table-toolbar is-split">
+        <el-button data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyCsv">导出 CSV</el-button>
+        <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
       <div class="bizday-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageItems"
@@ -445,15 +446,12 @@ async function handleDelete(id: string): Promise<void> {
   gap: 12px;
 }
 
-.bizday-count {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
 .bizday-bar-actions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  /* 原左侧「共 N 条」统计已移除，按钮保持靠右 */
+  margin-left: auto;
 }
 
 .bizday-empty {

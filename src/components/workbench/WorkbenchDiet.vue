@@ -273,13 +273,13 @@ onUnmounted(() => {
               <el-table-column label="餐别" width="110" align="center">
                 <template #default="{ row }"><span class="dt-meal-badge" :class="MEAL_BADGE_CLASS[row.mealType as MealType]">{{ row.mealType }}</span></template>
               </el-table-column>
-              <el-table-column label="食物" min-width="220" show-overflow-tooltip>
+              <el-table-column label="食物" min-width="220" align="center" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.content }}</template>
               </el-table-column>
               <el-table-column label="热量(kcal)" width="130" align="right">
                 <template #default="{ row }"><span style="font-weight:700;color:var(--color-success,#16a34a);font-variant-numeric: tabular-nums;">{{ row.calories }} kcal</span></template>
               </el-table-column>
-              <el-table-column label="备注" min-width="200" show-overflow-tooltip>
+              <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
                 <template #default="{ row }"><span v-if="row.note">{{ row.note }}</span><span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span></template>
               </el-table-column>
               <el-table-column label="操作" width="150" align="center" fixed="right" class-name="ewt-op-col">

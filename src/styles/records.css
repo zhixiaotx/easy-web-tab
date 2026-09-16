@@ -47,6 +47,10 @@
   justify-content: flex-end;
   margin-bottom: 8px;
 }
+/* 左侧放操作按钮、右侧放视图切换（与进货/收摊的工具条一致） */
+.ewt-table-toolbar.is-split {
+  justify-content: space-between;
+}
 
 /* 3 个工作台记录编辑弹框底部按钮统一：集中在右下角，顺序 取消 / 保存 / 删除 */
 .ewt-dialog-footer {

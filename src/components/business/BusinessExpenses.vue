@@ -160,17 +160,14 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
     <!-- 顶部 bar：统计 + 分类管理 + 新增 -->
     <div class="bizexp-bar">
       <div class="bizexp-bar-left">
-        <span class="bizexp-count">共 {{ dayGroups.length }} 天（{{ store.expenses.length }} 笔支出）</span>
-        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理" @click="showCatManager = true"><Icon name="cog" :size="15" /></el-button>
-      </div>
-      <div class="bizexp-bar-actions">
         <el-button type="primary" data-testid="bizexp-add" @click="startAdd">＋ 新增</el-button>
         <el-button data-testid="bizexp-export" :disabled="store.expenses.length === 0" @click="exportExpensesCsv">导出 CSV</el-button>
+        <el-button size="small" data-testid="bizexp-cat-manager" title="支出分类管理" @click="showCatManager = true"><Icon name="cog" :size="15" /></el-button>
       </div>
     </div>
 
     <!-- el-table 表格列表：一天一行，展开行展示当日支出条目 -->
-    <div v-if="dayGroups.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击右上角记下今天的第一笔</div>
+    <div v-if="dayGroups.length === 0" class="bizexp-empty" data-testid="bizexp-empty">暂无支出记录，点击左上角记下今天的第一笔</div>
     <template v-else>
       <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="bizexp-table-wrap">
@@ -369,11 +366,6 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.bizexp-count {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizexp-empty {

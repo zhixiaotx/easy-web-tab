@@ -537,7 +537,7 @@ onUnmounted(() => {
                 <span v-else style="color: var(--color-text-secondary,#9ca3af);">未设身高</span>
               </template>
             </el-table-column>
-            <el-table-column label="备注" min-width="200" show-overflow-tooltip>
+            <el-table-column label="备注" min-width="200" align="center" show-overflow-tooltip>
               <template #default="{ row }">
                 <span v-if="row.note">{{ row.note }}</span>
                 <span v-else style="color: var(--color-text-secondary,#9ca3af);">—</span>

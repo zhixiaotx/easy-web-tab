@@ -437,7 +437,7 @@ onUnmounted(() => {
       </div>
       <div v-else class="cd-table-wrap">
         <el-table class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%" height="100%">
-          <el-table-column label="名称" min-width="200" show-overflow-tooltip>
+          <el-table-column label="名称" min-width="200" align="center" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="cd-name">{{ row.name }}</span>
             </template>
@@ -456,12 +456,12 @@ onUnmounted(() => {
               <span v-else class="cd-t-empty">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="剩余时间" min-width="140">
+          <el-table-column label="剩余时间" min-width="140" align="center">
             <template #default="{ row }">
               <span class="cd-t-remain" :class="statusClass(row.remaining.status)">{{ row.remaining.isExpired ? '已过期' : '剩余' }} {{ row.remaining.label }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="下次提醒" min-width="150" show-overflow-tooltip>
+          <el-table-column label="下次提醒" min-width="150" align="center" show-overflow-tooltip>
             <template #default="{ row }">{{ row.remaining.nextTime }}</template>
           </el-table-column>
           <el-table-column label="操作" width="250" class-name="ewt-op-col" align="center">

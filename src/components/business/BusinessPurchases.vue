@@ -160,13 +160,15 @@ async function handleDelete(id: string): Promise<void> {
           >{{ cat.name }}</el-radio-button>
         </el-radio-group>
       </div>
-      <span class="bizpur-count">共 {{ filteredWithProductFilter.length }} 笔</span>
+    </div>
+
+    <div class="ewt-table-toolbar is-split">
       <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</el-button>
+      <ViewModeToggle v-if="filteredWithProductFilter.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
     <div v-if="filteredWithProductFilter.length === 0" class="bizpur-empty" data-testid="bizpur-empty">暂无进货记录</div>
     <template v-else>
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="bizpur-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageItems"
@@ -379,11 +381,6 @@ async function handleDelete(id: string): Promise<void> {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.bizpur-count {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 .bizpur-empty {

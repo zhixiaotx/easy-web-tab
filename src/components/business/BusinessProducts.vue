@@ -112,12 +112,21 @@ async function handleToggleActive(p: BusinessProduct): Promise<void> {
   await store.updateProduct(p.id, { active: !p.active })
 }
 
-async function handleDelete(p: BusinessProduct): Promise<void> {
-  if (!confirm(`确定要删除商品「${p.name}」吗？`)) return
+async function handleDelete(p: BusinessProduct): Promise<boolean> {
+  if (!confirm(`确定要删除商品「${p.name}」吗？`)) return false
   const r = await store.deleteProduct(p.id)
   if (!r.ok) {
     toast.error(r.reason === 'in-use' ? '该商品已有进货或收摊记录，无法删除（可改为停售）' : '商品不存在')
+    return false
   }
+  return true
+}
+
+// 编辑弹框内删除：成功后关闭弹框；失败（如已有进货/收摊记录）保留弹框看提示
+async function handleDeleteCurrent(): Promise<void> {
+  const p = store.products.find(x => x.id === editingId.value)
+  if (!p) return
+  if (await handleDelete(p)) showDialog.value = false
 }
 
 // P1-3：高亮商品
@@ -216,7 +225,6 @@ function drawerMarkupRate(): number | null {
           >{{ p.active ? '在售' : '停售' }}</el-checkbox>
           <div class="bizprod-actions">
             <el-button size="small" :data-testid="`bizprod-detail-${p.id}`" @click="openDetail(p)">详情</el-button>
-            <el-button size="small" type="danger" :data-testid="`bizprod-del-${p.id}`" @click="handleDelete(p)">删除</el-button>
           </div>
         </div>
       </div>
@@ -288,6 +296,7 @@ function drawerMarkupRate(): number | null {
           <el-button type="primary" native-type="submit" :disabled="!isFormValid" data-testid="bizprod-save">
             {{ editingId ? '保存' : '添加' }}
           </el-button>
+          <el-button v-if="editingId" type="danger" data-testid="bizprod-dialog-del" @click="handleDeleteCurrent">删除</el-button>
         </div>
       </form>
     </el-dialog>
@@ -576,7 +585,7 @@ function drawerMarkupRate(): number | null {
 .bizprod-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
 }
 

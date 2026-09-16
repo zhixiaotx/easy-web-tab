@@ -175,15 +175,31 @@ const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 const appSettings = useAppSettingsDialog()
 const cityInput = ref<HTMLInputElement | null>(null)
 
-// Vercount 访问统计展示：计数锚点（vercount_value_site_uv / site_pv）常驻于 BeianFooter 页脚，
-// 此处仅在「站点外观」子 tab 打开时读取锚点文本展示，避免重复 ID 与重复计数。
+// Vercount 访问统计展示：计数锚点（vercount_value_site_uv / site_pv）常驻于 BeianFooter 页脚（视觉隐藏），
+// vercount 脚本加载后会向锚点写入数字；此处读取展示，避免重复 ID 与重复计数。
+// 脚本为异步填充，故读取采用「锚点优先 + 只读 API 兜底」：锚点仍是占位符时回退查询只读接口（GET 不计数）。
 const vercountUv = ref<string>('—')
 const vercountPv = ref<string>('—')
-function syncVercount() {
-  const uv = document.getElementById('vercount_value_site_uv')?.textContent
-  const pv = document.getElementById('vercount_value_site_pv')?.textContent
+function readVercountAnchor(id: string): string | null {
+  const text = document.getElementById(id)?.textContent?.trim()
+  // 初始占位符 '-' 或空串视为脚本尚未填充
+  return text && text !== '-' ? text : null
+}
+async function syncVercount() {
+  const uv = readVercountAnchor('vercount_value_site_uv')
+  const pv = readVercountAnchor('vercount_value_site_pv')
   if (uv) vercountUv.value = uv
   if (pv) vercountPv.value = pv
+  if (uv && pv) return
+  // 兜底：直接查询 vercount 只读接口（与脚本同一数据源，只读不计数）
+  try {
+    const res = await fetch(`https://events.vercount.one/api/v1/log?url=${encodeURIComponent(window.location.href)}`)
+    const data = await res.json()
+    if (data && data.site_uv != null) vercountUv.value = String(data.site_uv)
+    if (data && data.site_pv != null) vercountPv.value = String(data.site_pv)
+  } catch {
+    /* 网络异常时保留现有展示，不打断设置页 */
+  }
 }
 
 // ========================================
@@ -1291,7 +1307,8 @@ watch(
   }
 )
 
-// 切到「站点外观」子 tab 时读取 Vercount 锚点值展示（脚本异步填充，稍后重试以确保读到最新值）
+// 「站点外观」子 tab 显示时读取 Vercount 统计展示（脚本异步填充，稍后重试以确保读到最新值）。
+// immediate: 设置弹窗打开时默认即位于该子 tab（nav 的首个子 tab），若只在变化时触发会永不执行 → 一直显示占位符。
 watch(
   () => [activeTab.value, activeSubTab.value],
   ([tab, sub]) => {
@@ -1300,7 +1317,8 @@ watch(
       setTimeout(syncVercount, 1000)
       setTimeout(syncVercount, 2500)
     }
-  }
+  },
+  { immediate: true }
 )
 
 onUnmounted(() => {

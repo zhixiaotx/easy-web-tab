@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
 import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import type { CountdownItem, CountdownRemaining, CountdownSortMode } from '@/stores/countdowns'
 import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/countdownCore'
 import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
-import { usePanelPaging } from '@/composables/usePanelPaging'
-import PanelPager from './PanelPager.vue'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
 import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 
@@ -25,12 +23,6 @@ const searchRepeat = ref<'' | CountdownRepeatType>('')
 // 分类筛选走标签页（即时生效）；'' = 全部
 const activeCategoryTab = ref('')
 const appliedFilters = ref<CountdownFilterCriteria>({})
-
-const hasActiveFilter = computed(() =>
-  (appliedFilters.value.name ?? '').trim() !== '' ||
-  Boolean(appliedFilters.value.category) ||
-  Boolean(appliedFilters.value.repeat)
-)
 
 function applySearch(): void {
   appliedFilters.value = {
@@ -58,18 +50,24 @@ function resetSearch(): void {
 // 列表渲染用筛选后的数据；排序/手动移动基于 filteredItems 的位置
 const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, appliedFilters.value))
 
-// ===== 自适应分页：5 列 × maxRows 2 = 每页 10 个，超出翻页 =====
-const gridEl = ref<HTMLElement | null>(null)
-const paging = usePanelPaging({
-  items: () => filteredItems.value,
-  rowHeight: 150,
-  maxRows: 2,
-  gap: 10,
-  containerRef: gridEl,
-  gridRef: gridEl
+// ===== 固定分页（卡片/表格通用，每页 10 条）=====
+const PAGE_SIZE = 10
+const currentPage = ref(1)
+const pageItems = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredItems.value.slice(start, start + PAGE_SIZE)
 })
-// usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供筛选/排序变化回页 1）
-const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
+function goto(p: number): void {
+  const max = Math.max(1, Math.ceil(filteredItems.value.length / PAGE_SIZE))
+  currentPage.value = Math.max(1, Math.min(max, p))
+}
+watch(
+  () => filteredItems.value.length,
+  (n: number) => {
+    const max = Math.max(1, Math.ceil(n / PAGE_SIZE))
+    if (currentPage.value > max) currentPage.value = max
+  }
+)
 
 // 徽标 class：内置分类用既有配色，自定义分类统一默认灰
 function categoryBadgeClass(category: string | null | undefined): string {
@@ -360,10 +358,6 @@ onUnmounted(() => {
           :data-testid="'cd-cat-' + c"
         >{{ categoryLabel(c) }}</el-radio-button>
       </el-radio-group>
-      <span class="toolbar-count" data-testid="cd-toolbar-count">
-        <template v-if="hasActiveFilter">筛选出 {{ filteredItems.length }} / {{ store.itemsWithRemaining.length }} 个</template>
-        <template v-else>共 {{ store.itemsWithRemaining.length }} 个倒计时</template>
-      </span>
       <el-button type="primary" size="small" class="btn-add" data-testid="cd-add-button" @click="startAdd"><Icon name="plus" :size="16" /> 新增提醒</el-button>
     </div>
 
@@ -377,7 +371,7 @@ onUnmounted(() => {
       <el-button size="small" @click="resetSearch">重置查询</el-button>
     </div>
 
-    <div v-else ref="gridEl" class="cd-viewport" :class="{ 'cd-grid-scroll': !fitsOnePage }">
+    <div v-else class="cd-viewport">
       <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div v-if="vm.mode === 'card'" class="cd-grid">
       <TransitionGroup name="grid">
@@ -486,7 +480,20 @@ onUnmounted(() => {
       </el-table>
     </div>
 
-    <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
+    <div class="cd-pager">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="PAGE_SIZE"
+        :page-sizes="[PAGE_SIZE]"
+        layout="total, prev, pager, next, jumper"
+        :total="filteredItems.length"
+        background
+        small
+        prev-text="上一页"
+        next-text="下一页"
+        data-testid="cd-pagination"
+      />
+    </div>
 
     <!-- 新增/编辑弹框 -->
     <el-dialog
@@ -673,24 +680,6 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--color-text-muted, var(--color-text-muted));
   flex-shrink: 0;
-}
-
-/* ===== 操作行（新增提醒 + 分类管理 靠左，数量靠右） ===== */
-.cd-actionbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.cd-actionbar .toolbar-count {
-  margin-left: auto;
-}
-
-.toolbar-count {
-  margin-left: auto;
-  font-size: 14px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
 /* ===== 卡片墙 ===== */
@@ -1185,15 +1174,11 @@ html.dark .cat-default {
   background: rgba(107, 114, 128, 0.15);
 }
 
-/* ===== 桌面自适应分页（一屏布局 Wave-2 T8：R1/R3/R4/R7 契约）===== */
+/* ===== 桌面端列表区撑满（表格 height:100% 生效） ===== */
 @media (min-width: 769px) {
   .cd-viewport {
     flex: 1;
     min-height: 0;
-  }
-
-  .cd-grid-scroll {
-    overflow-y: auto;
   }
 }
 
@@ -1225,3 +1210,16 @@ html.dark .cat-default {
   font-size: 11px;
 }
 </style>
+
+/* 底部分页器（与 WorkbenchTodo 统一：el-pagination total/prev/next/jumper） */
+.cd-pager {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+
+/* 分类标签页：新增按钮靠右（原靠 toolbar-count 推右，统计移除后显式置右） */
+.cd-cat-tabs .btn-add {
+  margin-left: auto;
+}

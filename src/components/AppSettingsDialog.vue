@@ -174,6 +174,17 @@ const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 const appSettings = useAppSettingsDialog()
 const cityInput = ref<HTMLInputElement | null>(null)
 
+// Vercount 访问统计展示：计数锚点（vercount_value_site_uv / site_pv）常驻于 BeianFooter 页脚，
+// 此处仅在「站点外观」子 tab 打开时读取锚点文本展示，避免重复 ID 与重复计数。
+const vercountUv = ref<string>('—')
+const vercountPv = ref<string>('—')
+function syncVercount() {
+  const uv = document.getElementById('vercount_value_site_uv')?.textContent
+  const pv = document.getElementById('vercount_value_site_pv')?.textContent
+  if (uv) vercountUv.value = uv
+  if (pv) vercountPv.value = pv
+}
+
 // ========================================
 // 站点管理（导航设置 tab）：原管理页工具栏九动作的迁移入口。
 // 弹窗类动作 = 先关本设置弹窗，再经 URL query 打开目标（与 HomeView 既有 URL 协议一致）；
@@ -1279,6 +1290,18 @@ watch(
   }
 )
 
+// 切到「站点外观」子 tab 时读取 Vercount 锚点值展示（脚本异步填充，稍后重试以确保读到最新值）
+watch(
+  () => [activeTab.value, activeSubTab.value],
+  ([tab, sub]) => {
+    if (tab === 'nav' && sub === 'nav-appearance') {
+      syncVercount()
+      setTimeout(syncVercount, 1000)
+      setTimeout(syncVercount, 2500)
+    }
+  }
+)
+
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   stopWatchSettings?.()
@@ -1412,6 +1435,17 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">
             浏览器标签页的图标，支持 PNG / JPG / SVG / ICO，自动压缩至 128px；「恢复默认」还原为内置图标。
+          </p>
+
+          <!-- 访问统计（Vercount）：锚点在页脚常驻，此处读取展示 -->
+          <div class="wb-menu-head vercount-box">
+            <span class="wb-menu-label">访问统计</span>
+            <span class="vercount-values">
+              使用人数 <b>{{ vercountUv }}</b> · 总访问 <b>{{ vercountPv }}</b>
+            </span>
+          </div>
+          <p class="wb-menu-hint">
+            由 Vercount 统计，需通过公网域名访问才生效；数据按浏览器与设备去重。
           </p>
         </div>
 
@@ -3191,6 +3225,20 @@ html.dark .site-action-btn:hover:not(:disabled) {
 
 .site-favicon-file {
   display: none;
+}
+
+/* ===== 站点外观（导航设置 tab）：Vercount 访问统计展示 ===== */
+.vercount-box {
+  margin-top: 14px;
+}
+.vercount-values {
+  font-size: 13px;
+  color: var(--color-text-secondary, #475569);
+}
+.vercount-values b {
+  color: var(--color-text-primary, #1e293b);
+  font-weight: 600;
+  margin: 0 2px;
 }
 
 /* ===== 记账分类：类型徽标（支出蓝 / 收入绿）+ 内置徽标 ===== */

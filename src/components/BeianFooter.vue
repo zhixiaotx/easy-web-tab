@@ -7,7 +7,8 @@
         <a v-if="PSB_NUMBER" :href="psbQueryUrl" target="_blank" rel="noopener noreferrer" data-testid="beian-psb-link" class="beian-psb"><img :src="PSB_BADGE_SRC" alt="公安备案" @error="badgeHidden = true" v-show="!badgeHidden" />{{ PSB_NUMBER }}</a>
         <span class="beian-sep">|</span>
       </template>
-      <span class="visitor-counter">
+      <!-- 计数锚点：vercount 会查找这两个 ID 并上报/填充。视觉隐藏（不显示在页脚），实际数字在「设置 → 导航设置 → 站点外观」展示 -->
+      <span class="visitor-counter" aria-hidden="true">
         使用人数 <span id="vercount_value_site_uv">-</span> · 总访问 <span id="vercount_value_site_pv">-</span>
       </span>
     </span>
@@ -25,7 +26,8 @@ const badgeHidden = ref(false)
 // Vercount 访客统计（不蒜子替代，需公网域名访问才生效）。
 // SPA 下若直接把脚本放 index.html，脚本执行时（document.readyState 已非 loading）Vue 尚未挂载页脚，
 // 计数 span（vercount_value_site_uv / site_pv）还不存在、统计会落空。
-// 故改为页脚挂载后再动态注入脚本，确保两个 span 已渲染，脚本加载即填充并上报。
+// 故改为页脚（App.vue 中无条件常驻挂载）挂载后再动态注入脚本，确保锚点 span 已渲染、脚本加载即填充并上报。
+// 锚点仅作计数用途（视觉隐藏），展示数字在「设置 → 导航设置 → 站点外观」读取渲染。
 onMounted(() => {
   if (document.getElementById('vercount-script')) return
   const s = document.createElement('script')
@@ -61,5 +63,16 @@ onMounted(() => {
 .beian-footer a { color: inherit; text-decoration: none; }
 .beian-footer a:hover { color: var(--color-text-secondary); text-decoration: underline; }
 .beian-psb img { height: 12px; width: auto; vertical-align: -1px; margin-right: 3px; }
-.visitor-counter { white-space: nowrap; }
+/* 计数锚点视觉隐藏（不显示在页脚），仍常驻 DOM 供 vercount 统计每次访问；数字在设置-站点外观展示 */
+.visitor-counter {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 </style>

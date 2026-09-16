@@ -307,7 +307,6 @@ onUnmounted(() => {
       </el-radio-group>
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
-        <template v-else>共 {{ store.sortedTodos.length }} 个待办</template>
       </span>
       <el-button type="primary" size="small" class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</el-button>
     </div>

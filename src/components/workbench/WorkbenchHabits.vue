@@ -325,9 +325,6 @@ onMounted(() => {
           <span class="dialog-title">
             <Icon name="habits" :size="16" class="hb-dlg-ico" /> {{ recordsHabit?.name }}
           </span>
-          <el-button class="dialog-close" aria-label="关闭" @click="closeRecords">
-            <Icon name="close" :size="18" />
-          </el-button>
         </div>
       </template>
       <div class="dialog-body" v-if="recordsHabit">

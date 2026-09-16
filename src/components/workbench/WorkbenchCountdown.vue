@@ -8,7 +8,7 @@ import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from './PanelPager.vue'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
-import { COUNTDOWN_CATEGORIES, COUNTDOWN_COLOR_PRESETS, DEFAULT_COUNTDOWN_COLOR } from '@/types'
+import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 
 const store = useCountdownsStore()
 
@@ -527,28 +527,6 @@ onUnmounted(() => {
               size="small"
             />
             <label class="panel-label">分钟</label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>卡片颜色</label>
-          <div class="color-picker">
-            <button
-              v-for="(color, i) in COUNTDOWN_COLOR_PRESETS"
-              :key="color"
-              type="button"
-              class="color-option"
-              :class="{ active: formColor.toLowerCase() === color }"
-              :style="{ '--swatch': color }"
-              :data-testid="'cd-color-preset-' + (i + 1)"
-              :title="color"
-              @click="formColor = color"
-            ></button>
-            <label class="color-custom" title="自定义颜色">
-              <el-color-picker v-model="formColor" class="color-input" data-testid="cd-color-input" size="small" />
-              <span class="color-custom-value">{{ formColor }}</span>
-            </label>
-            <el-button type="button" size="small" class="color-reset" @click="formColor = DEFAULT_COUNTDOWN_COLOR">恢复默认</el-button>
           </div>
         </div>
 

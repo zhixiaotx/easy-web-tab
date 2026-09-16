@@ -22,8 +22,7 @@ import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { filterTodos, dueInfo } from '@/composables/todoCore'
 import type { TodoFilterCriteria } from '@/composables/todoCore'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
-import { TODO_COLOR_PRESETS, DEFAULT_TODO_COLOR } from '@/types'
-
+import { DEFAULT_TODO_COLOR } from '@/types'
 
 const store = useWorkbenchTodosStore()
 
@@ -211,8 +210,6 @@ const PRIORITY_META: Record<TodoPriority, { label: string; className: string }> 
 function priorityMeta(priority: TodoPriority): { label: string; className: string } {
   return PRIORITY_META[priority]
 }
-
-
 
 // ESC 关闭弹框（先编辑弹框，再分类管理）
 function handleKeydown(event: KeyboardEvent): void {
@@ -485,30 +482,6 @@ onUnmounted(() => {
               placeholder="选择日期"
               data-testid="td-due-input"
             />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>卡片颜色</label>
-          <div class="color-picker">
-            <button
-              v-for="(color, i) in TODO_COLOR_PRESETS"
-              :key="color"
-              type="button"
-              class="color-option"
-              :class="{ active: formColor.toLowerCase() === color }"
-              :style="{ '--swatch': color }"
-              :data-testid="'td-color-preset-' + (i + 1)"
-              :title="color"
-              @click="formColor = color"
-            ></button>
-            <el-color-picker
-              v-model="formColor"
-              class="color-custom"
-              data-testid="td-color-input"
-            />
-            <span class="color-custom-value">{{ formColor }}</span>
-            <el-button size="small" class="color-reset" @click="formColor = DEFAULT_TODO_COLOR">恢复默认</el-button>
           </div>
         </div>
 

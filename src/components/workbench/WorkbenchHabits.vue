@@ -5,7 +5,6 @@ import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
 import type { Habit, HabitFrequency } from '@/composables/habitCore'
-import { TODO_COLOR_PRESETS } from '@/types'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from './PanelPager.vue'
 import Icon from '@/components/Icon.vue'
@@ -303,22 +302,6 @@ onMounted(() => {
               :label="opt.label"
             />
           </el-select>
-        </div>
-        <div class="field">
-          <label class="field-label">颜色</label>
-          <div class="hb-color-picker" data-testid="hb-dialog-color">
-            <button
-              v-for="(color, i) in TODO_COLOR_PRESETS"
-              :key="color"
-              type="button"
-              class="hb-color-option"
-              :class="{ active: dialogColor.toLowerCase() === color }"
-              :style="{ '--hb-swatch': color }"
-              :data-testid="'hb-dialog-color-' + (i + 1)"
-              :title="color"
-              @click="dialogColor = color"
-            ></button>
-          </div>
         </div>
       </div>
       <template #footer>

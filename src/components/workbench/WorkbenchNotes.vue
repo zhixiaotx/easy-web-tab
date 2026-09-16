@@ -17,7 +17,6 @@ function timelineCardFields(row: any) {
   ]
 }
 
-
 function cardFields(row: any) {
   return [
     { label: '标题', value: row.title || '无标题' },
@@ -32,7 +31,6 @@ function cardFields(row: any) {
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
-import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
 
@@ -650,7 +648,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-
     <!-- 编辑浮层（新增/编辑共用） -->
     <div v-if="formOpen" class="note-overlay" data-testid="note-overlay" @click.self="cancelForm">
       <div class="note-form">
@@ -695,22 +692,6 @@ onUnmounted(() => {
           data-testid="note-content-input"
           :placeholder="formType === 'timeline' ? '便签内容（时光轴可为空，条目在卡片上追加）' : '便签内容…'"
         />
-
-        <div class="note-color-picker">
-          <el-radio-group v-model="formColor">
-            <el-radio
-              v-for="color in NOTE_COLORS"
-              :key="color"
-              :value="color"
-              class="color-option"
-              :class="[`color-${color}`, { active: formColor === color }]"
-              :data-testid="`note-color-${color}`"
-            >
-              <span class="color-swatch"></span>
-              <span class="color-name">{{ COLOR_LABELS[color] }}</span>
-            </el-radio>
-          </el-radio-group>
-        </div>
 
         <div class="note-form-actions ewt-dialog-footer">
           <el-button type="button" class="btn-cancel" data-testid="note-cancel-button" @click="cancelForm">

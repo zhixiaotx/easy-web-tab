@@ -520,7 +520,7 @@ onUnmounted(() => {
 
     <!-- 新增/编辑记录弹框 -->
     <Transition name="dialog">
-      <div v-if="showDialog" class="dialog-overlay" @click.self="cancelForm">
+      <div v-if="showDialog" class="dialog-overlay dialog-overlay--top" @click.self="cancelForm">
       <div class="dialog" data-testid="ld-dialog">
         <div class="dialog-header">
           <h3>{{ editingId ? '编辑记录' : '新增记录' }}</h3>
@@ -1240,6 +1240,12 @@ html.dark .ld-trend-total-exp b { color: #f87171; }
   justify-content: center;
   z-index: 300;
   padding: 20px;
+}
+
+/* 新增/编辑弹框需覆盖在「查看记录」弹框之上：两者同为 .dialog-overlay 且 z-index 相同，
+   DOM 中后者（查看记录）会盖住前者（编辑），故编辑弹框显式提升层级 */
+.dialog-overlay--top {
+  z-index: 400;
 }
 
 .dialog {

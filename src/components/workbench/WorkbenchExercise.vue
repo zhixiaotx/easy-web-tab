@@ -378,7 +378,7 @@ onUnmounted(() => {
           <form class="dialog-body" @submit.prevent="handleSaveTarget">
             <div class="form-group">
               <label>目标指标</label>
-              <el-select v-model="formMetric" class="form-input" data-testid="ex-metric" size="default">
+              <el-select v-model="formMetric" data-testid="ex-metric" size="default">
                 <el-option v-for="opt in METRIC_OPTIONS" :key="opt.value" :value="opt.value" :label="opt.label" />
               </el-select>
             </div>
@@ -389,7 +389,7 @@ onUnmounted(() => {
                 :model-value="Number(formTarget) || undefined"
                 :min="1"
                 :step="1"
-                class="form-input"
+               
                 placeholder="例如：3"
                 data-testid="ex-target-input"
                 :controls="false"
@@ -432,13 +432,13 @@ onUnmounted(() => {
                   v-model="formDate"
                   type="date"
                   value-format="YYYY-MM-DD"
-                  class="form-input field-date"
+                  class="field-date"
                   data-testid="ex-form-date"
                 />
               </div>
               <div class="field">
                 <label class="field-label">运动类型 *</label>
-                <el-select v-model="formType" class="form-input field-type" data-testid="ex-form-type">
+                <el-select v-model="formType" class="field-type" data-testid="ex-form-type">
                   <el-option v-for="t in EXERCISE_TYPES" :key="t" :value="t" :label="t" />
                 </el-select>
               </div>
@@ -451,7 +451,7 @@ onUnmounted(() => {
                   :model-value="formDuration === '' ? undefined : Number(formDuration)"
                   :min="1"
                   :step="1"
-                  class="form-input field-duration"
+                  class="field-duration"
                   placeholder="例如：30"
                   data-testid="ex-form-duration"
                   :controls="false"
@@ -464,7 +464,7 @@ onUnmounted(() => {
                   :model-value="Number(formCalories)"
                   :min="0"
                   :step="1"
-                  class="form-input field-calories"
+                  class="field-calories"
                   placeholder="例如：200"
                   data-testid="ex-form-calories"
                   :controls="false"
@@ -480,7 +480,7 @@ onUnmounted(() => {
                   :model-value="formDistance === '' ? undefined : Number(formDistance)"
                   :min="0"
                   :step="0.1"
-                  class="form-input field-distance"
+                  class="field-distance"
                   placeholder="例如：5.2"
                   data-testid="ex-form-distance"
                   :controls="false"
@@ -496,7 +496,7 @@ onUnmounted(() => {
                 v-model="formNote"
                 type="textarea"
                 :rows="2"
-                class="form-input desc-input"
+                class="desc-input"
                 placeholder="补充说明…"
                 data-testid="ex-form-note"
               />

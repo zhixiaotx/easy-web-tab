@@ -317,7 +317,7 @@ onUnmounted(() => {
                 :model-value="formTarget === '' ? undefined : Number(formTarget)"
                 :min="1"
                 :step="1"
-                class="form-input"
+               
                 placeholder="例如：2000"
                 data-testid="dt-target-input"
                 :controls="false"
@@ -359,13 +359,13 @@ onUnmounted(() => {
                 v-model="formDate"
                 type="date"
                 value-format="YYYY-MM-DD"
-                class="form-input field-date"
+                class="field-date"
                 data-testid="dt-form-date"
               />
             </div>
             <div class="field">
               <label class="field-label">餐次 *</label>
-              <el-select v-model="formMeal" class="form-input field-meal" data-testid="dt-form-meal">
+              <el-select v-model="formMeal" class="field-meal" data-testid="dt-form-meal">
                 <el-option v-for="m in MEAL_TYPES" :key="m" :value="m" :label="m" />
               </el-select>
             </div>
@@ -378,7 +378,7 @@ onUnmounted(() => {
                 v-model="formContent"
                 type="text"
                 maxlength="200"
-                class="form-input field-content"
+                class="field-content"
                 placeholder="例如：鸡蛋牛奶"
                 data-testid="dt-form-content"
               />
@@ -389,7 +389,7 @@ onUnmounted(() => {
                 :model-value="Number(formCalories)"
                 :min="0"
                 :step="1"
-                class="form-input field-calories"
+                class="field-calories"
                 placeholder="例如：500"
                 data-testid="dt-form-calories"
                 :controls="false"
@@ -404,7 +404,7 @@ onUnmounted(() => {
               v-model="formNote"
               type="textarea"
               :rows="2"
-              class="form-input desc-input"
+              class="desc-input"
               placeholder="补充说明…"
               data-testid="dt-form-note"
             />

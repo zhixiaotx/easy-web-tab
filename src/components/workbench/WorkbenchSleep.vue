@@ -371,7 +371,7 @@ onUnmounted(() => {
               :model-value="formTarget === '' ? undefined : Number(formTarget)"
               :min="0.1"
               :step="0.1"
-              class="form-input"
+             
               placeholder="例如：8"
               data-testid="sl-target-input"
               :controls="false"
@@ -417,13 +417,13 @@ onUnmounted(() => {
                 v-model="formDate"
                 type="date"
                 value-format="YYYY-MM-DD"
-                class="form-input field-date"
+                class="field-date"
                 data-testid="sl-form-date"
               />
             </div>
             <div class="field">
               <label class="field-label">睡眠质量 *</label>
-              <el-select v-model="formQuality" class="form-input field-type" data-testid="sl-form-quality">
+              <el-select v-model="formQuality" class="field-type" data-testid="sl-form-quality">
                 <el-option v-for="n in 5" :key="n" :value="String(n)" :label="`${n} 星`" />
               </el-select>
             </div>
@@ -436,7 +436,7 @@ onUnmounted(() => {
                 v-model="formSleepTime"
                 format="HH:mm"
                 value-format="HH:mm"
-                class="form-input field-time"
+                class="field-time"
                 data-testid="sl-form-sleep-time"
               />
             </div>
@@ -446,7 +446,7 @@ onUnmounted(() => {
                 v-model="formWakeTime"
                 format="HH:mm"
                 value-format="HH:mm"
-                class="form-input field-time"
+                class="field-time"
                 data-testid="sl-form-wake-time"
               />
             </div>
@@ -467,7 +467,7 @@ onUnmounted(() => {
               v-model="formNote"
               type="textarea"
               :rows="2"
-              class="form-input desc-input"
+              class="desc-input"
               placeholder="补充说明…"
               data-testid="sl-form-note"
             />

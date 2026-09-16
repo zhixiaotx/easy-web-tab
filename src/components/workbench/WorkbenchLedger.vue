@@ -306,7 +306,7 @@ onUnmounted(() => {
           v-model="selectedMonth"
           type="month"
           value-format="YYYY-MM"
-          class="form-input"
+         
         />
       </div>
       <el-button class="month-btn today-btn" data-testid="ld-today" @click="goToCurrentMonth">本月</el-button>
@@ -534,13 +534,13 @@ onUnmounted(() => {
                 v-model="formDate"
                 type="date"
                 value-format="YYYY-MM-DD"
-                class="form-input field-date"
+                class="field-date"
                 data-testid="ld-form-date"
               />
             </div>
             <div class="field field-category">
               <label class="field-label">分组 *</label>
-              <el-select v-model="formCategoryId" class="form-input" data-testid="ld-form-category">
+              <el-select v-model="formCategoryId" data-testid="ld-form-category">
                 <el-option-group label="收入分组">
                   <el-option v-for="c in store.incomeCategories" :key="c.id" :value="c.id" :label="c.name" />
                 </el-option-group>
@@ -557,7 +557,7 @@ onUnmounted(() => {
               :model-value="formAmount === '' ? undefined : Number(formAmount)"
               :min="0.01"
               :step="0.01"
-              class="form-input"
+             
               placeholder="例如：100.00"
               data-testid="ld-form-amount"
               :controls="false"
@@ -572,7 +572,7 @@ onUnmounted(() => {
               v-model="formNote"
               type="textarea"
               :rows="2"
-              class="form-input desc-input"
+              class="desc-input"
               placeholder="补充说明…"
               data-testid="ld-form-note"
             />

@@ -407,7 +407,7 @@ onUnmounted(() => {
               :min="100"
               :max="250"
               :step="1"
-              class="form-input"
+             
               placeholder="例如：170"
               data-testid="wt-height-input"
               :controls="false"
@@ -442,7 +442,7 @@ onUnmounted(() => {
                 v-model="formDate"
                 type="date"
                 value-format="YYYY-MM-DD"
-                class="form-input field-date"
+                class="field-date"
                 data-testid="wt-form-date"
               />
             </div>
@@ -452,7 +452,7 @@ onUnmounted(() => {
                 :model-value="formWeightKg === '' ? undefined : Number(formWeightKg)"
                 :min="0.1"
                 :step="0.1"
-                class="form-input field-weight"
+                class="field-weight"
                 placeholder="例如：75"
                 data-testid="wt-form-weight"
                 :controls="false"
@@ -468,7 +468,7 @@ onUnmounted(() => {
               v-model="formNote"
               type="textarea"
               :rows="2"
-              class="form-input desc-input"
+              class="desc-input"
               placeholder="补充说明…"
               data-testid="wt-form-note"
             />

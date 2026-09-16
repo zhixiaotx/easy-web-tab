@@ -18,6 +18,7 @@ import { sendReminderEmail } from '@/composables/reminderEmail'
 import { requestNotifyPermission } from '@/composables/useDesktopNotify'
 import yaml from 'js-yaml'
 import { useRouter } from 'vue-router'
+import { ICP_NUMBER, PSB_NUMBER, MIIT_BEIAN_URL } from '@/config/beian'
 import { useSitesStore } from '@/stores/sites'
 import { useSearchEnginesStore } from '@/stores/searchEngines'
 import { captureSnapshot } from '@/composables/useSnapshots'
@@ -1446,6 +1447,20 @@ onUnmounted(() => {
           </div>
           <p class="wb-menu-hint">
             由 Vercount 统计，需通过公网域名访问才生效；数据按浏览器与设备去重。
+          </p>
+
+          <!-- 备案信息（来源 src/config/beian.ts，仅展示；修改需改源码重新构建部署） -->
+          <div class="wb-menu-head beian-box">
+            <span class="wb-menu-label">备案信息</span>
+            <span v-if="ICP_NUMBER || PSB_NUMBER" class="beian-values">
+              <a v-if="ICP_NUMBER" :href="MIIT_BEIAN_URL" target="_blank" rel="noopener noreferrer" class="beian-link">{{ ICP_NUMBER }}</a>
+              <span v-if="ICP_NUMBER && PSB_NUMBER" class="beian-sep">|</span>
+              <span v-if="PSB_NUMBER" class="beian-psb">{{ PSB_NUMBER }}</span>
+            </span>
+            <span v-else class="beian-values beian-empty">未配置</span>
+          </div>
+          <p class="wb-menu-hint">
+            备案号在 <code>src/config/beian.ts</code> 中配置，修改后需重新构建部署生效。
           </p>
         </div>
 
@@ -3239,6 +3254,29 @@ html.dark .site-action-btn:hover:not(:disabled) {
   color: var(--color-text-primary, #1e293b);
   font-weight: 600;
   margin: 0 2px;
+}
+
+/* ===== 站点外观（导航设置 tab）：备案信息展示 ===== */
+.beian-box {
+  margin-top: 14px;
+}
+.beian-values {
+  font-size: 13px;
+  color: var(--color-text-secondary, #475569);
+}
+.beian-link {
+  color: var(--color-primary, #3b82f6);
+  text-decoration: none;
+}
+.beian-link:hover {
+  text-decoration: underline;
+}
+.beian-sep {
+  margin: 0 6px;
+  opacity: 0.6;
+}
+.beian-empty {
+  color: var(--color-text-muted, #94a3b8);
 }
 
 /* ===== 记账分类：类型徽标（支出蓝 / 收入绿）+ 内置徽标 ===== */

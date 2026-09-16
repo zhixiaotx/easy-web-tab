@@ -8,7 +8,7 @@
  * 变更后需 npm run build 重新构建部署才生效
  */
 // 开源仓库中留空：请填入你自己站点的备案号
-export const ICP_NUMBER = ''
+export const ICP_NUMBER = '冀ICP备2026035690号'
 
 /**
  * 公安备案号

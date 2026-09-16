@@ -659,7 +659,7 @@ onUnmounted(() => {
         <el-input
           v-model="formTitle"
           type="text"
-          class="form-input note-title-input"
+          class="note-title-input"
           data-testid="note-title-input"
           placeholder="标题（可选）"
         />
@@ -679,7 +679,7 @@ onUnmounted(() => {
           <el-select
             v-model="formCategoryId"
             id="nt-form-category"
-            class="form-input note-cat-select"
+            class="note-cat-select"
             data-testid="nt-form-category"
           >
             <el-option value="" label="未分类" />
@@ -691,7 +691,7 @@ onUnmounted(() => {
           v-model="formContent"
           type="textarea"
           :rows="5"
-          class="form-input note-content-input"
+          class="note-content-input"
           data-testid="note-content-input"
           :placeholder="formType === 'timeline' ? '便签内容（时光轴可为空，条目在卡片上追加）' : '便签内容…'"
         />
@@ -1001,7 +1001,8 @@ onUnmounted(() => {
   transition: border-color var(--transition-fast, 0.15s ease);
 }
 .form-input:focus { outline: none; border-color: var(--color-primary, var(--color-primary)); }
-.note-content-input { height: 180px; min-height: 180px; resize: none; }
+.note-content-input { flex: 1 1 auto; min-height: 240px; }
+.note-content-input :deep(.el-textarea__inner) { height: 100%; min-height: 240px; resize: none; }
 .note-form-row { display: flex; align-items: center; gap: 10px; }
 .note-form-label { flex: 0 0 auto; min-width: 44px; font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); }
 .note-type-radios { display: flex; gap: 8px; }
@@ -1024,7 +1025,7 @@ onUnmounted(() => {
 .color-orange .color-swatch { background: #f97316; }
 .color-cyan .color-swatch { background: #06b6d4; }
 .color-purple .color-swatch { background: #a855f7; }
-.note-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.note-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
 .btn-save {
   padding: 9px 18px; font-size: 14px; color: #fff; white-space: nowrap; cursor: pointer;
   background: var(--color-primary, var(--color-primary)); border: none; border-radius: var(--radius-md, 8px);
@@ -1055,7 +1056,6 @@ html.dark .btn-add:disabled { background-color: var(--color-bg-input, #374151); 
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }
 html.dark .nt-btn-reset { background-color: var(--color-bg-card, #1f2937); color: var(--color-text-secondary, #d1d5db); border-color: var(--color-border, #374151); }
 html.dark .nt-cat-badge { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.45); }
-html.dark .note-cat-select { background-color: var(--color-bg-input, #374151); color: var(--color-text, #f9fafb); border-color: var(--color-border, #374151); }
 html.dark .timeline-item-time { color: var(--color-text-secondary, #d1d5db); }
 html.dark .timeline-item::before { background: var(--color-border, #374151); }
 

@@ -16,7 +16,6 @@ function cardFields(row: any) {
   ]
 }
 
-import Icon from '../Icon.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { filterTodos, dueInfo } from '@/composables/todoCore'

@@ -277,9 +277,6 @@ onMounted(() => {
       <template #header>
         <div class="dialog-header">
           <span class="dialog-title">{{ editingId ? '编辑习惯' : '新增习惯' }}</span>
-          <el-button class="dialog-close" aria-label="关闭" @click="closeEditDialog">
-            <Icon name="close" :size="18" />
-          </el-button>
         </div>
       </template>
       <div class="dialog-body">

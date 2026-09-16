@@ -4,15 +4,16 @@ import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useToast } from '@/composables/useToast'
 import { localToday } from '@/composables/todoCore'
 import { DEFAULT_HABIT_COLOR } from '@/composables/habitCore'
-import type { Habit, HabitFrequency } from '@/composables/habitCore'
+import type { HabitFrequency } from '@/composables/habitCore'
 import { usePanelPaging } from '@/composables/usePanelPaging'
 import PanelPager from './PanelPager.vue'
 import Icon from '@/components/Icon.vue'
+import HabitCalendarCard from './HabitCalendarCard.vue'
 
 const store = useWorkbenchHabitsStore()
 const toast = useToast()
 
-// 今天 = 本地日期 YYYY-MM-DD（localToday 防 UTC 偏移）；打卡/连击/周统计均以此为锚
+// 今天 = 本地日期 YYYY-MM-DD（localToday 防 UTC 偏移）
 const today = localToday()
 
 /** 今日是否已打卡（records 同日记录存在性判断，非公式）。 */
@@ -20,31 +21,23 @@ function isChecked(habitId: string): boolean {
   return store.records.some(r => r.habitId === habitId && r.date === today)
 }
 
-// 卡片视图数据：连续天数/周达成率一律走 store 薄委托（streakOf/weeklyAttainmentOf → habitCore）
-// 展示排序：未打卡置顶（「今天要处理」一眼可见），已打卡沉底；同状态内保持录入顺序稳定。
-// 仅依赖 records/today 的响应式派生，打卡后由 <TransitionGroup> 平滑滑动到新位置，不突兀跳变。
+// 卡片排序：未打卡置顶（「今天要处理」一眼可见），已打卡沉底；同状态内保持录入顺序稳定。
+// 仅依赖 records/today 的响应式派生；打卡（今日）后由 <TransitionGroup> 平滑滑动到新位置。
 const viewHabits = computed(() =>
   store.habits
     .map((h, i) => ({ h, i, checked: isChecked(h.id) }))
     .sort((a, b) => (a.checked === b.checked ? a.i - b.i : a.checked ? 1 : -1))
-    .map(({ h }) => ({
-      habit: h,
-      checked: isChecked(h.id),
-      streak: store.streakOf(h.id, h.frequency, today),
-      week: store.weeklyAttainmentOf(h.id, h.frequency, today)
-    }))
+    .map(({ h }) => h)
 )
 
-// ===== 自适应分页（R4/R7：rowHeight 180 = row-heights.json MAX 177.16 + 2px；
-// 右侧卡片网格：gridRef = listEl 同元素实测列数 → 每页 = rowsPerPage × colsPerRow）=====
+// ===== 自适应分页（月历卡片更高，rowHeight 取到 ~330）=====
 const listEl = ref<HTMLElement | null>(null)
 const paging = usePanelPaging({
   items: () => viewHabits.value,
-  rowHeight: 180, // row-heights.json: habits = 180 (MAX 177.16 + 2px)
+  rowHeight: 330,
   containerRef: listEl,
   gridRef: listEl
 })
-// usePanelPaging 返回普通对象（非 reactive），模板需顶层 ref 自动解包 → 解构（goto 供列表变化回页 1）
 const { pageItems, currentPage, totalPages, fitsOnePage, next, prev, goto } = paging
 
 // 频率选项与 habitCore HabitFrequency（每周目标次数 1-7）对齐：「每天」即 7
@@ -55,7 +48,7 @@ const FREQUENCY_OPTIONS: { value: HabitFrequency; label: string }[] = [
   { value: 1, label: '每周 1 次' }
 ]
 
-// 习惯操作失败 toast：reason 语义 → 中文文案（仿待办分类 CRUD 惯例）
+// 习惯操作失败 toast：reason 语义 → 中文文案
 const HABIT_ERROR_MESSAGES: Record<string, string> = {
   empty: '习惯名称不能为空',
   duplicate: '同名习惯已存在',
@@ -67,7 +60,7 @@ function habitErrorToast(result: { ok: boolean; reason?: string }): void {
   toast.error(HABIT_ERROR_MESSAGES[result.reason ?? ''] ?? '操作失败')
 }
 
-// ===== 新增/编辑弹框（顶部「新增习惯」按钮与卡片「编辑」共用同一弹框）=====
+// ===== 新增/编辑弹框（顶部「新增习惯」按钮与卡片点击共用同一弹框）=====
 const showEditDialog = ref(false)
 const editingId = ref<string | null>(null)
 const dialogName = ref('')
@@ -118,69 +111,22 @@ async function saveEditDialog(): Promise<void> {
   habitErrorToast(result)
 }
 
-// ===== 打开：记录详情弹框 =====
-const showRecords = ref(false)
-const recordsHabit = ref<Habit | null>(null)
-
-const recordsStreak = computed(() =>
-  recordsHabit.value
-    ? store.streakOf(recordsHabit.value.id, recordsHabit.value.frequency, today)
-    : { count: 0, unit: '' }
-)
-const recordsWeek = computed(() =>
-  recordsHabit.value
-    ? store.weeklyAttainmentOf(recordsHabit.value.id, recordsHabit.value.frequency, today)
-    : { completed: 0, target: 0 }
-)
-const recordsDates = computed<string[]>(() =>
-  recordsHabit.value
-    ? store.records
-        .filter(r => r.habitId === recordsHabit.value!.id)
-        .map(r => r.date)
-        .sort()
-        .reverse()
-    : []
-)
-
-function openRecords(id: string): void {
-  const h = store.habits.find(x => x.id === id)
-  if (!h) return
-  recordsHabit.value = h
-  showRecords.value = true
-}
-
-function closeRecords(): void {
-  showRecords.value = false
-  recordsHabit.value = null
-}
-
-// 从记录弹框直接切入编辑弹框（先关记录，再开编辑，避免双层遮罩叠加）
-function editFromRecords(): void {
-  if (!recordsHabit.value) return
-  const id = recordsHabit.value.id
-  closeRecords()
-  openEditDialog(id)
-}
-
 async function handleDelete(id: string): Promise<void> {
   const h = store.habits.find(x => x.id === id)
   if (!confirm(`确定要删除习惯「${h?.name ?? ''}」吗？删除后打卡记录一并清除。`)) return
   const result = await store.deleteHabit(id)
   if (result.ok) {
     if (editingId.value === id) closeEditDialog()
-    if (recordsHabit.value?.id === id) closeRecords()
     goto(1)
   }
   habitErrorToast(result)
 }
 
-// 打卡/取消打卡：幂等由 store.toggleCheckIn 保证（同一天再点取消），组件不重算
-async function handleCheck(habitId: string): Promise<void> {
-  const result = await store.toggleCheckIn(habitId, today)
-  if (!result.ok) habitErrorToast(result)
+function deleteCurrent(): void {
+  if (editingId.value) void handleDelete(editingId.value)
 }
 
-// 面板自管理数据加载（WorkbenchView Promise.all 不接入本 store；loadHabits 经 normalizeHabitsData 幂等归一）
+// 面板自管理数据加载
 onMounted(() => {
   void store.loadHabits()
 })
@@ -195,7 +141,7 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <!-- 习惯卡片网格（多条并排展示，分页在网格下方） -->
+    <!-- 习惯月历卡片网格（多列并排，分页在网格下方） -->
     <div class="hb-main">
       <div v-if="store.habits.length === 0" class="empty-state" data-testid="hb-empty">
         还没有习惯，点上方「新增习惯」开始吧
@@ -203,69 +149,19 @@ onMounted(() => {
 
       <div v-else ref="listEl" class="hb-list" :class="{ 'hb-list-scroll': !fitsOnePage }">
         <TransitionGroup name="grid">
-        <div
-          v-for="v in pageItems"
-          :key="v.habit.id"
-          class="hb-card"
-          :class="{ 'is-checked': v.checked }"
-          :data-testid="`hb-card-${v.habit.id}`"
-          :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-        >
-          <span class="hb-card-bar"></span>
-          <div class="hb-card-top">
-            <Icon name="habits" :size="20" class="hb-card-icon" />
-            <div class="hb-card-main">
-              <div class="hb-card-name">{{ v.habit.name }}</div>
-              <div class="hb-card-badges">
-                <span class="hb-badge hb-badge-streak" :data-testid="`hb-streak-${v.habit.id}`">
-                  <Icon name="trending-up" :size="13" class="hb-badge-ico" /> 连续 {{ v.streak.count }} {{ v.streak.unit }}
-                </span>
-                <span class="hb-badge hb-badge-week" :data-testid="`hb-week-${v.habit.id}`">
-                  本周 {{ v.week.completed }}/{{ v.week.target }}
-                </span>
-              </div>
-              <div class="hb-week-bar" :title="`本周 ${v.week.completed}/${v.week.target}`">
-                <div
-                  class="hb-week-fill"
-                  :style="{
-                    width: Math.min(100, Math.round(v.week.percent * 100)) + '%',
-                    background: v.habit.color ?? DEFAULT_HABIT_COLOR
-                  }"
-                ></div>
-              </div>
-            </div>
-            <el-button
-              class="hb-check-btn"
-              :class="{ 'is-checked': v.checked }"
-              :style="{ '--hb-color': v.habit.color ?? DEFAULT_HABIT_COLOR }"
-              :data-testid="`hb-check-${v.habit.id}`"
-              :aria-label="v.checked ? '取消今日打卡' : '今日打卡'"
-              @click="handleCheck(v.habit.id)"
-            >
-              <Icon name="check" :size="16" />
-              <span>{{ v.checked ? '已打卡' : '打卡' }}</span>
-            </el-button>
-          </div>
-          <!-- 卡片左下角：打开 / 编辑 / 删除 -->
-          <div class="hb-card-footer">
-            <el-button size="small" class="btn-text" :data-testid="`hb-open-${v.habit.id}`" @click="openRecords(v.habit.id)">
-              <Icon name="eye" :size="14" /> 查看
-            </el-button>
-            <el-button size="small" class="btn-text" :data-testid="`hb-edit-${v.habit.id}`" @click="openEditDialog(v.habit.id)">
-              <Icon name="pencil" :size="14" /> 编辑
-            </el-button>
-            <el-button size="small" class="btn-text btn-text-danger" :data-testid="`hb-delete-${v.habit.id}`" @click="handleDelete(v.habit.id)">
-              <Icon name="trash" :size="14" /> 删除
-            </el-button>
-          </div>
-        </div>
+          <HabitCalendarCard
+            v-for="h in pageItems"
+            :key="h.id"
+            :habit="h"
+            @edit="openEditDialog"
+          />
         </TransitionGroup>
       </div>
 
       <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
     </div>
 
-    <!-- 新增/编辑弹框（顶部按钮与卡片编辑共用） -->
+    <!-- 新增/编辑弹框（顶部按钮与卡片点击共用） -->
     <el-dialog
       :model-value="showEditDialog"
       :title="editingId ? '编辑习惯' : '新增习惯'"
@@ -303,57 +199,27 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="dialog-footer">
-          <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</el-button>
-          <el-button type="primary" size="small" :disabled="!dialogName.trim()" data-testid="hb-dialog-save" @click="saveEditDialog">
-            {{ editingId ? '保存' : '添加' }}
+          <el-button
+            v-if="editingId"
+            size="small"
+            class="btn-danger"
+            data-testid="hb-dialog-delete"
+            @click="deleteCurrent"
+          >
+            删除
           </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 打开：记录详情弹框 -->
-    <el-dialog
-      :model-value="showRecords"
-      title="习惯记录"
-      width="440px"
-      aria-label="习惯记录"
-      @close="closeRecords"
-      @update:model-value="(v: boolean) => { if (!v) closeRecords() }"
-    >
-      <template #header>
-        <div class="dialog-header">
-          <span class="dialog-title">
-            <Icon name="habits" :size="16" class="hb-dlg-ico" /> {{ recordsHabit?.name }}
+          <span class="dialog-footer-right">
+            <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</el-button>
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="!dialogName.trim()"
+              data-testid="hb-dialog-save"
+              @click="saveEditDialog"
+            >
+              {{ editingId ? '保存' : '添加' }}
+            </el-button>
           </span>
-        </div>
-      </template>
-      <div class="dialog-body" v-if="recordsHabit">
-        <div class="hb-rec-summary">
-          <div class="hb-rec-item">
-            <span class="hb-rec-value">{{ recordsStreak.count }} {{ recordsStreak.unit }}</span>
-            <span class="hb-rec-label">连续</span>
-          </div>
-          <div class="hb-rec-item">
-            <span class="hb-rec-value">{{ recordsWeek.completed }}/{{ recordsWeek.target }}</span>
-            <span class="hb-rec-label">本周打卡</span>
-          </div>
-          <div class="hb-rec-item">
-            <span class="hb-rec-value">{{ recordsDates.length }}</span>
-            <span class="hb-rec-label">累计打卡</span>
-          </div>
-        </div>
-        <div class="hb-rec-list">
-          <div v-for="d in recordsDates" :key="d" class="hb-rec-row">
-            <Icon name="check" :size="14" class="hb-rec-ico" />
-            <span>{{ d }}</span>
-          </div>
-          <div v-if="recordsDates.length === 0" class="hb-rec-empty">还没有打卡记录</div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button size="small" @click="closeRecords">关闭</el-button>
-          <el-button type="primary" size="small" data-testid="hb-rec-edit" @click="editFromRecords">编辑</el-button>
         </div>
       </template>
     </el-dialog>
@@ -399,294 +265,15 @@ onMounted(() => {
   color: var(--color-text-secondary, var(--color-text-secondary));
 }
 
-.form-input {
-  padding: 9px 12px;
-  background-color: var(--color-bg-input, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  color: var(--color-text, var(--color-text));
-  box-sizing: border-box;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.hb-color-picker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.hb-color-option {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: var(--hb-swatch);
-  border: 2px solid transparent;
-  cursor: pointer;
-  padding: 0;
-  transition: transform var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
-}
-
-.hb-color-option:hover {
-  transform: scale(1.1);
-}
-
-.hb-color-option.active {
-  border-color: var(--color-text, var(--color-text));
-  transform: scale(1.1);
-}
-
-/* ===== 通用按钮 ===== */
-.btn-primary {
-  align-self: flex-start;
-  padding: 10px 24px;
-  background-color: var(--color-primary, var(--color-primary));
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover, var(--color-primary-hover));
-}
-
-.btn-primary:disabled {
-  background: var(--color-text-muted, var(--color-text-muted));
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  padding: 10px 20px;
-  background: var(--color-bg-card, var(--color-bg-hover));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 8px);
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  white-space: nowrap;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-/* 卡片左下角文本按钮（打开/编辑/删除） */
-.btn-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-sm, 6px);
-  background: transparent;
-  border: 1px solid var(--color-border, var(--color-border));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  cursor: pointer;
-  transition: all var(--transition-fast, 0.15s ease);
-}
-
-.btn-text:hover {
-  color: var(--color-primary, var(--color-primary));
-  border-color: var(--color-primary, var(--color-primary));
-}
-
-.btn-text-danger:hover {
-  color: var(--color-error, var(--color-error));
-  border-color: var(--color-error, var(--color-error));
-}
-
-/* ===== 习惯卡片网格（多列并排） ===== */
+/* ===== 习惯卡片网格（多列并排，月历卡片） ===== */
 .hb-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 10px;
   align-content: start;
 }
 
-.hb-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 12px;
-  background: var(--color-bg-card, var(--color-bg-card));
-  border: 1px solid var(--color-border, var(--color-border));
-  border-radius: var(--radius-md, 10px);
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
-  transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
-}
-
-.hb-card:hover {
-  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
-}
-
-.hb-card.is-checked .hb-card-name {
-  text-decoration: line-through;
-  color: var(--color-text-muted, var(--color-text-muted));
-}
-
-/* 左侧颜色条（习惯主色，随卡片 hover 强调） */
-.hb-card-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: var(--radius-md, 10px) 0 0 var(--radius-md, 10px);
-  background-color: var(--hb-color, var(--color-primary, var(--color-primary)));
-}
-
-/* 卡片上半部：图标 + 主信息 + 打卡按钮 */
-.hb-card-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.hb-card-icon {
-  font-size: 20px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.hb-card-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hb-card-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text, var(--color-text));
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  word-break: break-all;
-}
-
-.hb-card-badges {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.hb-badge {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.hb-badge-streak {
-  background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-primary, var(--color-primary));
-}
-
-.hb-badge-week {
-  background: var(--color-bg-card, var(--color-bg-hover));
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.hb-badge-ico {
-  flex-shrink: 0;
-}
-
-/* 卡片左下角：打开 / 编辑 / 删除 */
-.hb-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-/* 打卡主角按钮：清晰的「打卡/已打卡」CTA，触控区 ≥44px，习惯主色，勾选后填充 */
-.hb-check-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 78px;
-  min-height: 36px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  border-radius: var(--radius-md, 8px);
-  border: 1.5px solid var(--hb-color, var(--color-primary, var(--color-primary)));
-  background: transparent;
-  color: var(--hb-color, var(--color-primary, var(--color-primary)));
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
-}
-
-.hb-check-btn:hover {
-  background: color-mix(in srgb, var(--hb-color, var(--color-primary)) 12%, transparent);
-}
-
-.hb-check-btn.is-checked {
-  background: var(--hb-color, var(--color-primary, var(--color-primary)));
-  color: #fff;
-  border-color: var(--hb-color, var(--color-primary, var(--color-primary)));
-}
-
-/* 本周进度条：目标完成度一眼可见（颜色随习惯主色） */
-.hb-week-bar {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--color-bg-input, var(--color-bg-hover));
-  overflow: hidden;
-  margin-top: 2px;
-}
-
-.hb-week-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width var(--transition-fast, 0.15s ease);
-}
-
-/* ===== 弹框（新增/编辑 + 记录详情，共用 hb-dialog-overlay）===== */
-.hb-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 320; /* 高于卡片与其它面板内弹框(310)，低于全局弹框(1000+) */
-  padding: 20px;
-}
-
-.hb-dialog {
-  background-color: var(--color-bg-card, var(--color-bg-card));
-  border-radius: var(--radius-lg, 12px);
-  width: 100%;
-  max-width: 440px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-modal, 0 20px 60px rgba(0, 0, 0, 0.3));
-}
-
+/* ===== 弹框（新增/编辑）===== */
 .dialog-header {
   display: flex;
   align-items: center;
@@ -703,24 +290,6 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--color-text, var(--color-text));
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dialog-close {
-  background: none;
-  border: none;
-  color: var(--color-text-muted, var(--color-text-muted));
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm, 6px);
-  display: inline-flex;
-  transition: color var(--transition-fast, 0.15s ease);
-}
-
-.dialog-close:hover {
-  color: var(--color-text, var(--color-text));
 }
 
 .dialog-body {
@@ -732,72 +301,29 @@ onMounted(() => {
 
 .dialog-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 14px 20px;
   border-top: 1px solid var(--color-border, var(--color-border));
 }
 
-/* 记录详情弹框 */
-.hb-dlg-ico {
-  color: var(--color-primary, var(--color-primary));
-}
-
-.hb-rec-summary {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.hb-rec-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 14px;
-  background: var(--color-bg-hover, var(--color-bg-card));
-  border-radius: var(--radius-md, 8px);
-  min-width: 90px;
-}
-
-.hb-rec-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-primary, var(--color-primary));
-  font-variant-numeric: tabular-nums;
-}
-
-.hb-rec-label {
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-}
-
-.hb-rec-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 40vh;
-  overflow-y: auto;
-  margin-top: 4px;
-}
-
-.hb-rec-row {
+.dialog-footer-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--color-text, var(--color-text));
-  font-variant-numeric: tabular-nums;
+  gap: 10px;
 }
 
-.hb-rec-ico {
-  color: var(--color-primary, var(--color-primary));
-  flex-shrink: 0;
+.btn-danger {
+  color: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
+  background: transparent;
 }
 
-.hb-rec-empty {
-  font-size: 13px;
-  color: var(--color-text-muted, var(--color-text-muted));
-  padding: 8px 0;
+.btn-danger:hover {
+  background: var(--color-error, #ef4444);
+  color: #fff;
+  border-color: var(--color-error, #ef4444);
 }
 
 /* ===== 空态 ===== */
@@ -812,67 +338,14 @@ onMounted(() => {
 }
 
 /* ===== 暗色模式覆盖 ===== */
-html.dark .hb-card {
-  background-color: var(--color-bg-card, #1f2937);
-  box-shadow: none;
-}
-
-html.dark .hb-badge-streak,
-html.dark .hb-badge-week {
-  background-color: var(--color-bg-input, #374151);
-}
-
-html.dark .hb-week-bar {
-  background-color: #374151;
-}
-
-html.dark .hb-card.is-checked .hb-card-name {
-  color: var(--color-text-muted, #9ca3af);
-}
-
-html.dark .hb-color-option.active {
-  border-color: var(--color-text, #f9fafb);
-}
-
-html.dark .btn-primary:disabled {
-  background-color: var(--color-bg-input, #374151);
-  color: var(--color-text-muted, #9ca3af);
-}
-
-html.dark .btn-secondary,
-html.dark .btn-text {
-  background-color: var(--color-bg-card, #1f2937);
-  color: var(--color-text-secondary, #d1d5db);
-  border-color: var(--color-border, #374151);
-}
-
-html.dark .form-input,
-html.dark select.form-input,
-html.dark input.form-input {
-  background-color: var(--color-bg-input, #374151);
+html.dark .dialog-header,
+html.dark .dialog-title {
   color: var(--color-text, #f9fafb);
-  border-color: var(--color-border, #374151);
+  background-color: var(--color-bg-card, #1f2937);
 }
 
 html.dark .empty-state {
   background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .hb-dialog {
-  background-color: var(--color-bg-card, #1f2937);
-}
-
-html.dark .dialog-header,
-html.dark .dialog-title {
-  color: var(--color-text, #f9fafb);
-}
-
-html.dark .hb-rec-item {
-  background-color: var(--color-bg-input, #374151);
-}
-
-html.dark .hb-rec-value {
-  color: var(--color-primary, #60a5fa);
 }
 
 /* ===== 桌面自适应分页（一屏布局：网格 flex:1 钉满，分页在网格下方）===== */
@@ -889,16 +362,6 @@ html.dark .hb-rec-value {
 
   .hb-list-scroll {
     overflow-y: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .hb-card-top {
-    flex-wrap: wrap;
-  }
-
-  .hb-check-btn {
-    margin-left: auto;
   }
 }
 </style>

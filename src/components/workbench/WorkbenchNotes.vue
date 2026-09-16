@@ -371,6 +371,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
 })
+
 </script>
 
 <template>
@@ -649,8 +650,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 普通便签与时光轴便签已合并至上方统一表格 -->
-    </template>
 
     <!-- 编辑浮层（新增/编辑共用） -->
     <div v-if="formOpen" class="note-overlay" data-testid="note-overlay" @click.self="cancelForm">

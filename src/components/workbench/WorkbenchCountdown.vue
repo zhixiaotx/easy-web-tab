@@ -435,49 +435,53 @@ onUnmounted(() => {
 
       </TransitionGroup>
       </div>
-      <el-table v-else class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%" height="100%">
-        <el-table-column label="名称" min-width="200" show-overflow-tooltip>
-          <template #default="{ row }">
-            <div class="cd-t-name">
+      <div v-else class="cd-table-wrap">
+        <el-table class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%" height="100%">
+          <el-table-column label="名称" min-width="200" show-overflow-tooltip>
+            <template #default="{ row }">
               <span class="cd-name">{{ row.name }}</span>
-              <span v-if="repeatLabel(row.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(row.repeat) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="分类" width="92" align="center">
+            <template #default="{ row }">
+              <span class="cat-badge" :class="categoryBadgeClass(row.category)">{{ categoryLabel(row.category) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="重复" width="104" align="center">
+            <template #default="{ row }">{{ repeatLabel(row.repeat) }}</template>
+          </el-table-column>
+          <el-table-column label="提醒" width="92" align="center">
+            <template #default="{ row }">
               <span v-if="isRemindedToday(row.lastRemindedAt)" class="reminded-badge">已提醒</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="分类" width="92" align="center">
-          <template #default="{ row }">
-            <span class="cat-badge" :class="categoryBadgeClass(row.category)">{{ categoryLabel(row.category) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="重复" width="104" align="center">
-          <template #default="{ row }">{{ repeatLabel(row.repeat) }}</template>
-        </el-table-column>
-        <el-table-column label="剩余时间" min-width="140">
-          <template #default="{ row }">
-            <span class="cd-t-remain" :class="statusClass(row.remaining.status)">{{ row.remaining.isExpired ? '已过期' : '剩余' }} {{ row.remaining.label }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="下次提醒" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.remaining.nextTime }}</template>
-        </el-table-column>
-        <el-table-column label="前台显示" width="80" align="center">
-          <template #default="{ row }">
-            <el-checkbox :model-value="row.showOnDisplay !== false" @click.stop @change="store.setShowOnDisplay(row.id, $event)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="188" class-name="ewt-op-col" align="center">
-          <template #default="{ row }">
-            <div class="cd-t-ops">
-              <template v-if="isManual">
-                <el-button size="small" :disabled="!canMoveUp(row.id)" title="上移" @click.stop="store.moveCountdown(row.id, 'up')">▲</el-button>
-                <el-button size="small" :disabled="!canMoveDown(row.id)" title="下移" @click.stop="store.moveCountdown(row.id, 'down')">▼</el-button>
-              </template>
-              <el-button size="small" class="btn-delete" @click.stop="handleDelete(row.id)">删除</el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+              <span v-else class="cd-t-empty">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="剩余时间" min-width="140">
+            <template #default="{ row }">
+              <span class="cd-t-remain" :class="statusClass(row.remaining.status)">{{ row.remaining.isExpired ? '已过期' : '剩余' }} {{ row.remaining.label }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="下次提醒" min-width="150" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.remaining.nextTime }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="250" class-name="ewt-op-col" align="center">
+            <template #default="{ row }">
+              <div class="cd-t-ops">
+                <template v-if="isManual">
+                  <el-button size="small" :disabled="!canMoveUp(row.id)" title="上移" @click.stop="store.moveCountdown(row.id, 'up')">▲</el-button>
+                  <el-button size="small" :disabled="!canMoveDown(row.id)" title="下移" @click.stop="store.moveCountdown(row.id, 'down')">▼</el-button>
+                </template>
+                <el-button
+                  size="small"
+                  :class="row.showOnDisplay !== false ? 'btn-show-on' : 'btn-show-off'"
+                  @click.stop="store.setShowOnDisplay(row.id, !(row.showOnDisplay !== false))"
+                >{{ row.showOnDisplay !== false ? '前台显示' : '未显示' }}</el-button>
+                <el-button size="small" class="btn-delete" @click.stop="handleDelete(row.id)">删除</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </div>
 
     <div class="cd-pager">
@@ -684,7 +688,20 @@ onUnmounted(() => {
 
 /* ===== 卡片墙 ===== */
 .cd-viewport {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+}
+
+/* 列表视图：表格外层定高容器（flex 撑满列表区剩余高度）。
+   若把 height:100% 的 el-table 直接放进非 flex 的 .cd-viewport，
+   工具条 + 表格 两者高度相加会溢出列表区，el-table（position:relative）
+   会盖住底部分页条（与 WorkbenchTodo 的 .td-table-wrap 同解法）。 */
+.cd-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .cd-grid {
@@ -1191,6 +1208,10 @@ html.dark .cat-default {
   min-width: 0;
 }
 
+.cd-t-empty {
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
 .cd-t-remain {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1203,23 +1224,62 @@ html.dark .cat-default {
   gap: 6px;
   flex-wrap: wrap;
 }
+/* 操作列：前台显示切换按钮（文字=当前是否上墙显示，点击切换） */
+.cd-t-ops .btn-show-on {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+.cd-t-ops .btn-show-off {
+  color: var(--color-text-secondary, #9ca3af);
+}
 
 /* 表格内徽章字号略缩，避免挤压 */
 .ewt-table .cd-t-name .repeat-badge,
 .ewt-table .cd-t-name .reminded-badge {
   font-size: 11px;
 }
-</style>
 
 /* 底部分页器（与 WorkbenchTodo 统一：el-pagination total/prev/next/jumper） */
 .cd-pager {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
   flex-shrink: 0;
-  padding: 4px 0;
+  padding: 10px 0 2px;
+}
+
+/* 显式上色，避免默认主题下分页按钮（上一页/下一页/页码/跳转）文字不可见（与 WorkbenchTodo 等统一） */
+.cd-pager :global(.el-pagination) { --el-pagination-bg-color: transparent; }
+.cd-pager :global(.el-pagination button),
+.cd-pager :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+.cd-pager :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+:global(html.dark) .cd-pager :global(.el-pagination button),
+:global(html.dark) .cd-pager :global(.el-pagination .el-pager li) {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+:global(html.dark) .cd-pager :global(.el-pagination .el-pager li.is-active) {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+.cd-pager :global(.el-pagination__total) {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
 }
 
 /* 分类标签页：新增按钮靠右（原靠 toolbar-count 推右，统计移除后显式置右） */
 .cd-cat-tabs .btn-add {
   margin-left: auto;
 }
+</style>

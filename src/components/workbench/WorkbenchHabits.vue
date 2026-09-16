@@ -199,6 +199,16 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="dialog-footer">
+          <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</el-button>
+          <el-button
+            type="primary"
+            size="small"
+            :disabled="!dialogName.trim()"
+            data-testid="hb-dialog-save"
+            @click="saveEditDialog"
+          >
+            {{ editingId ? '保存' : '添加' }}
+          </el-button>
           <el-button
             v-if="editingId"
             size="small"
@@ -208,18 +218,6 @@ onMounted(() => {
           >
             删除
           </el-button>
-          <span class="dialog-footer-right">
-            <el-button size="small" data-testid="hb-dialog-cancel" @click="closeEditDialog">取消</el-button>
-            <el-button
-              type="primary"
-              size="small"
-              :disabled="!dialogName.trim()"
-              data-testid="hb-dialog-save"
-              @click="saveEditDialog"
-            >
-              {{ editingId ? '保存' : '添加' }}
-            </el-button>
-          </span>
         </div>
       </template>
     </el-dialog>
@@ -302,16 +300,10 @@ onMounted(() => {
 .dialog-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   padding: 14px 20px;
   border-top: 1px solid var(--color-border, var(--color-border));
-}
-
-.dialog-footer-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .btn-danger {

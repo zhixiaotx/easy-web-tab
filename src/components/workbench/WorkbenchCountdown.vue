@@ -2,6 +2,8 @@
 import Icon from '../Icon.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useCountdownsStore, calcRemaining } from '@/stores/countdowns'
+import { useViewMode } from '@/composables/useViewMode'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import type { CountdownItem, CountdownRemaining, CountdownSortMode } from '@/stores/countdowns'
 import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/countdownCore'
 import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
@@ -11,6 +13,11 @@ import type { CountdownRepeat, CountdownCategory } from '@/types'
 import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '@/types'
 
 const store = useCountdownsStore()
+const vm = useViewMode()
+
+function rowClick(row: CountdownItem): void {
+  startEdit(row)
+}
 
 // ===== 查询/筛选（查询按钮生效，重置恢复全量）=====
 const searchName = ref('')
@@ -370,7 +377,9 @@ onUnmounted(() => {
       <el-button size="small" @click="resetSearch">重置查询</el-button>
     </div>
 
-    <div v-else ref="gridEl" class="cd-grid" :class="{ 'cd-grid-scroll': !fitsOnePage }">
+    <div v-else ref="gridEl" class="cd-viewport" :class="{ 'cd-grid-scroll': !fitsOnePage }">
+      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <div v-if="vm.mode === 'card'" class="cd-grid">
       <TransitionGroup name="grid">
       <div
         v-for="item in pageItems"
@@ -429,7 +438,52 @@ onUnmounted(() => {
           <el-button class="btn-delete" size="small" @click="handleDelete(item.id)">删除</el-button>
         </div>
       </div>
+
       </TransitionGroup>
+      </div>
+      <el-table v-else class="ewt-table" :data="pageItems" data-testid="cd-table" @row-click="rowClick" stripe border size="default" style="width: 100%" height="100%">
+        <el-table-column label="名称" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div class="cd-t-name">
+              <span class="cd-name">{{ row.name }}</span>
+              <span v-if="repeatLabel(row.repeat) !== '一次性'" class="repeat-badge">{{ repeatLabel(row.repeat) }}</span>
+              <span v-if="isRemindedToday(row.lastRemindedAt)" class="reminded-badge">已提醒</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="分类" width="92" align="center">
+          <template #default="{ row }">
+            <span class="cat-badge" :class="categoryBadgeClass(row.category)">{{ categoryLabel(row.category) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="重复" width="104" align="center">
+          <template #default="{ row }">{{ repeatLabel(row.repeat) }}</template>
+        </el-table-column>
+        <el-table-column label="剩余时间" min-width="140">
+          <template #default="{ row }">
+            <span class="cd-t-remain" :class="statusClass(row.remaining.status)">{{ row.remaining.isExpired ? '已过期' : '剩余' }} {{ row.remaining.label }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="下次提醒" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.remaining.nextTime }}</template>
+        </el-table-column>
+        <el-table-column label="前台显示" width="80" align="center">
+          <template #default="{ row }">
+            <el-checkbox :model-value="row.showOnDisplay !== false" @click.stop @change="store.setShowOnDisplay(row.id, $event)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="188" class-name="ewt-op-col" align="center">
+          <template #default="{ row }">
+            <div class="cd-t-ops">
+              <template v-if="isManual">
+                <el-button size="small" :disabled="!canMoveUp(row.id)" title="上移" @click.stop="store.moveCountdown(row.id, 'up')">▲</el-button>
+                <el-button size="small" :disabled="!canMoveDown(row.id)" title="下移" @click.stop="store.moveCountdown(row.id, 'down')">▼</el-button>
+              </template>
+              <el-button size="small" class="btn-delete" @click.stop="handleDelete(row.id)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
     <PanelPager :page="currentPage" :total="totalPages" @prev="prev()" @next="next()" />
@@ -640,6 +694,10 @@ onUnmounted(() => {
 }
 
 /* ===== 卡片墙 ===== */
+.cd-viewport {
+  min-height: 0;
+}
+
 .cd-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1129,7 +1187,7 @@ html.dark .cat-default {
 
 /* ===== 桌面自适应分页（一屏布局 Wave-2 T8：R1/R3/R4/R7 契约）===== */
 @media (min-width: 769px) {
-  .cd-grid {
+  .cd-viewport {
     flex: 1;
     min-height: 0;
   }
@@ -1137,5 +1195,33 @@ html.dark .cat-default {
   .cd-grid-scroll {
     overflow-y: auto;
   }
+}
+
+/* 列表视图表格（与卡片共享分页数据 pageItems） */
+.cd-t-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cd-t-remain {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-t-ops {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* 表格内徽章字号略缩，避免挤压 */
+.ewt-table .cd-t-name .repeat-badge,
+.ewt-table .cd-t-name .reminded-badge {
+  font-size: 11px;
 }
 </style>

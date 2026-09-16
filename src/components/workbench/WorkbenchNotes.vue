@@ -377,9 +377,10 @@ onUnmounted(() => {
           <el-input
             v-model="searchDraft"
             type="text"
-            class="form-input nt-field-keyword"
+            class="nt-field-keyword"
             placeholder="搜索便签…"
             data-testid="nt-search-input"
+            size="small"
             @keydown.enter="applyFilters"
             clearable
           />
@@ -388,7 +389,7 @@ onUnmounted(() => {
           <span class="nt-field-label">类型</span>
           <el-select
             v-model="typeDraft"
-            class="form-input nt-field-select"
+            class="nt-field-select"
             data-testid="nt-type-select"
             size="small"
           >
@@ -416,13 +417,19 @@ onUnmounted(() => {
           :data-testid="`nt-cat-${cat.id}`"
         >{{ cat.name }}</el-radio-button>
       </el-radio-group>
-      <span class="nt-toolbar-count" data-testid="nt-toolbar-count">{{ countText }}</span>
+      <span class="nt-toolbar-count" data-testid="nt-toolbar-count">
+        <template v-if="hasActiveFilter">{{ countText }}</template>
+      </span>
       <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
     </div>
 
-    <!-- 时光轴便签（仅在类型=时光轴时渲染，'all' 视图只显示普通便签） -->
-    <template v-if="activeType === 'timeline'">
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+    <!-- 全部类型：普通便签 + 时光轴便签两段共用顶部视图切换（单实例 vm，两段同模式） -->
+    <div v-if="activeType === 'all'" class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+
+    <!-- 时光轴便签：类型=时光轴 时渲染；类型=全部 且有匹配结果时一并渲染 -->
+    <template v-if="activeType === 'timeline' || (activeType === 'all' && filteredTimeline.length > 0)">
+      <div v-if="activeType !== 'all'" class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <div v-if="activeType === 'all'" class="nt-section-title">时光轴便签</div>
       <div v-if="filteredTimeline.length > 0" class="nt-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="timelineListPageItems"
@@ -624,9 +631,10 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 普通便签：空态 / el-table 表格 -->
+    <!-- 普通便签：空态 / el-table 表格（类型=全部时紧随时光轴段之后） -->
     <template v-if="activeType !== 'timeline'">
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <div v-if="activeType !== 'all'" class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <div v-if="activeType === 'all'" class="nt-section-title">普通便签</div>
       <div v-if="filteredNormal.length > 0" class="nt-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="normalListPageItems"
@@ -829,6 +837,7 @@ onUnmounted(() => {
 /* ===== 分类筛选标签页 + 新增按钮 ===== */
 .nt-cat-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .nt-toolbar-count { margin-left: auto; font-size: 14px; color: var(--color-text-secondary, var(--color-text-secondary)); }
+.nt-section-title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text-secondary)); margin: 2px 0 -4px; }
 .nt-btn-add {
   padding: 10px 16px; background: var(--color-primary, var(--color-primary)); border: none;
   border-radius: var(--radius-md, 8px); font-size: 14px; color: #fff; cursor: pointer; white-space: nowrap;
@@ -1109,7 +1118,6 @@ html.dark .empty-state { background-color: var(--color-bg-card, #1f2937); }
 html.dark .btn-save:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
 html.dark .btn-add:disabled { background-color: var(--color-bg-input, #374151); color: var(--color-text-muted, #9ca3af); }
 html.dark .nt-search { background-color: var(--color-bg-card, #1f2937); box-shadow: none; }
-html.dark .nt-search .form-input { background-color: var(--color-bg-input, #374151); color: var(--color-text, #f9fafb); border-color: var(--color-border, #374151); }
 html.dark .nt-btn-reset { background-color: var(--color-bg-card, #1f2937); color: var(--color-text-secondary, #d1d5db); border-color: var(--color-border, #374151); }
 html.dark .nt-cat-badge { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.45); }
 html.dark .note-cat-select { background-color: var(--color-bg-input, #374151); color: var(--color-text, #f9fafb); border-color: var(--color-border, #374151); }

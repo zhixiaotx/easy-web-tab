@@ -300,7 +300,6 @@ onMounted(async () => {
               <span class="shw-due" :class="{ overdue: dueInfo(row.dueDate, row.status).isOverdue, today: dueInfo(row.dueDate, row.status).isToday, tomorrow: dueInfo(row.dueDate, row.status).isTomorrow }">
                 {{ row.dueDate }}
               </span>
-              <div class="shw-due-text">{{ dueInfo(row.dueDate, row.status).text }}</div>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">

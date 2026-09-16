@@ -31,7 +31,7 @@ function cardFields(row: any) {
 
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
-import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, partitionNotesByType, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
+import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import { NOTE_COLORS } from '@/types'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
@@ -73,16 +73,14 @@ function applyFilters(): void {
   activeType.value = typeDraft.value
   activeCategoryId.value = categoryDraft.value === '' ? undefined : categoryDraft.value
   // 筛选变化 → 双段分页回第 1 页（R8 两个实例独立，但关键词/类型/分类影响两段，均需归位）
-  normalListPage.value = 1
-  timelineListPage.value = 1
+  listPage.value = 1
 }
 
 // 分类筛选标签页：点击即时生效（与倒计时面板一致）；同步草稿 ref，保证「查询」不覆盖、重置/删分类回退逻辑一致
 function selectCategoryTab(id: string | undefined): void {
   categoryDraft.value = id ?? ''
   activeCategoryId.value = id
-  normalListPage.value = 1
-  timelineListPage.value = 1
+  listPage.value = 1
 }
 
 // 重置：草稿与应用全部回默认（关键词空、类型普通、分类全部）
@@ -110,22 +108,30 @@ const filteredNotes = computed<WorkbenchNote[]>(() =>
   })
 )
 
-// 'all' 视图双段渲染：filterNotes 结果按类型拆分为普通/时光轴两段（noteCore 纯函数，组件禁止重算）
-const filteredPartition = computed(() => partitionNotesByType(filteredNotes.value))
-const filteredNormal = computed(() => filteredPartition.value.normal)
-const filteredTimeline = computed(() => filteredPartition.value.timeline)
+// 便签类型判定：type=undefined 缺省按普通处理（与 store 写入一致）
+function isTimeline(note: WorkbenchNote): boolean {
+  return (note.type ?? 'normal') === 'timeline'
+}
 
-// ===== Element Plus el-pagination 分页（普通/时光轴两套独立）=====
+// 时光轴内容列预览：最新条目 datetime + 内容（无条目显示占位）
+function lastEntryPreview(note: WorkbenchNote): string {
+  const ents = sortedEntriesOf(note)
+  if (ents.length === 0) return '暂无条目'
+  const last = ents[ents.length - 1]
+  return last.datetime + ' · ' + contentPreview(last.content)
+}
+
+// 类型列行样式：普通便签隐藏展开箭头（仅时光轴有条目管理展开行）
+function rowClassName(data: any): string {
+  return isTimeline(data.row) ? '' : 'nt-no-expand'
+}
+
+// ===== Element Plus el-pagination 分页（普通/时光轴合并为单一列表）=====
 const LIST_PAGE_SIZE = 10
-const normalListPage = ref(1)
-const normalListPageItems = computed<WorkbenchNote[]>(() => {
-  const start = (normalListPage.value - 1) * LIST_PAGE_SIZE
-  return filteredNormal.value.slice(start, start + LIST_PAGE_SIZE)
-})
-const timelineListPage = ref(1)
-const timelineListPageItems = computed<WorkbenchNote[]>(() => {
-  const start = (timelineListPage.value - 1) * LIST_PAGE_SIZE
-  return filteredTimeline.value.slice(start, start + LIST_PAGE_SIZE)
+const listPage = ref(1)
+const listPageItems = computed<WorkbenchNote[]>(() => {
+  const start = (listPage.value - 1) * LIST_PAGE_SIZE
+  return filteredNotes.value.slice(start, start + LIST_PAGE_SIZE)
 })
 
 // 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
@@ -423,132 +429,144 @@ onUnmounted(() => {
       <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
     </div>
 
-    <!-- 全部类型：普通便签 + 时光轴便签两段共用顶部视图切换（单实例 vm，两段同模式） -->
-    <div v-if="activeType === 'all'" class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+    <!-- 统一表格：普通便签 + 时光轴便签合并为单一列表/卡片（新增「便签类型」列） -->
+    <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
 
-    <!-- 时光轴便签：类型=时光轴 时渲染；类型=全部 且有匹配结果时一并渲染 -->
-    <template v-if="activeType === 'timeline' || (activeType === 'all' && filteredTimeline.length > 0)">
-      <div v-if="activeType !== 'all'" class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
-      <div v-if="activeType === 'all'" class="nt-section-title">时光轴便签</div>
-      <div v-if="filteredTimeline.length > 0" class="nt-table-wrap">
-        <el-table v-if="vm.mode === 'list'" class="ewt-table"
-          :data="timelineListPageItems"
-          stripe
-          border
-          size="default"
-          style="width: 100%"
-          height="100%"
-          empty-text="还没有时光轴便签"
-        >
-          <!-- 展开行：时光轴条目管理 -->
-          <el-table-column type="expand">
-            <template #default="{ row }">
-              <div class="nt-timeline-expand" @click.stop>
-                <div class="nt-timeline-expand-title">时光记录（{{ sortedEntriesOf(row).length }} 条）</div>
-                <div class="nt-timeline-list">
-                  <div
-                    v-for="entry in inlineEntriesOf(row)"
-                    :key="entry.id"
-                    class="nt-timeline-item"
-                    :data-testid="`nt-entry-${entry.id}`"
-                  >
-                    <template v-if="editingEntry && editingEntry.noteId === row.id && editingEntry.entryId === entry.id">
-                      <div class="nt-timeline-item-edit">
-                        <el-input v-model="entryEditDatetime" type="text" class="form-input" :data-testid="`nt-entry-edit-dt-${entry.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
-                        <el-input v-model="entryEditContent" type="text" class="form-input" :data-testid="`nt-entry-edit-content-${entry.id}`" placeholder="记录内容" size="small" />
-                        <div class="nt-timeline-item-actions">
-                          <el-button type="button" class="btn-save" :disabled="!canSaveEntry()" :data-testid="`nt-entry-save-${entry.id}`" @click="handleSaveEntry(row.id, entry.id)">保存</el-button>
-                          <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">取消</el-button>
-                        </div>
+    <div v-if="filteredNotes.length > 0" class="nt-table-wrap">
+      <el-table v-if="vm.mode === 'list'" class="ewt-table"
+        :data="listPageItems"
+        :row-class-name="rowClassName"
+        stripe
+        border
+        size="default"
+        style="width: 100%"
+        height="100%"
+        empty-text="当前分类/搜索下无便签"
+      >
+        <!-- 展开行：仅时光轴便签渲染条目管理（普通便签隐藏展开箭头） -->
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div v-if="isTimeline(row)" class="nt-timeline-expand" @click.stop>
+              <div class="nt-timeline-expand-title">时光记录（{{ sortedEntriesOf(row).length }} 条）</div>
+              <div class="nt-timeline-list">
+                <div
+                  v-for="entry in inlineEntriesOf(row)"
+                  :key="entry.id"
+                  class="nt-timeline-item"
+                  :data-testid="`nt-entry-${entry.id}`"
+                >
+                  <template v-if="editingEntry && editingEntry.noteId === row.id && editingEntry.entryId === entry.id">
+                    <div class="nt-timeline-item-edit">
+                      <el-input v-model="entryEditDatetime" type="text" class="form-input" :data-testid="`nt-entry-edit-dt-${entry.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+                      <el-input v-model="entryEditContent" type="text" class="form-input" :data-testid="`nt-entry-edit-content-${entry.id}`" placeholder="记录内容" size="small" />
+                      <div class="nt-timeline-item-actions">
+                        <el-button type="button" class="btn-save" :disabled="!canSaveEntry()" :data-testid="`nt-entry-save-${entry.id}`" @click="handleSaveEntry(row.id, entry.id)">保存</el-button>
+                        <el-button type="button" class="btn-cancel" :data-testid="`nt-entry-cancel-${entry.id}`" @click="cancelEditEntry">取消</el-button>
                       </div>
-                    </template>
-                    <template v-else>
-                      <div class="nt-timeline-item-body">
-                        <div class="nt-timeline-item-time">{{ entry.datetime }}</div>
-                        <div class="nt-timeline-item-content" v-html="renderedContent(entry.content)"></div>
-                        <div class="nt-timeline-item-actions">
-                          <el-button type="button" class="btn-edit" :data-testid="`nt-entry-edit-${entry.id}`" @click.stop="startEditEntry(row.id, entry)">编辑</el-button>
-                          <el-button type="button" class="btn-delete" :data-testid="`nt-entry-del-${entry.id}`" @click.stop="handleDeleteEntry(row.id, entry.id)">删除</el-button>
-                        </div>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div class="nt-timeline-item-body">
+                      <div class="nt-timeline-item-time">{{ entry.datetime }}</div>
+                      <div class="nt-timeline-item-content" v-html="renderedContent(entry.content)"></div>
+                      <div class="nt-timeline-item-actions">
+                        <el-button type="button" class="btn-edit" :data-testid="`nt-entry-edit-${entry.id}`" @click.stop="startEditEntry(row.id, entry)">编辑</el-button>
+                        <el-button type="button" class="btn-delete" :data-testid="`nt-entry-del-${entry.id}`" @click.stop="handleDeleteEntry(row.id, entry.id)">删除</el-button>
                       </div>
-                    </template>
-                  </div>
-                </div>
-                <!-- 超限「+N 条」按钮 -->
-                <el-button v-if="hiddenEntryCount(row) > 0" type="button" class="timeline-more-btn" :data-testid="`nt-entry-more-${row.id}`" @click.stop="openTimelineExpand(row.id)">
-                  +{{ hiddenEntryCount(row) }} 条
-                </el-button>
-                <!-- 快速追加行 -->
-                <div class="nt-timeline-add-row">
-                  <el-input v-model="entryDraftDatetime[row.id]" type="text" class="form-input nt-timeline-dt-input" :data-testid="`nt-entry-dt-${row.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
-                  <el-input v-model="entryDraftContent[row.id]" type="text" class="form-input nt-timeline-content-input" :data-testid="`nt-entry-content-${row.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(row)" size="small" />
-                  <el-button type="button" class="btn-add" :disabled="!canAddEntry(row)" data-testid="nt-entry-add" @click="handleAddEntry(row)">添加</el-button>
+                    </div>
+                  </template>
                 </div>
               </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="标题" min-width="180" align="left" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span style="font-weight: 600;">{{ row.title || '时光轴便签' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="分类" width="100" align="center">
-            <template #default="{ row }">
-              <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="条目数" width="80" align="center">
-            <template #default="{ row }">{{ sortedEntriesOf(row).length }} 条</template>
-          </el-table-column>
-          <el-table-column label="最新条目" min-width="200" align="left" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span v-if="sortedEntriesOf(row).length > 0">
-                {{ sortedEntriesOf(row)[sortedEntriesOf(row).length - 1].datetime }} · {{ contentPreview(sortedEntriesOf(row)[sortedEntriesOf(row).length - 1].content) }}
-              </span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">暂无条目</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="更新时间" width="140" align="center">
-            <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="140" align="center" fixed="right">
-            <template #default="{ row }">
-              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)" style="margin-right:6px;">编辑</el-button>
-              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div v-else class="ewt-card-grid">
-          <RecordsCard
-            @edit="startEdit(item)"
-            v-for="item in timelineListPageItems"
-            :key="item.id"
-            :fields="timelineCardFields(item)"
-          >
-          </RecordsCard>
-        </div>
-
+              <el-button v-if="hiddenEntryCount(row) > 0" type="button" class="timeline-more-btn" :data-testid="`nt-entry-more-${row.id}`" @click.stop="openTimelineExpand(row.id)">
+                +{{ hiddenEntryCount(row) }} 条
+              </el-button>
+              <div class="nt-timeline-add-row">
+                <el-input v-model="entryDraftDatetime[row.id]" type="text" class="form-input nt-timeline-dt-input" :data-testid="`nt-entry-dt-${row.id}`" placeholder="YYYY-MM-DD HH:mm" size="small" />
+                <el-input v-model="entryDraftContent[row.id]" type="text" class="form-input nt-timeline-content-input" :data-testid="`nt-entry-content-${row.id}`" placeholder="添加时光记录…" @keydown.enter="handleAddEntry(row)" size="small" />
+                <el-button type="button" class="btn-add" :disabled="!canAddEntry(row)" data-testid="nt-entry-add" @click="handleAddEntry(row)">添加</el-button>
+              </div>
+            </div>
+            <div v-else></div>
+          </template>
+        </el-table-column>
+        <el-table-column label="类型" width="90" align="center">
+          <template #default="{ row }">
+            <span class="nt-type-badge" :class="isTimeline(row) ? 'is-timeline' : 'is-normal'">{{ isTimeline(row) ? '时光轴' : '普通' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="标题" min-width="160" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span style="font-weight: 600;">{{ row.title || (isTimeline(row) ? '时光轴便签' : '无标题') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="内容" min-width="200" align="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="isTimeline(row)">{{ sortedEntriesOf(row).length }} 条记录 · {{ lastEntryPreview(row) }}</span>
+            <span v-else class="nt-content-preview">{{ contentPreview(row.content) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="分类" width="100" align="center">
+          <template #default="{ row }">
+            <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
+            <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="颜色" width="80" align="center">
+          <template #default="{ row }">
+            <span v-if="!isTimeline(row)" class="nt-color-tag">
+              <span class="color-dot" :class="`dot-${row.color}`"></span>
+              <span>{{ COLOR_LABELS[row.color as NoteColor] }}</span>
+            </span>
+            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="置顶" width="70" align="center">
+          <template #default="{ row }">
+            <span v-if="!isTimeline(row)">
+              <span v-if="row.pinned" class="nt-pin-badge">📌</span>
+              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+            </span>
+            <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="更新时间" width="140" align="center">
+          <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" class-name="ewt-op-col" width="210" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
+            <el-button v-if="!isTimeline(row)" size="small" class="nt-pin-btn" :class="{ active: row.pinned }" :data-testid="`note-pin-${row.id}`" @click="handlePin(row)">置顶</el-button>
+            <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div v-else class="ewt-card-grid">
+        <RecordsCard
+          @edit="startEdit(item)"
+          v-for="item in listPageItems"
+          :key="item.id"
+          :fields="isTimeline(item) ? timelineCardFields(item) : cardFields(item)"
+        >
+        </RecordsCard>
       </div>
-      <div v-if="filteredTimeline.length > 0" class="nt-list-pager">
-        <el-pagination
-          v-model:current-page="timelineListPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
-          layout="total, prev, pager, next, jumper"
-          :total="filteredTimeline.length"
-          background
-          small
-          prev-text="上一页"
-          next-text="下一页"
-        />
-      </div>
+    </div>
+    <div v-if="filteredNotes.length > 0" class="nt-list-pager">
+      <el-pagination
+        v-model:current-page="listPage"
+        :page-size="LIST_PAGE_SIZE"
+        :page-sizes="[LIST_PAGE_SIZE]"
+        layout="total, prev, pager, next, jumper"
+        :total="filteredNotes.length"
+        background
+        small
+        prev-text="上一页"
+        next-text="下一页"
+      />
+    </div>
 
-      <div v-if="filteredTimeline.length === 0" class="empty-state" data-testid="note-timeline-empty">
-        {{ emptyText }}
-      </div>
-    </template>
-
+    <div v-if="filteredNotes.length === 0" class="empty-state" data-testid="note-empty">
+      {{ emptyText }}
+    </div>
     <!-- 时光轴全量条目浮层（S4：「+N 条」开浮层看全量，列表区内滚动；复用 note-overlay 遮罩样式） -->
     <div v-if="expandedTimelineNote" class="note-overlay timeline-expand-overlay" data-testid="nt-entry-overlay" @click.self="closeTimelineExpand">
       <div class="timeline-expand-panel">
@@ -631,89 +649,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 普通便签：空态 / el-table 表格（类型=全部时紧随时光轴段之后） -->
-    <template v-if="activeType !== 'timeline'">
-      <div v-if="activeType !== 'all'" class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
-      <div v-if="activeType === 'all'" class="nt-section-title">普通便签</div>
-      <div v-if="filteredNormal.length > 0" class="nt-table-wrap">
-        <el-table v-if="vm.mode === 'list'" class="ewt-table"
-          :data="normalListPageItems"
-          stripe
-          border
-          size="default"
-          style="width: 100%"
-          height="100%"
-          empty-text="当前分类/搜索下无便签"
-        >
-          <el-table-column label="标题" min-width="150" align="left" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span style="font-weight: 600;">{{ row.title || '无标题' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="内容" min-width="200" align="left" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="nt-content-preview">{{ contentPreview(row.content) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="分类" width="100" align="center">
-            <template #default="{ row }">
-              <span v-if="catNameOf(row)" class="nt-cat-badge">{{ catNameOf(row) }}</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">未分类</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="颜色" width="80" align="center">
-            <template #default="{ row }">
-              <span class="nt-color-tag">
-                <span class="color-dot" :class="`dot-${row.color}`"></span>
-                <span>{{ COLOR_LABELS[row.color as NoteColor] }}</span>
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="置顶" width="70" align="center">
-            <template #default="{ row }">
-              <span v-if="row.pinned" class="nt-pin-badge">📌</span>
-              <span v-else style="color: var(--color-text-secondary, #9ca3af);">—</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="更新时间" width="140" align="center">
-            <template #default="{ row }">{{ formatNoteTime(row.updatedAt) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" class-name="ewt-op-col" width="210" align="center" fixed="right">
-            <template #default="{ row }">
-              <el-button size="small" class="nt-edit-btn" :data-testid="`nt-note-edit-${row.id}`" @click="startEdit(row)">编辑</el-button>
-              <el-button size="small" class="nt-pin-btn" :class="{ active: row.pinned }" :data-testid="`note-pin-${row.id}`" @click="handlePin(row)">置顶</el-button>
-              <el-button size="small" class="nt-delete-btn" :data-testid="`note-delete-${row.id}`" @click="handleDelete(row.id)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div v-else class="ewt-card-grid">
-          <RecordsCard
-            @edit="startEdit(item)"
-            v-for="item in normalListPageItems"
-            :key="item.id"
-            :fields="cardFields(item)"
-          >
-          </RecordsCard>
-        </div>
-
-      </div>
-      <div v-if="filteredNormal.length > 0" class="nt-list-pager">
-        <el-pagination
-          v-model:current-page="normalListPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
-          layout="total, prev, pager, next, jumper"
-          :total="filteredNormal.length"
-          background
-          small
-          prev-text="上一页"
-          next-text="下一页"
-        />
-      </div>
-
-      <div v-if="filteredNormal.length === 0" class="empty-state" data-testid="note-empty">
-        {{ emptyText }}
-      </div>
+    <!-- 普通便签与时光轴便签已合并至上方统一表格 -->
     </template>
 
     <!-- 编辑浮层（新增/编辑共用） -->
@@ -1129,6 +1065,13 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
   .nt-field-grow { width: 100%; }
   .nt-field-grow .nt-field-keyword { width: 100%; }
 }
+
+/* ===== 合并表格：便签类型徽标 + 普通行隐藏展开箭头 ===== */
+.nt-type-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-full, 999px); white-space: nowrap; }
+.nt-type-badge.is-normal { color: var(--color-primary, #3b82f6); background: var(--color-primary-light, #eff6ff); border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent); }
+.nt-type-badge.is-timeline { color: var(--color-success, #22c55e); background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-success, #22c55e) 35%, transparent); }
+/* 普通便签行隐藏展开箭头（仅时光轴有条目管理展开） */
+.nt-table-wrap :deep(.nt-no-expand .el-table__expand-column .el-table__expand-icon) { visibility: hidden; pointer-events: none; }
 
 /* ===== 便签/时光轴内容 Markdown 排版 ===== */
 .nt-timeline-item-content :deep(h1),

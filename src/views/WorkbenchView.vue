@@ -21,7 +21,6 @@ import WorkbenchNotes from '@/components/workbench/WorkbenchNotes.vue'
 import WorkbenchCountdown from '@/components/workbench/WorkbenchCountdown.vue'
 import WorkbenchPomodoro from '@/components/workbench/WorkbenchPomodoro.vue'
 import WorkbenchHabits from '@/components/workbench/WorkbenchHabits.vue'
-import WorkbenchHabitWeek from '@/components/workbench/WorkbenchHabitWeek.vue'
 import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
@@ -62,7 +61,6 @@ const SECTION_KEYS = [
   'countdowns',
   'pomodoro',
   'habits',
-  'habit-week',
   'passwords',
   'health',
   'ledger'
@@ -280,7 +278,6 @@ async function handleSyncNowClick(): Promise<void> {
         <WorkbenchCountdown v-else-if="activeSection === 'countdowns'" />
         <WorkbenchPomodoro v-else-if="activeSection === 'pomodoro'" />
         <WorkbenchHabits v-else-if="activeSection === 'habits'" />
-        <WorkbenchHabitWeek v-else-if="activeSection === 'habit-week'" />
         <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
         <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />

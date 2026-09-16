@@ -199,7 +199,7 @@ async function handleQuickNote(): Promise<void> {
         <span class="ov-label">今日番茄</span>
       </button>
       <span class="ov-sep" aria-hidden="true"></span>
-      <button class="ov-cell" data-testid="home-ov-habits" @click="navTo('habit-week')">
+      <button class="ov-cell" data-testid="home-ov-habits" @click="navTo('habits')">
         <span class="ov-icon"><Icon name="habits" :size="18" /></span>
         <span class="ov-value">{{ todayOverview.habits }}</span>
         <span class="ov-label">本周打卡</span>
@@ -425,11 +425,11 @@ async function handleQuickNote(): Promise<void> {
               </HomeLayoutCard>
 
               <HomeLayoutCard v-if="visibleStatCards.includes('habits')" card-id="habits" :default-w="1">
-                <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" @click="navTo('habit-week')">
+                <div class="bento-card bento-stat bento-stat-habits" data-testid="home-stats-habits" @click="navTo('habits')">
                   <div class="stat-header">
                     <span class="stat-icon"><Icon name="habits" :size="16" /></span>
                     <span class="stat-label">习惯打卡</span>
-                    <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habit-week')">前往 →</button>
+                    <button class="nav-btn" data-testid="home-nav-habits" @click.stop="navTo('habits')">前往 →</button>
                   </div>
                   <div class="stat-value" data-testid="home-stats-value-habits">{{ habitStats.metCount }}/{{ habitStats.total }}</div>
                   <div class="stat-sub" data-testid="home-stats-sub-habits">本周打卡 {{ habitStats.weekCheckins }} 次</div>

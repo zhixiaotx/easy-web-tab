@@ -11,7 +11,6 @@ export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'countdowns',
   'pomodoro',
   'habits',
-  'habit-week',
   'passwords',
   'health',
   'ledger'
@@ -29,7 +28,6 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   countdowns: '定时提醒',
   pomodoro: '番茄钟',
   habits: '习惯打卡',
-  'habit-week': '习惯周历',
   passwords: '密码管理',
   health: '健康管理',
   ledger: '记账'
@@ -44,7 +42,6 @@ export const MENU_ICONS: Record<string, string> = {
   countdowns: 'countdowns',
   pomodoro: 'pomodoro',
   habits: 'habits',
-  'habit-week': 'habits',
   passwords: 'passwords',
   health: 'health',
   ledger: 'ledger'

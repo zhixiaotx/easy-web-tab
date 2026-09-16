@@ -28,7 +28,7 @@ composables/
 ├── useSnapshots.ts         # 工作台快照（时光机）单例：captureSnapshot(force?) 捕获 IDB 全量到 store 'snapshots'，环形最多 10 份、同日去重；纯逻辑委托 snapshotCore
 ├── snapshotCore.ts         # 快照纯函数：makeSnapshotId/normalizeSnapshotList/pushSnapshot/findSnapshot（零 vue/pinia）
 ├── useHomeLayout.ts        # 主页卡片布局单例：3 容器 action4/overview10/tools2 卡片顺序/尺寸/HTML5 拖拽，持久化 settingsStore.homeCardLayout，重排 600ms 防抖 pushNow（动态 import useCloudSync）
-├── useHomeStats.ts         # 主页只读统计聚合：聚合 8 store 统计卡（visibleStatCards 按菜单开关/空数据隐藏、upcomingCountdowns/pendingTodos/habitWeekOf）
+├── useHomeStats.ts         # 主页只读统计聚合：聚合 8 store 统计卡（visibleStatCards 按菜单开关/空数据隐藏、upcomingCountdowns/pendingTodos）
 ├── useWeather.ts           # Open-Meteo（免 key）两段串行（geocoding→weather 4s/8s，失败静默 null）+ weatherEmoji/weatherDesc/formatTime 纯函数（WeatherCard/CalendarAnchorCard 消费）
 ├── useWeather.ts           # 天气数据获取（WorkbenchHome 天气卡 WeatherCard 消费）
 ├── healthCore.ts           # 健康纯逻辑引擎: BMI(国标 WS/T 428-2013 四档)/达标率(周/日)/睡眠时长/折线图坐标 + normalizeHealthData

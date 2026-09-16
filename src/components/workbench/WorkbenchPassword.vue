@@ -339,7 +339,7 @@ watch(
           v-model="masterPasswordInput"
           type="password"
           placeholder="输入主密码"
-          class="form-input"
+         
           data-testid="pwd-setup-input"
           @keyup.enter="handleSetupMasterPassword"
           show-password
@@ -348,7 +348,7 @@ watch(
           v-model="masterPasswordConfirm"
           type="password"
           placeholder="确认主密码"
-          class="form-input"
+         
           data-testid="pwd-setup-confirm"
           @keyup.enter="handleSetupMasterPassword"
           show-password
@@ -374,7 +374,7 @@ watch(
           v-model="masterPasswordInput"
           type="password"
           placeholder="主密码"
-          class="form-input"
+         
           data-testid="pwd-unlock-input"
           @keyup.enter="handleUnlock"
           show-password
@@ -399,7 +399,7 @@ watch(
             v-model="searchQuery"
             type="text"
             placeholder="搜索网站名称…"
-            class="form-input pwd-search"
+            class="pwd-search"
             data-testid="pwd-search-input"
             clearable
           />
@@ -532,7 +532,7 @@ watch(
                   v-model="formSiteName"
                   type="text"
                   placeholder="输入网站名称或从下拉选择"
-                  class="form-input"
+                 
                   data-testid="pwd-form-site"
                   @input="onSiteNameInput"
                   @blur="onSiteNameBlur"
@@ -558,7 +558,7 @@ watch(
                 v-model="formUrl"
                 type="text"
                 placeholder="https://example.com"
-                class="form-input"
+               
                 data-testid="pwd-form-url"
               />
             </div>
@@ -568,7 +568,7 @@ watch(
                 v-model="formUsername"
                 type="text"
                 placeholder="用户名或邮箱"
-                class="form-input"
+               
                 data-testid="pwd-form-username"
               />
             </div>
@@ -579,7 +579,7 @@ watch(
                   v-model="formPassword"
                   :type="showFormPassword ? 'text' : 'password'"
                   placeholder="密码"
-                  class="form-input"
+                 
                   data-testid="pwd-form-password"
                   show-password
                 />
@@ -644,7 +644,7 @@ watch(
   margin: 0 0 18px 0;
 }
 
-.pwd-auth-card .form-input {
+.pwd-auth-card .el-input {
   margin-bottom: 12px;
 }
 
@@ -1021,10 +1021,6 @@ watch(
   position: relative;
 }
 
-.pwd-password-wrap .form-input {
-  padding-right: 36px;
-}
-
 .pwd-eye-btn {
   position: absolute;
   right: 8px;
@@ -1108,8 +1104,6 @@ html.dark .pwd-auth-hint {
   color: var(--color-text-secondary, #d1d5db);
 }
 
-html.dark .pwd-auth-card .form-input,
-html.dark .pwd-modal-body .form-input,
 html.dark .pwd-search {
   background-color: var(--color-bg-input, #374151);
   color: var(--color-text, #f9fafb);

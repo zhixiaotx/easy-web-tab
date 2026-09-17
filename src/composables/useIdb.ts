@@ -415,9 +415,12 @@ export async function exportWorkbench(): Promise<WorkbenchSyncData> {
 export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ adoptedPasswordIdentity: boolean; appliedPrefs: boolean }> {
   // 1) 读本地 settings（用于把 cloudSync 凭证/开关 4 字段合并回 remote.settings，保留本机凭证）
   // 2) 读本地 business（idbImportAll 会写 business store，workbench.json 不携带 business 时需保留本地数据）
-  const [localSettings, localBusiness] = await Promise.all([
+  // localFamily：云端信封尚无 family 字段时（家谱数据还没推上去 / 云端是 v15 之前的旧信封），
+  // 用它兜底保留本地家谱，避免每次自动拉取把本地数据静默清空
+  const [localSettings, localBusiness, localFamily] = await Promise.all([
     idbGet<AppSettingsData>('settings'),
-    idbGet<BusinessData>('business')
+    idbGet<BusinessData>('business'),
+    idbGet<GenealogyData>('family')
   ])
 
   // 合并：remote.settings（含同步偏好 cloudSyncInterval/cloudSyncSilentThreshold）+ 本机 cloudSync 凭证/开关 4 字段
@@ -439,8 +442,11 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
     settings: mergedSettings,
     pomodoro: remote.pomodoro ?? emptyPomodoroData(),
     habits: remote.habits ?? emptyHabitsData(),
-    // 家谱并入 workbench.json（明文同步，不加密）；缺失 → empty 兜底
-    family: remote.family ?? emptyGenealogyData(),
+    // 家谱并入 workbench.json（明文同步，不加密）。
+    // 关键：远端信封若**根本没有** family 字段，说明云端还是旧版（或家谱尚未推送），
+    // 此时必须保留本地 family，绝不能覆盖成空——否则后台自动拉取会静默清空本地家谱。
+    // 仅当远端明确带 family（哪怕是空数组）时才应用远端。
+    family: remote.family ?? localFamily ?? emptyGenealogyData(),
     // 保留本地 business（workbench.json 不携带；idbImportAll 会写入此值，等同 no-op）
     business: localBusiness ?? emptyBusinessData(),
     passwordsSalt: remote.passwordsSalt,

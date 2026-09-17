@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { ref } from 'vue'
 import { idbGet, idbPut } from '@/composables/useIdb'
 import { markDirty } from '@/composables/useCloudSync'
 import {
@@ -45,8 +45,11 @@ export const useGenealogyStore = defineStore('genealogy', () => {
   }
 
   function persist(): void {
-    void idbPut('family', toRaw({ members: members.value, rootId: rootId.value })).catch(() => {
-      // IDB 写入失败静默忽略（fire-and-forget）
+    // 深拷贝成纯对象再落盘：避免 Vue 响应式代理影响 IndexedDB 结构化克隆。
+    // 写入失败必须可见（此前 .catch 静默吞掉，导致"数据存了却没落盘"无法察觉）。
+    const snapshot: GenealogyData = JSON.parse(JSON.stringify({ members: members.value, rootId: rootId.value }))
+    void idbPut('family', snapshot).catch((e) => {
+      console.error('[genealogy] 家谱数据写入 IndexedDB 失败：', e)
     })
     markDirty()
   }

@@ -258,6 +258,30 @@ export interface WorkbenchData {
   clientId?: string          // v9 新增：推送设备标识（首次同步时生成 uuid，存 localStorage）
   pushedAt?: number          // v9 新增：远端推送时间戳（ms）；idbExportAll 不主动输出此字段，仅云端往返携带
   prefs?: Record<string, string>  // v9 新增：localStorage 偏好打包（导航 + 主题 + 工作台偏好；不含图标、不含加密身份键）
+  family: GenealogyData            // 家庭家谱（并入 workbench 阶层，明文同步，不加密）
+}
+
+// ==================== 家庭家谱（并入 workbench 阶层，不加密、明文同步） ====================
+
+/** 家庭成员：成员为中心 + 最小边模型（仅挂 parents/spouses 两条边，子女/兄弟姐妹/祖孙全部运行时派生，不单独建关系表） */
+export interface FamilyMember {
+  id: string            // 'fm_' 前缀，uuid
+  name: string          // 必填，≤50
+  gender?: 'male' | 'female' | '' | null   // 可选，UI 提供「男/女/不详」
+  birthDate?: string    // 'YYYY-MM-DD' 可选
+  deathDate?: string    // 可选（在世可空）
+  phone?: string        // 可选
+  note?: string         // 可选备注
+  parents: string[]     // 父/母 id（不区分亲生/继/养）
+  spouses: string[]     // 配偶 id（UI 仅一对一，模型允许多）
+  createdAt: string
+  updatedAt: string
+}
+
+/** 家谱数据集（IDB store 'family' 单对象；随 workbench.json 明文同步） */
+export interface GenealogyData {
+  members: FamilyMember[]
+  rootId: string | null  // 主根（标记家族起点；可空 → 未标记时树视图显示森林/提示选主根）
 }
 
 // ==================== 健康管理 ====================
@@ -1148,6 +1172,7 @@ export interface WorkbenchSyncData {
   passwordsSalt?: string
   passwordVerification?: string
   prefs?: Record<string, string>
+  family: GenealogyData            // 家庭家谱（并入 workbench 阶层，明文同步，不加密）
 }
 
 /** BusinessSyncData：销售记账独立同步信封 */

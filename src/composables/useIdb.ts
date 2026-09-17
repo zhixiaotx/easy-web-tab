@@ -7,10 +7,11 @@
  * 所有请求失败均 reject，由调用方自行 try/catch 降级（不做 localStorage 回退写）
  */
 import { WORKBENCH_DATA_VERSION, emptyAppSettingsData } from '../types'
-import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessSyncData, Countdown, DiaryData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
+import type { AppSettingsData, AppSettingsDataNoCloudSync, BusinessData, BusinessSyncData, Countdown, DiaryData, GenealogyData, HealthData, IconsSyncData, LedgerData, NavSyncData, NoteData, StudentSyncData, WorkbenchData, WorkbenchSyncData, WorkbenchTodo } from '../types'
 import { adoptPasswordIdentity, getStoredSaltHex, getStoredVerification } from './useCrypto'
 import { emptyBusinessData } from './businessCore.ts'
 import { emptyDiaryData } from './diaryCore'
+import { emptyGenealogyData } from './genealogyCore'
 import { emptyHabitsData } from './habitCore'
 import { emptyHealthData } from './healthCore'
 import { emptyLedgerData } from './ledgerCore'
@@ -18,9 +19,9 @@ import { emptyNoteData, normalizeNoteData } from './noteCore'
 import { emptyPomodoroData } from './pomodoroCore'
 
 export const DB_NAME = 'easy-web-tab'
-export const DB_VERSION = 14
-/** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business） */
-export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business'] as const
+export const DB_VERSION = 15
+/** 核心 9 store：随 JSON 备份导出/导入（v6 新增 business；v15 新增 family 家谱） */
+export const IDB_CORE_STORES = ['todos', 'notes', 'diary', 'countdowns', 'passwords', 'health', 'ledger', 'settings', 'business', 'family'] as const
 /** 辅助 store：pomodoro/habits 随 v5 备份导出/导入；snapshots 仅本地使用，不参与备份 */
 export const IDB_AUX_STORES = ['pomodoro', 'habits', 'snapshots'] as const
 /** 自定义图标 store（v11 新增：原 localStorage 容量仅 ~5MB 易抛 QuotaExceededError，迁移至 IDB 获 50MB+ 容量） */
@@ -162,7 +163,7 @@ export function applyPrefsToLocalStorage(prefs: Record<string, string> | undefin
 }
 
 export async function idbExportAll(): Promise<WorkbenchData> {
-  const [todos, notes, diary, countdowns, passwords, health, ledger, settings, pomodoro, habits, business] = await Promise.all([
+  const [todos, notes, diary, countdowns, passwords, health, ledger, settings, pomodoro, habits, business, family] = await Promise.all([
     idbGet<WorkbenchTodo[]>('todos'),
     idbGet<NoteData>('notes'),
     idbGet<DiaryData>('diary'),
@@ -173,7 +174,8 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     idbGet<AppSettingsData>('settings'),
     idbGet('pomodoro'),
     idbGet('habits'),
-    idbGet<BusinessData>('business')
+    idbGet<BusinessData>('business'),
+    idbGet<GenealogyData>('family')
   ])
   return {
     version: WORKBENCH_DATA_VERSION,
@@ -189,6 +191,7 @@ export async function idbExportAll(): Promise<WorkbenchData> {
     pomodoro: pomodoro ?? emptyPomodoroData(),
     habits: habits ?? emptyHabitsData(),
     business: business ?? emptyBusinessData(),
+    family: family ?? emptyGenealogyData(),
     passwordsSalt: getStoredSaltHex() ?? undefined,
     passwordVerification: getStoredVerification() ?? undefined,
     prefs: packPrefsFromLocalStorage()
@@ -240,6 +243,8 @@ export async function idbImportAll(data: WorkbenchData): Promise<{ adoptedPasswo
   data = { ...data, diary: data.diary ?? emptyDiaryData() }
   // business 兼容 v1-v7 备份（无该字段 → empty 兜底）；v8 备份原样透传（含内置种子分类契约）
   data = { ...data, business: data.business ?? emptyBusinessData() }
+  // family 兼容 v1-v14 备份（无该字段 → empty 兜底）；v15 起原样透传
+  data = { ...data, family: data.family ?? emptyGenealogyData() }
   // prefs 兼容 v1-v8 备份（无该字段 → {} 空对象兜底，导入后不回写任何 localStorage）
   data = { ...data, prefs: (typeof data.prefs === 'object' && data.prefs !== null) ? data.prefs : {} }
   // 密码加密身份归一化（v8）：仅当备份携带完整身份（盐+验证串均为非空字符串）且密码库非空时才采纳；
@@ -401,7 +406,8 @@ export async function exportWorkbench(): Promise<WorkbenchSyncData> {
     habits: full.habits,
     passwordsSalt: full.passwordsSalt,
     passwordVerification: full.passwordVerification,
-    prefs: full.prefs
+    prefs: full.prefs,
+    family: full.family
     // 注意：business 字段独立走 business.json，不在此输出
   }
 }
@@ -433,6 +439,8 @@ export async function importWorkbenchData(remote: WorkbenchSyncData): Promise<{ 
     settings: mergedSettings,
     pomodoro: remote.pomodoro ?? emptyPomodoroData(),
     habits: remote.habits ?? emptyHabitsData(),
+    // 家谱并入 workbench.json（明文同步，不加密）；缺失 → empty 兜底
+    family: remote.family ?? emptyGenealogyData(),
     // 保留本地 business（workbench.json 不携带；idbImportAll 会写入此值，等同 no-op）
     business: localBusiness ?? emptyBusinessData(),
     passwordsSalt: remote.passwordsSalt,

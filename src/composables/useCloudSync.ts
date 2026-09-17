@@ -43,6 +43,7 @@ import {
 import { useAppSettingsStore } from '../stores/settings'
 import { useToast } from './useToast'
 import { getStoredSaltHex, getStoredVerification } from './useCrypto'
+import { mergeFamily } from './genealogyCore'
 import type {
   BusinessData,
   BusinessSyncData,
@@ -742,7 +743,9 @@ function mergeWorkbench(local: WorkbenchSyncData, remote: WorkbenchSyncData): Wo
     settings: local.settings,
     pomodoro: mergePomodoro(local.pomodoro as PomodoroData | undefined, remote.pomodoro as PomodoroData | undefined),
     habits: mergeHabits(local.habits as HabitsData | undefined, remote.habits as HabitsData | undefined),
-    prefs: mergePrefs(local.prefs, remote.prefs)
+    prefs: mergePrefs(local.prefs, remote.prefs),
+    // 家谱：本地优先按 id 合并（mergeFamily 内部处理 updatedAt 较新者胜 + 补缺失）
+    family: mergeFamily(local.family, remote.family)
     // pushedAt 不设——由后续 pushNow 写入
   }
 }
@@ -826,7 +829,7 @@ function mergeStudentValue(lv: unknown, rv: unknown): unknown {
 
 async function reloadWorkbenchStores(): Promise<void> {
   // 惰性导入避免循环依赖（各 store 在 WorkbenchView 里已 import，此处用动态导入走 onMounted init）
-  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useAppSettingsStore }] = await Promise.all([
+  const [{ useWorkbenchTodosStore }, { useWorkbenchNotesStore }, { useWorkbenchDiaryStore }, { useCountdownsStore }, { useWorkbenchHealthStore }, { useWorkbenchLedgerStore }, { useWorkbenchPomodoroStore }, { useWorkbenchHabitsStore }, { useAppSettingsStore }, { useGenealogyStore }] = await Promise.all([
     import('../stores/workbenchTodos'),
     import('../stores/workbenchNotes'),
     import('../stores/workbenchDiary'),
@@ -835,7 +838,8 @@ async function reloadWorkbenchStores(): Promise<void> {
     import('../stores/workbenchLedger'),
     import('../stores/workbenchPomodoro'),
     import('../stores/workbenchHabits'),
-    import('../stores/settings')
+    import('../stores/settings'),
+    import('../stores/genealogy')
   ])
   await Promise.all([
     useWorkbenchTodosStore().loadTodos(),
@@ -846,7 +850,8 @@ async function reloadWorkbenchStores(): Promise<void> {
     useWorkbenchLedgerStore().loadLedger(),
     useWorkbenchPomodoroStore().loadPomodoro(),
     useWorkbenchHabitsStore().loadHabits(),
-    useAppSettingsStore().initSettings()
+    useAppSettingsStore().initSettings(),
+    useGenealogyStore().load()
   ])
 }
 

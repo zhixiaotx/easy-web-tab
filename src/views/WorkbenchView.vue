@@ -11,6 +11,7 @@ import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import { useWorkbenchHabitsStore } from '@/stores/workbenchHabits'
 import { useWorkbenchPomodoroStore } from '@/stores/workbenchPomodoro'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
+import { useGenealogyStore } from '@/stores/genealogy'
 import { useAppSettingsStore } from '@/stores/settings'
 import AppSettingsDialog from '@/components/AppSettingsDialog.vue'
 import PageSwitcher from '@/components/PageSwitcher.vue'
@@ -25,6 +26,7 @@ import WorkbenchPassword from '@/components/workbench/WorkbenchPassword.vue'
 import WorkbenchHealth from '@/components/workbench/WorkbenchHealth.vue'
 import WorkbenchLedger from '@/components/workbench/WorkbenchLedger.vue'
 import WorkbenchDiary from '@/components/workbench/WorkbenchDiary.vue'
+import WorkbenchGenealogy from '@/components/workbench/WorkbenchGenealogy.vue'
 import Icon from '@/components/Icon.vue'
 import SpotlightOverlay from '@/components/SpotlightOverlay.vue'
 import type { SpotlightAction } from '@/components/SpotlightOverlay.vue'
@@ -46,13 +48,14 @@ const ledgerStore = useWorkbenchLedgerStore()
 const habitsStore = useWorkbenchHabitsStore()
 const pomodoroStore = useWorkbenchPomodoroStore()
 const diaryStore = useWorkbenchDiaryStore()
+const genealogyStore = useGenealogyStore()
 const settingsStore = useAppSettingsStore()
 const sitesStore = useSitesStore()
 
 // 移动端菜单导航 ref（用于自动滚动到激活项）
 const menuNavRef = ref<HTMLElement | null>(null)
 
-// 左侧菜单导航白名单（10 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
+// 左侧菜单导航白名单（11 项；菜单项顺序/名称/图标由 workbenchMenuCore 经设置 store 驱动）
 const SECTION_KEYS = [
   'home',
   'todos',
@@ -63,7 +66,8 @@ const SECTION_KEYS = [
   'habits',
   'passwords',
   'health',
-  'ledger'
+  'ledger',
+  'genealogy'
 ] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
@@ -176,7 +180,8 @@ onMounted(async () => {
     healthStore.loadHealth(),
     ledgerStore.loadLedger(),
     sitesStore.loadSites(),
-    pomodoroStore.loadPomodoro()
+    pomodoroStore.loadPomodoro(),
+    genealogyStore.load()
   ])
   // 习惯面板自管理数据加载（不接入上方 Promise.all，仿 WorkbenchPomodoro onMounted 自加载）
   await habitsStore.loadHabits()
@@ -281,6 +286,7 @@ async function handleSyncNowClick(): Promise<void> {
         <WorkbenchPassword v-else-if="activeSection === 'passwords'" />
         <WorkbenchHealth v-else-if="activeSection === 'health'" :active-tab="activeHealthTab" @change="activeHealthTab = $event" />
         <WorkbenchLedger v-else-if="activeSection === 'ledger'" />
+        <WorkbenchGenealogy v-else-if="activeSection === 'genealogy'" />
       </main>
     </div>
 

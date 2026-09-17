@@ -13,7 +13,8 @@ export const WORKBENCH_MENU_KEYS: readonly string[] = [
   'habits',
   'passwords',
   'health',
-  'ledger'
+  'ledger',
+  'genealogy'
 ]
 
 /** 默认菜单顺序（home 首位，与键集合一致）。 */
@@ -30,7 +31,8 @@ export const MENU_DEFAULT_LABELS: Record<string, string> = {
   habits: '习惯打卡',
   passwords: '密码管理',
   health: '健康管理',
-  ledger: '记账'
+  ledger: '记账',
+  genealogy: '家庭家谱'
 }
 
 /** 菜单图标映射（内联 SVG path 标识，由 Icon.vue 查表渲染；值 = Icon 表键名，非 emoji）。 */
@@ -44,7 +46,8 @@ export const MENU_ICONS: Record<string, string> = {
   habits: 'habits',
   passwords: 'passwords',
   health: 'health',
-  ledger: 'ledger'
+  ledger: 'ledger',
+  genealogy: 'genealogy'
 }
 
 const KNOWN_MENU_KEYS: ReadonlySet<string> = new Set<string>(WORKBENCH_MENU_KEYS)

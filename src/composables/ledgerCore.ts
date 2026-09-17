@@ -387,3 +387,137 @@ export const LEDGER_CATEGORY_COLORS: readonly string[] = [
   '#84cc16',
   '#f97316'
 ]
+
+/** 日期 +delta 天（'YYYY-MM-DD'）。先 setDate 再取日期组件，防 DST 偏移（同 habitCore addDays）。 */
+export function shiftDay(dateStr: string, delta: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1)
+  dt.setDate(dt.getDate() + delta)
+  return localDateStr(dt)
+}
+
+/** 单日支出汇总 */
+export interface DailyExpenseDay {
+  dateKey: string
+  total: number
+}
+
+/**
+ * 按日支出序列：以 endDateKey 为末日向前取 days 天，缺失日 0 填充，升序返回。
+ * 支出语义同 calcTrendSeries：收入分类跳过，其余（含未知分类）计入支出。
+ * endDateKey 非法 → []。纯函数，不 mutate 入参。
+ */
+export function calcDailyExpenseSeries(
+  entries: LedgerEntry[],
+  categories: LedgerCategory[],
+  endDateKey: string,
+  days = 7
+): DailyExpenseDay[] {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDateKey)) return []
+  const keys: string[] = [endDateKey]
+  for (let i = 1; i < days; i++) keys.unshift(shiftDay(keys[0], -1))
+  const buckets = new Map<string, number>()
+  for (const e of entries) {
+    const cat = findCategory(categories, e.categoryId)
+    if (cat && cat.type === 'income') continue // 只统计支出
+    buckets.set(e.date, (buckets.get(e.date) ?? 0) + e.amount)
+  }
+  return keys.map(key => ({
+    dateKey: key,
+    total: Math.round((buckets.get(key) ?? 0) * 100) / 100
+  }))
+}
+
+/** 按日支出柱：坐标 + 值 */
+export interface DailyExpenseBar {
+  dateKey: string
+  total: number
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** 按日支出柱状图坐标（含自适应高度） */
+export interface DailyExpenseChartScale {
+  bars: DailyExpenseBar[]
+  maxY: number
+  /** 图表高度：按内容自适应并钳在 [minHeight, maxHeight]（默认 5~200） */
+  height: number
+  gridlines: { y: number; value: number }[]
+  dayLabels: { x: number; label: string; dateKey: string }[]
+}
+
+/**
+ * 按日支出柱状图坐标：序列为空或全 0 → null（组件走空态）。
+ * maxY 取 {1,2,5}×10^k nice 天花板（与 trendChartScale 同口径）；
+ * 柱高按 maxY 归一化到最大绘图区，非 0 值最低 minBarHeight（默认 5）保证可见；
+ * 图表高度 = 最高柱 + 上下留白，再钳到 [minHeight, maxHeight]（默认 5~200）→ 内容越少图表越矮。
+ * 纯函数，不 mutate 入参；组件/面板禁止重算坐标。
+ */
+export function dailyExpenseChartScale(
+  series: DailyExpenseDay[],
+  opts: {
+    width?: number
+    minHeight?: number
+    maxHeight?: number
+    minBarHeight?: number
+    padTop?: number
+    padBottom?: number
+    padX?: number
+  } = {}
+): DailyExpenseChartScale | null {
+  const width = opts.width ?? 600
+  const minHeight = opts.minHeight ?? 5
+  const maxHeight = opts.maxHeight ?? 200
+  const minBar = opts.minBarHeight ?? 5
+  const padTop = opts.padTop ?? 12
+  const padBottom = opts.padBottom ?? 18
+  const padX = opts.padX ?? 24
+  const days = series.length
+  if (days === 0) return null
+  let maxVal = 0
+  for (const d of series) if (d.total > maxVal) maxVal = d.total
+  if (maxVal <= 0) return null
+
+  const k = Math.floor(Math.log10(maxVal))
+  const maxY =
+    maxVal < 1 ? 1 : ([1, 2, 5, 10].map(s => s * Math.pow(10, k)).find(s => s >= maxVal) ?? Math.pow(10, k + 1))
+
+  // 归一化柱高：最大绘图区 = maxHeight - 上下留白，保证最高柱不超过 maxHeight
+  const plotMax = Math.max(maxHeight - padTop - padBottom, minBar)
+  const heights = series.map(d => {
+    const h = (d.total / maxY) * plotMax
+    return d.total > 0 && h < minBar ? minBar : h
+  })
+  const usedMax = heights.reduce((a, b) => (b > a ? b : a), 0)
+  const height = Math.round(Math.min(maxHeight, Math.max(minHeight, usedMax + padTop + padBottom)))
+  const plotH = Math.max(height - padTop - padBottom, minBar)
+  const baseline = height - padBottom
+
+  const innerW = Math.max(width - 2 * padX, days)
+  const slot = innerW / days
+  const barWidth = Math.max(slot * 0.5, 2)
+
+  const bars: DailyExpenseBar[] = series.map((d, i) => {
+    const h = heights[i]
+    return {
+      dateKey: d.dateKey,
+      total: d.total,
+      x: padX + slot * i + (slot - barWidth) / 2,
+      y: baseline - h,
+      width: barWidth,
+      height: h
+    }
+  })
+  const gridlines = [0, maxY / 2, maxY].map(v => ({
+    y: baseline - (v / maxY) * plotH,
+    value: v
+  }))
+  const dayLabels = series.map((d, i) => ({
+    x: padX + slot * i + slot / 2,
+    label: `${Number(d.dateKey.slice(5, 7))}/${Number(d.dateKey.slice(8, 10))}`,
+    dateKey: d.dateKey
+  }))
+  return { bars, maxY, height, gridlines, dayLabels }
+}

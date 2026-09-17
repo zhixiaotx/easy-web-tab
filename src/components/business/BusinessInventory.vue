@@ -100,7 +100,7 @@ function exportInventoryCsv(): void {
       <div class="bizinv-alert-head">
         <span class="bizinv-alert-title"><Icon name="alert" :size="15" /> 低库存预警</span>
         <div class="bizinv-alert-actions">
-          <el-button size="small" data-testid="bizinv-export" :disabled="store.products.length === 0" @click="exportInventoryCsv">导出 CSV</el-button>
+          <el-button class="btn-export-csv" size="small" data-testid="bizinv-export" :disabled="store.products.length === 0" @click="exportInventoryCsv">导出 CSV</el-button>
           <label class="bizinv-threshold">
           阈值
           <el-input

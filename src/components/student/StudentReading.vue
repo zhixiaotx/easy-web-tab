@@ -158,11 +158,7 @@ onMounted(async () => {
 
 <template>
   <div class="sr-shell">
-    <StudentToolbar title="阅读记录">
-      <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
-        ＋ 新增记录
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="阅读记录" />
 
     <div class="sr-stats">
       <div class="sr-stat-card">
@@ -184,8 +180,15 @@ onMounted(async () => {
     </div>
 
     <div class="sr-main">
-      <!-- 表格区（Element Plus Table） -->
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <!-- 表格区（Element Plus Table）：左上新增 + 右上视图切换 -->
+      <div class="ewt-table-toolbar is-split">
+        <div class="sr-toolbar-left">
+          <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
+            ＋ 新增记录
+          </el-button>
+        </div>
+        <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
       <div class="sr-list">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="listPageItems"
@@ -576,5 +579,12 @@ onMounted(async () => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+
+.sr-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

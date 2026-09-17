@@ -63,3 +63,28 @@
 .ewt-dialog-footer .el-button + .el-button {
   margin-left: 0;
 }
+
+/* ===== 通用按钮：导出 CSV（全部面板统一「天空蓝」） ===== */
+/* 用 .btn-export-csv.el-button 提高优先级并加 !important，覆盖各面板 scoped 的按钮配色 */
+.btn-export-csv.el-button {
+  background-color: #38bdf8 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+.btn-export-csv.el-button:hover,
+.btn-export-csv.el-button:focus {
+  background-color: #0ea5e9 !important;
+  border-color: #0ea5e9 !important;
+  color: #ffffff !important;
+}
+.btn-export-csv.el-button:active {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
+.btn-export-csv.el-button.is-disabled,
+.btn-export-csv.el-button:disabled {
+  background-color: #7dd3fc !important;
+  border-color: #7dd3fc !important;
+  color: #ffffff !important;
+  opacity: 0.6;
+}

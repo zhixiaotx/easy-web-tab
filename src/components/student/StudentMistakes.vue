@@ -192,11 +192,7 @@ onMounted(() => {
 
 <template>
   <div class="sm-shell">
-    <StudentToolbar title="错题本">
-      <el-button type="primary" size="small" class="sm-add-btn" data-testid="sm-add-btn" @click="openAddDialog">
-        <Icon name="plus" :size="16" /> 新增错题
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="错题本" />
 
     <div class="sm-tabs">
       <el-radio-group v-model="activeSubject" size="small">
@@ -261,14 +257,20 @@ onMounted(() => {
     </div>
 
     <div class="sm-main">
+      <div class="ewt-table-toolbar is-split">
+        <div class="sm-toolbar-left">
+          <el-button type="primary" size="small" class="sm-add-btn" data-testid="sm-add-btn" @click="openAddDialog">
+            <Icon name="plus" :size="16" /> 新增错题
+          </el-button>
+        </div>
+        <ViewModeToggle v-if="viewEntries.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
+
       <div v-if="viewEntries.length === 0" class="empty-state" data-testid="sm-empty">
-        <p>还没有错题，点上方「新增错题」开始吧</p>
+        <p>还没有错题，点左上角「新增错题」开始吧</p>
       </div>
 
       <template v-else>
-        <div class="ewt-table-toolbar">
-          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-        </div>
 
         <div class="sm-list-area">
           <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -278,7 +280,7 @@ onMounted(() => {
             size="default"
             style="width: 100%"
             height="100%"
-            empty-text="还没有错题，点上方「新增错题」开始吧"
+            empty-text="还没有错题，点左上角「新增错题」开始吧"
           >
             <el-table-column label="学科" width="90" align="center">
               <template #default="{ row }">
@@ -858,5 +860,12 @@ onMounted(() => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+
+.sm-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

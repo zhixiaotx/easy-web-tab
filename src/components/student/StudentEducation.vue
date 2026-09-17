@@ -175,13 +175,13 @@ const degreeOptions = DEGREE_OPTIONS
 
 <template>
   <section class="edu-panel">
-    <!-- 顶部工具条 -->
-    <div class="edu-toolbar">
-      <el-button type="primary" data-testid="edu-add" @click="openAdd">＋ 新增</el-button>
+    <!-- 表格区（Element Plus Table）：左上新增 + 右上视图切换 -->
+    <div class="ewt-table-toolbar is-split">
+      <div class="edu-toolbar-left">
+        <el-button type="primary" data-testid="edu-add" @click="openAdd">＋ 新增</el-button>
+      </div>
+      <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
     </div>
-
-    <!-- 表格区（Element Plus Table） -->
-    <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
     <div class="edu-list">
       <el-table v-if="vm.mode === 'list'" class="ewt-table"
         :data="listPageItems"
@@ -371,12 +371,10 @@ const degreeOptions = DEGREE_OPTIONS
   height: 100%;
   min-height: 0;
 }
-.edu-toolbar {
+.edu-toolbar-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px 8px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
 /* ===== 列表容器（学生工作台无强制一屏：直接 flex 列撑满即可） ===== */
@@ -582,9 +580,6 @@ const degreeOptions = DEGREE_OPTIONS
 
 /* ===== 移动端：表格横向滚动、分页条换行 ===== */
 @media (max-width: 768px) {
-  .edu-toolbar {
-    padding: 0 12px 6px;
-  }
   .edu-list {
     padding: 0 12px;
     overflow-x: auto;
@@ -599,5 +594,12 @@ const degreeOptions = DEGREE_OPTIONS
   .edu-list-pager > :deep(.el-pagination) {
     flex-wrap: wrap;
   }
+}
+
+.edu-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

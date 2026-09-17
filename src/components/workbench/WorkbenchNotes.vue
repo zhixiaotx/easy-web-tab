@@ -425,11 +425,16 @@ onUnmounted(() => {
       <span class="nt-toolbar-count" data-testid="nt-toolbar-count">
         <template v-if="hasActiveFilter">{{ countText }}</template>
       </span>
-      <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
     </div>
 
     <!-- 统一表格：普通便签 + 时光轴便签合并为单一列表/卡片（新增「便签类型」列） -->
-    <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+    <!-- 工具条：左上新增 + 右上视图切换 -->
+    <div class="ewt-table-toolbar is-split">
+      <div class="nt-toolbar-left">
+        <el-button class="nt-btn-add" data-testid="note-add-button" @click="startAdd">＋ 新增便签</el-button>
+      </div>
+      <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+    </div>
 
     <div v-if="filteredNotes.length > 0" class="nt-table-wrap">
       <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -1088,4 +1093,11 @@ html.dark .timeline-item::before { background: var(--color-border, #374151); }
 .timeline-item-content :deep(hr) { border: none; border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent); margin: 0.5em 0; }
 .nt-timeline-item-content :deep(img),
 .timeline-item-content :deep(img) { max-width: 100%; border-radius: 6px; }
+
+.nt-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 </style>

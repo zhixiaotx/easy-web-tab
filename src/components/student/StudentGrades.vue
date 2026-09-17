@@ -308,11 +308,7 @@ onMounted(async () => {
 
 <template>
   <div class="sg-shell">
-    <StudentToolbar title="成绩记录">
-      <el-button type="primary" size="small" class="sg-add-btn" data-testid="sg-add" @click="openAddDialog">
-        <Icon name="plus" :size="16" /> 新增成绩
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="成绩记录" />
 
     <!-- 学段分组（一级导航） -->
     <el-radio-group
@@ -372,14 +368,23 @@ onMounted(async () => {
       </div>
     </div>
 
+    <!-- 工具条：左上新增 + 右上视图切换（常驻渲染，空列表也能新增） -->
+    <div class="ewt-table-toolbar is-split">
+      <div class="sg-toolbar-left">
+        <el-button type="primary" size="small" class="sg-add-btn" data-testid="sg-add" @click="openAddDialog">
+          <Icon name="plus" :size="16" /> 新增成绩
+        </el-button>
+      </div>
+      <ViewModeToggle v-if="store.pagedLevelGrades.total > 0" :mode="vm.mode" @toggle="vm.toggle" />
+    </div>
+
     <!-- 空状态 -->
     <div v-if="store.pagedLevelGrades.total === 0" class="sg-empty" data-testid="sg-empty">
-      {{ store.activeStage ? `「${activeStageLabel}」还没有成绩记录` : (store.activeLevel ? `「${store.activeLevel}」还没有成绩记录` : '还没有成绩记录') }}，点右上角「新增成绩」开始吧
+      {{ store.activeStage ? `「${activeStageLabel}」还没有成绩记录` : (store.activeLevel ? `「${store.activeLevel}」还没有成绩记录` : '还没有成绩记录') }}，点左上角「新增成绩」开始吧
     </div>
 
     <!-- 成绩表格 + 分页 -->
     <template v-else>
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <el-table
         :data="store.pagedLevelGrades.items"
         size="small"
@@ -852,5 +857,12 @@ html.dark .sg-summary-soft {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+
+.sg-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

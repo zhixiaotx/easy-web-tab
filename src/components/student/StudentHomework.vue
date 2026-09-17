@@ -233,11 +233,7 @@ onMounted(async () => {
 
 <template>
   <div class="shw-shell">
-    <StudentToolbar title="作业管理">
-      <el-button type="primary" size="small" class="shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
-        ＋ 新增作业
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="作业管理" />
 
     <div class="shw-filters">
       <el-radio-group v-model="activeSubject" class="shw-subject-tabs" size="small">
@@ -259,8 +255,15 @@ onMounted(async () => {
     </div>
 
     <div class="shw-main">
-      <!-- 表格区（Element Plus Table） -->
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <!-- 表格区（Element Plus Table）：左上新增 + 右上视图切换 -->
+      <div class="ewt-table-toolbar is-split">
+        <div class="shw-toolbar-left">
+          <el-button type="primary" size="small" class="shw-add-btn" data-testid="shw-add-btn" @click="openAddDialog">
+            ＋ 新增作业
+          </el-button>
+        </div>
+        <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
       <div class="shw-list">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="listPageItems"
@@ -706,5 +709,12 @@ onMounted(async () => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+
+.shw-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

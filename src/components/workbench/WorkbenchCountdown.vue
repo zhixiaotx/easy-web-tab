@@ -358,7 +358,14 @@ onUnmounted(() => {
           :data-testid="'cd-cat-' + c"
         >{{ categoryLabel(c) }}</el-radio-button>
       </el-radio-group>
-      <el-button type="primary" size="small" class="btn-add" data-testid="cd-add-button" @click="startAdd"><Icon name="plus" :size="16" /> 新增提醒</el-button>
+    </div>
+
+    <!-- 表格工具条：左上新增 + 右上视图切换（常驻渲染，空列表/筛空时也能新增） -->
+    <div class="ewt-table-toolbar is-split">
+      <div class="cd-toolbar-left">
+        <el-button type="primary" size="small" class="btn-add" data-testid="cd-add-button" @click="startAdd"><Icon name="plus" :size="16" /> 新增提醒</el-button>
+      </div>
+      <ViewModeToggle v-if="filteredItems.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -372,7 +379,6 @@ onUnmounted(() => {
     </div>
 
     <div v-else class="cd-viewport">
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div v-if="vm.mode === 'card'" class="cd-grid">
       <TransitionGroup name="grid">
       <div
@@ -1278,8 +1284,11 @@ html.dark .cat-default {
   font-size: 13px;
 }
 
-/* 分类标签页：新增按钮靠右（原靠 toolbar-count 推右，统计移除后显式置右） */
-.cd-cat-tabs .btn-add {
-  margin-left: auto;
+
+.cd-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

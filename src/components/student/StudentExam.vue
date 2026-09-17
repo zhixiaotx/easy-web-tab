@@ -30,12 +30,11 @@ const stage = computed(() => settingsStore.stage)
 // 题型筛选 tabs：全部 + 学段内置建议 + 用户自定义
 const activeCategoryTab = ref<string>('')
 
-const typeTabs = computed<string[]>(() => {
-  return ['全部', ...examTypeOptions(stage.value, store.customCategories)]
-})
+// 题型 tabs：不再展示「全部」按钮；空值 = 全部，再次点击已选题型可取消筛选回到全部
+const typeTabs = computed<string[]>(() => examTypeOptions(stage.value, store.customCategories))
 
-function selectCategoryTab(tab: string): void {
-  activeCategoryTab.value = tab === '全部' ? '' : tab
+function toggleCategoryTab(tab: string): void {
+  activeCategoryTab.value = activeCategoryTab.value === tab ? '' : tab
   goto(1)
 }
 
@@ -213,22 +212,18 @@ onMounted(async () => {
 
 <template>
   <div class="se-shell">
-    <StudentToolbar title="考试倒计时">
-      <el-button type="primary" size="small" class="se-add-btn" data-testid="se-add-btn" @click="openAddDialog">
-        <Icon name="plus" :size="16" /> 新增考试
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="考试倒计时" />
 
     <div class="se-tabs">
-      <el-radio-group v-model="activeCategoryTab" size="small" @change="selectCategoryTab">
+      <el-radio-group :model-value="activeCategoryTab" size="small">
         <el-radio-button
           v-for="tab in typeTabs"
           :key="tab"
           :value="tab"
           :data-testid="`se-tab-${tab}`"
+          @click="toggleCategoryTab(tab)"
         >{{ tab }}</el-radio-button>
       </el-radio-group>
-      <span class="se-count">{{ filteredItems.length }} 场</span>
     </div>
 
     <div class="se-stats">
@@ -251,14 +246,20 @@ onMounted(async () => {
     </div>
 
     <div class="se-main">
+      <div class="ewt-table-toolbar is-split">
+        <div class="se-toolbar-left">
+          <el-button type="primary" size="small" class="se-add-btn" data-testid="se-add-btn" @click="openAddDialog">
+            <Icon name="plus" :size="16" /> 新增考试
+          </el-button>
+        </div>
+        <ViewModeToggle v-if="filteredItems.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
+
       <div v-if="filteredItems.length === 0" class="empty-state" data-testid="se-empty">
-        <p>{{ store.countdowns.length === 0 ? '还没有考试，点上方「新增考试」开始吧' : '当前题型下暂无考试' }}</p>
+        <p>{{ store.countdowns.length === 0 ? '还没有考试，点左上角「新增考试」开始吧' : '当前题型下暂无考试' }}</p>
       </div>
 
       <template v-else>
-        <div class="ewt-table-toolbar">
-          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-        </div>
 
         <div class="se-list-area">
           <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -268,7 +269,7 @@ onMounted(async () => {
             size="default"
             style="width: 100%"
             height="100%"
-            empty-text="还没有考试，点上方「新增考试」开始吧"
+            empty-text="还没有考试，点左上角「新增考试」开始吧"
           >
             <el-table-column label="名称" min-width="180" align="left" show-overflow-tooltip>
               <template #default="{ row }">
@@ -492,12 +493,6 @@ onMounted(async () => {
   color: var(--color-primary, #10b981);
   background: color-mix(in srgb, var(--color-primary, #10b981) 8%, transparent);
   box-shadow: none;
-}
-
-.se-count {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--color-text-muted, #6b7280);
 }
 
 .se-stats {
@@ -886,5 +881,12 @@ onMounted(async () => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+
+.se-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

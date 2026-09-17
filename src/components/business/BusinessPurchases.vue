@@ -28,6 +28,7 @@ import Icon from '../Icon.vue'
 import { computed, ref, watch } from 'vue'
 import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcMarkupRate, filterPurchasesByCategory, findProduct, findProductCategory, formatYuanOf, localDateKey, visibleProductCategories } from '@/composables/businessCore'
+import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessPurchase } from '@/types'
 
 // P1-3：跨模块联动跳转 emit
@@ -46,6 +47,21 @@ function productNameOf(id: string): string {
 function catNameOf(productId: string): string {
   const catId = findProduct(store.products, productId)?.categoryId
   return catId ? (findProductCategory(store.productCategories, catId)?.name ?? '未分类') : '未分类'
+}
+
+// ===== 一键导出 CSV（进货记录：按当前分类/商品筛选导出）=====
+function exportPurchasesCsv(): void {
+  const headers = ['日期', '商品', '分类', '数量', '进货单价', '金额', '备注']
+  const rows: (string | number)[][] = filteredWithProductFilter.value.map(p => [
+    p.date,
+    productNameOf(p.productId),
+    catNameOf(p.productId),
+    p.quantity,
+    p.unitPrice.toFixed(2),
+    p.total.toFixed(2),
+    p.note ?? ''
+  ])
+  downloadCsv(csvFileName('进货记录'), buildCsv(headers, rows))
 }
 
 // P0-2：获取商品售价
@@ -163,7 +179,10 @@ async function handleDelete(id: string): Promise<void> {
     </div>
 
     <div class="ewt-table-toolbar is-split">
-      <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</el-button>
+      <div class="bizpur-toolbar-left">
+        <el-button type="primary" data-testid="bizpur-add" @click="startAdd">＋ 新增进货</el-button>
+        <el-button class="btn-export-csv" data-testid="bizpur-export" :disabled="filteredWithProductFilter.length === 0" @click="exportPurchasesCsv">导出 CSV</el-button>
+      </div>
       <ViewModeToggle v-if="filteredWithProductFilter.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
@@ -381,6 +400,12 @@ async function handleDelete(id: string): Promise<void> {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.bizpur-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .bizpur-empty {

@@ -18,15 +18,18 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useWorkbenchLedgerStore } from '@/stores/workbenchLedger'
 import Icon from '@/components/Icon.vue'
 import {
+  calcDailyExpenseSeries,
   calcDepositTotal,
   calcMonthlyStats,
   calcTrendSeries,
+  dailyExpenseChartScale,
   findCategory,
   formatYuan,
   LEDGER_CATEGORY_COLORS,
   localDateStr,
   maskOrReveal,
   monthKeyOf,
+  shiftDay,
   trendChartScale
 } from '@/composables/ledgerCore'
 import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
@@ -145,6 +148,44 @@ const donutSegments = computed<DonutSegment[]>(() => {
     return seg
   })
 })
+
+// ===== 近 7 日支出柱状图（数据/坐标走 ledgerCore，禁组件内重算；高度按内容自适应 5~200）=====
+const DAILY_DAYS = 7
+/** 0 = 最近 7 天；递增 = 往前翻更早的 7 天 */
+const dailyOffset = ref(0)
+const dailyEndKey = computed(() => shiftDay(localDateStr(), -DAILY_DAYS * dailyOffset.value))
+const dailySeries = computed(() =>
+  calcDailyExpenseSeries(store.entries, store.categories, dailyEndKey.value, DAILY_DAYS)
+)
+const dailyScale = computed(() => dailyExpenseChartScale(dailySeries.value))
+const dailyTotal = computed(() => dailySeries.value.reduce((s, d) => s + d.total, 0))
+const dailyRangeLabel = computed(() => {
+  const s = dailySeries.value
+  if (s.length === 0) return ''
+  const short = (k: string) => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}`
+  return `${short(s[0].dateKey)} - ${short(s[s.length - 1].dateKey)}`
+})
+function dailyOlder(): void {
+  dailyOffset.value += 1
+}
+function dailyNewer(): void {
+  if (dailyOffset.value > 0) dailyOffset.value -= 1
+}
+
+// 移动端左右滑动切换：左滑看更早，右滑回更新
+let dailyTouchStartX: number | null = null
+function onDailyTouchStart(e: TouchEvent): void {
+  dailyTouchStartX = e.changedTouches[0]?.clientX ?? null
+}
+function onDailyTouchEnd(e: TouchEvent): void {
+  if (dailyTouchStartX === null) return
+  const endX = e.changedTouches[0]?.clientX ?? dailyTouchStartX
+  const dx = endX - dailyTouchStartX
+  dailyTouchStartX = null
+  if (Math.abs(dx) < 40) return
+  if (dx < 0) dailyOlder()
+  else dailyNewer()
+}
 
 // ===== 月内记录列表（date 降序，同日 createdAt 降序）=====
 const monthEntries = computed(() =>
@@ -319,7 +360,7 @@ onUnmounted(() => {
         <el-button class="btn-manage" data-testid="ld-toggle-list" @click="openRecordsModal">
           查看（{{ monthEntries.length }}）
         </el-button>
-        <el-button class="btn-manage" data-testid="ld-export" :disabled="monthEntries.length === 0" @click="exportLedgerCsv">导出 CSV</el-button>
+        <el-button class="btn-export-csv" data-testid="ld-export" :disabled="monthEntries.length === 0" @click="exportLedgerCsv">导出 CSV</el-button>
       </div>
     </div>
 
@@ -383,10 +424,133 @@ onUnmounted(() => {
         <span class="ld-charts-chevron" :class="{ open: chartsExpanded }">▾</span>
       </el-button>
       <div v-show="chartsExpanded" class="ld-charts-row">
-      <!-- 近 12 月收支趋势（内联 SVG 分组柱状图：income/expense 各一根柱，坐标走 ledgerCore trendChartScale） -->
-      <section class="ld-card" data-testid="ld-trend">
+
+
+      <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
+      <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
+        <div class="ld-ratio-title">支出占比</div>
+        <div class="ld-donut-layout">
+          <div class="ld-donut-wrap">
+            <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
+              <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
+              <circle
+                v-for="(seg, idx) in donutSegments"
+                :key="seg.categoryId"
+                class="ld-donut-seg"
+                :class="{ 'is-accent': idx === 0 }"
+                cx="110"
+                cy="110"
+                :r="RING_R"
+                :stroke="idx === 0 ? undefined : seg.color"
+                :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
+                :stroke-dashoffset="seg.dashOffset"
+                :stroke-linecap="seg.linecap"
+                :data-testid="`ld-donut-seg-${idx}`"
+                transform="rotate(-90 110 110)"
+              />
+            </svg>
+            <div class="ld-donut-center" data-testid="ld-donut-center">
+              {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
+            </div>
+          </div>
+          <div class="ld-donut-legend">
+            <div
+              v-for="(seg, idx) in donutSegments"
+              :key="seg.categoryId"
+              class="ld-donut-legend-row"
+              :data-testid="`ld-donut-legend-${seg.categoryId}`"
+            >
+              <span
+                class="ld-donut-dot"
+                :class="{ 'is-accent': idx === 0 }"
+                :style="idx === 0 ? undefined : { background: seg.color }"
+              ></span>
+              <div class="ld-ratio-head">
+                <span class="ld-ratio-name">{{ seg.name }}</span>
+                <span class="ld-ratio-val">
+                  {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 近 7 日支出柱状图（按日汇总；‹ › 翻页/左右滑动看更早 7 天；高度按内容自适应 5~200） -->
+      <section class="ld-card ld-daily-card" data-testid="ld-daily">
+        <div class="ld-daily-header">
+          <h3 class="ld-card-title">近 7 日支出</h3>
+          <div class="ld-daily-nav">
+            <el-button
+              size="small"
+              :disabled="dailyOffset === 0"
+              data-testid="ld-daily-newer"
+              title="更新的 7 天"
+              @click="dailyNewer"
+            >›</el-button>
+            <span class="ld-daily-range" data-testid="ld-daily-range">{{ dailyRangeLabel }}</span>
+            <el-button size="small" data-testid="ld-daily-older" title="更早的 7 天" @click="dailyOlder">‹</el-button>
+          </div>
+        </div>
+        <div
+          class="ld-daily-body"
+          @touchstart.passive="onDailyTouchStart"
+          @touchend.passive="onDailyTouchEnd"
+        >
+          <svg v-if="dailyScale" class="ld-daily-svg" :viewBox="`0 0 600 ${dailyScale.height}`">
+            <g>
+              <line
+                v-for="(g, gi) in dailyScale.gridlines"
+                :key="'daily-g-' + gi"
+                class="ld-daily-gridline"
+                x1="0"
+                x2="600"
+                :y1="g.y"
+                :y2="g.y"
+              />
+              <text
+                v-for="(g, gi) in dailyScale.gridlines"
+                :key="'daily-v-' + gi"
+                class="ld-daily-axis-label"
+                x="6"
+                :y="g.y - 3"
+                font-size="11"
+                text-anchor="start"
+              >{{ formatYuan(g.value) }}</text>
+            </g>
+            <rect
+              v-for="b in dailyScale.bars"
+              :key="b.dateKey"
+              class="ld-daily-bar"
+              :data-testid="`ld-daily-bar-${b.dateKey}`"
+              :x="b.x"
+              :y="b.y"
+              :width="b.width"
+              :height="b.height"
+              rx="2"
+            >
+              <title>{{ b.dateKey }} 支出 ¥{{ masked(formatYuan(b.total)) }}</title>
+            </rect>
+            <text
+              v-for="l in dailyScale.dayLabels"
+              :key="l.dateKey"
+              class="ld-daily-axis-label"
+              :x="l.x"
+              :y="dailyScale.height - 4"
+              font-size="11"
+              text-anchor="middle"
+            >{{ l.label }}</text>
+          </svg>
+          <div v-else class="ld-daily-empty" data-testid="ld-daily-empty">这 7 天没有支出记录</div>
+        </div>
+        <div class="ld-daily-footer">
+          <span class="ld-daily-total">7 日支出合计 <b>¥{{ masked(formatYuan(dailyTotal)) }}</b></span>
+        </div>
+      </section>
+      <!-- 近 12 个月收支情况（分组柱状图：收入/支出各一根；跨两列宽度，位于收支占比与近 7 日支出下方；超出屏幕可下滑） -->
+<section class="ld-card ld-year-card" data-testid="ld-year">
         <div class="ld-trend-header">
-          <h3 class="ld-card-title">近 12 月收支趋势</h3>
+          <h3 class="ld-card-title">近 12 个月收支情况</h3>
           <div class="ld-trend-totals">
             <span class="ld-trend-total ld-trend-total-inc">
               收入合计 <b>¥{{ masked(formatYuan(trendTotalIncome)) }}</b>
@@ -459,56 +623,6 @@ onUnmounted(() => {
         </svg>
         <div v-else class="ld-trend-empty" data-testid="ld-trend-empty">暂无收支数据</div>
       </section>
-
-      <!-- 支出分类占比环形图（当月 expense>0 才显示整块；ring 常量同 WorkbenchPomodoro） -->
-      <div v-if="monthStats.expense > 0" class="ld-ratio-block" data-testid="ld-ratio-block">
-        <div class="ld-ratio-title">支出分类占比</div>
-        <div class="ld-donut-layout">
-          <div class="ld-donut-wrap">
-            <svg class="ld-donut-svg" viewBox="0 0 220 220" width="220" height="220" data-testid="ld-donut">
-              <circle class="ld-donut-track" cx="110" cy="110" :r="RING_R" />
-              <circle
-                v-for="(seg, idx) in donutSegments"
-                :key="seg.categoryId"
-                class="ld-donut-seg"
-                :class="{ 'is-accent': idx === 0 }"
-                cx="110"
-                cy="110"
-                :r="RING_R"
-                :stroke="idx === 0 ? undefined : seg.color"
-                :stroke-dasharray="`${seg.dashLen} ${RING_C - seg.dashLen}`"
-                :stroke-dashoffset="seg.dashOffset"
-                :stroke-linecap="seg.linecap"
-                :data-testid="`ld-donut-seg-${idx}`"
-                transform="rotate(-90 110 110)"
-              />
-            </svg>
-            <div class="ld-donut-center" data-testid="ld-donut-center">
-              {{ maskOrReveal(formatYuan(monthStats.expense), !store.showAmount) }}
-            </div>
-          </div>
-          <div class="ld-donut-legend">
-            <div
-              v-for="(seg, idx) in donutSegments"
-              :key="seg.categoryId"
-              class="ld-donut-legend-row"
-              :data-testid="`ld-donut-legend-${seg.categoryId}`"
-            >
-              <span
-                class="ld-donut-dot"
-                :class="{ 'is-accent': idx === 0 }"
-                :style="idx === 0 ? undefined : { background: seg.color }"
-              ></span>
-              <div class="ld-ratio-head">
-                <span class="ld-ratio-name">{{ seg.name }}</span>
-                <span class="ld-ratio-val">
-                  {{ masked(formatYuan(seg.total)) }} · {{ masked(percentLabel(seg.percent)) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       </div>
     </div>
 
@@ -681,6 +795,18 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* 桌面端 .wb-content 为 overflow:hidden 且本面板 flex:1 min-height:0，
+     图表区（含下方「近 12 个月收支情况」）变高时需自身可滚动，否则被裁切无法下滑查看 */
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* 防止 flex 列内子项被压缩而导致内容无法滚动（显式作用于三块主区域；
+   scoped 通用选择器 `.wb-ledger > *` 在编译/压缩后易丢失，故改为具名类） */
+.ld-month-bar,
+.ld-stats,
+.ld-charts-section {
+  flex-shrink: 0;
 }
 
 /* ===== 月份选择条 ===== */
@@ -1714,6 +1840,7 @@ html.dark input.form-input {
      此带宽下保持并排以保住列表区可用高度（QA 仅覆盖 1366×768 与 1920×1080） */
   .ld-charts-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: stretch;
   }
@@ -1723,5 +1850,70 @@ html.dark input.form-input {
     flex: 1;
     min-width: 0;
   }
+
+  /* 近 12 个月收支情况：跨两列宽度（换行占满整行，位于收支占比与近 7 日支出下方） */
+  .ld-charts-row > .ld-year-card {
+    flex: 0 0 100%;
+    min-width: 0;
+  }
+}
+
+/* ===== 近 7 日支出柱状图 ===== */
+.ld-daily-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.ld-daily-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ld-daily-range {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+/* 宽度撑满、高度随 viewBox 等比自适应（5~200） */
+.ld-daily-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ld-daily-gridline {
+  stroke: var(--color-border, #e5e7eb);
+  stroke-width: 1;
+}
+.ld-daily-bar {
+  fill: #ef4444;
+}
+html.dark .ld-daily-bar {
+  fill: #f87171;
+}
+.ld-daily-axis-label {
+  fill: var(--color-text-secondary, #6b7280);
+}
+.ld-daily-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-muted, #9ca3af);
+}
+.ld-daily-footer {
+  margin-top: 6px;
+  text-align: right;
+}
+.ld-daily-total {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+}
+.ld-daily-total b {
+  color: #ef4444;
+}
+html.dark .ld-daily-total b {
+  color: #f87171;
 }
 </style>

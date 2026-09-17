@@ -212,11 +212,10 @@ onMounted(async () => {
             @click="openCellDialog(d, p)"
           >
             <template v-if="getCell(d, p)">
-              <div class="stt-subject">{{ getCell(d, p)!.subject }}</div>
-              <div class="stt-time">{{ getCell(d, p)!.startHHMM }}-{{ getCell(d, p)!.endHHMM }}</div>
-              <div class="stt-info" v-if="getCell(d, p)!.teacher">
-                <strong class="stt-teacher">{{ getCell(d, p)!.teacher }}</strong>
+              <div class="stt-subject">
+                {{ getCell(d, p)!.subject }}<span v-if="getCell(d, p)!.teacher" class="stt-teacher">（{{ getCell(d, p)!.teacher }}）</span>
               </div>
+              <div class="stt-time">{{ getCell(d, p)!.startHHMM }}-{{ getCell(d, p)!.endHHMM }}</div>
             </template>
             <template v-else>
               <span class="stt-add-mark">+</span>
@@ -364,7 +363,9 @@ onMounted(async () => {
   border-left: 3px solid var(--color-primary, #3b82f6);
 }
 .stt-teacher {
-  font-weight: 700;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-text-muted, #9ca3af);
 }
 .stt-subject {
   font-size: 15px;
@@ -379,14 +380,6 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--color-primary, #3b82f6);
   font-weight: 500;
-}
-.stt-info {
-  font-size: 14px;
-  color: var(--color-text-muted, #9ca3af);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 .stt-add-mark {
   font-size: 22px;

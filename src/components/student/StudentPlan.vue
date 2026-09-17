@@ -224,11 +224,7 @@ onMounted(() => {
 
 <template>
   <div class="sp-shell">
-    <StudentToolbar title="学习计划">
-      <el-button type="primary" size="small" class="sp-add-btn" data-testid="sp-add-btn" @click="openAddDialog">
-        ＋ 新增计划
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="学习计划" />
 
     <el-radio-group v-model="activeTypeTab" class="sp-tabs" size="small">
       <el-radio-button
@@ -263,8 +259,15 @@ onMounted(() => {
     </div>
 
     <div class="sp-main">
-      <!-- 表格区（Element Plus Table，含 expand 行管理目标） -->
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
+      <!-- 表格区（Element Plus Table，含 expand 行管理目标）：左上新增 + 右上视图切换 -->
+      <div class="ewt-table-toolbar is-split">
+        <div class="sp-toolbar-left">
+          <el-button type="primary" size="small" class="sp-add-btn" data-testid="sp-add-btn" @click="openAddDialog">
+            ＋ 新增计划
+          </el-button>
+        </div>
+        <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
       <div class="sp-list">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="listPageItems"
@@ -800,5 +803,12 @@ onMounted(() => {
     width: 92vw !important;
     max-width: 92vw;
   }
+}
+
+.sp-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

@@ -197,18 +197,16 @@ async function handleDelete(id: string): Promise<void> {
 
 <template>
   <div class="bizday">
-    <div class="bizday-bar">
-      <div class="bizday-bar-actions">
+    <div class="ewt-table-toolbar is-split">
+      <div class="bizday-toolbar-left">
         <el-button type="primary" data-testid="bizday-add" @click="startAdd">＋ 收摊记录</el-button>
+        <el-button class="btn-export-csv" data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyCsv">导出 CSV</el-button>
       </div>
+      <ViewModeToggle v-if="sorted.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
-    <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击右上角记下今天的第一笔</div>
+    <div v-if="sorted.length === 0" class="bizday-empty" data-testid="bizday-empty">暂无收摊记录，点击左上角记下今天的第一笔</div>
     <template v-else>
-      <div class="ewt-table-toolbar is-split">
-        <el-button data-testid="bizday-export" :disabled="sorted.length === 0" @click="exportDailyCsv">导出 CSV</el-button>
-        <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-      </div>
       <div class="bizday-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageItems"
@@ -439,19 +437,10 @@ async function handleDelete(id: string): Promise<void> {
   min-height: 0;
 }
 
-.bizday-bar {
+.bizday-toolbar-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.bizday-bar-actions {
-  display: inline-flex;
-  align-items: center;
   gap: 8px;
-  /* 原左侧「共 N 条」统计已移除，按钮保持靠右 */
-  margin-left: auto;
 }
 
 .bizday-empty {
@@ -870,14 +859,15 @@ html.dark .biz-input {
   width: 90px;
 }
 
-/* 移动端：顶部工具行（计数 + 导出/收摊）换行，按钮不被压扁变形 */
+/* 移动端：表格工具行（收摊记录 + 导出 + 视图切换）换行，按钮不被压扁变形 */
 @media (max-width: 767px) {
-  .bizday-bar {
+  .ewt-table-toolbar.is-split {
     flex-wrap: wrap;
+    gap: 8px;
   }
-  .bizday-bar-actions {
+  .bizday-toolbar-left {
+    flex-wrap: wrap;
     width: 100%;
-    justify-content: flex-end;
   }
 }
 </style>

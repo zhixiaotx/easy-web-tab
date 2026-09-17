@@ -158,11 +158,7 @@ function daysClass(days: number): string {
 
 <template>
   <div class="sr-shell">
-    <StudentToolbar title="复习计划">
-      <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
-        <Icon name="plus" :size="16" /> 新增复习
-      </el-button>
-    </StudentToolbar>
+    <StudentToolbar title="复习计划" />
 
     <div class="sr-tabs">
       <el-radio-group v-model="activeSubject" size="small">
@@ -203,14 +199,20 @@ function daysClass(days: number): string {
     </div>
 
     <div class="sr-main">
+      <div class="ewt-table-toolbar is-split">
+        <div class="sr-toolbar-left">
+          <el-button type="primary" size="small" class="sr-add-btn" data-testid="sr-add-btn" @click="openAddDialog">
+            <Icon name="plus" :size="16" /> 新增复习
+          </el-button>
+        </div>
+        <ViewModeToggle v-if="viewEntries.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
+      </div>
+
       <div v-if="viewEntries.length === 0" class="empty-state" data-testid="sr-empty">
-        <p>还没有复习条目，点上方「新增复习」开始吧</p>
+        <p>还没有复习条目，点左上角「新增复习」开始吧</p>
       </div>
 
       <template v-else>
-        <div class="ewt-table-toolbar">
-          <ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" />
-        </div>
 
         <div class="sr-list-area">
           <el-table v-if="vm.mode === 'list'" class="ewt-table"
@@ -220,7 +222,7 @@ function daysClass(days: number): string {
             size="default"
             style="width: 100%"
             height="100%"
-            empty-text="还没有复习条目，点上方「新增复习」开始吧"
+            empty-text="还没有复习条目，点左上角「新增复习」开始吧"
           >
             <el-table-column label="学科" width="90" align="center">
               <template #default="{ row }">
@@ -751,5 +753,12 @@ function daysClass(days: number): string {
   .sr-card-foot {
     flex-wrap: wrap;
   }
+}
+
+.sr-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

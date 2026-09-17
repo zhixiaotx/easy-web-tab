@@ -304,7 +304,14 @@ onUnmounted(() => {
       <span class="toolbar-count" data-testid="td-toolbar-count">
         <template v-if="hasActiveFilter">筛选出 {{ filteredTodos.length }} / {{ store.sortedTodos.length }} 个</template>
       </span>
-      <el-button type="primary" size="small" class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</el-button>
+    </div>
+
+    <!-- 表格工具条：左上新增 + 右上视图切换（常驻渲染，空列表/筛空时也能新增） -->
+    <div class="ewt-table-toolbar is-split">
+      <div class="td-toolbar-left">
+        <el-button type="primary" size="small" class="btn-add" data-testid="td-add-button" @click="startAdd">＋ 新增待办</el-button>
+      </div>
+      <ViewModeToggle v-if="filteredTodos.length > 0" :mode="vm.mode" @toggle="vm.toggle" />
     </div>
 
     <!-- 空态 / 卡片墙 -->
@@ -318,7 +325,6 @@ onUnmounted(() => {
     </div>
 
     <template v-else>
-      <div class="ewt-table-toolbar"><ViewModeToggle :mode="vm.mode" @toggle="vm.toggle" /></div>
       <div class="td-table-wrap">
         <el-table v-if="vm.mode === 'list'" class="ewt-table"
           :data="pageTodos"
@@ -1296,5 +1302,12 @@ html.dark .btn-add:disabled {
   .td-field-grow {
     width: 100%;
   }
+}
+
+.td-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

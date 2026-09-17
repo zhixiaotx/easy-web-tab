@@ -95,6 +95,11 @@ pm2 start pm2.config.cjs
 
 ### 方式三：Docker 容器
 
+> ⚠️ **构建镜像的基础 Node 必须 ≥ 22.12**（与 `package.json` 的 `engines` 一致）。
+> 若用 Node 20 构建，`re2`（metascraper 依赖的原生模块）会因 `node-gyp` 不兼容
+> （`webidl.util.markAsUncloneable is not a function`）而安装失败。
+> 推荐 `FROM node:22-bookworm` 或 `node:22.12-alpine` 作为构建/运行基础镜像。
+
 ```bash
 docker build -t easywebtab .                    # 构建镜像（serve -s 托管 dist/，端口 16718）
 docker run -d -p 16718:16718 --name easywebtab easywebtab

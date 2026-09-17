@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import { URL } from 'node:url';
 import { Buffer } from 'node:buffer';
 import os from 'node:os';
@@ -149,6 +152,20 @@ async function handleWebdavProxy(req, res) {
 export default defineConfig({
     plugins: [
       vue(),
+      // dts: false —— 不生成 auto-imports.d.ts / components.d.ts。
+      // 生成它们会把 Element Plus 组件的「严格 prop 类型」注入 vue-tsc，
+      // 导致全项目既有 el-button type="button"、el-table row 类型断言等大量
+      // TS2345/TS2322 报错（改造前这些 <el-*> 被视为松散的自定义元素，不报错）。
+      // 关闭 dts 仅影响类型声明，按需「自动引入组件 + 对应 CSS」在构建期照常生效，
+      // 入口包体收益不变，同时复用改造前 vue-tsc 的通过状态。
+      AutoImport({
+        resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+        dts: false,
+      }),
+      Components({
+        resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+        dts: false,
+      }),
       {
         name: 'webdav-proxy',
         configureServer(server) {

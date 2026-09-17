@@ -2,11 +2,12 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
+// 按需引入：unplugin-auto-import + unplugin-vue-components 会在编译期
+// 自动注入用到的 El* 组件及其样式（见 vite.config.js 的 ElementPlusResolver），
+// 不再全量引入 element-plus / dist/index.css，显著减小入口包体。
+// 暗色主题为 css 变量方案，必须保留（轻量，仅变量定义）。
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './styles/element-theme.css'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import './style.css'
 import './styles/background.css'
 import './styles/mobile.css'
@@ -19,7 +20,8 @@ const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
-app.use(ElementPlus, { locale: zhCn })
+// Element Plus 中文语言包改为在 App.vue 顶层用 <el-config-provider :locale="zhCn"> 承接
+// （按需引入后不再 app.use(ElementPlus, { locale })）
 
 // 初始化主题和背景
 const themeStore = useThemeStore()

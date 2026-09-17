@@ -8,6 +8,9 @@ import BeianFooter from './components/BeianFooter.vue'
 import { useToast } from './composables/useToast'
 import { useCountdownReminder } from './composables/useCountdownReminder'
 import { useCloudSync } from './composables/useCloudSync'
+// Element Plus 中文语言包（按需引入后，改由顶层 el-config-provider 注入，
+// 替代原先 main.ts 里 app.use(ElementPlus, { locale: zhCn })）
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 const themeStore = useThemeStore()
 const { toasts, removeToast } = useToast()
@@ -38,22 +41,28 @@ async function ensurePersistentStorage() {
 
 <template>
   <!--
-    Route transition: <Transition mode="out-in"> fails when the OLD component
-    is a Vue fragment (multiple root elements, e.g. HomeView) because Vue
-    cannot apply CSS transition classes to a fragment. The leave phase "completes"
-    instantly but the enter phase never starts, leaving a blank page.
-
-    Fix: CSS @keyframes fade-in + :key="$route.path" forces component
-    recreation on navigation. Works with both single-root and fragment components.
-    The route-transition CSS class is defined in animations.css.
+    顶层 el-config-provider 注入 Element Plus 中文语言包（按需引入后替代 app.use(ElementPlus,{locale})）。
+    el-config-provider 由 unplugin-vue-components 自动注册，无需显式 import。
   -->
-  <router-view v-slot="{ Component }">
-    <component :is="Component" :key="$route.path" class="route-transition" />
-  </router-view>
-  <Toast :toasts="toasts as any" @remove="removeToast" />
-  <CountdownReminder />
-  <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
-  <BeianFooter />
+  <el-config-provider :locale="zhCn">
+    <!--
+      Route transition: <Transition mode="out-in"> fails when the OLD component
+      is a Vue fragment (multiple root elements, e.g. HomeView) because Vue
+      cannot apply CSS transition classes to a fragment. The leave phase "completes"
+      instantly but the enter phase never starts, leaving a blank page.
+
+      Fix: CSS @keyframes fade-in + :key="$route.path" forces component
+      recreation on navigation. Works with both single-root and fragment components.
+      The route-transition CSS class is defined in animations.css.
+    -->
+    <router-view v-slot="{ Component }">
+      <component :is="Component" :key="$route.path" class="route-transition" />
+    </router-view>
+    <Toast :toasts="toasts as any" @remove="removeToast" />
+    <CountdownReminder />
+    <CloudSyncConflictModal v-if="cloudSync.conflictData.value" />
+    <BeianFooter />
+  </el-config-provider>
 </template>
 
 <style>

@@ -78,18 +78,22 @@ async function handleResetVault(): Promise<void> {
   ) {
     return
   }
-  const result = await passwordsStore.resetVault()
-  if (!result.saved) {
-    toast.error('重置失败：本地密码库写入异常，请重试')
-    return
-  }
+  // 先同步切换 UI 状态：重置会清空本地加密身份，界面应立即回到「设置主密码」，
+  // 不等待（也不依赖）云端推送结果——否则云推送卡住/失败会让本应跳转的页面停在解锁界面（"重置后没刷新"）。
   isNewSetup.value = true
   masterPasswordInput.value = ''
   masterPasswordConfirm.value = ''
   authError.value = ''
-  if (result.synced) toast.success('密码已重置，已同步到云端')
-  else if (result.cloudEnabled) toast.warning('密码已重置，但云同步失败，请稍后手动同步')
-  else toast.success('密码已重置，所有密码条目已清空')
+  try {
+    const result = await passwordsStore.resetVault()
+    if (!result.saved) toast.warning('密码已重置，但本地存储清理失败，重设主密码即可覆盖')
+    else if (result.synced) toast.success('密码已重置，已同步到云端')
+    else if (result.cloudEnabled) toast.warning('密码已重置，但云同步失败，请稍后手动同步')
+    else toast.success('密码已重置，所有密码条目已清空')
+  } catch {
+    // 本地加密身份已清空、界面已跳转；仅云端同步异常，提示用户稍后手动同步
+    toast.error('重置完成，但云端同步异常，请稍后手动同步')
+  }
 }
 
 // ===== P0-3：空闲自动锁定 =====

@@ -356,7 +356,11 @@ yanglijuan: https://<域名>/dav/    yanglijuan    sfj131420ylj&
 | 数据目录 | `/var/sifujiang/dav/<名>/easy-web-tab/` | **`/home/<用户名>/easy-web-tab/`** |
 | 适用人群 | 只有自己家 | **任何人自建服务器都能照抄**（换域名即可） |
 
-URL 结构**不变**（客户端零改动）：`https://<域名>/dav/<用户名>/easy-web-tab/`。
+> ⚠️ **§12 是最终部署方案（以此为准）**，取代 §3–§11 的早期设计。关键点变化：**同步 URL 不再带 `/dav/` 段**，
+> 形式为 `https://<域名>/<用户名>/easy-web-tab/`；nginx 用 `/easy-web-tab/` 作为正则锚点（避免误伤同域静态资源）。
+> 下面 §12.3 软链农场、`§12.4` nginx 块、`§12.6` 验证命令、`§12.8` 部署一页纸均已同步去掉 `/dav/`。
+
+URL 结构（客户端零改动）：`https://<域名>/<用户名>/easy-web-tab/`  —— 去掉了固定的 `/dav/` 段，用户名直接作为路径首段。
 
 ### 12.2 认证：系统账号 + 系统密码（**推荐：shadow 哈希镜像，不用装 PAM 模块**）
 
@@ -378,8 +382,8 @@ TMP=$(mktemp); chmod 640 "$TMP"
 awk -F: '($3>=1000) && ($2 ~ /^\$(1|5|6|2[aby])\$/) { print $1 ":" $2 }' /etc/shadow > "$TMP"
 chown root:nginx "$TMP" 2>/dev/null || chown root:www-data "$TMP"   # Alinux/CentOS 是 nginx，Debian 是 www-data
 chmod 640 "$TMP"; mv "$TMP" "$SHARED"
-# 拆成「每用户一份」：/dav/<user>/ 只能用 <user> 自己的密码认证（隔离关键）
-# nginx 侧 auth_basic_user_file 用 ..._$sync_user 拼到对应文件，alice 无法认证 /dav/bob/
+# 拆成「每用户一份」：/<user>/easy-web-tab/ 只能用 <user> 自己的密码认证（隔离关键）
+# nginx 侧 auth_basic_user_file 用 ..._$sync_user 拼到对应文件，alice 无法认证 /bob/easy-web-tab/
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   u="${line%%:*}"
@@ -427,7 +431,7 @@ auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd_$sync_user;   # $sync_user �
 ```
 
 > 每个用户一份口令文件（`/etc/nginx/.ewt_sync_htpasswd_<用户名>`）由 §12.2 脚本生成。
-> 这样 alice 想访问 `/dav/bob/` 时，nginx 用 bob 的口令文件校验，alice 的密码通不过 → 直接 401，
+> 这样 alice 想访问 `/bob/easy-web-tab/` 时，nginx 用 bob 的口令文件校验，alice 的密码通不过 → 直接 401，
 > 实现「只能用自己密码访问自己目录」的隔离，无需任何 `if`。
 
 > **备选（Debian/Ubuntu 想要"实时"校验）**：装 `libnginx-mod-http-auth-pam`，用 `auth_pam` + `/etc/pam.d/ewt-sync`
@@ -440,18 +444,26 @@ nginx 用**静态 root + 符号链接农场**映射（刻意避开 `alias` + dav
 
 ```bash
 sudo mkdir -p /var/ewt-sync /var/lib/nginx/ewt-tmp
-# 每个允许同步的用户建一次：
+# 每个允许同步的用户建一次（下面 <用户名> 换成实际系统用户名，如 sifujiang）：
 # 注意：nginx worker 用户名在 RHEL/CentOS/Alibaba Cloud Linux 上是 `nginx`，
 #       在 Debian/Ubuntu 上是 `www-data`。下面对应改成你服务器的实际用户。
 sudo install -d -o nginx -g nginx -m 755 /home/<用户名>/easy-web-tab
-sudo setfacl -m u:nginx:x /home/<用户名>              # 让 worker 能穿过家目录（只给执行/进入权）
-sudo ln -s /home/<用户名> /var/ewt-sync/dav/<用户名>   # ← 链到家目录本身（含 /dav 段，与 root /var/ewt-sync 对应）
+sudo chown -R nginx:nginx /home/<用户名>/easy-web-tab
+sudo setfacl -m u:nginx:rwx /home/<用户名>/easy-web-tab   # nginx 可在该目录内创建/写入信封文件（关键，缺它会 403）
+sudo setfacl -m u:nginx:x  /home/<用户名>                 # 仅让 worker 穿过家目录（最小权限）
+sudo ln -s /home/<用户名> /var/ewt-sync/<用户名>          # 软链农场：/<user> -> /home/<user>（无 /dav 段，URI 直接用 /<用户名>/easy-web-tab/...）
 sudo chown -R nginx:nginx /var/lib/nginx/ewt-tmp
 ```
 
-映射结果：URI `/dav/<用户名>/easy-web-tab/nav.json`
-→ `/var/ewt-sync/dav/<用户名>/easy-web-tab/nav.json`   （root /var/ewt-sync + URI 原样拼接）
-→ **`/home/<用户名>/easy-web-tab/nav.json`**            （经软链 /var/ewt-sync/dav/<用户名> 穿透）
+> ⚠️ **这些步骤是必须的，不是可选**。没建软链农场 / 没给 nginx 对 `easy-web-tab` 的写权限时，
+> 连接测试会报 **MKCOL 403 Forbidden「无写入权限」**——因为 nginx 认证通过后要建目录却写不进去。
+> SELinux 开启（Enforcing）的 RHEL 系还要额外放行：
+> `sudo setsebool -P httpd_unified 1`（或把 `/home/<用户名>/easy-web-tab` 标成 `httpd_sys_rw_content_t`）。
+> 先用 `getenforce` 看是否 Enforcing。
+
+映射结果：URI `/<用户名>/easy-web-tab/nav.json`
+→ `/var/ewt-sync/<用户名>/easy-web-tab/nav.json`   （root /var/ewt-sync + URI 原样拼接）
+→ **`/home/<用户名>/easy-web-tab/nav.json`**            （经软链 /var/ewt-sync/<用户名> 穿透）
 
 > 备选（不想用软链）：正则 location 里 `alias /home/$sync_user/;`。语法合法但 **dav + alias 需实测**，
 > 我优先推荐软链（root 是静态路径，dav 模块最稳）。
@@ -459,14 +471,14 @@ sudo chown -R nginx:nginx /var/lib/nginx/ewt-tmp
 ### 12.4 nginx 配置（以此为准）
 
 ```nginx
-location ~ ^/dav/(?<sync_user>[A-Za-z0-9._-]+)/ {
+location ~ ^/(?<sync_user>[A-Za-z0-9._-]+)/easy-web-tab/ {
     # ① 系统账号认证（密码=该用户的系统登录密码，见 §12.2）
     #    按 URL 里的用户名加载对应 per-user 口令文件 —— 隔离就靠它：
-    #    alice 访问 /dav/bob/ 时用 bob 的文件校验，alice 的密码通不过 → 401。
+    #    alice 访问 /bob/easy-web-tab/ 时用 bob 的文件校验，alice 的密码通不过 → 401。
     auth_basic           "easy-web-tab sync";
     auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd_$sync_user;
 
-    # ② 静态 root + 软链农场（/var/ewt-sync/dav/<user> -> /home/<user>，见 §12.3）
+    # ② 静态 root + 软链农场（/var/ewt-sync/<user> -> /home/<user>，见 §12.3）
     root                 /var/ewt-sync;
     dav_methods         PUT DELETE MKCOL;
     create_full_put_path on;                  # PUT 自动建中间目录（客户端 409 透传依赖此项）
@@ -474,12 +486,10 @@ location ~ ^/dav/(?<sync_user>[A-Za-z0-9._-]+)/ {
     autoindex           off;                  # 不暴露目录列表
     # 单文件可达数 MB，body 上限已在 http 块全局设为 10m（勿漏）
 }
-
-# 未带合法用户名段的 /dav/ 一律拒绝（兜底，避免落到 location / 反代到 Node）
-location /dav/ {
-    return 403;
-}
 ```
+> 用 URL 里**恒定存在**的 `/easy-web-tab/` 作为正则锚点，而不是 `/dav/` 或单纯的 `/<user>/`：
+> 若用 `^/<user>/` 会误伤站点自身的静态资源（`/assets/...`、`/index.html` 等，同域 nginx 也在托管前端 dist）；
+> 而同步地址必含 `/easy-web-tab/`，用它锚定既精准又不会撞车。原来的 `location /dav/ { return 403; }` 兜底块已不再需要（URI 里不再有 `/dav/`）。
 
 > 为什么不用 `if ($remote_user != $sync_user) return 403` 做隔离？
 > nginx 的 `$remote_user` 要等 `auth_basic` 在 **access 阶段** 跑完才被赋值，
@@ -507,20 +517,20 @@ systemctl list-timers | grep ewt-sync-passwd         # 刷新定时器在跑
 sudo nginx -t
 
 # 2) 认证（用 lucky 的系统密码）
-curl -u lucky -X MKCOL https://<域名>/dav/lucky/easy-web-tab   # 201，再执行一次 405
-curl -u lucky -X PUT --data '{"a":1}' https://<域名>/dav/lucky/easy-web-tab/nav.json
-curl -u lucky https://<域名>/dav/lucky/easy-web-tab/nav.json     # 返回内容
+curl -u lucky -X MKCOL https://<域名>/lucky/easy-web-tab   # 201，再执行一次 405
+curl -u lucky -X PUT --data '{"a":1}' https://<域名>/lucky/easy-web-tab/nav.json
+curl -u lucky https://<域名>/lucky/easy-web-tab/nav.json     # 返回内容
 ls -l /home/lucky/easy-web-tab/                                  # 文件确实落在家里
 
 # 3) 隔离（应 403）
-curl -u lucky https://<域名>/dav/root/easy-web-tab/nav.json
-curl -u lucky https://<域名>/dav/otheruser/easy-web-tab/nav.json
+curl -u lucky https://<域名>/root/easy-web-tab/nav.json
+curl -u lucky https://<域名>/otheruser/easy-web-tab/nav.json
 
 # 4) 系统账号限制（应 401）
-curl -u root https://<域名>/dav/root/easy-web-tab/nav.json
+curl -u root https://<域名>/root/easy-web-tab/nav.json
 
 # 5) 未认证（应 401）
-curl https://<域名>/dav/lucky/easy-web-tab/nav.json
+curl https://<域名>/lucky/easy-web-tab/nav.json
 ```
 
 ### 12.7 备选 A：另设同步口令（不镜像 shadow）
@@ -540,5 +550,5 @@ curl https://<域名>/dav/lucky/easy-web-tab/nav.json
 1. 建口令镜像：`/usr/local/sbin/ewt-sync-passwd.sh`（§12.2）+ 5 分钟定时器
 2. 建目录与软链（每个要同步的用户一条，§12.3）
 3. 贴 §12.4 的 nginx 配置，`nginx -t && systemctl reload nginx`
-4. 应用里填：URL `https://<自己的域名>/dav/`、用户名 = 系统用户名、密码 = **该用户的系统登录密码**
+4. 应用里填：URL `https://<自己的域名>/`、用户名 = 系统用户名、密码 = **该用户的系统登录密码**
 5. 新增用户 = 在系统里 `useradd` 一个普通账号 + 跑一遍 §12.3 的两条命令（口令文件 5 分钟内自动带上他）

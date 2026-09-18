@@ -128,6 +128,16 @@ export function getSaltHex(): string {
 }
 
 /**
+ * 清除主密码加密身份（盐 + 验证串）。
+ * 用于「重置密码」：旧主密码丢弃后，整库密文无法再用新主密码解密，
+ * 必须一并清空本地加密身份，使 hasMasterPassword() 回到 false，回到首次设置流程。
+ */
+export function clearPasswordIdentity(): void {
+  localStorage.removeItem(SALT_KEY)
+  localStorage.removeItem(VERIFICATION_KEY)
+}
+
+/**
  * 只读读取已存盐的 hex 字符串（不生成——导出侧不得凭空制造加密身份；未设置返回 null）
  */
 export function getStoredSaltHex(): string | null {

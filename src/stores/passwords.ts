@@ -8,7 +8,8 @@ import {
   verifyMasterPassword,
   setVerification,
   hasMasterPassword,
-  getSaltHex
+  getSaltHex,
+  clearPasswordIdentity
 } from '../composables/useCrypto'
 import { idbGet, idbPut } from '../composables/useIdb'
 import { markDirty, useCloudSync } from '@/composables/useCloudSync'
@@ -144,6 +145,32 @@ export const usePasswordsStore = defineStore('passwords', () => {
     isUnlocked.value = false
     currentMasterPassword = ''
     passwords.value = []
+  }
+
+  /**
+   * 重置密码（忘记主密码自救）：清空全部密码条目 + 清除主密码加密身份，
+   * 之后回到「设置主密码」流程。因密码是整库用一个主密码加密的单个密文串，
+   * 旧数据无法用新主密码解密，故重置必须一并清空（即用户要求的"清空密码信息"）。
+   * 已启用云同步时静默推送清空后的状态（密码策略为"云端覆盖本地"，其他设备会同步清空）。
+   */
+  async function resetVault(): Promise<PasswordSaveResult> {
+    passwords.value = []
+    currentMasterPassword = ''
+    isUnlocked.value = false
+    let saved = true
+    try {
+      await idbPut('passwords', '')
+    } catch (e) {
+      console.error('[Passwords] clear IDB failed', e)
+      saved = false
+    }
+    clearPasswordIdentity()
+    if (!saved) {
+      return { saved: false, synced: false, cloudEnabled: false }
+    }
+    markDirty()
+    const { synced, cloudEnabled } = await pushPasswordsToCloud()
+    return { saved: true, synced, cloudEnabled }
   }
 
   // 添加密码（saved=false = 未保存，通常因密码库已锁定）
@@ -307,6 +334,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     setupMasterPassword,
     unlock,
     lock,
+    resetVault,
     addPassword,
     updatePassword,
     deletePassword,

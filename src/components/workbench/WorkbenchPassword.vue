@@ -67,6 +67,31 @@ function handleLock(): void {
   cancelForm()
 }
 
+// ===== 重置密码（忘记主密码自救）=====
+// 清空全部密码条目并清除主密码身份，之后回到「设置主密码」流程。
+// 破坏性操作，二次确认后执行；已启用云同步时清空状态会同步到其他设备。
+async function handleResetVault(): Promise<void> {
+  if (
+    !confirm(
+      '确定要重置密码吗？\n\n此操作将清空所有已保存的密码条目，并清除主密码。\n重置后需重新设置主密码，已保存的密码无法恢复。'
+    )
+  ) {
+    return
+  }
+  const result = await passwordsStore.resetVault()
+  if (!result.saved) {
+    toast.error('重置失败：本地密码库写入异常，请重试')
+    return
+  }
+  isNewSetup.value = true
+  masterPasswordInput.value = ''
+  masterPasswordConfirm.value = ''
+  authError.value = ''
+  if (result.synced) toast.success('密码已重置，已同步到云端')
+  else if (result.cloudEnabled) toast.warning('密码已重置，但云同步失败，请稍后手动同步')
+  else toast.success('密码已重置，所有密码条目已清空')
+}
+
 // ===== P0-3：空闲自动锁定 =====
 // 解锁后启动计时，任一用户活动（鼠标/键盘/触摸/滚动）重置计时；
 // 超时（默认 5 分钟）且无操作则自动锁定，与加密身份体系配套提升安全性。
@@ -388,6 +413,15 @@ watch(
         >
           {{ isUnlocking ? '解锁中...' : '解锁' }}
         </el-button>
+        <p class="pwd-reset-hint">
+          <button
+            type="button"
+            class="pwd-reset-link"
+            data-testid="pwd-reset-btn"
+            :disabled="isUnlocking"
+            @click="handleResetVault"
+          >忘记密码？重置密码</button>
+        </p>
       </div>
     </div>
 
@@ -656,6 +690,32 @@ watch(
   color: var(--color-error, #ef4444);
   font-size: 13px;
   margin: 0 0 12px 0;
+}
+
+.pwd-reset-hint {
+  margin: 14px 0 0 0;
+  text-align: center;
+}
+
+.pwd-reset-link {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 6px);
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+.pwd-reset-link:hover:not(:disabled) {
+  color: var(--color-error, #ef4444);
+}
+
+.pwd-reset-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ===== 输入框 ===== */
@@ -1102,6 +1162,14 @@ html.dark .pwd-dialog-title {
 
 html.dark .pwd-auth-hint {
   color: var(--color-text-secondary, #d1d5db);
+}
+
+html.dark .pwd-reset-link {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+html.dark .pwd-reset-link:hover:not(:disabled) {
+  color: var(--color-error, #f87171);
 }
 
 html.dark .pwd-search {

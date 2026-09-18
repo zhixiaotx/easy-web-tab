@@ -106,6 +106,58 @@ export function weekdayLabel(day: number): string {
   return labels[day] ?? ''
 }
 
+// ============ 学科配色（稳定映射，跨周同色）============
+/**
+ * 学科 → 主题色。用于课程表格子左色条、软底与文字，提升扫视辨识度。
+ * 颜色仅作辅助区分，学科名始终以文字呈现（不靠颜色单通道传达，满足 WCAG 1.4.1）。
+ * 自定义学科（不在表内）回退中性色。
+ */
+export const SUBJECT_COLORS: Record<string, string> = {
+  语文: '#ef4444',
+  数学: '#3b82f6',
+  英语: '#f59e0b',
+  物理: '#10b981',
+  化学: '#8b5cf6',
+  生物: '#14b8a6',
+  历史: '#f97316',
+  地理: '#06b6d4',
+  政治: '#ec4899',
+  体育: '#84cc16',
+  音乐: '#a855f7',
+  美术: '#eab308'
+}
+/** 自定义/未知学科回退色 */
+export const SUBJECT_COLOR_FALLBACK = '#64748b'
+
+/** 取学科主色（含回退） */
+export function subjectColor(subject: string): string {
+  return SUBJECT_COLORS[subject] ?? SUBJECT_COLOR_FALLBACK
+}
+
+/**
+ * 生成格子着色用的 CSS 变量集合（--c / --c-soft / --c-strong）。
+ * soft = 软底（亮色 12% / 暗色 18% alpha）；strong = 文字色（暗色提亮，保证对比度）。
+ * @param isDark 当前是否暗色主题
+ */
+export function subjectStyleVars(subject: string, isDark: boolean): Record<string, string> {
+  const c = subjectColor(subject)
+  const n = parseInt(c.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  const softAlpha = isDark ? 0.18 : 0.12
+  const soft = `rgba(${r}, ${g}, ${b}, ${softAlpha})`
+  let sr = r
+  let sg = g
+  let sb = b
+  if (isDark) {
+    sr = Math.min(255, r + 60)
+    sg = Math.min(255, g + 60)
+    sb = Math.min(255, b + 60)
+  }
+  return { '--c': c, '--c-soft': soft, '--c-strong': `rgb(${sr}, ${sg}, ${sb})` }
+}
+
 /** 设置/更新某节课 */
 export function setCell(
   schedule: StudentTimetableSchedule,

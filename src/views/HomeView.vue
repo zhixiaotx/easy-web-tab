@@ -14,6 +14,7 @@ import BackupManager from '../components/BackupManager.vue'
 import IconManager from '../components/IconManager.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
 import HelpModal from '../components/HelpModal.vue'
+import CountdownModal from '@/components/CountdownModal.vue'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import Icon from '../components/Icon.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
@@ -40,6 +41,7 @@ const showCategoryManager = ref(false)
 const showBackupManager = ref(false)
 const showIconManager = ref(false)
 const showSettingsDialog = ref(false)
+const showCountdownModal = ref(false)
 const editingSite = ref<Site | null>(null)
 
 // ===== 视图模式：经典网格 / 侧边栏导航（默认经典，零改动） =====
@@ -230,15 +232,9 @@ const closeAllModals = () => {
   }
 }
 
-// 切换到前台
-const toggleAdmin = () => {
-  router.push('/display')
-}
-
 // 注册键盘快捷键
 useKeyboardShortcuts({
   onCloseModal: closeAllModals,
-  onToggleAdmin: toggleAdmin,
   onToggleTheme: () => themeStore.toggleTheme()
 })
 
@@ -337,9 +333,7 @@ onUnmounted(() => {
       >{{ syncLabel }}</button>
       <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置"><Icon name="cog" /></button>
       <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助"><Icon name="help" /></button>
-      <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
-        前台
-      </button>
+      <button class="btn-help" @click="showCountdownModal = true" title="倒计时" aria-label="倒计时"><Icon name="timer-sand" /></button>
 
       <!-- 视图模式切换（经典 ⇄ 侧边栏）：右侧对齐，滑动开关 -->
       <div class="view-toggle" role="group" aria-label="视图模式切换">
@@ -515,6 +509,11 @@ onUnmounted(() => {
       <BackupManager v-if="showBackupManager" @close="closeAllModals" />
 
       <IconManager v-if="showIconManager" @close="closeAllModals" />
+
+      <CountdownModal
+        v-if="showCountdownModal"
+        @close="showCountdownModal = false"
+      />
     </div>
   </div>
 </template>
@@ -563,23 +562,6 @@ onUnmounted(() => {
 
 .nav-entry-label {
   white-space: nowrap;
-}
-
-.btn-front {
-  padding: 8px 14px;
-  background-color: transparent;
-  color: var(--color-text-secondary, #64748b);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-front:hover {
-  background-color: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #e2e8f0);
 }
 
 .btn-help {
@@ -814,31 +796,6 @@ onUnmounted(() => {
   flex: 1;
 }
 
-/* 导航页「添加网站」主行动按钮 */
-.btn-add-site {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background-color: var(--color-primary, #3b82f6);
-  color: #fff;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color var(--motion-duration, 220ms) var(--motion-ease, ease), transform var(--motion-duration, 220ms) var(--motion-ease, ease);
-  white-space: nowrap;
-}
-
-.btn-add-site:hover {
-  background-color: var(--color-primary-hover, #2563eb);
-}
-
-.btn-add-site:active {
-  transform: var(--motion-press, scale(0.97));
-}
-
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -944,16 +901,6 @@ html.dark .app-bar {
   border-bottom-color: var(--color-border, #374151);
 }
 
-html.dark .btn-front {
-  color: var(--color-text-secondary, #d1d5db);
-}
-
-html.dark .btn-front:hover {
-  background-color: var(--color-bg-hover, #374151);
-  color: var(--color-primary, #3b82f6);
-  border-color: var(--color-border, #374151);
-}
-
 /* 左上角入口按钮（暗色，与全局 .btn-help 暗色一致） */
 html.dark .app-bar .btn-help {
   color: var(--color-text-secondary, #d1d5db);
@@ -1046,11 +993,6 @@ html.dark .view-hamburger {
 
   .btn-help {
     padding: 8px 10px;
-  }
-
-  /* 移动端隐藏右上角「前台」按钮（PC 端保留，不动） */
-  .btn-front {
-    display: none;
   }
 
   .container {

@@ -21,8 +21,8 @@ easy-web-tab/
 │   │   └── business/             # 8 SFC 销售记账面板（首页/商品/进货/收摊/支出/库存/统计 + BusinessCategoryManager）
 │   ├── composables/              # 53 composables (reusable logic incl. useIdb.ts, useCloudSync.ts, useBackup.ts, useSnapshots.ts, useHomeLayout.ts, useHomeStats.ts, useWeather.ts, spotlightCore.ts, snapshotCore.ts + 15 student*Core.ts 纯逻辑 family; 1 auto-generated presetIcons.ts)
 │   ├── stores/                   # 31 Pinia stores (16 workbench/biz workbenchTodos/Notes/Diary/Health/Ledger/Pomodoro/Habits/Business + 15 student*)
-│   ├── views/                    # 5 views: HomeView (admin), DisplayView (read-only), WorkbenchView (个人工作台), BusinessView (销售记账/摆摊进销存), StudentView (学生工作台)
-│   ├── router/index.ts           # / → admin, /display → new-tab page, /workbench → 个人工作台, /business → 销售记账, /student → 学生工作台 (eager imports)
+│   ├── views/                    # 5 views: HomeView (admin), WorkbenchView (个人工作台), BusinessView (销售记账/摆摊进销存), StudentView (学生工作台)
+│   ├── router/index.ts           # / → admin, /workbench → 个人工作台, /business → 销售记账, /student → 学生工作台 (eager imports)
 │   ├── config/beian.ts           # 备案信息页脚常量（ICP/公安，写死，改后需重编译）
 │   ├── types/index.ts            # Site, Category, WorkbenchDiary/DiaryData interfaces + Business 摆摊进销存接口/种子常量 + DEFAULT_CATEGORIES + WORKBENCH_DATA_VERSION=9 + STUDENT_DATA_VERSION=1（v8 起备份内嵌 passwordsSalt/passwordVerification 密码加密身份）
 │   └── styles/                   # dark.css, background.css
@@ -47,7 +47,7 @@ easy-web-tab/
 |------|----------|-------|
 | Add/edit bookmark UI | `src/components/SiteModal.vue` | Auto-fetches metadata via Jina.ai |
 | Bookmark CRUD logic | `src/stores/sites.ts` | God store: filtering, pagination, import/export |
-| Add new route | `src/router/index.ts` | Eager-loaded (no lazy loading); 5 routes: `/`, `/display`, `/workbench`, `/business`, `/student` |
+| Add new route | `src/router/index.ts` | Eager-loaded (no lazy loading); 4 routes: `/`, `/workbench`, `/business`, `/student` |
 | Add new type | `src/types/index.ts` | Single file, all interfaces（`AppSettingsData` 含 6 个提醒设置可选字段 + `Countdown.emailReminder` opt-in + Business 摆摊进销存全部接口与种子常量 `DEFAULT_BUSINESS_EXPENSE_CATEGORIES`/`DEFAULT_BUSINESS_PRODUCT_CATEGORIES` + 学生工作台 STUDENT_MENU_KEYS/StudentParentTask/StudentStage；`WORKBENCH_DATA_VERSION=9` + `STUDENT_DATA_VERSION=1`（v8 起备份内嵌 passwordsSalt/passwordVerification 密码加密身份）） |
 | Dark mode styles | `src/styles/dark.css` | CSS variables, class toggle |
 | Sample data | `public/data/myself-sites.md` | Fetched by `HelpModal.vue` (「下载示例数据」source) |

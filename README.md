@@ -10,7 +10,7 @@
 
 | 模块 | 路由 | 一句话说明 |
 |------|------|-----------|
-| 网址导航 | `/` · `/display` | 分类管理、全文搜索、多引擎切换、暗色模式、Markdown 导入导出 |
+| 网址导航 | `/` | 分类管理、全文搜索、多引擎切换、暗色模式、Markdown 导入导出 |
 | 个人工作台 | `/workbench` | 待办 / 便签 / 日记 / 倒计时 / 番茄钟 / 习惯打卡 / 密码库 / 健康管理（运动·饮食·睡眠·体重）/ 记账，10 个面板 |
 | 销售记账 | `/business` | 摆摊进销存：商品 / 进货 / 收摊 / 支出 / 库存 / 统计，盈亏与趋势分析 |
 | 学生工作台 | `/student` | 习惯 / 作业 / 课表 / 计划 / 复习 / 错题 / 阅读 / 考试 / 教育经历 / 日记 / 番茄钟 / 成就 / 奖励 + 家长协同（PIN 锁） |
@@ -58,7 +58,6 @@ npm run serve      # 仅启动静态服务（读取已构建的 dist/，含游�
 | 页面 | 路由 | 说明 |
 |------|------|------|
 | 导航管理（后台） | `/` | 添加/编辑/删除网址，管理分类、搜索引擎、导入导出 |
-| 导航展示（前台） | `/display` | 纯展示、隐藏管理按钮，适合设为浏览器新标签页 |
 | 个人工作台 | `/workbench` | 待办 / 便签 / 日记 / 倒计时 / 番茄钟 / 习惯 / 密码 / 健康 / 记账 等 |
 | 销售记账 | `/business` | 摆摊进销存：商品 / 进货 / 收摊 / 支出 / 库存 / 统计 |
 | 学生工作台 | `/student` | 学习管理 + 家长协同 |
@@ -360,7 +359,7 @@ easy-web-tab/
 │   │   │                         #   spotlightCore + 各 *Core 纯逻辑 + 1 个自动生成的 presetIcons.ts）
 │   ├── stores/                   # 31 个 Pinia store（16 工作台/业务 + 15 学生）
 │   ├── views/                    # 5 个视图：Home / Display / Workbench / Business / Student
-│   ├── router/index.ts           # / /display /workbench /business /student（eager）
+│   ├── router/index.ts           # / /workbench /business /student（eager）
 │   ├── config/beian.ts           # 备案页脚常量
 │   ├── types/index.ts            # 全部 TS 接口（含 WORKBENCH_DATA_VERSION=9 / STUDENT_DATA_VERSION=1）
 │   └── styles/                   # dark.css / background.css

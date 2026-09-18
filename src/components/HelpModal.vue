@@ -70,7 +70,6 @@ async function copyText(text: string, field: string) {
 
 const shortcuts = [
   { key: 'Ctrl + N', action: '新增网址' },
-  { key: 'Ctrl + B', action: '切换前台/后台' },
   { key: 'Ctrl + D', action: '切换暗色模式' },
   { key: 'ESC', action: '关闭弹窗' }
 ]
@@ -573,10 +572,6 @@ const skillInstall = [
               <span class="mode-badge mode-admin">管理后台</span>
               <p>路由 <code>/</code>，默认页面，可添加/编辑/删除网址，管理分类和搜索引擎。</p>
             </div>
-            <div class="mode-item">
-              <span class="mode-badge mode-display">前台展示</span>
-              <p>路由 <code>/display</code>，纯展示模式，隐藏管理功能，适合设为浏览器新标签页。</p>
-            </div>
           </div>
         </section>
 
@@ -966,11 +961,6 @@ const skillInstall = [
 .mode-admin {
   background-color: #eff6ff;
   color: #3b82f6;
-}
-
-.mode-display {
-  background-color: #f0fdf4;
-  color: #22c55e;
 }
 
 .mode-item p {

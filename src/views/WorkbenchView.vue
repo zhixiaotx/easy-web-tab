@@ -490,7 +490,7 @@ async function handleSyncNowClick(): Promise<void> {
   font-feature-settings: "tnum";
 }
 
-/* 暗色模式覆盖（模式参考 DisplayView.vue:199-215 与 dark.css:4-44） */
+/* 暗色模式覆盖（模式参考 dark.css:4-44） */
 html.dark .wb-shell {
   background-color: var(--color-bg, #111827);
 }

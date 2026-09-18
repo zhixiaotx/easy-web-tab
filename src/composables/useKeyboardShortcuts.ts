@@ -3,7 +3,6 @@ import { onMounted, onUnmounted } from 'vue'
 export interface KeyboardShortcutsOptions {
   onCloseModal?: () => void
   onToggleTheme?: () => void
-  onToggleAdmin?: () => void
 }
 
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
@@ -11,13 +10,6 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
 
   function handleKeydown(event: KeyboardEvent) {
     const isMod = isMac ? event.metaKey : event.ctrlKey
-
-    // Ctrl/Cmd + B: 切换后台/前台
-    if (isMod && event.key === 'b' && !event.shiftKey) {
-      event.preventDefault()
-      options.onToggleAdmin?.()
-      return
-    }
 
     // Ctrl/Cmd + D: 切换暗色模式
     if (isMod && event.key === 'd') {
@@ -45,7 +37,6 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   return {
     isMac,
     shortcuts: {
-      toggleAdmin: isMac ? '⌘B' : 'Ctrl+B',
       toggleTheme: isMac ? '⌘D' : 'Ctrl+D',
       closeModal: 'ESC'
     }

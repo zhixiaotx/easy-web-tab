@@ -32,7 +32,6 @@ d:\opencodeWorkSpace\easy-web-tab\src\
 │   ├── WorkbenchView.vue    # 工作台主视图（左菜单 + 右内容）
 │   ├── BusinessView.vue     # 销售记账主视图
 │   ├── HomeView.vue         # 管理页
-│   └── DisplayView.vue      # 新标签页
 ├── router/index.ts          # 路由（eager import，无 lazy）
 └── styles/
     ├── dark.css             # 暗色模式 CSS 变量

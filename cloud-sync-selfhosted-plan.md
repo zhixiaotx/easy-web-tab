@@ -371,16 +371,27 @@ URL 结构**不变**（客户端零改动）：`https://<域名>/dav/<用户名>
 sudo tee /usr/local/sbin/ewt-sync-passwd.sh >/dev/null <<'EOF'
 #!/bin/bash
 set -euo pipefail
-OUT=/etc/nginx/.ewt_sync_htpasswd
+DIR=/etc/nginx
+SHARED="$DIR/.ewt_sync_htpasswd"          # 合并版（保留，便于排查）
 TMP=$(mktemp); chmod 640 "$TMP"
 # 只镜像普通用户(uid>=1000)且密码字段是有效哈希(排除 !/* 锁定账号)
 awk -F: '($3>=1000) && ($2 ~ /^\$(1|5|6|2[aby])\$/) { print $1 ":" $2 }' /etc/shadow > "$TMP"
 chown root:nginx "$TMP" 2>/dev/null || chown root:www-data "$TMP"   # Alinux/CentOS 是 nginx，Debian 是 www-data
-chmod 640 "$TMP"; mv "$TMP" "$OUT"
+chmod 640 "$TMP"; mv "$TMP" "$SHARED"
+# 拆成「每用户一份」：/dav/<user>/ 只能用 <user> 自己的密码认证（隔离关键）
+# nginx 侧 auth_basic_user_file 用 ..._$sync_user 拼到对应文件，alice 无法认证 /dav/bob/
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  u="${line%%:*}"
+  f="$DIR/.ewt_sync_htpasswd_$u"
+  printf '%s\n' "$line" > "$f"
+  chown root:nginx "$f" 2>/dev/null || chown root:www-data "$f"
+  chmod 640 "$f"
+done < "$SHARED"
 EOF
 sudo chmod +x /usr/local/sbin/ewt-sync-passwd.sh
 sudo /usr/local/sbin/ewt-sync-passwd.sh
-sudo cat /etc/nginx/.ewt_sync_htpasswd      # 应看到 <用户名>:$6$... 若干行
+sudo ls -l /etc/nginx/.ewt_sync_htpasswd_*      # 应看到每个普通用户一个文件
 ```
 
 定时刷新（用户改密码后自动跟上；**每 5 分钟**）：
@@ -408,12 +419,16 @@ sudo systemctl enable --now ewt-sync-passwd.timer
 2. **root 自动被排除**（uid<1000），符合你的选择。
 3. 文件里是与 shadow 同等强度的 SHA-512 加盐哈希，权限 `640 root:nginx`，**不要放进 web 目录**。
 
-nginx 侧就是最朴素的 Basic 认证：
+nginx 侧用「按用户名拼文件」的 Basic 认证（隔离就靠这一步）：
 
 ```nginx
 auth_basic "easy-web-tab sync";
-auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd;
+auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd_$sync_user;   # $sync_user 来自 location 正则捕获，见 §12.4
 ```
+
+> 每个用户一份口令文件（`/etc/nginx/.ewt_sync_htpasswd_<用户名>`）由 §12.2 脚本生成。
+> 这样 alice 想访问 `/dav/bob/` 时，nginx 用 bob 的口令文件校验，alice 的密码通不过 → 直接 401，
+> 实现「只能用自己密码访问自己目录」的隔离，无需任何 `if`。
 
 > **备选（Debian/Ubuntu 想要"实时"校验）**：装 `libnginx-mod-http-auth-pam`，用 `auth_pam` + `/etc/pam.d/ewt-sync`
 > （含 `pam_succeed_if.so uid >= 1000`），代价是要让 nginx 用户能读 `/etc/shadow`（`setfacl -m u:www-data:r /etc/shadow`）。
@@ -446,19 +461,12 @@ sudo chown -R nginx:nginx /var/lib/nginx/ewt-tmp
 ```nginx
 location ~ ^/dav/(?<sync_user>[A-Za-z0-9._-]+)/ {
     # ① 系统账号认证（密码=该用户的系统登录密码，见 §12.2）
+    #    按 URL 里的用户名加载对应 per-user 口令文件 —— 隔离就靠它：
+    #    alice 访问 /dav/bob/ 时用 bob 的文件校验，alice 的密码通不过 → 401。
     auth_basic           "easy-web-tab sync";
-    auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd;
+    auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd_$sync_user;
 
-    # ② 隔离：已登录用户名必须 == URL 里的目录名。
-    #    注意必须用「嵌套 if」：先判断 $remote_user 非空（已认证），再判断是否匹配，
-    #    否则未登录请求会在 rewrite 阶段直接 403，auth_basic 根本没机会弹 401。
-    if ($remote_user != "") {
-        if ($remote_user != $sync_user) {
-            return 403;
-        }
-    }
-
-    # ③ 静态 root + 软链农场（/var/ewt-sync/dav/<user> -> /home/<user>，见 §12.3）
+    # ② 静态 root + 软链农场（/var/ewt-sync/dav/<user> -> /home/<user>，见 §12.3）
     root                 /var/ewt-sync;
     dav_methods         PUT DELETE MKCOL;
     create_full_put_path on;                  # PUT 自动建中间目录（客户端 409 透传依赖此项）
@@ -473,8 +481,12 @@ location /dav/ {
 }
 ```
 
-为什么能用 `$remote_user`：nginx 核心的 `ngx_http_auth_basic_user()` 解析 `Authorization: Basic`
-后把用户名写进 `r->headers_in.user`，`$remote_user` 即取此值（PAM 模块走的也是同一个值，所以两种认证方式都能用这招隔离）。
+> 为什么不用 `if ($remote_user != $sync_user) return 403` 做隔离？
+> nginx 的 `$remote_user` 要等 `auth_basic` 在 **access 阶段** 跑完才被赋值，
+> 而 `if`/`return` 在 **rewrite 阶段** 就执行了——此时 `$remote_user` 永远是空，
+> `if` 要么永远拦不到（空==空）、要么未登录就直接 403 导致浏览器连登录框都弹不出。
+> 嵌套 `if` 还会触发 `if directive is not allowed here` 语法错误（正是本次 `nginx -t` 报的错）。
+> 所以这里改用「per-user 口令文件 + 变量」在认证阶段就完成隔离，彻底避开 `if`。
 
 ### 12.5 客户端侧配套小改（2 处）
 

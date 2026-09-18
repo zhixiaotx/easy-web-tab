@@ -192,6 +192,70 @@ async function proxyDav(targetUrl: string, method: DavMethod, username: string, 
   return res
 }
 
+/**
+ * 是否走「直连」（自建服务器）——**自动判断，无需用户配置**：
+ *
+ * 同步地址与当前页面**同源** ⇒ 是自己的服务器：浏览器可直连，无 CORS 预检（方案 A1）。
+ * 否则 ⇒ 视为第三方 WebDAV（坚果云 / Nextcloud 等默认不返回 CORS 头），
+ *        走同源代理 /api/webdav-proxy 转发。
+ *
+ * URL 为空或解析失败时保守返回 false（走代理）。
+ */
+function shouldUseDirect(syncUrl: string | undefined): boolean {
+  if (!syncUrl) return false
+  try {
+    return new URL(syncUrl).origin === location.origin
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 同步前置校验：URL、用户名、密码三者必填。
+ *
+ * 注意：直连模式（自建服务器）同样三者必填——
+ * - 用户名 = 服务器上的个人目录名（一家人共用一台服务器时靠它隔离数据）
+ * - 密码   = 服务端 auth_basic 的口令
+ */
+function hasSyncCredentials(s: {
+  cloudSyncUrl?: string
+  cloudSyncUsername?: string
+  cloudSyncPassword?: string
+}): boolean {
+  return !!s.cloudSyncUrl && !!s.cloudSyncUsername && !!s.cloudSyncPassword
+}
+
+/**
+ * 直连模式请求：直接对目标 URL 发真实 WebDAV 方法。
+ * 用户名与密码均为空时**不发送** Authorization 头（自建服务器可配置为无需认证）。
+ */
+async function directDav(
+  targetUrl: string,
+  method: DavMethod,
+  username: string,
+  password: string,
+  body?: string
+): Promise<Response> {
+  const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (username || password) {
+    headers['Authorization'] = 'Basic ' + btoaSafe(`${username}:${password}`)
+  }
+  return await fetch(targetUrl, { method, headers, body })
+}
+
+/** 统一请求入口：按目标 URL 是否与页面同源，自动在「直连」与「同源代理」间分流 */
+async function davRequest(
+  targetUrl: string,
+  method: DavMethod,
+  username: string,
+  password: string,
+  body?: string
+): Promise<Response> {
+  if (shouldUseDirect(targetUrl)) return await directDav(targetUrl, method, username, password, body)
+  return await proxyDav(targetUrl, method, username, password, body)
+}
+
 /** 从代理响应里解析诊断信息（非 2xx 时用），返回 {upstreamStatus, snippet, textBody} */
 async function readDavDiagnostics(res: Response): Promise<{ upstreamStatus: string | null; snippet: string | null; textBody: string }> {
   const upstreamStatus = res.headers.get('X-Upstream-Status') || String(res.status)
@@ -339,7 +403,7 @@ interface WebdavGetResult {
 }
 
 async function webdavGet(url: string, username: string, password: string): Promise<WebdavGetResult> {
-  const res = await proxyDav(url, 'GET', username, password)
+  const res = await davRequest(url, 'GET', username, password)
   if (res.status === 404) return { data: null, lastModifiedMs: 0, rawText: '' }
   if (!res.ok) {
     const diag = await readDavDiagnostics(res)
@@ -363,7 +427,7 @@ async function webdavGet(url: string, username: string, password: string): Promi
  */
 async function webdavHead(url: string, username: string, password: string): Promise<number> {
   try {
-    const res = await proxyDav(url, 'HEAD', username, password)
+    const res = await davRequest(url, 'HEAD', username, password)
     if (!res.ok) return 0
     const lm = res.headers.get('Last-Modified')
     if (!lm) return 0
@@ -375,7 +439,7 @@ async function webdavHead(url: string, username: string, password: string): Prom
 }
 
 async function webdavPut(url: string, username: string, password: string, body: string): Promise<void> {
-  const res = await proxyDav(url, 'PUT', username, password, body)
+  const res = await davRequest(url, 'PUT', username, password, body)
   if (!res.ok) {
     const diag = await readDavDiagnostics(res)
     throw new Error(davErrorLabel('PUT', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
@@ -383,7 +447,7 @@ async function webdavPut(url: string, username: string, password: string, body: 
 }
 
 async function webdavDelete(url: string, username: string, password: string): Promise<void> {
-  const res = await proxyDav(url, 'DELETE', username, password)
+  const res = await davRequest(url, 'DELETE', username, password)
   // 404 视作成功（文件本就不存在）
   if (res.ok || res.status === 404) return
   const diag = await readDavDiagnostics(res)
@@ -400,25 +464,61 @@ async function webdavDelete(url: string, username: string, password: string): Pr
  *
  * 判据：三个代理实现（vite dev / serve-with-rewrites / webdav-proxy-only）在**任何**
  * 响应里都会带 X-Upstream-Status 头；Nginx 自己生成的 405 绝不会带。据此区分来源。
+ *
+ * 直连模式例外：没有代理这一层，也就没有 X-Upstream-Status 头。此时 405 就是服务端
+ * （自建 nginx）在说「目录已存在」，直接视作成功，不能套用上面的代理判据。
+ *
+ * 直连下的 409 同样放过：自建服务器按系统账号建目录（/home/<用户名>/easy-web-tab），
+ * 新用户首次同步时父目录可能还没建 —— nginx 开了 `create_full_put_path on`，
+ * 随后的 PUT 会自动把整条路径创建出来，MKCOL 失败不影响同步。
  */
 async function webdavMkcol(url: string, username: string, password: string): Promise<void> {
-  const res = await proxyDav(url, 'MKCOL', username, password)
+  const res = await davRequest(url, 'MKCOL', username, password)
   if (res.ok) return
-  if (res.status === 405) {
-    if (res.headers.has('X-Upstream-Status')) return // 真·WebDAV 说目录已存在
-    throw new Error(
-      '云同步代理未生效：POST /api/webdav-proxy 返回 405，且缺少 X-Upstream-Status 响应头，' +
-      '说明请求被静态服务器（Nginx）拒绝而非到达 WebDAV 服务。' +
-      '请在 Nginx 中反代 /api/webdav-proxy 到 webdav 代理服务（默认 127.0.0.1:16719）。'
-    )
+  if (res.status === 405 || res.status === 409) {
+    // 直连（自建服务器）：405 = 目录已存在；409 = 父目录未建，随后的 PUT 会自动创建
+    if (shouldUseDirect(url)) return
+    if (res.status === 405) {
+      if (res.headers.has('X-Upstream-Status')) return // 真·WebDAV 说目录已存在
+      throw new Error(
+        '云同步代理未生效：POST /api/webdav-proxy 返回 405，且缺少 X-Upstream-Status 响应头，' +
+        '说明请求被静态服务器（Nginx）拒绝而非到达 WebDAV 服务。' +
+        '请在 Nginx 中反代 /api/webdav-proxy 到 webdav 代理服务（默认 127.0.0.1:16719）。'
+      )
+    }
+    // 代理模式下的 409 是真错（如坚果云根路径没建），落到下面统一报错
   }
   const diag = await readDavDiagnostics(res)
   throw new Error(davErrorLabel('MKCOL', diag.upstreamStatus, diag.snippet, diag.textBody, res.status))
 }
 
-function dirUrl(base: string): string {
+/**
+ * 目录名安全化：直连模式下用户名会成为 URL 路径片段（自建服务器的个人目录名）。
+ *
+ * 允许字符集对齐 **Linux 系统用户名**（自建服务器按系统账号建目录，见 cloud-sync-selfhosted-plan.md §12）：
+ * 字母、数字、`.`、`_`、`-`（`useradd` 的合法字符集是 `[a-z_][a-z0-9_-]*[$]?`）。
+ * 其余字符（含 `/`）一律剔除，并显式丢弃 `.`/`..`，避免路径穿越与非法路径。
+ */
+function sanitizeDirName(name: string): string {
+  const cleaned = name.replace(/[^A-Za-z0-9._-]/g, '')
+  return cleaned === '.' || cleaned === '..' ? '' : cleaned
+}
+
+/**
+ * 同步目录 URL。
+ *
+ * 直连模式（自建服务器）且填了用户名时：**用户名即个人目录名**，插在基础 URL 与
+ * easy-web-tab 之间，形如 https://域名/dav/sifujiang/easy-web-tab。
+ * 这样一家人共用一台服务器时，各人数据天然隔离。
+ *
+ * 代理模式（第三方 WebDAV：坚果云等）保持原样：基础 URL + /easy-web-tab
+ * （第三方服务的目录与用户名无关，不能拼用户名）。
+ */
+function dirUrl(base: string, username?: string): string {
   const clean = base.replace(/\/$/, '')
-  return clean.endsWith(`/${DATA_DIR}`) ? clean : `${clean}/${DATA_DIR}`
+  const userSeg = shouldUseDirect(base) && username ? `/${sanitizeDirName(username)}` : ''
+  const withUser = `${clean}${userSeg}`
+  return withUser.endsWith(`/${DATA_DIR}`) ? withUser : `${withUser}/${DATA_DIR}`
 }
 
 /** 探测连接 + 确保 easy-web-tab 目录存在（v10 改为只 MKCOL 探目录，不再 GET backup.json） */
@@ -429,13 +529,15 @@ export async function testConnection(
 ): Promise<{ ok: boolean; error?: string }> {
   if (!url || !username || !password) return { ok: false, error: 'URL / 用户名 / 应用密码不能为空' }
   try {
-    const dir = dirUrl(url)
+    const dir = dirUrl(url, username)
     await webdavMkcol(dir, username, password)
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : '连接失败'
     const hint = msg.includes('Failed to fetch')
-      ? '请求失败：请确认本页面通过 Vite dev(npm run dev) 或内置服务(npm run serve) 打开，以启用 WebDAV 代理。'
+      ? (shouldUseDirect(url)
+        ? '请求失败：直连（同源）模式下无法访问该地址。请确认 URL 正确、服务器已启动，且用户名对应的目录已创建且在白名单内。'
+        : '请求失败：请确认本页面通过 Vite dev(npm run dev) 或内置服务(npm run serve) 打开，以启用 WebDAV 代理。')
       : msg
     return { ok: false, error: hint }
   }
@@ -1115,14 +1217,14 @@ async function detectExternalChange(dir: string, username: string, password: str
  */
 async function pushNow(silent = false, skipRemoteGuard = false): Promise<boolean> {
   const settings = useAppSettingsStore()
-  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
+  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     return false
   }
   status.value = 'pushing'
   errorMessage.value = ''
-  const dir = dirUrl(settings.cloudSyncUrl!)
-  const username = settings.cloudSyncUsername!
-  const password = settings.cloudSyncPassword!
+  const username = settings.cloudSyncUsername ?? ''
+  const password = settings.cloudSyncPassword ?? ''
+  const dir = dirUrl(settings.cloudSyncUrl!, username)
 
   // ===== 推送保险：云端被外部改过 → 先合并再推，禁止盲推覆盖 =====
   if (!skipRemoteGuard) {
@@ -1208,14 +1310,14 @@ async function applyFileRemote(cfg: FileConfig, remote: unknown): Promise<{ iden
  */
 async function pullNow(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
-  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
+  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     return
   }
   status.value = 'pulling'
   errorMessage.value = ''
-  const dir = dirUrl(settings.cloudSyncUrl!)
-  const username = settings.cloudSyncUsername!
-  const password = settings.cloudSyncPassword!
+  const username = settings.cloudSyncUsername ?? ''
+  const password = settings.cloudSyncPassword ?? ''
+  const dir = dirUrl(settings.cloudSyncUrl!, username)
   try {
     // ===== 1) 串行 GET 5 份文件，记录 data + lastModifiedMs =====
     const remoteResults: Record<string, { data: unknown; lastModifiedMs: number }> = {}
@@ -1514,15 +1616,15 @@ export async function syncNow(silent = false): Promise<void> {
  */
 export async function forcePullRemote(silent = false): Promise<void> {
   const settings = useAppSettingsStore()
-  if (!settings.cloudSyncEnabled || !settings.cloudSyncUrl || !settings.cloudSyncUsername || !settings.cloudSyncPassword) {
+  if (!settings.cloudSyncEnabled || !hasSyncCredentials(settings)) {
     if (!silent) useToast().error('请先在设置中启用并配置云同步')
     return
   }
   status.value = 'pulling'
   errorMessage.value = ''
-  const dir = dirUrl(settings.cloudSyncUrl!)
-  const username = settings.cloudSyncUsername!
-  const password = settings.cloudSyncPassword!
+  const username = settings.cloudSyncUsername ?? ''
+  const password = settings.cloudSyncPassword ?? ''
+  const dir = dirUrl(settings.cloudSyncUrl!, username)
   try {
     let applied = false
     let workbenchIdentityChanged = false

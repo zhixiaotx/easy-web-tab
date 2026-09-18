@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Icon from './Icon.vue'
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import type { Site } from '../types'
 import { getFaviconImgSrc, getIconUrl } from '../composables/useIconCache'
 import { useSitesStore } from '../stores/sites'
@@ -19,7 +19,6 @@ const emit = defineEmits<{
 }>()
 
 const sitesStore = useSitesStore()
-const isHovered = ref(false)
 
 // ========================================
 // 描述弹框：hover 3s 打开 / 2s 自动关 / 鼠标在弹框中不关 / 点叉即关
@@ -59,7 +58,6 @@ function closeDescPopup() {
 
 // 卡片事件：进入 -> 启动 3s 打开；离开 -> 取消打开 / 已开则开始 2s 自动关
 function handleCardMouseEnter() {
-  isHovered.value = true
   if (!hasDescription()) return
   clearHoverTimer()
   hoverTimer = setTimeout(() => {
@@ -70,7 +68,6 @@ function handleCardMouseEnter() {
 }
 
 function handleCardMouseLeave() {
-  isHovered.value = false
   // 还没到 3s 就离开 → 取消打开（鼠标进入 popup 不会触发 card leave，因为 popup 是 card 子元素）
   clearHoverTimer()
   // 已打开 → 启动 2s 自动关倒计时（离开卡片但没进 popup 时 2s 关；进了 popup 会被 enterPopup 暂停）
@@ -87,9 +84,57 @@ function handlePopupMouseLeave() {
   restartAutoClose()
 }
 
+// ========================================
+// 卡片操作菜单：常驻 ⋯ 触发（触屏无 hover，不能依赖悬停才出现）
+// ========================================
+const menuOpen = ref(false)
+const cardRef = ref<HTMLElement | null>(null)
+
+function closeMenu(): void {
+  menuOpen.value = false
+}
+
+function toggleMenu(): void {
+  menuOpen.value = !menuOpen.value
+}
+
+function handleEdit(): void {
+  closeMenu()
+  emit('edit', props.site)
+}
+
+function handleUnmark(): void {
+  closeMenu()
+  emit('unmark', props.site.url)
+}
+
+function handleRemove(): void {
+  closeMenu()
+  emit('delete', props.site.url)
+}
+
+function handleOutsideClick(event: MouseEvent): void {
+  if (!menuOpen.value) return
+  const el = cardRef.value
+  if (el && event.target instanceof Node && !el.contains(event.target)) {
+    closeMenu()
+  }
+}
+
+function handleEscape(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && menuOpen.value) closeMenu()
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick, true)
+  document.addEventListener('keydown', handleEscape)
+})
+
 onBeforeUnmount(() => {
   clearHoverTimer()
   clearAutoCloseTimer()
+  document.removeEventListener('click', handleOutsideClick, true)
+  document.removeEventListener('keydown', handleEscape)
 })
 
 // 四层降级：自定义 icon → 本地缓存 → Google Favicon → 默认 SVG
@@ -114,6 +159,7 @@ const handleClick = () => {
 
 <template>
   <div
+    ref="cardRef"
     class="site-card"
     :class="{ 'is-drag-over': props.isDragOver, 'is-dragging': props.isDragging }"
     :data-site-url="site.url"
@@ -134,25 +180,48 @@ const handleClick = () => {
       <div v-if="site.isValid === false" class="invalid-badge" title="链接已失效">
         <Icon name="alert" />
       </div>
-      <div v-if="isHovered && !props.readonly" class="card-actions">
-        <button v-if="site.isValid === false" class="action-btn unmark" @click.stop="emit('unmark', site.url)" title="取消失效标记">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 11l3 3L22 4"/>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      <div v-if="!props.readonly" class="card-actions">
+        <button
+          type="button"
+          class="menu-trigger"
+          aria-haspopup="menu"
+          :aria-expanded="menuOpen"
+          title="更多操作"
+          aria-label="更多操作"
+          data-testid="site-card-menu"
+          @click.stop="toggleMenu"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.9" />
+            <circle cx="12" cy="12" r="1.9" />
+            <circle cx="12" cy="19" r="1.9" />
           </svg>
         </button>
-        <button class="action-btn edit" @click.stop="emit('edit', site)" title="编辑">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </button>
-        <button class="action-btn delete" @click.stop="emit('delete', site.url)" title="删除">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </button>
+        <Transition name="card-menu-fade">
+          <div v-if="menuOpen" class="card-menu" role="menu" @click.stop>
+            <button type="button" class="card-menu-item" role="menuitem" @click.stop="handleEdit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              <span>编辑</span>
+            </button>
+            <button v-if="site.isValid === false" type="button" class="card-menu-item" role="menuitem" @click.stop="handleUnmark">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              <span>取消失效标记</span>
+            </button>
+            <button type="button" class="card-menu-item is-danger" role="menuitem" @click.stop="handleRemove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+              <span>删除</span>
+            </button>
+          </div>
+        </Transition>
       </div>
     </div>
     <h3 class="site-name">{{ site.name }}</h3>
@@ -254,57 +323,100 @@ const handleClick = () => {
 
 .card-actions {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  display: flex;
-  gap: 2px;
-  animation: fadeIn 0.15s ease;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  font-size: 14px;
-  opacity: 0.5;
-  transition: opacity 0.2s, color 0.2s;
+.menu-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-bg-card, #ffffff);
+  color: var(--color-text-secondary, #64748b);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
 
-.action-btn:hover {
+.site-card:hover .menu-trigger,
+.site-card:focus-within .menu-trigger {
   opacity: 1;
 }
 
-.action-btn.edit {
-  color: #3b82f6;
+.menu-trigger:hover {
+  color: var(--color-primary, #3b82f6);
 }
 
-.action-btn.edit:hover {
-  background-color: #eff6ff;
+.menu-trigger:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+  opacity: 1;
 }
 
-.action-btn.delete:hover {
+.card-menu {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  min-width: 148px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1600;
+  text-align: left;
+}
+
+.card-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #334155;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.card-menu-item:hover {
+  background-color: #f1f5f9;
+  color: var(--color-primary, #3b82f6);
+}
+
+.card-menu-item:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: -2px;
+}
+
+.card-menu-item.is-danger {
   color: #ef4444;
+}
+
+.card-menu-item.is-danger:hover {
   background-color: #fef2f2;
+  color: #ef4444;
 }
 
-.action-btn.unmark {
-  color: #10b981;
+.card-menu-fade-enter-active,
+.card-menu-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.action-btn.unmark:hover {
-  background-color: #ecfdf5;
+.card-menu-fade-enter-from,
+.card-menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .site-name {
@@ -403,7 +515,52 @@ const handleClick = () => {
   transform: translateX(-50%) translateY(4px);
 }
 
+/* ===== 触屏 / 窄屏：放大菜单触发区（44px 触控目标下限） ===== */
+@media (max-width: 768px), (pointer: coarse) {
+  .menu-trigger {
+    width: 36px;
+    height: 36px;
+    opacity: 1;
+  }
+  .card-menu {
+    top: 40px;
+    min-width: 160px;
+  }
+  .card-menu-item {
+    min-height: 44px;
+  }
+}
+
 /* ================ 暗色主题 ================ */
+:global(.dark) .menu-trigger {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+:global(.dark) .card-menu {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+:global(.dark) .card-menu-item {
+  color: #cbd5e1;
+}
+
+:global(.dark) .card-menu-item:hover {
+  background-color: #334155;
+  color: var(--color-primary, #60a5fa);
+}
+
+:global(.dark) .card-menu-item.is-danger {
+  color: #f87171;
+}
+
+:global(.dark) .card-menu-item.is-danger:hover {
+  background-color: rgba(248, 113, 113, 0.16);
+  color: #f87171;
+}
+
 :global(.dark) .desc-popup {
   background: #1e293b;
   color: #e2e8f0;

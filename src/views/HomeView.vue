@@ -472,7 +472,7 @@ onUnmounted(() => {
         />
       </main>
 
-      <Pagination class="bottom-pagination" @pageChange="handlePageChange" />
+      <Pagination @pageChange="handlePageChange" />
 
       <div v-if="store.filteredSites.length === 0" class="empty-state">
         <p v-if="store.showOnlyInvalid">没有检测到无效链接 <Icon name="check" /></p>
@@ -801,7 +801,7 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: 24px;
   padding-top: 84px; /* 为顶部统一 App Bar 留出空间 */
-  padding-bottom: 120px; /* 为底部固定分页留出空间 */
+  padding-bottom: 32px;
 }
 
 .header {
@@ -869,20 +869,6 @@ onUnmounted(() => {
   padding: 1px 8px;
 }
 
-/* 底部固定分页 */
-.bottom-pagination {
-  position: fixed;
-  bottom: 48px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 12px 24px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-}
-
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -891,11 +877,6 @@ onUnmounted(() => {
 }
 
 /* 暗色模式 */
-html.dark .bottom-pagination {
-  background-color: rgba(31, 41, 55, 0.95);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
 html.dark .app-bar {
   background-color: rgba(31, 41, 55, 0.82);
   border-bottom-color: var(--color-border, #374151);
@@ -985,6 +966,25 @@ html.dark .view-hamburger {
   }
   .app-bar-right {
     justify-content: flex-start;
+    /* 按钮放不下时内部横向滚动，避免溢出后被裁掉够不着 */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .app-bar-right::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 视图切换收窄为纯图标，给工具按钮让出空间 */
+  .view-toggle {
+    width: 92px;
+    margin-left: 4px;
+  }
+  .view-toggle-opt span {
+    display: none;
   }
 
   .nav-entry-label {
@@ -1000,13 +1000,8 @@ html.dark .view-hamburger {
     /* 左右内边距收窄，给卡片网格让出宽度 */
     padding-left: 12px;
     padding-right: 12px;
-    /* 移动端底部分页条已隐藏（默认显示全部），仅保留安全区与少量留白 */
+    /* 分页已回归文档流，底部仅保留安全区与少量留白 */
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  }
-
-  /* 移动端：默认显示全部，隐藏底部分页条（页码按钮随 isAllMode 自动消失，这里连每页条数下拉一并收起） */
-  .bottom-pagination {
-    display: none;
   }
 
   /* 站点网格：小屏降为 150px 最小列宽，360px 屏可排两列，一屏看到更多站点 */
@@ -1022,25 +1017,6 @@ html.dark .view-hamburger {
   .empty-state {
     padding: 40px 16px;
     font-size: 15px;
-  }
-
-  /* 底部固定分页：浮空胶囊在窄屏会换行撑高并遮挡内容，改为贴底全宽条 */
-  /* 选择器带 .container 提升特异性，覆盖 Pagination 组件内 .pagination-wrapper 的 margin/padding */
-  .container .bottom-pagination {
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    transform: none;
-    margin-top: 0;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
-  }
-
-  html.dark .container .bottom-pagination {
-    background-color: rgba(31, 41, 55, 0.95);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
   }
 
   /* 移动端侧边栏：改为抽屉（默认移出视口，open 时滑入） */

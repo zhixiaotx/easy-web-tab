@@ -304,7 +304,7 @@ onUnmounted(() => {
         @click="handleSyncNowClick"
       >{{ syncLabel }}</button>
       <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置"><Icon name="cog" /></button>
-      <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助"><Icon name="help" /></button>
+      <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助">帮助</button>
       <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
         前台
       </button>

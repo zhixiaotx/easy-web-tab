@@ -18,6 +18,7 @@ import ThemeToggle from '../components/ThemeToggle.vue'
 import Icon from '../components/Icon.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
+import { useCategoriesStore } from '../stores/categories'
 import { useThemeStore } from '../stores/theme'
 import { useAppSettingsStore } from '../stores/settings'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
@@ -26,6 +27,7 @@ import { useCloudSync } from '../composables/useCloudSync'
 import type { SyncStatus } from '../composables/useCloudSync'
 
 const store = useSitesStore()
+const categoriesStore = useCategoriesStore()
 const themeStore = useThemeStore()
 const settingsStore = useAppSettingsStore()
 const { showHelp, openHelp, closeHelp } = useHelpModal()
@@ -39,6 +41,36 @@ const showBackupManager = ref(false)
 const showIconManager = ref(false)
 const showSettingsDialog = ref(false)
 const editingSite = ref<Site | null>(null)
+
+// ===== 视图模式：经典网格 / 侧边栏导航（默认经典，零改动） =====
+type ViewMode = 'classic' | 'sidebar'
+const viewMode = ref<ViewMode>('classic')
+const sidebarOpen = ref(false) // 仅移动端抽屉用
+function setViewMode(mode: ViewMode): void {
+  viewMode.value = mode
+  if (mode === 'classic') sidebarOpen.value = false
+}
+function toggleSidebar(): void {
+  sidebarOpen.value = !sidebarOpen.value
+}
+// 侧边栏分类导航（复用 store 分类与筛选，与顶部分类标签共享同一筛选态）
+const sidebarCategories = computed(() => categoriesStore.allCategories)
+const countByCategory = computed<Record<string, number>>(() => {
+  const counts: Record<string, number> = {}
+  for (const site of store.sites) {
+    counts[site.category] = (counts[site.category] ?? 0) + 1
+  }
+  return counts
+})
+const totalCount = computed(() => store.sites.length)
+function selectCategory(id: string): void {
+  if (store.selectedCategory === id) {
+    store.setCategory('')
+  } else {
+    store.setCategory(id)
+  }
+  sidebarOpen.value = false // 移动端选中后自动收起抽屉
+}
 
 // ===== 右上角云同步快捷按钮（开关开启时显示；共享 useCloudSync 单例，与设置弹窗互相同步状态） =====
 const cloudSync = useCloudSync()
@@ -285,7 +317,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=主题/同步/设置/帮助/前台 -->
+  <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=主题/同步/设置/帮助/前台/视图切换 -->
   <div class="app-bar">
     <div class="app-bar-left">
       <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
@@ -308,93 +340,182 @@ onUnmounted(() => {
       <button class="btn-front" @click="toggleAdmin" title="切换到前台 (Ctrl+B)">
         前台
       </button>
+
+      <!-- 视图模式切换（经典 ⇄ 侧边栏）：右侧对齐，滑动开关 -->
+      <div class="view-toggle" role="group" aria-label="视图模式切换">
+        <button
+          type="button"
+          class="view-toggle-opt"
+          :class="{ active: viewMode === 'classic' }"
+          :aria-pressed="viewMode === 'classic'"
+          @click="setViewMode('classic')"
+        >
+          <svg class="vt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3V3m10 0h8v8h-8V3M3 13h8v8H3v-8m10 0h8v8h-8v-8z" /></svg>
+          <span>经典</span>
+        </button>
+        <button
+          type="button"
+          class="view-toggle-opt"
+          :class="{ active: viewMode === 'sidebar' }"
+          :aria-pressed="viewMode === 'sidebar'"
+          @click="setViewMode('sidebar')"
+        >
+          <svg class="vt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z" /></svg>
+          <span>侧边栏</span>
+        </button>
+        <span class="view-toggle-thumb" :class="{ right: viewMode === 'sidebar' }"></span>
+      </div>
     </div>
   </div>
 
-  <div class="container">
-    <header class="header">
-      <div class="search-section">
-        <GlobalSearch class="global-search-bar" />
-      </div>
-    </header>
-
-    <!-- 分类 · 标签筛选栏：折叠开关（默认收起，可在设置 → 导航设置 → 导航筛选栏切换模式） -->
-    <button
-      class="nav-filter-toggle"
-      data-testid="nav-filter-toggle"
-      :aria-expanded="settingsStore.navFiltersExpanded"
-      @click="settingsStore.setNavFiltersExpanded(!settingsStore.navFiltersExpanded)"
+  <!-- 视图外壳：侧边栏模式下挂左侧菜单；经典模式无额外包裹，布局完全不变 -->
+  <div class="home-shell" :class="{ 'is-sidebar': viewMode === 'sidebar' }">
+    <aside
+      v-if="viewMode === 'sidebar'"
+      class="nav-sidebar"
+      :class="{ open: sidebarOpen }"
+      aria-label="分类导航"
     >
-      <span class="nav-filter-chevron" :class="{ open: settingsStore.navFiltersExpanded }">▸</span>
-      <span>分类 · 标签</span>
-      <span v-if="!settingsStore.navFiltersExpanded && (store.selectedCategory !== '' || store.selectedTags.length > 0 || store.showOnlyInvalid)" class="nav-filter-hint">
-        有筛选
-      </span>
-    </button>
+      <div class="nav-sidebar-brand">
+        <svg class="nav-brand-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5m0 7L2 14l10 5 10-5-10-5m0 7L2 21l10 5 10-5-10-5z" /></svg>
+        <span>导航</span>
+      </div>
+      <div class="nav-sidebar-scroll">
+        <div class="nav-sidebar-section-title">分类</div>
+        <nav class="nav-sidebar-menu">
+          <button
+            type="button"
+            class="nav-menu-item"
+            :class="{ active: store.selectedCategory === '' }"
+            @click="selectCategory('')"
+          >
+            <span class="nav-menu-icon">🗂️</span>
+            <span class="nav-menu-label">全部</span>
+            <span class="nav-menu-count">{{ totalCount }}</span>
+          </button>
+          <button
+            v-for="cat in sidebarCategories"
+            :key="cat.id"
+            type="button"
+            class="nav-menu-item"
+            :class="{ active: store.selectedCategory === cat.id }"
+            @click="selectCategory(cat.id)"
+          >
+            <span class="nav-menu-icon">{{ cat.icon }}</span>
+            <span class="nav-menu-label">{{ cat.name }}</span>
+            <span class="nav-menu-count">{{ countByCategory[cat.id] ?? 0 }}</span>
+          </button>
+        </nav>
+        <div class="nav-sidebar-divider"></div>
+        <div class="nav-sidebar-section-title">标签</div>
+        <TagFilter />
+      </div>
+    </aside>
 
-    <div v-show="settingsStore.navFiltersExpanded" class="nav-filter-panel" data-testid="nav-filter-panel">
-      <CategoryTabs />
+    <!-- 移动端抽屉遮罩 -->
+    <div
+      v-if="viewMode === 'sidebar' && sidebarOpen"
+      class="nav-sidebar-backdrop"
+      @click="sidebarOpen = false"
+    ></div>
 
-      <TagFilter />
-    </div>
+    <div class="container" :class="{ 'container-sidebar': viewMode === 'sidebar' }">
+      <header class="header">
+        <div class="header-top">
+          <button
+            v-if="viewMode === 'sidebar'"
+            type="button"
+            class="view-hamburger"
+            @click="toggleSidebar"
+            aria-label="打开/关闭分类菜单"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z" /></svg>
+          </button>
+          <div class="search-section">
+            <GlobalSearch class="global-search-bar" />
+          </div>
+        </div>
+      </header>
 
-    <main ref="sitesGridRef" class="sites-grid">
-      <SiteCard
-        v-for="site in filteredSites"
-        :key="site.url"
-        :site="site"
-        :readonly="false"
-        :is-drag-over="dragOverUrl === site.url"
-        :is-dragging="dragSourceUrl === site.url"
-        draggable="true"
-        @edit="handleEdit"
-        @delete="handleDelete"
-        @unmark="handleUnmark"
-        @dragstart="handleDragStart(site)"
-        @dragover="handleDragOver(site, $event)"
-        @dragleave="handleDragLeave"
-        @drop="handleDrop(site)"
-        @dragend="handleDragEnd"
+      <!-- 分类 · 标签筛选栏：折叠开关（默认收起，可在设置 → 导航设置 → 导航筛选栏切换模式）；侧边栏模式下由左侧菜单接管，隐藏此处 -->
+      <button
+        v-if="viewMode === 'classic'"
+        class="nav-filter-toggle"
+        data-testid="nav-filter-toggle"
+        :aria-expanded="settingsStore.navFiltersExpanded"
+        @click="settingsStore.setNavFiltersExpanded(!settingsStore.navFiltersExpanded)"
+      >
+        <span class="nav-filter-chevron" :class="{ open: settingsStore.navFiltersExpanded }">▸</span>
+        <span>分类 · 标签</span>
+        <span v-if="!settingsStore.navFiltersExpanded && (store.selectedCategory !== '' || store.selectedTags.length > 0 || store.showOnlyInvalid)" class="nav-filter-hint">
+          有筛选
+        </span>
+      </button>
+
+      <div v-if="viewMode === 'classic' && settingsStore.navFiltersExpanded" class="nav-filter-panel" data-testid="nav-filter-panel">
+        <CategoryTabs />
+
+        <TagFilter />
+      </div>
+
+      <main ref="sitesGridRef" class="sites-grid">
+        <SiteCard
+          v-for="site in filteredSites"
+          :key="site.url"
+          :site="site"
+          :readonly="false"
+          :is-drag-over="dragOverUrl === site.url"
+          :is-dragging="dragSourceUrl === site.url"
+          draggable="true"
+          @edit="handleEdit"
+          @delete="handleDelete"
+          @unmark="handleUnmark"
+          @dragstart="handleDragStart(site)"
+          @dragover="handleDragOver(site, $event)"
+          @dragleave="handleDragLeave"
+          @drop="handleDrop(site)"
+          @dragend="handleDragEnd"
+        />
+      </main>
+
+      <Pagination class="bottom-pagination" @pageChange="handlePageChange" />
+
+      <div v-if="store.filteredSites.length === 0" class="empty-state">
+        <p v-if="store.showOnlyInvalid">没有检测到无效链接 <Icon name="check" /></p>
+        <p v-else>没有找到匹配的网站</p>
+      </div>
+
+      <SiteModal
+        v-if="showModal"
+        :site="editingSite"
+        @save="handleSave"
+        @close="closeAllModals"
       />
-    </main>
 
-    <Pagination class="bottom-pagination" @pageChange="handlePageChange" />
+      <SearchEngineManager
+        v-if="showEngineManager"
+        @close="closeAllModals"
+      />
 
-    <div v-if="store.filteredSites.length === 0" class="empty-state">
-      <p v-if="store.showOnlyInvalid">没有检测到无效链接 <Icon name="check" /></p>
-      <p v-else>没有找到匹配的网站</p>
+      <HelpModal
+        v-if="showHelp"
+        @close="closeAllModals"
+      />
+
+      <AppSettingsDialog
+        v-if="showSettingsDialog"
+        source="nav"
+        @close="showSettingsDialog = false"
+      />
+
+      <BackgroundManager v-if="showBackgroundManager" @close="closeAllModals" />
+
+      <CategoryManager v-if="showCategoryManager" @close="closeAllModals" />
+
+      <BackupManager v-if="showBackupManager" @close="closeAllModals" />
+
+      <IconManager v-if="showIconManager" @close="closeAllModals" />
     </div>
-
-    <SiteModal
-      v-if="showModal"
-      :site="editingSite"
-      @save="handleSave"
-      @close="closeAllModals"
-    />
-
-    <SearchEngineManager 
-      v-if="showEngineManager" 
-      @close="closeAllModals"
-    />
-
-    <HelpModal
-      v-if="showHelp"
-      @close="closeAllModals"
-    />
-
-    <AppSettingsDialog
-      v-if="showSettingsDialog"
-      source="nav"
-      @close="showSettingsDialog = false"
-    />
-
-    <BackgroundManager v-if="showBackgroundManager" @close="closeAllModals" />
-
-    <CategoryManager v-if="showCategoryManager" @close="closeAllModals" />
-
-    <BackupManager v-if="showBackupManager" @close="closeAllModals" />
-
-    <IconManager v-if="showIconManager" @close="closeAllModals" />
   </div>
 </template>
 
@@ -479,6 +600,218 @@ onUnmounted(() => {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #e2e8f0);
+}
+
+/* ===== 视图模式切换：经典 ⇄ 侧边栏（右侧对齐滑动开关） ===== */
+.view-toggle {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 176px;
+  margin-left: auto; /* 在 App Bar 右侧组中推到最右，确保靠右对齐 */
+  padding: 3px;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+.view-toggle-opt {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.view-toggle-opt .vt-ico {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+.view-toggle-opt.active {
+  color: #fff;
+}
+.view-toggle-opt:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 1px;
+}
+.view-toggle-thumb {
+  position: absolute;
+  z-index: 0;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 0.22s var(--motion-ease, ease);
+}
+.view-toggle-thumb.right {
+  transform: translateX(100%);
+}
+
+/* ===== 侧边栏导航布局 ===== */
+.home-shell {
+  min-height: 100vh;
+}
+.nav-sidebar {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  bottom: 0;
+  width: 240px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface, #fff);
+  border-right: 1px solid var(--color-border, #e2e8f0);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  transform: translateX(-100%);
+  transition: transform 0.25s var(--motion-ease, ease);
+  overflow: hidden;
+}
+.nav-sidebar.open {
+  transform: translateX(0);
+}
+.nav-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+.nav-brand-ico {
+  width: 18px;
+  height: 18px;
+  fill: var(--color-primary, #3b82f6);
+}
+.nav-sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+.nav-sidebar-section-title {
+  font-size: 12px;
+  color: var(--color-text-secondary, #94a3b8);
+  padding: 8px 8px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.nav-sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  transition: background-color 0.15s, color 0.15s;
+}
+.nav-menu-item:hover {
+  background-color: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text, #1e293b);
+}
+.nav-menu-item.active {
+  background-color: rgba(59, 130, 246, 0.14);
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+}
+.nav-menu-item:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 1px;
+}
+.nav-menu-icon {
+  width: 20px;
+  flex: none;
+  text-align: center;
+  font-size: 15px;
+}
+.nav-menu-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-menu-count {
+  font-size: 12px;
+  color: var(--color-text-secondary, #94a3b8);
+  background: var(--color-bg-hover, #f1f5f9);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.nav-menu-item.active .nav-menu-count {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--color-primary, #3b82f6);
+}
+.nav-sidebar-divider {
+  height: 1px;
+  background: var(--color-border, #e2e8f0);
+  margin: 12px 4px;
+}
+.nav-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 85;
+}
+
+/* 侧边栏模式下容器让出左侧 240px（桌面端常驻显示） */
+.container.container-sidebar {
+  max-width: none;
+  margin: 0;
+  padding-left: 264px;
+}
+
+/* 移动端侧边栏汉堡按钮（仅侧边栏模式显示） */
+.view-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+}
+.view-hamburger svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-top .search-section {
+  flex: 1;
 }
 
 /* 导航页「添加网站」主行动按钮 */
@@ -642,6 +975,46 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
   border-color: var(--color-border, #374151);
 }
 
+/* 暗色模式下的侧边栏 / 切换控件 */
+html.dark .view-toggle {
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border, #374151);
+}
+html.dark .nav-sidebar {
+  background-color: var(--color-surface, #1f2937);
+  border-right-color: var(--color-border, #374151);
+}
+html.dark .nav-sidebar-brand {
+  border-bottom-color: var(--color-border, #374151);
+  color: var(--color-text, #e5e7eb);
+}
+html.dark .nav-menu-item {
+  color: var(--color-text-secondary, #d1d5db);
+}
+html.dark .nav-menu-item:hover {
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text, #e5e7eb);
+}
+html.dark .nav-menu-item.active {
+  background-color: rgba(59, 130, 246, 0.22);
+  color: var(--color-primary, #60a5fa);
+}
+html.dark .nav-menu-count {
+  background: var(--color-bg-hover, #374151);
+  color: var(--color-text-secondary, #9ca3af);
+}
+html.dark .nav-menu-item.active .nav-menu-count {
+  background: rgba(59, 130, 246, 0.32);
+  color: var(--color-primary, #60a5fa);
+}
+html.dark .nav-sidebar-divider {
+  background: var(--color-border, #374151);
+}
+html.dark .view-hamburger {
+  border-color: var(--color-border, #374151);
+  color: var(--color-text-secondary, #d1d5db);
+}
+
 @media (max-width: 768px) {
   .app-bar {
     padding: 8px 10px;
@@ -726,6 +1099,37 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
   html.dark .container .bottom-pagination {
     background-color: rgba(31, 41, 55, 0.95);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  /* 移动端侧边栏：改为抽屉（默认移出视口，open 时滑入） */
+  .nav-sidebar {
+    transform: translateX(-100%);
+    width: 260px;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
+  }
+  .nav-sidebar.open {
+    transform: translateX(0);
+  }
+  .view-hamburger {
+    display: inline-flex;
+  }
+  /* 移动端侧边栏模式下容器不预留左侧空间（抽屉覆盖） */
+  .container.container-sidebar {
+    padding-left: 12px;
+  }
+}
+
+/* 桌面端侧边栏常驻显示（覆盖移动端抽屉态） */
+@media (min-width: 769px) {
+  .nav-sidebar {
+    transform: translateX(0) !important;
+  }
+  /* 桌面端不需要汉堡按钮与遮罩 */
+  .view-hamburger {
+    display: none !important;
+  }
+  .nav-sidebar-backdrop {
+    display: none !important;
   }
 }
 

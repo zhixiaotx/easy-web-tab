@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>管理页 · 布局样式切换原型（经典 ⇄ 侧边栏）</title>
+<style>
+  /* ============ Design Tokens（沿用项目） ============ */
+  :root {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-bg: #f8fafc;
+    --color-bg-card: #ffffff;
+    --color-text: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-text-muted: #94a3b8;
+    --color-border: #e2e8f0;
+    --color-border-hover: #cbd5e1;
+    --color-bg-hover: #f1f5f9;
+    --color-shadow: rgba(0,0,0,0.08);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+    --shadow-card-hover: 0 10px 28px rgba(0,0,0,0.14);
+    --radius: 12px;
+    --motion: 220ms cubic-bezier(0.34,1.56,0.64,1);
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --sidebar-w: 248px;
+  }
+  html.dark {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-bg: #111827;
+    --color-bg-card: #1f2937;
+    --color-text: #f9fafb;
+    --color-text-secondary: #d1d5db;
+    --color-text-muted: #9ca3af;
+    --color-border: #374151;
+    --color-border-hover: #4b5563;
+    --color-bg-hover: #374151;
+    --color-shadow: rgba(0,0,0,0.4);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-card-hover: 0 12px 30px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--font-family); background: var(--color-bg); color: var(--color-text); -webkit-font-smoothing: antialiased; transition: background-color var(--motion), color var(--motion); }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: var(--font-family); }
+
+  /* ============ 顶部布局切换控件 ============ */
+  .layout-switch {
+    display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px;
+    background: var(--color-bg-hover); border: 1px solid var(--color-border);
+  }
+  .layout-switch button {
+    border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--color-text-secondary); padding: 6px 12px; border-radius: 8px; transition: all .2s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .layout-switch button.active { background: var(--color-bg-card); color: var(--color-primary); box-shadow: var(--shadow-sm); }
+
+  .ghost-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--color-text-secondary); background:transparent; border:1px solid transparent; transition:all .2s; white-space:nowrap; }
+  .ghost-btn:hover { background:var(--color-bg-hover); color:var(--color-primary); border-color:var(--color-border); }
+  .nav-entry { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--color-text-secondary); font-size:13px; background:transparent; border:1px solid transparent; transition:all .2s; white-space:nowrap; }
+  .nav-entry:hover { background:var(--color-bg-hover); color:var(--color-primary); border-color:var(--color-border); }
+
+  /* ============ 模式容器显隐 ============ */
+  .mode { display: none; }
+  .mode.show { display: block; }
+  body.sb-mode .mode-classic { display: none; }
+  body.sb-mode .mode-sidebar { display: block; }
+  body:not(.sb-mode) .mode-classic { display: block; }
+  body:not(.sb-mode) .mode-sidebar { display: none; }
+
+  /* ====================================================== */
+  /*  模式 A：经典网格（= 当前 HomeView，默认不变）           */
+  /* ====================================================== */
+  .topbar {
+    position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; background: color-mix(in srgb, var(--color-bg-card) 82%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--color-border);
+  }
+  .topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px 120px; }
+  .search-section { display: flex; justify-content: center; margin: 24px 0 16px; }
+  .search-box { display:flex; align-items:center; gap:10px; width:100%; max-width:720px; background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:12px; padding:12px 16px; box-shadow:var(--shadow-sm); transition:border-color .2s, box-shadow .2s; }
+  .search-box:focus-within { border-color:var(--color-primary); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent); }
+  .search-box svg { color:var(--color-text-muted); flex:none; }
+  .search-box input { flex:1; border:none; outline:none; background:transparent; color:var(--color-text); font-size:15px; }
+  .search-box input::placeholder { color:var(--color-text-muted); }
+
+  .cat-tabs { display:flex; flex-wrap:wrap; gap:8px; margin: 8px 0 4px; }
+  .cat-tab { padding:8px 16px; border-radius:999px; cursor:pointer; font-size:13px; font-weight:500; background:var(--color-bg-card); color:var(--color-text-secondary); border:1px solid var(--color-border); transition:all .2s; display:inline-flex; align-items:center; gap:6px; }
+  .cat-tab:hover { color:var(--color-primary); border-color:var(--color-primary); }
+  .cat-tab.active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+
+  .sites-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); margin-top:16px; }
+
+  /* SiteCard 风格磁贴（管理：hover 出编辑/删除） */
+  .tile { position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 12px; background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:var(--radius); cursor:pointer; min-height:44px; box-shadow:var(--shadow-sm); transition:transform var(--motion), box-shadow .2s, border-color .2s; }
+  .tile:hover { transform:translateY(-4px); box-shadow:var(--shadow-card-hover); border-color:var(--color-border-hover); }
+  .tile:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+  .tile-icon { width:44px; height:44px; border-radius:11px; display:grid; place-items:center; font-size:20px; color:#fff; font-weight:700; overflow:hidden; }
+  .tile-icon img { width:100%; height:100%; object-fit:cover; }
+  .tile-name { font-size:14px; font-weight:600; text-align:center; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile-desc { font-size:12px; color:var(--color-text-secondary); text-align:center; line-height:1.4; max-height:2.8em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .tile-desc:empty { display:none; }
+  .invalid-badge { position:absolute; top:8px; left:8px; font-size:11px; color:#ef4444; background:rgba(239,68,68,.14); border-radius:6px; padding:1px 5px; font-weight:600; }
+  .tile-actions { position:absolute; top:-8px; right:-8px; display:none; gap:2px; }
+  .tile:hover .tile-actions { display:flex; animation:fadeIn .15s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  .act { width:28px; height:28px; border-radius:6px; border:none; background:var(--color-bg-card); color:var(--color-text-secondary); cursor:pointer; display:grid; place-items:center; box-shadow:var(--shadow-sm); transition:all .2s; }
+  .act:hover { color:var(--color-primary); background:var(--color-bg-hover); }
+  .act.del:hover { color:#ef4444; }
+
+  .pagination { display:flex; justify-content:center; gap:6px; margin-top:24px; flex-wrap:wrap; }
+  .pg { padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; background:var(--color-bg-card); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+  .pg.active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+
+  /* ====================================================== */
+  /*  模式 B：侧边栏布局（新增）                              */
+  /* ====================================================== */
+  .app { display:flex; min-height:100vh; }
+  .sidebar {
+    width:var(--sidebar-w); flex:none; position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--color-bg-card); border-right:1px solid var(--color-border); padding:14px 12px;
+    display:flex; flex-direction:column; gap:6px; transition:transform .25s ease;
+  }
+  .sb-brand { display:flex; align-items:center; justify-content:space-between; padding:6px 8px 12px; }
+  .sb-brand b { font-size:16px; display:flex; align-items:center; gap:8px; }
+  .sb-collapse { border:none; background:transparent; color:var(--color-text-muted); cursor:pointer; font-size:16px; padding:4px; border-radius:6px; }
+  .sb-collapse:hover { background:var(--color-bg-hover); color:var(--color-primary); }
+  .sb-group-title { font-size:11px; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.5px; padding:10px 8px 4px; }
+  .sb-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer; color:var(--color-text-secondary); font-size:14px; transition:all .18s; }
+  .sb-item:hover { background:var(--color-bg-hover); color:var(--color-text); }
+  .sb-item.active { background:var(--color-primary); color:#fff; }
+  .sb-item .ic { width:22px; text-align:center; flex:none; }
+  .sb-item .cnt { margin-left:auto; font-size:12px; background:var(--color-bg-hover); color:var(--color-text-muted); border-radius:999px; padding:1px 8px; }
+  .sb-item.active .cnt { background:rgba(255,255,255,.25); color:#fff; }
+  .sb-spacer { flex:1; }
+  .sb-footer { display:flex; gap:6px; padding-top:10px; border-top:1px solid var(--color-border); }
+
+  .main { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .main-topbar { position:sticky; top:0; z-index:90; display:flex; align-items:center; gap:12px; padding:12px 20px; background:color-mix(in srgb, var(--color-bg-card) 82%, transparent); backdrop-filter:blur(12px); border-bottom:1px solid var(--color-border); }
+  .main-topbar .search-box { max-width:none; }
+  .hamburger { display:none; border:none; background:transparent; color:var(--color-text-secondary); font-size:20px; cursor:pointer; padding:6px; border-radius:8px; }
+  .hamburger:hover { background:var(--color-bg-hover); }
+  .main-body { padding:20px; }
+  .main-head { display:flex; align-items:baseline; gap:10px; margin:0 0 16px; }
+  .main-head h2 { margin:0; font-size:20px; }
+  .main-head .sub { color:var(--color-text-secondary); font-size:13px; }
+  .scrim { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; }
+
+  @media (max-width: 768px) {
+    .container { padding:0 12px 120px; }
+    .topbar { flex-wrap:wrap; gap:6px; }
+    .nav-entry-label { display:inline; }
+    .sidebar { position:fixed; left:0; top:0; z-index:300; transform:translateX(-100%); box-shadow:var(--shadow-md); }
+    body.sb-mode .sidebar.open { transform:translateX(0); }
+    body.sb-mode .scrim.show { display:block; }
+    .hamburger { display:inline-flex; }
+    .main-body { padding:14px; }
+    .sites-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .pagination { display:none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } .tile:hover { transform:none; } }
+</style>
+</head>
+<body class="">
+  <!-- 模式 A：经典网格 -->
+  <div class="mode mode-classic">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="nav-entry">🧰 工作台</span>
+        <span class="nav-entry">🏪 销售台</span>
+        <span class="nav-entry">📝 学生台</span>
+        <span class="layout-switch" title="切换管理页布局样式">
+          <button id="toClassicA" class="active">▦ 经典</button>
+          <button id="toSidebarA">☰ 侧边栏</button>
+        </span>
+      </div>
+      <div class="topbar-right">
+        <button class="ghost-btn theme-toggle" id="themeBtnA">🌙 暗色</button>
+        <button class="ghost-btn">⚙️</button>
+        <button class="ghost-btn">❓</button>
+        <button class="nav-entry">前台</button>
+      </div>
+    </div>
+    <div class="container">
+      <div class="search-section">
+        <div class="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="searchA" type="text" placeholder="搜索站点、分类或标签…" aria-label="搜索站点" />
+        </div>
+      </div>
+      <div class="cat-tabs" id="catTabsA"></div>
+      <div class="sites-grid" id="gridA"></div>
+      <div class="pagination" id="pgA"></div>
+    </div>
+  </div>
+
+  <!-- 模式 B：侧边栏 -->
+  <div class="mode mode-sidebar">
+    <div class="scrim" id="scrim"></div>
+    <div class="app">
+      <aside class="sidebar" id="sidebar">
+        <div class="sb-brand">
+          <b>🧭 导航管理</b>
+          <button class="sb-collapse" id="collapseBtn" title="收起侧边栏">⟨</button>
+        </div>
+        <div class="sb-group-title">工作区</div>
+        <div class="sb-item"><span class="ic">🧰</span> 工作台</div>
+        <div class="sb-item"><span class="ic">🏪</span> 销售台</div>
+        <div class="sb-item"><span class="ic">📝</span> 学生台</div>
+        <div class="sb-group-title">分类</div>
+        <div id="sbCats"></div>
+        <div class="sb-spacer"></div>
+        <div class="sb-footer">
+          <button class="ghost-btn theme-toggle" id="themeBtnB" style="flex:1;justify-content:center">🌙</button>
+          <button class="ghost-btn" style="flex:1;justify-content:center">⚙️</button>
+          <button class="ghost-btn" style="flex:1;justify-content:center">❓</button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="main-topbar">
+          <button class="hamburger" id="hamburger">☰</button>
+          <div class="search-box" style="flex:1">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input id="searchB" type="text" placeholder="搜索站点、分类或标签…" aria-label="搜索站点" />
+          </div>
+          <button class="ghost-btn">＋ 新增</button>
+          <button class="nav-entry">前台</button>
+          <span class="layout-switch" title="切换管理页布局样式">
+            <button id="toClassicB">▦ 经典</button>
+            <button id="toSidebarB" class="active">☰ 侧边栏</button>
+          </span>
+        </div>
+        <div class="main-body">
+          <div class="main-head">
+            <h2 id="mainTitle">全部站点</h2>
+            <span class="sub" id="mainCount"></span>
+          </div>
+          <div class="sites-grid" id="gridB"></div>
+          <div class="pagination" id="pgB"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ============ 分类强调色（稳定映射） ============
+  const ACCENTS = {
+    pink:{light:'#db2777',dark:'#f472b6'}, blue:{light:'#2563eb',dark:'#60a5fa'}, cyan:{light:'#0891b2',dark:'#22d3ee'},
+    orange:{light:'#ea580c',dark:'#fb923c'}, green:{light:'#059669',dark:'#34d399'}, violet:{light:'#7c3aed',dark:'#a78bfa'}
+  };
+  const CATEGORIES = [
+    { id:'video', name:'视频音乐', icon:'🎬', accent:'pink', sort:1 },
+    { id:'dev',   name:'开发工具', icon:'🛠', accent:'blue', sort:2 },
+    { id:'social',name:'社交沟通', icon:'💬', accent:'cyan', sort:3 },
+    { id:'shop',  name:'购物生活', icon:'🛒', accent:'orange', sort:4 },
+    { id:'study', name:'学习资料', icon:'📚', accent:'green', sort:5 },
+    { id:'other', name:'其他',     icon:'📁', accent:'violet', sort:999 },
+  ];
+  const SITES = [
+    {name:'哔哩哔哩',url:'https://bilibili.com',category:'video',description:'弹幕视频与番剧'},
+    {name:'网易云音乐',url:'https://music.163.com',category:'video',description:'在线音乐'},
+    {name:'YouTube',url:'https://youtube.com',category:'video',description:'海外视频'},
+    {name:'QQ音乐',url:'https://y.qq.com',category:'video',description:''},
+    {name:'GitHub',url:'https://github.com',category:'dev',description:'代码托管'},
+    {name:'Gitee',url:'https://gitee.com',category:'dev',description:'国内代码托管'},
+    {name:'Stack Overflow',url:'https://stackoverflow.com',category:'dev',description:'技术问答'},
+    {name:'MDN',url:'https://developer.mozilla.org',category:'dev',description:'Web 文档'},
+    {name:'Vue 官网',url:'https://vuejs.org',category:'dev',description:'前端框架'},
+    {name:'微信网页版',url:'https://wx.qq.com',category:'social',description:''},
+    {name:'钉钉',url:'https://dingtalk.com',category:'social',description:'企业沟通'},
+    {name:'飞书',url:'https://feishu.cn',category:'social',description:'协同办公'},
+    {name:'QQ 邮箱',url:'https://mail.qq.com',category:'social',description:''},
+    {name:'淘宝',url:'https://taobao.com',category:'shop',description:'网购'},
+    {name:'京东',url:'https://jd.com',category:'shop',description:'自营电商'},
+    {name:'美团',url:'https://meituan.com',category:'shop',description:'外卖到店'},
+    {name:'拼多多',url:'https://pinduoduo.com',category:'shop',description:'',invalid:true},
+    {name:'中国大学 MOOC',url:'https://icourse163.org',category:'study',description:'公开课'},
+    {name:'知乎',url:'https://zhihu.com',category:'study',description:'问答社区'},
+    {name:'Wikipedia',url:'https://wikipedia.org',category:'study',description:'百科全书'},
+    {name:'百度网盘',url:'https://pan.baidu.com',category:'other',description:'云存储'},
+    {name:'高德地图',url:'https://amap.com',category:'other',description:'导航地图'},
+    {name:'12306',url:'https://12306.cn',category:'other',description:'火车票'},
+  ];
+
+  const isDark = () => document.documentElement.classList.contains('dark');
+  const accentOf = id => { const c=CATEGORIES.find(x=>x.id===id); const k=c?c.accent:'violet'; return isDark()?ACCENTS[k].dark:ACCENTS[k].light; };
+  const letterOf = n => (n||'?').trim().charAt(0).toUpperCase();
+  const catName = id => (CATEGORIES.find(c=>c.id===id)||{}).name || '其他';
+  const countOf = id => SITES.filter(s=>s.category===id).length;
+
+  // ============ 共享状态（两种布局一致：功能不变） ============
+  const state = { cat:'', q:'' };
+  function filtered(){
+    return SITES.filter(s => (state.cat==='' || s.category===state.cat)
+      && (!state.q || s.name.toLowerCase().includes(state.q) || catName(s.category).toLowerCase().includes(state.q)));
+  }
+
+  // ============ 渲染磁贴 ============
+  function makeTile(s){
+    const t=document.createElement('a'); t.className='tile'; t.href=s.url; t.target='_blank';
+    t.setAttribute('aria-label','打开 '+s.name);
+    t.innerHTML = `
+      ${s.invalid?'<span class="invalid-badge">失效</span>':''}
+      <span class="tile-icon" style="background:${accentOf(s.category)}">${letterOf(s.name)}</span>
+      <span class="tile-name">${s.name}</span>
+      <span class="tile-desc">${s.description||''}</span>
+      <span class="tile-actions">
+        <button class="act edit" title="编辑">✎</button>
+        <button class="act del" title="删除">🗑</button>
+      </span>`;
+    t.querySelector('.edit').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();alert('原型：编辑 '+s.name);});
+    t.querySelector('.del').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();alert('原型：删除 '+s.name);});
+    return t;
+  }
+  function renderGrid(el){ el.innerHTML=''; const list=filtered(); if(!list.length){ el.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--color-text-secondary);padding:40px">没有找到匹配的网站</p>'; return;} list.forEach(s=>el.appendChild(makeTile(s))); }
+
+  // ============ 经典：分类标签 ============
+  const catTabsA=document.getElementById('catTabsA');
+  function renderCatTabs(){
+    catTabsA.innerHTML='';
+    const all=document.createElement('div'); all.className='cat-tab'+(state.cat===''?' active':''); all.textContent='全部'; all.onclick=()=>{state.cat='';syncAll();};
+    catTabsA.appendChild(all);
+    CATEGORIES.forEach(c=>{ const t=document.createElement('div'); t.className='cat-tab'+(state.cat===c.id?' active':''); t.innerHTML=`${c.icon} ${c.name}`; t.onclick=()=>{state.cat=c.id;syncAll();}; catTabsA.appendChild(t); });
+  }
+
+  // ============ 侧边栏：分类菜单 ============
+  const sbCats=document.getElementById('sbCats');
+  function renderSbCats(){
+    sbCats.innerHTML='';
+    const mk=(id,icon,name,cnt)=>{ const d=document.createElement('div'); d.className='sb-item'+(state.cat===id?' active':''); d.innerHTML=`<span class="ic">${icon}</span> ${name} <span class="cnt">${cnt}</span>`; d.onclick=()=>{state.cat=id;syncAll();closeDrawer();}; return d; };
+    sbCats.appendChild(mk('','📋','全部站点',SITES.length));
+    CATEGORIES.forEach(c=>sbCats.appendChild(mk(c.id,c.icon,c.name,countOf(c.id))));
+  }
+
+  // ============ 同步两种布局的选中态与计数 ============
+  function syncAll(){
+    renderCatTabs(); renderSbCats();
+    renderGrid(document.getElementById('gridA')); renderGrid(document.getElementById('gridB'));
+    document.getElementById('mainTitle').textContent = state.cat==='' ? '全部站点' : catName(state.cat);
+    document.getElementById('mainCount').textContent = '· ' + filtered().length + ' 个站点';
+  }
+
+  // ============ 搜索（两处输入共享 state.q） ============
+  function bindSearch(id){ const el=document.getElementById(id); el.addEventListener('input',e=>{ state.q=e.target.value.trim().toLowerCase(); syncAll(); }); }
+  bindSearch('searchA'); bindSearch('searchB');
+
+  // ============ 布局切换 ============
+  function setMode(sidebar){ document.body.classList.toggle('sb-mode', sidebar);
+    document.getElementById('toClassicA').classList.toggle('active',!sidebar);
+    document.getElementById('toSidebarA').classList.toggle('active',sidebar);
+    document.getElementById('toClassicB').classList.toggle('active',!sidebar);
+    document.getElementById('toSidebarB').classList.toggle('active',sidebar);
+  }
+  document.getElementById('toSidebarA').onclick=()=>setMode(true);
+  document.getElementById('toSidebarB').onclick=()=>setMode(true);
+  document.getElementById('toClassicA').onclick=()=>setMode(false);
+  document.getElementById('toClassicB').onclick=()=>setMode(false);
+
+  // ============ 移动端抽屉 ============
+  const sidebar=document.getElementById('sidebar'), scrim=document.getElementById('scrim');
+  function openDrawer(){ sidebar.classList.add('open'); scrim.classList.add('show'); }
+  function closeDrawer(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); }
+  document.getElementById('hamburger').onclick=openDrawer;
+  scrim.onclick=closeDrawer;
+  document.getElementById('collapseBtn').onclick=()=>alert('原型：桌面端收起侧边栏为图标条（真实实现可折叠）');
+
+  // ============ 主题切换（两处同步） ============
+  function syncTheme(){ const label=isDark()?'🌙 暗色':'☀️ 亮色'; document.getElementById('themeBtnA').textContent=label; document.getElementById('themeBtnB').textContent=isDark()?'🌙':'☀️'; syncAll(); }
+  document.getElementById('themeBtnA').onclick=()=>{ document.documentElement.classList.toggle('dark'); syncTheme(); };
+  document.getElementById('themeBtnB').onclick=()=>{ document.documentElement.classList.toggle('dark'); syncTheme(); };
+
+  // ============ 初始化（默认经典样式，不变） ============
+  setMode(false); syncTheme();
+</script>
+</body>
+</html>

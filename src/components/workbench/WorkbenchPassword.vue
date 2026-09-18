@@ -546,6 +546,7 @@ watch(
     <el-dialog
       v-model="showForm"
       width="480px"
+      :show-close="false"
       data-testid="pwd-form-modal"
       @close="cancelForm"
     >

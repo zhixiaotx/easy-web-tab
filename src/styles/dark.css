@@ -1222,6 +1222,21 @@ html.dark .download-info code {
   color: #60a5fa;
 }
 
+html.dark .sync-label {
+  color: #94a3b8;
+}
+
+html.dark .btn-copy {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+html.dark .btn-copy:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
 /* ========================================
    SiteCard 悬停描述弹框暗色模式
    ======================================== */

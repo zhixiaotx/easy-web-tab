@@ -57,6 +57,17 @@ async function downloadSkill() {
   }
 }
 
+const copied = ref('')
+async function copyText(text: string, field: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    copied.value = field
+    setTimeout(() => { if (copied.value === field) copied.value = '' }, 1500)
+  } catch {
+    alert('复制失败，请手动复制')
+  }
+}
+
 const shortcuts = [
   { key: 'Ctrl + N', action: '新增网址' },
   { key: 'Ctrl + B', action: '切换前台/后台' },
@@ -470,6 +481,41 @@ const skillInstall = [
       <div class="modal-body">
         <!-- ===== 标签 1：网址导航 ===== -->
         <template v-if="activeTab === 'nav'">
+        <!-- 云同步体验账号 -->
+        <section class="help-section">
+          <div class="download-card">
+            <div class="download-info">
+              <span class="download-icon"><Icon name="cloud" /></span>
+              <div>
+                <h4>云同步 · 体验账号</h4>
+                <p>想先体验云同步、又不想自己搭服务器？可用下面的公共体验账号（WebDAV 直连，与本站同源，无需额外配置）：</p>
+                <ul class="sync-account">
+                  <li>
+                    <span class="sync-label">同步地址</span>
+                    <code>https://www.codehelp.com.cn/dav/</code>
+                    <button class="btn-copy" @click="copyText('https://www.codehelp.com.cn/dav/', 'url')">{{ copied === 'url' ? '已复制' : '复制' }}</button>
+                  </li>
+                  <li>
+                    <span class="sync-label">用户名</span>
+                    <code>public</code>
+                    <button class="btn-copy" @click="copyText('public', 'user')">{{ copied === 'user' ? '已复制' : '复制' }}</button>
+                  </li>
+                  <li>
+                    <span class="sync-label">密码</span>
+                    <code>public</code>
+                    <button class="btn-copy" @click="copyText('public', 'pass')">{{ copied === 'pass' ? '已复制' : '复制' }}</button>
+                  </li>
+                </ul>
+                <p class="sync-note"><Icon name="info" :size="13" />
+                  在「设置 → 云同步」中填入以上三项后点「测试连接」即可。
+                  该账号为 <strong>公共共享账号</strong>，<strong>每晚凌晨 2 点自动恢复初始数据</strong>，
+                  请勿存放重要或私密信息，也不要期待数据长期保留。
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- 示例数据下载 -->
         <section class="help-section download-section">
           <div class="download-card">
@@ -1039,6 +1085,52 @@ const skillInstall = [
   border-radius: 4px;
   font-size: 12px;
   color: #3b82f6;
+}
+
+.sync-account {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.sync-account li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.sync-label {
+  flex-shrink: 0;
+  width: 56px;
+  color: #64748b;
+}
+
+.btn-copy {
+  padding: 2px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-copy:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.download-info .sync-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 8px;
+  line-height: 1.6;
 }
 
 .btn-download {

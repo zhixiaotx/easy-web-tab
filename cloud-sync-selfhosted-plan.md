@@ -426,15 +426,17 @@ nginx 用**静态 root + 符号链接农场**映射（刻意避开 `alias` + dav
 ```bash
 sudo mkdir -p /var/ewt-sync /var/lib/nginx/ewt-tmp
 # 每个允许同步的用户建一次：
-sudo install -d -o www-data -g www-data -m 755 /home/<用户名>/easy-web-tab
-sudo setfacl -m u:www-data:x /home/<用户名>              # 让 worker 能穿过家目录（只给执行/进入权）
-sudo ln -s /home/<用户名> /var/ewt-sync/<用户名>          # ← 链到家目录本身
-sudo chown -R www-data:www-data /var/lib/nginx/ewt-tmp
+# 注意：nginx worker 用户名在 RHEL/CentOS/Alibaba Cloud Linux 上是 `nginx`，
+#       在 Debian/Ubuntu 上是 `www-data`。下面对应改成你服务器的实际用户。
+sudo install -d -o nginx -g nginx -m 755 /home/<用户名>/easy-web-tab
+sudo setfacl -m u:nginx:x /home/<用户名>              # 让 worker 能穿过家目录（只给执行/进入权）
+sudo ln -s /home/<用户名> /var/ewt-sync/dav/<用户名>   # ← 链到家目录本身（含 /dav 段，与 root /var/ewt-sync 对应）
+sudo chown -R nginx:nginx /var/lib/nginx/ewt-tmp
 ```
 
 映射结果：URI `/dav/<用户名>/easy-web-tab/nav.json`
-→ `/var/ewt-sync/<用户名>/easy-web-tab/nav.json`
-→ **`/home/<用户名>/easy-web-tab/nav.json`**
+→ `/var/ewt-sync/dav/<用户名>/easy-web-tab/nav.json`   （root /var/ewt-sync + URI 原样拼接）
+→ **`/home/<用户名>/easy-web-tab/nav.json`**            （经软链 /var/ewt-sync/dav/<用户名> 穿透）
 
 > 备选（不想用软链）：正则 location 里 `alias /home/$sync_user/;`。语法合法但 **dav + alias 需实测**，
 > 我优先推荐软链（root 是静态路径，dav 模块最稳）。
@@ -444,32 +446,31 @@ sudo chown -R www-data:www-data /var/lib/nginx/ewt-tmp
 ```nginx
 location ~ ^/dav/(?<sync_user>[A-Za-z0-9._-]+)/ {
     # ① 系统账号认证（密码=该用户的系统登录密码，见 §12.2）
-    auth_basic "easy-web-tab sync";
+    auth_basic           "easy-web-tab sync";
     auth_basic_user_file /etc/nginx/.ewt_sync_htpasswd;
 
-    # ② 隔离：认证通过的用户名必须 == URL 里的目录名（$remote_user 由 Basic 认证头解析）
-    if ($remote_user != $sync_user) { return 403; }
+    # ② 隔离：已登录用户名必须 == URL 里的目录名。
+    #    注意必须用「嵌套 if」：先判断 $remote_user 非空（已认证），再判断是否匹配，
+    #    否则未登录请求会在 rewrite 阶段直接 403，auth_basic 根本没机会弹 401。
+    if ($remote_user != "") {
+        if ($remote_user != $sync_user) {
+            return 403;
+        }
+    }
 
-    # ③ 静态 root + 软链（/var/ewt-sync/<user> -> /home/<user>）
-    root /var/ewt-sync;
-    dav_methods PUT DELETE MKCOL;
-    dav_access user:rw group:rw all:r;
-    create_full_put_path on;
-
-    client_max_body_size 10m;                  # icons.json 已 1.4MB
-    client_body_temp_path /var/lib/nginx/ewt-tmp;   # 尽量与 /home 同文件系统，避免跨设备拷贝
-
-    autoindex off;
-
-    # 本地 localhost 跨域调试时才用得到（生产同域不触发 CORS）
-    add_header Access-Control-Allow-Origin  $http_origin always;
-    add_header Access-Control-Allow-Methods 'GET, PUT, DELETE, MKCOL, HEAD, OPTIONS' always;
-    add_header Access-Control-Allow-Headers 'Authorization, Content-Type' always;
-    if ($request_method = OPTIONS) { return 204; }
+    # ③ 静态 root + 软链农场（/var/ewt-sync/dav/<user> -> /home/<user>，见 §12.3）
+    root                 /var/ewt-sync;
+    dav_methods         PUT DELETE MKCOL;
+    create_full_put_path on;                  # PUT 自动建中间目录（客户端 409 透传依赖此项）
+    client_body_temp_path /var/lib/nginx/ewt-tmp;
+    autoindex           off;                  # 不暴露目录列表
+    # 单文件可达数 MB，body 上限已在 http 块全局设为 10m（勿漏）
 }
 
-# 未带用户名段的 /dav/ 一律拒绝
-location /dav/ { return 403; }
+# 未带合法用户名段的 /dav/ 一律拒绝（兜底，避免落到 location / 反代到 Node）
+location /dav/ {
+    return 403;
+}
 ```
 
 为什么能用 `$remote_user`：nginx 核心的 `ngx_http_auth_basic_user()` 解析 `Authorization: Basic`

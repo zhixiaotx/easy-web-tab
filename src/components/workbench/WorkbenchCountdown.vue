@@ -9,6 +9,7 @@ import { repeatLabel, categoryLabel, filterCountdowns } from '@/composables/coun
 import type { CountdownFilterCriteria, CountdownRepeatType } from '@/composables/countdownCore'
 import type { CountdownRepeat, CountdownCategory } from '@/types'
 import { COUNTDOWN_CATEGORIES, DEFAULT_COUNTDOWN_COLOR } from '@/types'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useCountdownsStore()
 const vm = useViewMode()
@@ -52,19 +53,20 @@ const filteredItems = computed(() => filterCountdowns(store.itemsWithRemaining, 
 
 // ===== 固定分页（卡片/表格通用，每页 10 条）=====
 const PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('cd-pager', PAGE_SIZE)
 const currentPage = ref(1)
 const pageItems = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return filteredItems.value.slice(start, start + PAGE_SIZE)
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredItems.value.slice(start, start + pageSize.value)
 })
 function goto(p: number): void {
-  const max = Math.max(1, Math.ceil(filteredItems.value.length / PAGE_SIZE))
+  const max = Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value))
   currentPage.value = Math.max(1, Math.min(max, p))
 }
 watch(
   () => filteredItems.value.length,
   (n: number) => {
-    const max = Math.max(1, Math.ceil(n / PAGE_SIZE))
+    const max = Math.max(1, Math.ceil(n / pageSize.value))
     if (currentPage.value > max) currentPage.value = max
   }
 )
@@ -490,11 +492,12 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="cd-pager">
+    <div class="cd-pager ewt-pager">
       <el-pagination
         v-model:current-page="currentPage"
-        :page-size="PAGE_SIZE"
-        :page-sizes="[PAGE_SIZE]"
+        @size-change="currentPage = 1"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
         layout="total, prev, pager, next, jumper"
         :total="filteredItems.length"
         background
@@ -1256,33 +1259,6 @@ html.dark .cat-default {
 }
 
 /* 显式上色，避免默认主题下分页按钮（上一页/下一页/页码/跳转）文字不可见（与 WorkbenchTodo 等统一） */
-.cd-pager :global(.el-pagination) { --el-pagination-bg-color: transparent; }
-.cd-pager :global(.el-pagination button),
-.cd-pager :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.cd-pager :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .cd-pager :global(.el-pagination button),
-:global(html.dark) .cd-pager :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .cd-pager :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.cd-pager :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
-}
 
 
 .cd-toolbar-left {

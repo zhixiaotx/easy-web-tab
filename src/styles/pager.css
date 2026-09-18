@@ -1,0 +1,118 @@
+/* ============================================
+   全局共享分页样式（el-pagination）
+   --------------------------------------------
+   背景：原先每个面板都在自己的 scoped 样式里重复抄写同一套 ~7 条
+   el-pagination 规则（按钮/页码/激活态/暗色/总条数），20+ 文件累计
+   约 140 条重复；且 mobile.css 只硬编码了 9 个容器类名，后加的面板
+   （笔记/家谱/倒计时/待办/销售/运动/记账等）在移动端完全没有优化。
+
+   用法：给分页容器（或 el-pagination 自身）加上 ewt-pager 类即可：
+     <div class="xxx-pager ewt-pager"><el-pagination … /></div>   ← 容器包裹（多数）
+     <el-pagination class="sg-pagination ewt-pager" … />          ← 类挂组件上
+   两种写法的选择器下面都已覆盖。
+
+   注意：本文件只接管「分页控件自身」的观感，各面板容器的
+   padding/border/背景等版式差异仍由面板自己的 .xxx-pager 规则负责。
+   ============================================ */
+
+/* 控件根：透明底 + 允许换行（窄屏不会挤出横向滚动） */
+.ewt-pager > .el-pagination,
+.ewt-pager.el-pagination {
+  --el-pagination-bg-color: transparent;
+}
+
+/* 上一页/下一页按钮 + 页码块（亮色）
+   !important 是必需的：Element Plus 自带样式特异性不低，且各面板
+   历史 scoped 规则也靠 !important 才压得住。 */
+.ewt-pager > .el-pagination button,
+.ewt-pager > .el-pagination .el-pager li,
+.ewt-pager.el-pagination button,
+.ewt-pager.el-pagination .el-pager li {
+  background-color: var(--color-bg-card, #ffffff) !important;
+  border: 1px solid var(--color-border, #e5e7eb) !important;
+  color: var(--color-text-secondary, #6b7280) !important;
+}
+
+/* 当前页（亮色） */
+.ewt-pager > .el-pagination .el-pager li.is-active,
+.ewt-pager.el-pagination .el-pager li.is-active {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+
+/* 暗色模式 */
+html.dark .ewt-pager > .el-pagination button,
+html.dark .ewt-pager > .el-pagination .el-pager li,
+html.dark .ewt-pager.el-pagination button,
+html.dark .ewt-pager.el-pagination .el-pager li {
+  background-color: var(--color-bg-card, #1f2937) !important;
+  border-color: var(--color-border, #374151) !important;
+  color: var(--color-text-secondary, #d1d5db) !important;
+}
+
+html.dark .ewt-pager > .el-pagination .el-pager li.is-active,
+html.dark .ewt-pager.el-pagination .el-pager li.is-active {
+  background-color: var(--color-primary, #3b82f6) !important;
+  color: #fff !important;
+  border-color: var(--color-primary, #3b82f6) !important;
+}
+
+/* 总条数
+   修正：原各面板写的是 `.xxx-pager > .el-pagination__total`（直接子选择器），
+   而 __total 实际嵌在 .el-pagination 内部，那条规则从来没匹配上（死规则）。
+   这里改用后代选择器，让总条数配色真正生效。 */
+.ewt-pager .el-pagination__total {
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+html.dark .ewt-pager .el-pagination__total {
+  color: var(--color-text-secondary, #d1d5db);
+}
+
+/* 键盘可达性：焦点可见（WCAG 2.4.7），只影响键盘 Tab 触发的焦点 */
+.ewt-pager .el-pagination button:focus-visible,
+.ewt-pager .el-pagination .el-pager li:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   移动端精简（≤767px）
+   原逻辑在 mobile.css，但只硬编码了 9 个类名；改为挂在 .ewt-pager 上，
+   所有面板（含后加的笔记/家谱/倒计时/待办/销售/运动/记账）一并生效。
+   目标：居中换行、隐藏页码数字与跳转框，只留「总条数 · 上一页 · 下一页」。
+   ============================================ */
+@media (max-width: 767px) {
+  /* 容器与控件都居中，并允许换行 */
+  .ewt-pager {
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  .ewt-pager > .el-pagination,
+  .ewt-pager.el-pagination {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    row-gap: 8px !important;
+  }
+
+  /* 隐藏页码数字与跳转框（窄屏放不下且意义不大） */
+  .ewt-pager .el-pager,
+  .ewt-pager .el-pagination__jump {
+    display: none !important;
+  }
+
+  /* 总条数始终可见 */
+  .ewt-pager .el-pagination__total {
+    display: inline-flex !important;
+  }
+
+  /* 触控目标放大到 40px（对齐项目既有「移动端图标按钮 ≥40px」约定，
+     满足 WCAG 2.2 目标尺寸要求；EP small 默认仅 ~24px 偏小） */
+  .ewt-pager .el-pagination button {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+}

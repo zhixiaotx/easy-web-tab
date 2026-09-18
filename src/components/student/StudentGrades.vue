@@ -432,7 +432,7 @@ onMounted(async () => {
         :page-size="GRADE_PAGE_SIZE"
         :total="store.pagedLevelGrades.total"
         layout="total, prev, pager, next"
-        class="sg-pagination"
+        class="sg-pagination ewt-pager"
         data-testid="sg-pagination"
         @current-change="store.setPage"
       />

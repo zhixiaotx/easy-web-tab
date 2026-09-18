@@ -22,6 +22,7 @@ import { filterTodos, dueInfo } from '@/composables/todoCore'
 import type { TodoFilterCriteria } from '@/composables/todoCore'
 import type { TodoPriority, WorkbenchTodo } from '@/types'
 import { DEFAULT_TODO_COLOR } from '@/types'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchTodosStore()
 
@@ -90,17 +91,18 @@ const viewTodos = computed(() => filteredTodos.value.map(todo => ({ todo, hero: 
 
 // ===== 固定分页（el-table 列表，10 条/页）=====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('td-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 const pageTodos = computed(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return viewTodos.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return viewTodos.value.slice(start, start + pageSize.value)
 })
 
 // 条目数缩减后钳制页码，避免末页渲染为空
 watch(
   () => viewTodos.value.length,
   (n) => {
-    const maxPage = Math.max(1, Math.ceil(n / LIST_PAGE_SIZE))
+    const maxPage = Math.max(1, Math.ceil(n / pageSize.value))
     if (listPage.value > maxPage) listPage.value = maxPage
   }
 )
@@ -408,11 +410,12 @@ onUnmounted(() => {
         </div>
 
       </div>
-      <div class="td-list-pager">
+      <div class="td-list-pager ewt-pager">
         <el-pagination
           v-model:current-page="listPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
+          @size-change="listPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="viewTodos.length"
           background
@@ -700,33 +703,6 @@ onUnmounted(() => {
 :global(html.dark) .td-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.td-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
-.td-list-pager > :global(.el-pagination button),
-.td-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.td-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .td-list-pager > :global(.el-pagination button),
-:global(html.dark) .td-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .td-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.td-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* ===== 表格内徽章/标签 ===== */

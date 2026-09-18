@@ -8,6 +8,7 @@ import { useToast } from '@/composables/useToast'
 import { useGenealogyStore } from '@/stores/genealogy'
 import { buildTree, getChildren, getDescendants } from '@/composables/genealogyCore'
 import type { FamilyMember } from '@/types'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useGenealogyStore()
 const vm = useViewMode()
@@ -24,6 +25,7 @@ const searchName = ref('')
 
 // ===== 分页（固定 10 条/页）=====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('fg-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 
 const filteredMembers = computed<FamilyMember[]>(() => {
@@ -33,14 +35,14 @@ const filteredMembers = computed<FamilyMember[]>(() => {
 })
 
 const pageMembers = computed<FamilyMember[]>(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return filteredMembers.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return filteredMembers.value.slice(start, start + pageSize.value)
 })
 
 watch(
   () => filteredMembers.value.length,
   (n) => {
-    const maxPage = Math.max(1, Math.ceil(n / LIST_PAGE_SIZE))
+    const maxPage = Math.max(1, Math.ceil(n / pageSize.value))
     if (listPage.value > maxPage) listPage.value = maxPage
   }
 )
@@ -362,11 +364,12 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="fg-list-pager">
+        <div class="fg-list-pager ewt-pager">
           <el-pagination
             v-model:current-page="listPage"
-            :page-size="LIST_PAGE_SIZE"
-            :page-sizes="[LIST_PAGE_SIZE]"
+            @size-change="listPage = 1"
+            v-model:page-size="pageSize"
+            :page-sizes="PAGE_SIZES"
             layout="total, prev, pager, next, jumper"
             :total="filteredMembers.length"
             background
@@ -613,33 +616,6 @@ onUnmounted(() => {
 :global(html.dark) .fg-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.fg-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
-.fg-list-pager > :global(.el-pagination button),
-.fg-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.fg-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .fg-list-pager > :global(.el-pagination button),
-:global(html.dark) .fg-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .fg-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.fg-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* ===== 表格内元素 ===== */

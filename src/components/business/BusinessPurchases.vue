@@ -30,6 +30,7 @@ import { useWorkbenchBusinessStore } from '@/stores/workbenchBusiness'
 import { calcMarkupRate, filterPurchasesByCategory, findProduct, findProductCategory, formatYuanOf, localDateKey, visibleProductCategories } from '@/composables/businessCore'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessPurchase } from '@/types'
+import { usePageSize } from '@/composables/usePageSize'
 
 // P1-3：跨模块联动跳转 emit
 const emit = defineEmits<{ navigate: [section: string, filter?: string] }>()
@@ -90,10 +91,11 @@ const filteredWithProductFilter = computed(() => {
 
 // ===== el-pagination 分页（固定 10 条/页） =====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('bizpur-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 const pageItems = computed<BusinessPurchase[]>(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return filteredWithProductFilter.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return filteredWithProductFilter.value.slice(start, start + pageSize.value)
 })
 watch(activeCat, () => { listPage.value = 1 })
 watch(() => props.productFilter, () => { listPage.value = 1 })
@@ -274,11 +276,12 @@ async function handleDelete(id: string): Promise<void> {
         </div>
 
       </div>
-      <div class="bizpur-list-pager">
+      <div class="bizpur-list-pager ewt-pager">
         <el-pagination
           v-model:current-page="listPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
+          @size-change="listPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="filteredWithProductFilter.length"
           background
@@ -479,33 +482,6 @@ async function handleDelete(id: string): Promise<void> {
 :global(html.dark) .bizpur-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.bizpur-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
-.bizpur-list-pager > :global(.el-pagination button),
-.bizpur-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.bizpur-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .bizpur-list-pager > :global(.el-pagination button),
-:global(html.dark) .bizpur-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .bizpur-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.bizpur-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* ===== 表格内徽章/链接/标签 ===== */

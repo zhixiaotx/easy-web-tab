@@ -28,6 +28,7 @@ import { localToday } from '@/composables/todoCore'
 import type { StudentPlan, StudentPlanType } from '@/types'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useStudentPlanStore()
 const toast = useToast()
@@ -48,10 +49,11 @@ const viewEntries = computed<StudentPlan[]>(() => store.filterByType(activeTypeT
 
 // ===== 分页：Element Plus el-pagination，固定 10 条/页 =====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('sp-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 const listPageItems = computed<StudentPlan[]>(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return viewEntries.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return viewEntries.value.slice(start, start + pageSize.value)
 })
 
 watch(activeTypeTab, () => goto(1))
@@ -358,11 +360,12 @@ onMounted(() => {
       </div>
 
       <!-- 分页条 -->
-      <div v-if="viewEntries.length > 0" class="sp-list-pager">
+      <div v-if="viewEntries.length > 0" class="sp-list-pager ewt-pager">
         <el-pagination
           v-model:current-page="listPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
+          @size-change="listPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="viewEntries.length"
           background
@@ -575,35 +578,6 @@ onMounted(() => {
 :global(html.dark) .sp-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.sp-list-pager > :global(.el-pagination) {
-  --el-pagination-bg-color: transparent;
-}
-.sp-list-pager > :global(.el-pagination button),
-.sp-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.sp-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .sp-list-pager > :global(.el-pagination button),
-:global(html.dark) .sp-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .sp-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.sp-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* ===== 类型徽章 ===== */

@@ -38,6 +38,7 @@ import type {
 } from '@/types'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useStudentHomeworkStore()
 const settingsStore = useStudentSettingsStore()
@@ -80,10 +81,11 @@ const viewEntries = computed(() => {
 
 // ===== 分页：Element Plus el-pagination，固定 10 条/页 =====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('shw-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 const listPageItems = computed<StudentHomework[]>(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return viewEntries.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return viewEntries.value.slice(start, start + pageSize.value)
 })
 
 watch([activeSubject, activeStatus], () => goto(1))
@@ -347,11 +349,12 @@ onMounted(async () => {
       </div>
 
       <!-- 分页条（Element Plus Pagination） -->
-      <div v-if="viewEntries.length > 0" class="shw-pager">
+      <div v-if="viewEntries.length > 0" class="shw-pager ewt-pager">
         <el-pagination
           v-model:current-page="listPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
+          @size-change="listPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="viewEntries.length"
           background
@@ -537,35 +540,6 @@ onMounted(async () => {
 :global(html.dark) .shw-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.shw-pager > :global(.el-pagination) {
-  --el-pagination-bg-color: transparent;
-}
-.shw-pager > :global(.el-pagination button),
-.shw-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.shw-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .shw-pager > :global(.el-pagination button),
-:global(html.dark) .shw-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .shw-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.shw-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 .shw-subject-badge {

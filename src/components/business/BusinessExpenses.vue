@@ -22,6 +22,7 @@ import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import type { BusinessExpense } from '@/types'
 import BusinessCategoryManager from './BusinessCategoryManager.vue'
 import Icon from '@/components/Icon.vue'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchBusinessStore()
 
@@ -66,10 +67,11 @@ function exportExpensesCsv(): void {
 
 // ===== el-pagination 分页（固定 10 条/页，每个日组一行） =====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('bizexp-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 const pageItems = computed<ExpenseDayGroup[]>(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return dayGroups.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return dayGroups.value.slice(start, start + pageSize.value)
 })
 watch(dayGroups, () => { listPage.value = 1 })
 
@@ -255,11 +257,12 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
         </div>
 
       </div>
-      <div class="bizexp-list-pager">
+      <div class="bizexp-list-pager ewt-pager">
         <el-pagination
           v-model:current-page="listPage"
-          :page-size="LIST_PAGE_SIZE"
-          :page-sizes="[LIST_PAGE_SIZE]"
+          @size-change="listPage = 1"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
           layout="total, prev, pager, next, jumper"
           :total="dayGroups.length"
           background
@@ -436,33 +439,6 @@ async function handleDeleteGroup(g: ExpenseDayGroup): Promise<void> {
 :global(html.dark) .bizexp-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.bizexp-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
-.bizexp-list-pager > :global(.el-pagination button),
-.bizexp-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.bizexp-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .bizexp-list-pager > :global(.el-pagination button),
-:global(html.dark) .bizexp-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .bizexp-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.bizexp-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* ===== 表格内文本样式 ===== */

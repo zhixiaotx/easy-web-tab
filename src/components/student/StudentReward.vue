@@ -29,6 +29,7 @@ import PanelPager from '@/components/workbench/PanelPager.vue'
 import Icon from '@/components/Icon.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import type { StudentRewardItem, StudentRewardTxn } from '@/types'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useStudentRewardsStore()
 const toast = useToast()
@@ -53,12 +54,13 @@ const { pageItems: rewardPageItems, currentPage: rewardCurrentPage, totalPages: 
 
 // ===== 交易记录表格（el-table + el-pagination，固定 10 条/页，对齐教育经历） =====
 const HISTORY_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('sr-history-pager', HISTORY_PAGE_SIZE)
 const historyPage = ref(1)
 const historyTotal = computed(() => store.allHistory().length)
 const historyPageItems = computed<StudentRewardTxn[]>(() => {
   const all = store.allHistory()
-  const start = (historyPage.value - 1) * HISTORY_PAGE_SIZE
-  return all.slice(start, start + HISTORY_PAGE_SIZE)
+  const start = (historyPage.value - 1) * pageSize.value
+  return all.slice(start, start + pageSize.value)
 })
 
 // ===== 兑换 =====
@@ -226,11 +228,12 @@ onMounted(async () => {
           </div>
 
         </div>
-        <div class="sr-history-pager">
+        <div class="sr-history-pager ewt-pager">
           <el-pagination
             v-model:current-page="historyPage"
-            :page-size="HISTORY_PAGE_SIZE"
-            :page-sizes="[HISTORY_PAGE_SIZE]"
+            @size-change="historyPage = 1"
+            v-model:page-size="pageSize"
+            :page-sizes="PAGE_SIZES"
             layout="total, prev, pager, next, jumper"
             :total="historyTotal"
             background
@@ -490,35 +493,6 @@ onMounted(async () => {
 :global(html.dark) .sr-history-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.sr-history-pager > :global(.el-pagination) {
-  --el-pagination-bg-color: transparent;
-}
-.sr-history-pager > :global(.el-pagination button),
-.sr-history-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.sr-history-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #10b981) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #10b981) !important;
-}
-:global(html.dark) .sr-history-pager > :global(.el-pagination button),
-:global(html.dark) .sr-history-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .sr-history-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #10b981) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #10b981) !important;
-}
-.sr-history-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* 积分变动：加分绿 / 兑换红 */

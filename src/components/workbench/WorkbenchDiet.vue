@@ -20,6 +20,7 @@ import { calcDailyAttainment } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import { MEAL_TYPES, type MealType } from '@/types'
 import WorkbenchHealthReminders from './WorkbenchHealthReminders.vue'
+import { usePageSize } from '@/composables/usePageSize'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -102,10 +103,11 @@ const formNote = ref('')
 const showListDialog = ref(false)
 const listPage = ref(1)
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('dt-list-pager', LIST_PAGE_SIZE)
 
 const listPageItems = computed(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return sortedRecords.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return sortedRecords.value.slice(start, start + pageSize.value)
 })
 
 function openListDialog(): void {
@@ -296,8 +298,8 @@ onUnmounted(() => {
               </RecordsCard>
             </div>
           </div>
-          <div class="dt-list-pager">
-            <el-pagination v-model:current-page="listPage" :page-size="LIST_PAGE_SIZE" :page-sizes="[LIST_PAGE_SIZE]" layout="total, prev, pager, next, jumper" :total="sortedRecords.length" background small prev-text="上一页" next-text="下一页" />
+          <div class="dt-list-pager ewt-pager">
+            <el-pagination v-model:current-page="listPage" v-model:page-size="pageSize" :page-sizes="PAGE_SIZES" layout="total, prev, pager, next, jumper" :total="sortedRecords.length" background small prev-text="上一页" next-text="下一页" @size-change="listPage = 1" />
           </div>
         </div>
       </div>
@@ -1101,35 +1103,6 @@ html.dark .btn-delete {
 :global(html.dark) .dt-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.dt-list-pager :global(.el-pagination) {
-  --el-pagination-bg-color: transparent;
-}
-.dt-list-pager :global(.el-pagination button),
-.dt-list-pager :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.dt-list-pager :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #10b981) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #10b981) !important;
-}
-:global(html.dark) .dt-list-pager :global(.el-pagination button),
-:global(html.dark) .dt-list-pager :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .dt-list-pager :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #10b981) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #10b981) !important;
-}
-.dt-list-pager :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 @media (max-width: 768px) {

@@ -36,6 +36,7 @@ import type { TrendChartScale, TrendMonth } from '@/composables/ledgerCore'
 import type { LedgerCategory, LedgerEntry } from '@/types'
 import { buildCsv, csvFileName, downloadCsv } from '@/composables/csvExport'
 import { usePanelPaging } from '@/composables/usePanelPaging'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchLedgerStore()
 
@@ -208,6 +209,7 @@ function exportLedgerCsv(): void {
 const showRecordsModal = ref(false)
 const recordsPage = ref(1)
 const RECORDS_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('ld-records-pager', RECORDS_PAGE_SIZE)
 
 // ===== 图表区展开/折叠（默认展开）=====
 const chartsExpanded = ref(true)
@@ -222,8 +224,8 @@ function closeRecordsModal(): void {
 }
 
 const recordsPageItems = computed<EntryView[]>(() => {
-  const start = (recordsPage.value - 1) * RECORDS_PAGE_SIZE
-  return viewEntries.value.slice(start, start + RECORDS_PAGE_SIZE)
+  const start = (recordsPage.value - 1) * pageSize.value
+  return viewEntries.value.slice(start, start + pageSize.value)
 })
 
 interface EntryView {
@@ -770,11 +772,12 @@ onUnmounted(() => {
             </div>
 
           </div>
-          <div class="ld-records-pager">
+          <div class="ld-records-pager ewt-pager">
             <el-pagination
               v-model:current-page="recordsPage"
-              :page-size="RECORDS_PAGE_SIZE"
-              :page-sizes="[RECORDS_PAGE_SIZE]"
+              @size-change="recordsPage = 1"
+              v-model:page-size="pageSize"
+              :page-sizes="PAGE_SIZES"
               layout="total, prev, pager, next, jumper"
               :total="viewEntries.length"
               background

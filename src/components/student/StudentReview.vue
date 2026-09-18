@@ -14,6 +14,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 import StudentToolbar from '@/components/student/StudentToolbar.vue'
 import Icon from '@/components/Icon.vue'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useStudentReviewStore()
 const settingsStore = useStudentSettingsStore()
@@ -34,10 +35,11 @@ const viewEntries = computed<StudentReviewItem[]>(() => store.filterBySubject(ac
 
 // 固定每页分页（与学习计划一致：el-pagination）
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('sr-list-pager', LIST_PAGE_SIZE)
 const currentPage = ref(1)
 const pageItems = computed<StudentReviewItem[]>(() => {
-  const start = (currentPage.value - 1) * LIST_PAGE_SIZE
-  return viewEntries.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (currentPage.value - 1) * pageSize.value
+  return viewEntries.value.slice(start, start + pageSize.value)
 })
 watch(activeSubject, () => { currentPage.value = 1 })
 
@@ -325,11 +327,12 @@ function daysClass(days: number): string {
           </div>
         </div>
 
-        <div v-if="viewEntries.length > 0" class="sr-list-pager">
+        <div v-if="viewEntries.length > 0" class="sr-list-pager ewt-pager">
           <el-pagination
             v-model:current-page="currentPage"
-            :page-size="LIST_PAGE_SIZE"
-            :page-sizes="[LIST_PAGE_SIZE]"
+            @size-change="currentPage = 1"
+            v-model:page-size="pageSize"
+            :page-sizes="PAGE_SIZES"
             layout="total, prev, pager, next, jumper"
             :total="viewEntries.length"
             background
@@ -518,35 +521,6 @@ function daysClass(days: number): string {
 :global(html.dark) .sr-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.sr-list-pager > :global(.el-pagination) {
-  --el-pagination-bg-color: transparent;
-}
-.sr-list-pager > :global(.el-pagination button),
-.sr-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.sr-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .sr-list-pager > :global(.el-pagination button),
-:global(html.dark) .sr-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .sr-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.sr-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 .sr-list {

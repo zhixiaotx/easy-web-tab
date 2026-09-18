@@ -24,6 +24,7 @@ import { injectHealthStore, type HealthStoreLike } from '@/composables/healthSto
 import { calcDailyAttainment, sleepDurationHours } from '@/composables/healthCore'
 import { localToday } from '@/composables/todoCore'
 import type { SleepRecord } from '@/types'
+import { usePageSize } from '@/composables/usePageSize'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -108,12 +109,13 @@ const formNote = ref('')
 
 // ===== 列表弹框 + 分页（每页 10 条）=====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('ex-list-pager', LIST_PAGE_SIZE)
 const showListDialog = ref(false)
 const listPage = ref(1)
 const listPageItems = computed<SleepRecord[]>(() => {
   const arr = sortedRecords.value
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return arr.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return arr.slice(start, start + pageSize.value)
 })
 function openListDialog(): void { listPage.value = 1; showListDialog.value = true }
 function closeListDialog(): void { showListDialog.value = false }
@@ -339,11 +341,12 @@ onUnmounted(() => {
             </div>
 
           </div>
-          <div class="ex-list-pager">
+          <div class="ex-list-pager ewt-pager">
             <el-pagination
               v-model:current-page="listPage"
-              :page-size="LIST_PAGE_SIZE"
-              :page-sizes="[LIST_PAGE_SIZE]"
+              @size-change="listPage = 1"
+              v-model:page-size="pageSize"
+              :page-sizes="PAGE_SIZES"
               layout="total, prev, pager, next, jumper"
               :total="sortedRecords.length"
               background
@@ -1118,35 +1121,6 @@ html.dark .btn-delete {
 :global(html.dark) .ex-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.ex-list-pager :global(.el-pagination) {
-  --el-pagination-bg-color: transparent;
-}
-.ex-list-pager :global(.el-pagination button),
-.ex-list-pager :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.ex-list-pager :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #10b981) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #10b981) !important;
-}
-:global(html.dark) .ex-list-pager :global(.el-pagination button),
-:global(html.dark) .ex-list-pager :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .ex-list-pager :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #10b981) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #10b981) !important;
-}
-.ex-list-pager :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* 睡眠质量文字色（sl-quality-1..5） */

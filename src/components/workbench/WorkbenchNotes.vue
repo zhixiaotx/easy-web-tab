@@ -33,6 +33,7 @@ import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { filterNotes, findNoteCategory, hasActiveNoteFilter, isUncategorized, noteCountText, sortTimelineEntries, tabCategoriesOf } from '@/composables/noteCore'
 import type { NoteCategory, NoteColor, NoteType, NoteTypeFilter, TimelineEntry, WorkbenchNote } from '@/types'
 import { renderMarkdown } from '@/composables/noteMarkdown'
+import { usePageSize } from '@/composables/usePageSize'
 
 const store = useWorkbenchNotesStore()
 
@@ -126,10 +127,11 @@ function rowClassName(data: any): string {
 
 // ===== Element Plus el-pagination 分页（普通/时光轴合并为单一列表）=====
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('nt-list-pager', LIST_PAGE_SIZE)
 const listPage = ref(1)
 const listPageItems = computed<WorkbenchNote[]>(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return filteredNotes.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return filteredNotes.value.slice(start, start + pageSize.value)
 })
 
 // 是否存在生效筛选：类型非普通 / 分类已选 / 关键词非空（noteCore 纯函数，组件禁止重算）
@@ -554,11 +556,12 @@ onUnmounted(() => {
         </RecordsCard>
       </div>
     </div>
-    <div v-if="filteredNotes.length > 0" class="nt-list-pager">
+    <div v-if="filteredNotes.length > 0" class="nt-list-pager ewt-pager">
       <el-pagination
         v-model:current-page="listPage"
-        :page-size="LIST_PAGE_SIZE"
-        :page-sizes="[LIST_PAGE_SIZE]"
+        @size-change="listPage = 1"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
         layout="total, prev, pager, next, jumper"
         :total="filteredNotes.length"
         background
@@ -825,33 +828,6 @@ onUnmounted(() => {
 :global(html.dark) .nt-list-pager {
   border-top-color: var(--color-border, #374151);
   background: var(--color-bg-hover, #111827);
-}
-.nt-list-pager > :global(.el-pagination) { --el-pagination-bg-color: transparent; }
-.nt-list-pager > :global(.el-pagination button),
-.nt-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #ffffff) !important;
-  border: 1px solid var(--color-border, #e5e7eb) !important;
-  color: var(--color-text-secondary, #6b7280) !important;
-}
-.nt-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-:global(html.dark) .nt-list-pager > :global(.el-pagination button),
-:global(html.dark) .nt-list-pager > :global(.el-pagination .el-pager li) {
-  background-color: var(--color-bg-card, #1f2937) !important;
-  border-color: var(--color-border, #374151) !important;
-  color: var(--color-text-secondary, #d1d5db) !important;
-}
-:global(html.dark) .nt-list-pager > :global(.el-pagination .el-pager li.is-active) {
-  background-color: var(--color-primary, #3b82f6) !important;
-  color: #fff !important;
-  border-color: var(--color-primary, #3b82f6) !important;
-}
-.nt-list-pager > :global(.el-pagination__total) {
-  color: var(--color-text-secondary, #6b7280);
-  font-size: 13px;
 }
 
 /* ===== 表格内徽章/标签 ===== */

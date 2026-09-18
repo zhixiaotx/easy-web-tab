@@ -10,6 +10,7 @@ import Icon from '@/components/Icon.vue'
 import { useViewMode } from '@/composables/useViewMode'
 import RecordsCard from '@/components/common/RecordsCard.vue'
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
+import { usePageSize } from '@/composables/usePageSize'
 
 // store 来源可注入：默认成人端 store，学生端容器 provide 自己的 store 后自动改为学生数据（见 healthStoreContext）
 const store = (injectHealthStore() ?? useWorkbenchHealthStore()) as HealthStoreLike
@@ -120,10 +121,11 @@ const showDistanceField = computed(() => DISTANCE_TYPES.has(formType.value))
 const showListDialog = ref(false)
 const listPage = ref(1)
 const LIST_PAGE_SIZE = 10
+const { pageSize, PAGE_SIZES } = usePageSize('ex-list-pager', LIST_PAGE_SIZE)
 
 const listPageItems = computed(() => {
-  const start = (listPage.value - 1) * LIST_PAGE_SIZE
-  return sortedRecords.value.slice(start, start + LIST_PAGE_SIZE)
+  const start = (listPage.value - 1) * pageSize.value
+  return sortedRecords.value.slice(start, start + pageSize.value)
 })
 
 function openListDialog(): void {
@@ -350,11 +352,12 @@ onUnmounted(() => {
               </RecordsCard>
             </div>
           </div>
-          <div class="ex-list-pager">
+          <div class="ex-list-pager ewt-pager">
             <el-pagination
               v-model:current-page="listPage"
-              :page-size="LIST_PAGE_SIZE"
-              :page-sizes="[LIST_PAGE_SIZE]"
+              @size-change="listPage = 1"
+              v-model:page-size="pageSize"
+              :page-sizes="PAGE_SIZES"
               layout="total, prev, pager, next, jumper"
               :total="sortedRecords.length"
               background

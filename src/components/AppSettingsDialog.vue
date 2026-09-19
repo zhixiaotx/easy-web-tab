@@ -170,6 +170,111 @@ watch(visibleTabs, (tabs) => {
   }
 }, { immediate: true })
 
+
+// ================================================================
+// 设置页左侧分组导航（rail）数据模型
+// 每个 leaf item 映射到 (主 tab, 子 tab?)；点击时同时设置 activeTab / activeSubTab，
+// 内容区按既有 v-if 子门控显示对应区块。分组与可见性跟随 visibleTabs（来源页过滤）。
+// ================================================================
+interface NavItem { key: string; label: string; icon: string; tab: SettingsTabKey; sub?: SubTabKey }
+interface NavGroup { key: string; label: string; items: NavItem[] }
+const NAV_GROUPS: NavGroup[] = [
+  {
+    key: 'personal',
+    label: '个性化',
+    items: [
+      { key: 'theme', label: '主题与外观', icon: 'palette', tab: 'nav', sub: 'nav-display' }
+    ]
+  },
+  {
+    key: 'nav',
+    label: '导航站',
+    items: [
+      { key: 'nav-appearance', label: '站点外观', icon: 'monitor', tab: 'nav', sub: 'nav-appearance' },
+      { key: 'nav-site', label: '站点管理', icon: 'folder', tab: 'nav', sub: 'nav-site' },
+      { key: 'nav-size', label: '弹窗尺寸', icon: 'package', tab: 'nav', sub: 'nav-size' }
+    ]
+  },
+  {
+    key: 'wb',
+    label: '个人工作台',
+    items: [
+      { key: 'wb-city', label: '天气城市', icon: 'weather-sunny', tab: 'wb', sub: 'wb-city' },
+      { key: 'wb-menu', label: '工作台菜单', icon: 'clipboard', tab: 'wb', sub: 'wb-menu' },
+      { key: 'wb-card', label: '卡片尺寸', icon: 'image', tab: 'wb', sub: 'wb-card' },
+      { key: 'wb-cat', label: '分类管理', icon: 'tag', tab: 'wb', sub: 'wb-cat' },
+      { key: 'wb-backup', label: '工作台备份', icon: 'save', tab: 'wb', sub: 'wb-backup' },
+      { key: 'wb-snapshot', label: '数据时光机', icon: 'refresh', tab: 'wb', sub: 'wb-snapshot' },
+      { key: 'wb-size', label: '弹窗尺寸', icon: 'package', tab: 'wb', sub: 'wb-size' }
+    ]
+  },
+  {
+    key: 'business',
+    label: '销售记账',
+    items: [
+      { key: 'biz-base', label: '基础设置', icon: 'store', tab: 'business', sub: 'biz-base' },
+      { key: 'biz-backup', label: '备份导入导出', icon: 'archive', tab: 'business', sub: 'biz-backup' }
+    ]
+  },
+  {
+    key: 'student',
+    label: '学生工作台',
+    items: [
+      { key: 'stu-stage', label: '学段', icon: 'trending-up', tab: 'student', sub: 'stu-stage' },
+      { key: 'stu-info', label: '学生信息', icon: 'info', tab: 'student', sub: 'stu-info' },
+      { key: 'stu-subject', label: '学科清单', icon: 'document', tab: 'student', sub: 'stu-subject' },
+      { key: 'stu-menu', label: '学生菜单', icon: 'bookmark', tab: 'student', sub: 'stu-menu' }
+    ]
+  },
+  {
+    key: 'notify',
+    label: '通知与同步',
+    items: [
+      { key: 'remind', label: '提醒设置', icon: 'timer', tab: 'remind' },
+      { key: 'sync', label: '云同步', icon: 'cloud', tab: 'sync' }
+    ]
+  }
+]
+
+const railQuery = ref('')
+const filteredGroups = computed<NavGroup[]>(() => {
+  const allowed = visibleTabs.value
+  const q = railQuery.value.trim().toLowerCase()
+  return NAV_GROUPS
+    .map(g => ({
+      ...g,
+      items: g.items.filter(it => allowed.includes(it.tab) && (!q || it.label.toLowerCase().includes(q)))
+    }))
+    .filter(g => g.items.length > 0)
+})
+
+function isActiveNav(item: NavItem): boolean {
+  if (activeTab.value !== item.tab) return false
+  if (item.sub) return activeSubTab.value === item.sub
+  return true
+}
+
+function selectNav(item: NavItem): void {
+  activeTab.value = item.tab
+  const list = currentSubTabs.value
+  if (item.sub) {
+    activeSubTab.value = item.sub
+  } else if (list.length > 0) {
+    activeSubTab.value = list[0].key
+  }
+}
+
+const currentNavMeta = computed<{ group: string; item: string } | null>(() => {
+  for (const g of NAV_GROUPS) {
+    for (const it of g.items) {
+      if (isActiveNav(it)) return { group: g.label, item: it.label }
+    }
+  }
+  return null
+})
+const currentGroupLabel = computed(() => currentNavMeta.value?.group ?? '')
+const currentItemLabel = computed(() => currentNavMeta.value?.item ?? '')
+
 // 销售记账分类管理弹框（复用页面内共享组件；null = 关闭）
 const bizCatManagerKind = ref<'product' | 'expense' | null>(null)
 // 设置弹窗「去设置」入口单例（WeatherCard 等调用 openAppSettings() → 本组件订阅后定位到城市输入框）
@@ -1337,86 +1442,47 @@ onUnmounted(() => {
         <button class="close-btn" @click="emit('close')"><Icon name="close" /></button>
       </div>
 
-      <div class="manager-body">
-        <div class="settings-tabs" role="tablist">
-          <button
-            v-if="visibleTabs.includes('nav')"
-            type="button"
-            role="tab"
-            class="tab-btn"
-            :class="{ active: activeTab === 'nav' }"
-            :aria-selected="activeTab === 'nav'"
-            @click="activeTab = 'nav'"
-          >导航设置</button>
-          <button
-            v-if="visibleTabs.includes('wb')"
-            type="button"
-            role="tab"
-            class="tab-btn"
-            :class="{ active: activeTab === 'wb' }"
-            :aria-selected="activeTab === 'wb'"
-            @click="activeTab = 'wb'"
-          >工作台设置</button>
-          <button
-            v-if="visibleTabs.includes('remind')"
-            type="button"
-            role="tab"
-            class="tab-btn"
-            :class="{ active: activeTab === 'remind' }"
-            :aria-selected="activeTab === 'remind'"
-            @click="activeTab = 'remind'"
-          >提醒设置</button>
-          <button
-            v-if="visibleTabs.includes('business')"
-            type="button"
-            role="tab"
-            class="tab-btn"
-            :class="{ active: activeTab === 'business' }"
-            :aria-selected="activeTab === 'business'"
-            data-testid="settings-tab-business"
-            @click="activeTab = 'business'"
-          >{{ store.businessPageDisplayName }}</button>
-          <button
-            v-if="visibleTabs.includes('student')"
-            type="button"
-            role="tab"
-            class="tab-btn"
-            :class="{ active: activeTab === 'student' }"
-            :aria-selected="activeTab === 'student'"
-            data-testid="settings-tab-student"
-            @click="activeTab = 'student'"
-          >{{ store.studentPageDisplayName }}</button>
-          <button
-            v-if="visibleTabs.includes('sync')"
-            type="button"
-            role="tab"
-            class="tab-btn"
-            :class="{ active: activeTab === 'sync' }"
-            :aria-selected="activeTab === 'sync'"
-            @click="activeTab = 'sync'"
-          >云同步</button>
-        </div>
-
-        <!-- 第二层：子 tab 条（仅 nav/wb/business/student 四个内容多的主 tab 才渲染；remind/sync 不显示） -->
-        <div v-if="currentSubTabs.length > 0" class="settings-tabs settings-tabs-sub" role="tablist">
-          <button
-            v-for="st in currentSubTabs"
-            :key="st.key"
-            type="button"
-            role="tab"
-            class="tab-btn sub-tab-btn"
-            :class="{ active: activeSubTab === st.key }"
-            :aria-selected="activeSubTab === st.key"
-            :data-testid="`subtab-${st.key}`"
-            @click="activeSubTab = st.key"
-          >{{ st.label }}</button>
-        </div>
-
-        <!-- 弹窗尺寸提示：仅当导航/工作台 tab 且子 tab 切到"弹窗尺寸"时才显示 -->
-        <p v-if="(activeTab === 'nav' && activeSubTab === 'nav-size') || (activeTab === 'wb' && activeSubTab === 'wb-size')" class="hint">调整各弹窗的默认尺寸，修改即时生效并自动保存。</p>
-
-        <!-- 站点外观（导航设置 tab - 站点外观）：浏览器标签页标题与图标 -->
-        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-appearance'" class="wb-menu-config">
+            <div class="manager-body">
+        <aside class="settings-rail">
+          <div class="rail-search">
+            <Icon name="search" />
+            <input
+              type="text"
+              v-model="railQuery"
+              class="rail-search-input"
+              placeholder="搜索设置项"
+              aria-label="搜索设置项"
+            />
+          </div>
+          <nav class="rail-nav" aria-label="设置导航">
+            <template v-for="grp in filteredGroups" :key="grp.key">
+              <div class="rail-group-label">{{ grp.label }}</div>
+              <button
+                v-for="item in grp.items"
+                :key="item.key"
+                type="button"
+                class="rail-item"
+                :class="{ active: isActiveNav(item) }"
+                :aria-current="isActiveNav(item) ? 'page' : undefined"
+                @click="selectNav(item)"
+              >
+                <Icon :name="item.icon" />
+                <span class="rail-item-label">{{ item.label }}</span>
+              </button>
+            </template>
+          </nav>
+        </aside>
+        <section class="settings-content">
+          <header class="settings-content-head">
+            <nav class="settings-crumb" aria-label="位置">
+              <span class="crumb-group">{{ currentGroupLabel }}</span>
+              <span class="crumb-sep">/</span>
+              <span class="crumb-item">{{ currentItemLabel }}</span>
+            </nav>
+            <span class="status-pill"><span class="status-dot"></span>已自动保存</span>
+          </header>
+          <div class="settings-scroll">
+<div v-if="activeTab === 'nav' && activeSubTab === 'nav-appearance'" class="wb-menu-config">
           <h3 class="wb-menu-title">站点外观</h3>
 
           <!-- 站点名称（浏览器标签页标题） -->
@@ -2546,6 +2612,8 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      </section>
+      </div>
 
       <div class="manager-footer">
         <span class="footer-hint">修改即时生效</span>
@@ -2623,9 +2691,11 @@ onUnmounted(() => {
 }
 
 .manager-body {
-  padding: 20px 24px;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
   flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
 .hint {
@@ -3599,4 +3669,142 @@ html.dark .ld-builtin-tag {
   width: 14px;
   height: 14px;
 }
+
+/* ===== 设置页：左侧分组导航（rail）+ 内容区 ===== */
+.settings-rail {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-bg-2, #f7f8fa);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+html.dark .settings-rail { background-color: rgba(255, 255, 255, 0.03); }
+
+.rail-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+.rail-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-text);
+  width: 100%;
+}
+.rail-search-input::placeholder { color: var(--color-text-muted); }
+
+.rail-nav { display: flex; flex-direction: column; gap: 2px; }
+.rail-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 14px 10px 6px;
+}
+.rail-group-label:first-child { padding-top: 0; }
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+.rail-item:hover { background-color: var(--color-bg-hover, rgba(0, 0, 0, 0.04)); color: var(--color-text); }
+.rail-item.active {
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+}
+html.dark .rail-item.active { background-color: rgba(96, 165, 250, 0.15); }
+html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
+
+.settings-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.settings-content-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.settings-crumb {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-crumb .crumb-group { color: var(--color-text-secondary); }
+.settings-crumb .crumb-item { color: var(--color-text); font-weight: 600; }
+.settings-crumb .crumb-sep { opacity: 0.5; }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #16a34a;
+  background-color: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background-color: #16a34a; }
+html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.12); border-color: rgba(74, 222, 128, 0.3); }
+
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .manager-body { flex-direction: column; }
+  .settings-rail {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .rail-search { display: none; }
+  .rail-nav { flex-direction: row; flex-wrap: nowrap; gap: 6px; }
+  .rail-group-label { display: none; }
+  .rail-item { width: auto; white-space: nowrap; padding: 7px 12px; }
+  .rail-item .rail-item-label { font-size: 12px; }
+  .settings-content-head { padding: 12px 16px; }
+  .settings-scroll { padding: 16px; }
+}
+
 </style>

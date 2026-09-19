@@ -363,7 +363,7 @@ onUnmounted(() => {
       >{{ syncLabel }}</button>
       <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置">设置</button>
       <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助">帮助</button>
-      <button class="btn-help" @click="showCountdownModal = true" title="倒计时" aria-label="倒计时"><Icon name="timer-sand" /></button>
+      <button class="btn-help" @click="showCountdownModal = true" title="倒计时" aria-label="倒计时">倒计时</button>
 
     </div>
   </div>

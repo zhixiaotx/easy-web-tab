@@ -631,11 +631,16 @@ onBeforeUnmount(() => {
   background: var(--c, #64748b);
 }
 
-/* 网格 */
+/* 网格滚动容器：占满父容器（100% 高度），内容超出时内部滚动。
+   PC 端课程信息在 100% 高度内完整展示；移动端内容超出则启用竖向滚动，
+   仅表格内部滚动，工具栏/今日速览/图例保持固定。 */
 .stt-grid-wrap {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   background: var(--color-bg-card, #fff);

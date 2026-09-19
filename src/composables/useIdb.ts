@@ -136,7 +136,8 @@ export const WORKBENCH_PREFS_KEYS = [
   'user-countdown-tab-categories',
   'user-countdown-sort',
   'user-todo-categories',
-  'user-todo-tab-categories'
+  'user-todo-tab-categories',
+  'help-ack-count'
 ] as const
 
 /** 打包 localStorage 偏好为 Record<string, string>；idbExportAll 直接调用 */

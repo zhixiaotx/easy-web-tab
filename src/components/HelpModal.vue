@@ -2,10 +2,18 @@
 import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { useAppSettingsStore } from '@/stores/settings'
+import { incrementHelpAckCount } from '../composables/useHelpModal'
 const settingsStore = useAppSettingsStore()
 const emit = defineEmits<{
   close: []
 }>()
+
+// 「知道了」：累计点击次数 +1 并持久化（nav.json 偏好），再关闭。
+// 注意：右上角 × 与遮罩点击走 emit('close')，不计数，未点「知道了」时下次访问仍会自动弹出。
+function acknowledgeHelp(): void {
+  incrementHelpAckCount()
+  emit('close')
+}
 
 async function downloadExample() {
   try {
@@ -775,7 +783,7 @@ const skillInstall = [
       </div>
 
       <div class="modal-footer">
-        <button class="btn-primary" @click="emit('close')">知道了</button>
+        <button class="btn-primary" @click="acknowledgeHelp">知道了</button>
       </div>
     </div>
   </div>

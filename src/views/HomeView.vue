@@ -30,7 +30,7 @@ const store = useSitesStore()
 const categoriesStore = useCategoriesStore()
 const themeStore = useThemeStore()
 const settingsStore = useAppSettingsStore()
-const { showHelp, openHelp, closeHelp } = useHelpModal()
+const { showHelp, openHelp, closeHelp, maybeAutoOpenHelp } = useHelpModal()
 const router = useRouter()
 const route = useRoute()
 const showModal = ref(false)
@@ -144,6 +144,8 @@ const handleDragEnd = () => {
 
 onMounted(() => {
   store.loadSites()
+  // 网站加载时：helpAckCount 为 0（首次 / 尚未点过「知道了」）自动弹出帮助页；>0 不再弹
+  maybeAutoOpenHelp()
 })
 
 // 同步 URL query 参数与弹框状态（Ctrl+N / 直接访问 URL 均可打开弹框）

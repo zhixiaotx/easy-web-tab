@@ -41,7 +41,7 @@ export const THEMES: ThemeDef[] = [
   { id: 'system', name: '跟随系统', mode: 'light', accent: null, system: true },
 ]
 
-const DEFAULT_THEME_ID = 'light-blue'
+const DEFAULT_THEME_ID = 'china-red'
 
 export const useThemeStore = defineStore('theme', () => {
   // ========================================
@@ -92,8 +92,8 @@ export const useThemeStore = defineStore('theme', () => {
       // 兼容旧版只存 light/dark 的情况（dark-blue 已下架，暗色回退到科技紫·深）
       currentThemeId.value = saved === 'light' ? 'light-blue' : 'purple'
     } else {
-      // 无保存过：跟随系统
-      currentThemeId.value = 'system'
+      // 无保存过：使用默认主题（中国红·浅）
+      currentThemeId.value = DEFAULT_THEME_ID
     }
     applyTheme()
   }

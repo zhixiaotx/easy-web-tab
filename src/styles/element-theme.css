@@ -25,3 +25,59 @@ html.dark {
   --el-color-success-light-9: #ecfdf5;
   --el-color-success-dark-2: #059669;
 }
+
+/* ============================================================
+ * Element Plus 桥接层：把 EP 的"表面/文字/边框/表格"token 全部接到
+ * 项目语义 token 上，使 EP 组件（表格、分页、下拉、弹框、输入框…）
+ * 与自定义组件共用同一套主题变量。
+ *
+ * 背景：此前只映射了 --el-color-primary*，EP 其余 token 仍用官方默认值
+ * （白底 #fff / 边框 #EBEEF5），导致三个工作台的表格底色不跟随主题，
+ * 各面板只好在自己 scoped 里各抄一份 --el-table-*（17 处，且 hover 色硬编码）。
+ * 这里统一映射后，22 个 .ewt-table 一处生效，面板内的重复声明可全部删除。
+ * ============================================================ */
+:root,
+html.dark {
+  /* 背景 / 填充 */
+  --el-bg-color: var(--color-bg-card);
+  --el-bg-color-page: var(--color-bg);
+  --el-bg-color-overlay: var(--color-bg-card);
+  --el-fill-color: var(--color-bg-hover);
+  --el-fill-color-light: var(--color-bg-hover);
+  --el-fill-color-lighter: var(--color-bg-hover);
+  --el-fill-color-blank: var(--color-bg-card);
+  --el-mask-color: rgba(0, 0, 0, 0.5);
+
+  /* 边框 */
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-border);
+  --el-border-color-lighter: var(--color-border);
+  --el-border-color-extra-light: var(--color-border);
+  --el-border-color-hover: var(--color-border-hover);
+  --el-border-color-dark: var(--color-border-hover);
+  --el-border-color-darker: var(--color-border-hover);
+
+  /* 文字 */
+  --el-text-color-primary: var(--color-text);
+  --el-text-color-regular: var(--color-text);
+  --el-text-color-secondary: var(--color-text-secondary);
+  --el-text-color-placeholder: var(--color-text-muted);
+  --el-text-color-disabled: var(--color-text-muted);
+
+  /* 禁用态 */
+  --el-disabled-bg-color: var(--color-bg-hover);
+  --el-disabled-border-color: var(--color-border);
+  --el-disabled-text-color: var(--color-text-muted);
+
+  /* 表格：底色/表头/hover 全部跟随主题（hover 用 accent 柔光底，随主色变化） */
+  --el-table-bg-color: var(--color-bg-card);
+  --el-table-tr-bg-color: var(--color-bg-card);
+  --el-table-header-bg-color: var(--color-bg-hover);
+  --el-table-header-text-color: var(--color-text);
+  --el-table-text-color: var(--color-text);
+  --el-table-border-color: var(--color-border);
+  --el-table-border: 1px solid var(--color-border);
+  --el-table-row-hover-bg-color: var(--color-primary-soft);
+  --el-table-current-row-bg-color: var(--color-primary-soft);
+  --el-table-expanded-cell-bg-color: var(--color-surface-2);
+}

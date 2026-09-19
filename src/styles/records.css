@@ -64,27 +64,28 @@
   margin-left: 0;
 }
 
-/* ===== 通用按钮：导出 CSV（全部面板统一「天空蓝」） ===== */
+/* ===== 通用按钮：导出 CSV（全部面板统一，配色跟随当前主题主色） ===== */
 /* 用 .btn-export-csv.el-button 提高优先级并加 !important，覆盖各面板 scoped 的按钮配色 */
+/* 此前硬编码天空蓝 #38bdf8，切主题后不跟随；改为引用主色 token */
 .btn-export-csv.el-button {
-  background-color: #38bdf8 !important;
-  border-color: #38bdf8 !important;
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
   color: #ffffff !important;
 }
 .btn-export-csv.el-button:hover,
 .btn-export-csv.el-button:focus {
-  background-color: #0ea5e9 !important;
-  border-color: #0ea5e9 !important;
+  background-color: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
   color: #ffffff !important;
 }
 .btn-export-csv.el-button:active {
-  background-color: #0284c7 !important;
-  border-color: #0284c7 !important;
+  background-color: var(--color-primary-700) !important;
+  border-color: var(--color-primary-700) !important;
 }
 .btn-export-csv.el-button.is-disabled,
 .btn-export-csv.el-button:disabled {
-  background-color: #7dd3fc !important;
-  border-color: #7dd3fc !important;
+  background-color: var(--color-primary-300) !important;
+  border-color: var(--color-primary-300) !important;
   color: #ffffff !important;
   opacity: 0.6;
 }

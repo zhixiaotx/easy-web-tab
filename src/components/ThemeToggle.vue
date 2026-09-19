@@ -19,7 +19,27 @@ const accentColor: Record<string, string> = {
   gray: '#6c7a8c',
   system: '#94a3b8'
 }
+// accent → 该主题的表面底色（与 themes.css 的 --color-bg-card 一致，用于色块预览）
+// 预览用「表面 + 主色」双色块：切主题后变化最大的是表面，单点主色无法反映真实观感
+const surfaceColor: Record<string, string> = {
+  blue: '#ffffff',
+  brown: '#faf6ee',
+  pink: '#ffffff',
+  green: '#ffffff',
+  purple: '#1d1930',
+  red: '#ffffff',
+  gray: '#f6f5f2',
+  system: '#f8fafc'
+}
 const dotColor = (accent: ThemeAccent | null) => accentColor[accent ?? 'system']
+const surfaceOf = (accent: ThemeAccent | null) => surfaceColor[accent ?? 'system']
+// 明暗标注：帮助理解"为什么切换后整体明暗会变"，不拆成两个控件（维持一键切换）
+const modeLabel = (id: string) => {
+  const t = THEMES.find(x => x.id === id)
+  if (!t) return ''
+  if (t.system) return '跟随系统'
+  return t.mode === 'dark' ? '深' : '浅'
+}
 const currentTheme = computed(() => themeStore.currentTheme)
 
 function setExpanded(v: boolean) {
@@ -83,7 +103,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
       @click="toggleOpen"
       @keydown="onTriggerKeydown"
     >
-      <span class="theme-dot" :style="{ background: dotColor(currentTheme.accent) }"></span>
+      <span
+        class="theme-swatch"
+        :style="{ '--sw-surface': surfaceOf(currentTheme.accent), '--sw-accent': dotColor(currentTheme.accent) }"
+      ></span>
       <span class="theme-name">{{ currentTheme.name }}</span>
       <svg class="theme-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M6 9l6 6 6-6" />
@@ -110,8 +133,12 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
         @click="selectTheme(t.id)"
         @mousemove="activeIndex = i"
       >
-        <span class="theme-dot" :style="{ background: dotColor(t.accent) }"></span>
+        <span
+          class="theme-swatch"
+          :style="{ '--sw-surface': surfaceOf(t.accent), '--sw-accent': dotColor(t.accent) }"
+        ></span>
         <span class="theme-option-name">{{ t.name }}</span>
+        <span class="theme-option-mode">{{ modeLabel(t.id) }}</span>
         <svg v-if="t.id === themeStore.currentThemeId" class="theme-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M5 13l4 4L19 7" />
         </svg>
@@ -158,12 +185,31 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 .theme-toggle:active:not(:disabled) {
   transform: var(--motion-press, scale(0.97));
 }
-.theme-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+/* 主题预览色块：外圈=该主题的表面底色，内芯=主色（两者一起才反映真实观感） */
+.theme-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
   flex: 0 0 auto;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  background: var(--sw-surface, #fff);
+  border: 1px solid var(--color-border-strong, #cbd5e1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-swatch::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sw-accent, var(--color-primary));
+}
+
+/* 键盘焦点可见（WCAG 2.4.7 / 2.4.11：焦点指示 ≥3:1） */
+.theme-toggle:focus-visible,
+.theme-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 .theme-name {
   white-space: nowrap;
@@ -218,6 +264,14 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 .theme-option-name {
   flex: 1;
 }
+.theme-option-mode {
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-muted);
+  padding: 1px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full, 9999px);
+}
 .theme-check {
   width: 16px;
   height: 16px;
@@ -260,6 +314,12 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
   .theme-name {
     display: none;
   }
+}
+
+/* 触屏设备：触控目标 ≥44px（WCAG 2.5.5 Target Size） */
+@media (pointer: coarse) {
+  .theme-toggle { min-height: 44px; }
+  .theme-option { min-height: 44px; }
 }
 
 @keyframes theme-sheet-up {

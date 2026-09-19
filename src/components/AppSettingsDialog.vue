@@ -1555,7 +1555,7 @@ onUnmounted(() => {
             <h3 class="wb-menu-title">主题</h3>
             <ThemeToggle />
           </div>
-          <p class="wb-menu-hint">切换亮色 / 暗色外观，修改即时生效并随云同步跨设备。</p>
+          <p class="wb-menu-hint">选择一个主题，页面底色、卡片、表格与弹框会整体跟随（不只是按钮主色）；修改即时生效并随云同步跨设备。</p>
 
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">经典侧边栏</h3>

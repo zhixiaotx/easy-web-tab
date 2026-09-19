@@ -529,10 +529,6 @@ onMounted(() => {
   flex: 1 1 auto;
   min-height: 220px;
   width: 100% !important;
-  --el-table-border-color: var(--color-border, #e5e7eb);
-  --el-table-header-bg-color: var(--color-bg-hover, #f3f4f6);
-  --el-table-tr-bg-color: transparent;
-  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.06);
   font-size: 13px;
   border-radius: 10px;
   overflow: hidden;
@@ -545,11 +541,6 @@ onMounted(() => {
 }
 .sp-list > :global(.el-table td.el-table__cell) {
   color: var(--color-text, #111827);
-}
-:global(html.dark) .sp-list > :global(.el-table) {
-  --el-table-border-color: var(--color-border, #374151);
-  --el-table-header-bg-color: var(--color-bg-hover, #111827);
-  --el-table-tr-bg-color: transparent;
 }
 :global(html.dark) .sp-list > :global(.el-table th.el-table__cell) {
   background-color: var(--color-bg-hover, #111827) !important;

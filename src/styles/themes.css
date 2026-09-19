@@ -1,11 +1,24 @@
 /* ============================================================
    多主题强调色覆盖 (accent)
-   驱动 --color-primary 系列；Element Plus 主色经 element-theme.css
-   引用 --color-primary-* 自动跟随，消除暗黑绿蓝割裂。
+
+   每个 accent 提供三层，缺一不可：
+     1) 主色系   --color-primary*                  （明暗通用，无条件覆盖）
+     2) 浅色表面系 html:not(.dark)[data-accent='x'] （页面底色/卡片/边框/文字）
+     3) 深色表面系 html.dark[data-accent='x']
+
+   为什么必须有表面系：导航站与三个工作台的主体是"卡片 + 页面背景"，
+   只改 --color-primary* 时观感几乎无变化（切换无感）。表面系才是主题辨识度的来源。
+
+   为什么必须区分明暗作用域：本文件加载在 dark.css 之后，若像早期那样无条件
+   覆盖表面色，浅色米黄/莫兰迪表面会在深色模式下把底色刷白。因此浅色表面限定
+   html:not(.dark)，深色表面另给 html.dark 版本。
+
+   对比度：--color-text / -secondary / -muted 均按正文标准 ≥4.5:1 校准（WCAG AA）。
+
    加载顺序须在 dark.css 之后（main.ts 末行 import），确保覆盖其 primary。
    ============================================================ */
 
-/* 蓝（默认，浅/暗通用；与 :root / dark.css 一致，显式声明确保切换回蓝正确） */
+/* ============================== 经典蓝 ============================== */
 html[data-accent='blue'] {
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
@@ -20,9 +33,46 @@ html[data-accent='blue'] {
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
   --color-primary-light: #eff6ff;
+  --color-border-focus: #3b82f6;
+}
+/* 蓝·浅：冷调蓝灰表面 */
+html:not(.dark)[data-accent='blue'] {
+  --color-bg: #f5f8fc;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #eaf1fa;
+  --color-bg-active: #dce8f6;
+  --color-bg-input: #eef3fa;
+  --color-border: #dbe4f0;
+  --color-border-hover: #bccfe8;
+  --color-text: #16233a;
+  --color-text-secondary: #4f5d75;
+  --color-text-muted: #5f6c85;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f8fc;
+  --color-hover: #eaf1fa;
+  --color-primary-soft: rgba(59, 130, 246, 0.10);
+  --color-border-strong: #a9c0de;
+}
+/* 蓝·深 */
+html.dark[data-accent='blue'] {
+  --color-bg: #0f1623;
+  --color-bg-card: #172033;
+  --color-bg-hover: #1f2a3f;
+  --color-bg-active: #26364f;
+  --color-bg-input: #1c2637;
+  --color-border: #2a3648;
+  --color-border-hover: #3a4a63;
+  --color-text: #eaf1fb;
+  --color-text-secondary: #b9c6da;
+  --color-text-muted: #8b9ab2;
+  --color-surface: #172033;
+  --color-surface-2: #0f1623;
+  --color-hover: #1f2a3f;
+  --color-primary-soft: rgba(96, 165, 250, 0.20);
+  --color-border-strong: #46586f;
 }
 
-/* 护眼·米黄（浅色专属：柔和棕强调 + 米黄表面，降低冷蓝、提升长时间阅读舒适度） */
+/* ============================== 护眼·米黄 ============================== */
 html[data-accent='brown'] {
   --color-primary: #a47551;
   --color-primary-hover: #8c5e3f;
@@ -38,25 +88,45 @@ html[data-accent='brown'] {
   --color-primary-900: #4a3222;
   --color-primary-light: #faf5ef;
   --color-border-focus: #a47551;
-  /* 米黄表面系 */
+}
+/* 米黄·浅：暖调纸质表面，长时间阅读舒适 */
+html:not(.dark)[data-accent='brown'] {
   --color-bg: #f3ede2;
   --color-bg-card: #faf6ee;
   --color-bg-hover: #ece3d3;
+  --color-bg-active: #e2d8c6;
   --color-bg-input: #f1e9da;
   --color-border: #e3d8c4;
   --color-border-hover: #d4c6ad;
   --color-text: #44403a;
   --color-text-secondary: #6b6354;
-  --color-text-muted: #8a8170;
-  /* 米黄表面系（卡片/柔光底随主题统一为米黄调，避免白卡突兀） */
+  --color-text-muted: #6f6757;
   --color-surface: #faf6ee;
   --color-surface-2: #f3ede2;
   --color-hover: #ece3d3;
   --color-primary-soft: rgba(164, 117, 81, 0.14);
   --color-border-strong: #d9c8ad;
 }
+/* 米黄·深 */
+html.dark[data-accent='brown'] {
+  --color-bg: #1b1712;
+  --color-bg-card: #241f18;
+  --color-bg-hover: #2e2820;
+  --color-bg-active: #382f25;
+  --color-bg-input: #2a241c;
+  --color-border: #3a3227;
+  --color-border-hover: #4c4234;
+  --color-text: #f2ece1;
+  --color-text-secondary: #d3c9b8;
+  --color-text-muted: #a89c89;
+  --color-surface: #241f18;
+  --color-surface-2: #1b1712;
+  --color-hover: #2e2820;
+  --color-primary-soft: rgba(196, 149, 105, 0.22);
+  --color-border-strong: #5b4f3f;
+}
 
-/* 樱粉（浅色专属） */
+/* ============================== 樱粉 ============================== */
 html[data-accent='pink'] {
   --color-primary: #ec4899;
   --color-primary-hover: #db2777;
@@ -73,8 +143,44 @@ html[data-accent='pink'] {
   --color-primary-light: #fce7f3;
   --color-border-focus: #ec4899;
 }
+/* 樱粉·浅 */
+html:not(.dark)[data-accent='pink'] {
+  --color-bg: #fdf6f9;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #fbe9f1;
+  --color-bg-active: #f6d8e6;
+  --color-bg-input: #fcedf4;
+  --color-border: #f5dbe7;
+  --color-border-hover: #eabfd6;
+  --color-text: #33212a;
+  --color-text-secondary: #6b5561;
+  --color-text-muted: #7d6473;
+  --color-surface: #ffffff;
+  --color-surface-2: #fdf6f9;
+  --color-hover: #fbe9f1;
+  --color-primary-soft: rgba(236, 72, 153, 0.10);
+  --color-border-strong: #dfa8c4;
+}
+/* 樱粉·深 */
+html.dark[data-accent='pink'] {
+  --color-bg: #1a1218;
+  --color-bg-card: #241a21;
+  --color-bg-hover: #2f222b;
+  --color-bg-active: #3a2a35;
+  --color-bg-input: #2a1e26;
+  --color-border: #3a2b34;
+  --color-border-hover: #4d3944;
+  --color-text: #fbecf3;
+  --color-text-secondary: #dcc4d0;
+  --color-text-muted: #a88f9d;
+  --color-surface: #241a21;
+  --color-surface-2: #1a1218;
+  --color-hover: #2f222b;
+  --color-primary-soft: rgba(244, 114, 182, 0.20);
+  --color-border-strong: #5d4653;
+}
 
-/* 青柠（浅色专属，呼应成功绿） */
+/* ============================== 青柠 ============================== */
 html[data-accent='green'] {
   --color-primary: #22c55e;
   --color-primary-hover: #16a34a;
@@ -91,8 +197,44 @@ html[data-accent='green'] {
   --color-primary-light: #dcfce7;
   --color-border-focus: #22c55e;
 }
+/* 青柠·浅 */
+html:not(.dark)[data-accent='green'] {
+  --color-bg: #f4faf5;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #e8f5ea;
+  --color-bg-active: #d8ecdc;
+  --color-bg-input: #eef7ef;
+  --color-border: #d9ebdd;
+  --color-border-hover: #b7d8bf;
+  --color-text: #172a1d;
+  --color-text-secondary: #4e6153;
+  --color-text-muted: #5f7164;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4faf5;
+  --color-hover: #e8f5ea;
+  --color-primary-soft: rgba(34, 197, 94, 0.10);
+  --color-border-strong: #9dc8a8;
+}
+/* 青柠·深 */
+html.dark[data-accent='green'] {
+  --color-bg: #101a13;
+  --color-bg-card: #18241c;
+  --color-bg-hover: #203027;
+  --color-bg-active: #283a2f;
+  --color-bg-input: #1c2a21;
+  --color-border: #2a3b2f;
+  --color-border-hover: #3a4f41;
+  --color-text: #e9f5ec;
+  --color-text-secondary: #bcd2c2;
+  --color-text-muted: #8ea595;
+  --color-surface: #18241c;
+  --color-surface-2: #101a13;
+  --color-hover: #203027;
+  --color-primary-soft: rgba(74, 222, 128, 0.20);
+  --color-border-strong: #47604d;
+}
 
-/* 科技紫（深色专属） */
+/* ============================== 科技紫 ============================== */
 html[data-accent='purple'] {
   --color-primary: #8b5cf6;
   --color-primary-hover: #7c3aed;
@@ -109,8 +251,44 @@ html[data-accent='purple'] {
   --color-primary-light: #ede9fe;
   --color-border-focus: #8b5cf6;
 }
+/* 科技紫·浅 */
+html:not(.dark)[data-accent='purple'] {
+  --color-bg: #f8f6fd;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #efeaf9;
+  --color-bg-active: #e2daf4;
+  --color-bg-input: #f3effb;
+  --color-border: #e4dcf5;
+  --color-border-hover: #c8bcea;
+  --color-text: #221c38;
+  --color-text-secondary: #5b5478;
+  --color-text-muted: #6d6590;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8f6fd;
+  --color-hover: #efeaf9;
+  --color-primary-soft: rgba(139, 92, 246, 0.10);
+  --color-border-strong: #b0a1dc;
+}
+/* 科技紫·深 */
+html.dark[data-accent='purple'] {
+  --color-bg: #141122;
+  --color-bg-card: #1d1930;
+  --color-bg-hover: #272140;
+  --color-bg-active: #30294e;
+  --color-bg-input: #221d38;
+  --color-border: #322a4e;
+  --color-border-hover: #443a68;
+  --color-text: #efeafd;
+  --color-text-secondary: #c7bee0;
+  --color-text-muted: #968cb4;
+  --color-surface: #1d1930;
+  --color-surface-2: #141122;
+  --color-hover: #272140;
+  --color-primary-soft: rgba(167, 139, 250, 0.22);
+  --color-border-strong: #52457c;
+}
 
-/* 中国红（浅色专属：经典正红主色，喜庆中国风，呼应传统朱红） */
+/* ============================== 中国红 ============================== */
 html[data-accent='red'] {
   --color-primary: #c8102e;
   --color-primary-hover: #a60d24;
@@ -127,8 +305,44 @@ html[data-accent='red'] {
   --color-primary-light: #fdecec;
   --color-border-focus: #c8102e;
 }
+/* 中国红·浅：暖调朱红表面（默认主题，切换后卡片与底色整体转暖） */
+html:not(.dark)[data-accent='red'] {
+  --color-bg: #fdf6f5;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #fbe9e7;
+  --color-bg-active: #f6d9d5;
+  --color-bg-input: #fceeeb;
+  --color-border: #f4dcd8;
+  --color-border-hover: #e8bcb5;
+  --color-text: #2c1a1a;
+  --color-text-secondary: #6b4c4a;
+  --color-text-muted: #7f605d;
+  --color-surface: #ffffff;
+  --color-surface-2: #fdf6f5;
+  --color-hover: #fbe9e7;
+  --color-primary-soft: rgba(200, 16, 46, 0.10);
+  --color-border-strong: #dc9f96;
+}
+/* 中国红·深 */
+html.dark[data-accent='red'] {
+  --color-bg: #1a1012;
+  --color-bg-card: #241619;
+  --color-bg-hover: #301d21;
+  --color-bg-active: #3b252a;
+  --color-bg-input: #2b1a1e;
+  --color-border: #3c262a;
+  --color-border-hover: #503338;
+  --color-text: #fbeceb;
+  --color-text-secondary: #dcc4c2;
+  --color-text-muted: #a8908e;
+  --color-surface: #241619;
+  --color-surface-2: #1a1012;
+  --color-hover: #301d21;
+  --color-primary-soft: rgba(224, 83, 83, 0.22);
+  --color-border-strong: #613e44;
+}
 
-/* 莫兰迪灰（浅色专属：低饱和灰蓝主色 + 暖灰表面，中性优雅高级灰调） */
+/* ============================== 莫兰迪·灰 ============================== */
 html[data-accent='gray'] {
   --color-primary: #6c7a8c;
   --color-primary-hover: #5a6779;
@@ -144,20 +358,40 @@ html[data-accent='gray'] {
   --color-primary-900: #2f3640;
   --color-primary-light: #eef1f2;
   --color-border-focus: #6c7a8c;
-  /* 莫兰迪暖灰表面系 */
+}
+/* 莫兰迪·浅：低饱和暖灰表面 */
+html:not(.dark)[data-accent='gray'] {
   --color-bg: #eceae6;
   --color-bg-card: #f6f5f2;
   --color-bg-hover: #e3e1dc;
+  --color-bg-active: #d8d5ce;
   --color-bg-input: #efece7;
   --color-border: #d9d6d0;
   --color-border-hover: #c8c4bc;
   --color-text: #4a4844;
   --color-text-secondary: #6c6964;
-  --color-text-muted: #908c85;
-  /* 莫兰迪表面系（卡片/柔光底随主题统一为暖灰调） */
+  --color-text-muted: #69655e;
   --color-surface: #f6f5f2;
   --color-surface-2: #eeece8;
   --color-hover: #e3e1dc;
   --color-primary-soft: rgba(108, 122, 140, 0.14);
   --color-border-strong: #c8c4bc;
+}
+/* 莫兰迪·深 */
+html.dark[data-accent='gray'] {
+  --color-bg: #141516;
+  --color-bg-card: #1d1f21;
+  --color-bg-hover: #282b2d;
+  --color-bg-active: #333638;
+  --color-bg-input: #232628;
+  --color-border: #33373a;
+  --color-border-hover: #454a4e;
+  --color-text: #eceaea;
+  --color-text-secondary: #c6c3c0;
+  --color-text-muted: #979490;
+  --color-surface: #1d1f21;
+  --color-surface-2: #141516;
+  --color-hover: #282b2d;
+  --color-primary-soft: rgba(145, 158, 171, 0.22);
+  --color-border-strong: #53585d;
 }

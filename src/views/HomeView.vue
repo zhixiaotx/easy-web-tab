@@ -15,7 +15,6 @@ import IconManager from '../components/IconManager.vue'
 import SearchEngineManager from '../components/SearchEngineManager.vue'
 import HelpModal from '../components/HelpModal.vue'
 import CountdownModal from '@/components/CountdownModal.vue'
-import ThemeToggle from '../components/ThemeToggle.vue'
 import Icon from '../components/Icon.vue'
 import AppSettingsDialog from '../components/AppSettingsDialog.vue'
 import { useSitesStore } from '../stores/sites'
@@ -46,12 +45,11 @@ const editingSite = ref<Site | null>(null)
 
 // ===== 视图模式：经典网格 / 侧边栏导航（默认经典，零改动） =====
 type ViewMode = 'classic' | 'sidebar'
-const viewMode = ref<ViewMode>('classic')
+const viewMode = computed<ViewMode>({
+  get: () => settingsStore.viewMode,
+  set: (v) => settingsStore.setViewMode(v)
+})
 const sidebarOpen = ref(false) // 仅移动端抽屉用
-function setViewMode(mode: ViewMode): void {
-  viewMode.value = mode
-  if (mode === 'classic') sidebarOpen.value = false
-}
 function toggleSidebar(): void {
   sidebarOpen.value = !sidebarOpen.value
 }
@@ -346,7 +344,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=主题/同步/设置/帮助/前台/视图切换 -->
+  <!-- 顶部统一 App Bar：左=工作台/销售台/学生台入口，右=同步/设置/帮助/倒计时；主题与经典侧边栏已迁入 设置→导航设置→显示控制 -->
   <div class="app-bar">
     <div class="app-bar-left">
       <button v-if="settingsStore.workbenchPageVisible !== false" class="btn-help" @click="router.push('/workbench')" :title="settingsStore.workbenchPageDisplayName"><Icon name="toolbox" /> <span class="nav-entry-label">{{ settingsStore.workbenchPageDisplayName }}</span></button>
@@ -354,7 +352,6 @@ onUnmounted(() => {
       <button v-if="settingsStore.studentPageVisible !== false" class="btn-help" data-testid="nav-student-entry" @click="router.push('/student')" :title="settingsStore.studentPageDisplayName"><Icon name="notes" /> <span class="nav-entry-label">{{ settingsStore.studentPageDisplayName }}</span></button>
     </div>
     <div class="app-bar-right">
-      <ThemeToggle />
       <button
         v-if="cloudEnabled"
         class="btn-help wb-sync-btn"
@@ -364,34 +361,10 @@ onUnmounted(() => {
         :disabled="syncBusy || cloudSync.status.value === 'pulling' || cloudSync.status.value === 'pushing'"
         @click="handleSyncNowClick"
       >{{ syncLabel }}</button>
-      <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置"><Icon name="cog" /></button>
+      <button class="btn-help" @click="showSettingsDialog = true" title="设置" aria-label="设置">设置</button>
       <button class="btn-help" @click="openHelp" title="帮助" aria-label="帮助">帮助</button>
       <button class="btn-help" @click="showCountdownModal = true" title="倒计时" aria-label="倒计时"><Icon name="timer-sand" /></button>
 
-      <!-- 视图模式切换（经典 ⇄ 侧边栏）：右侧对齐，滑动开关 -->
-      <div class="view-toggle" role="group" aria-label="视图模式切换">
-        <button
-          type="button"
-          class="view-toggle-opt"
-          :class="{ active: viewMode === 'classic' }"
-          :aria-pressed="viewMode === 'classic'"
-          @click="setViewMode('classic')"
-        >
-          <svg class="vt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3V3m10 0h8v8h-8V3M3 13h8v8H3v-8m10 0h8v8h-8v-8z" /></svg>
-          <span>经典</span>
-        </button>
-        <button
-          type="button"
-          class="view-toggle-opt"
-          :class="{ active: viewMode === 'sidebar' }"
-          :aria-pressed="viewMode === 'sidebar'"
-          @click="setViewMode('sidebar')"
-        >
-          <svg class="vt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z" /></svg>
-          <span>侧边栏</span>
-        </button>
-        <span class="view-toggle-thumb" :class="{ right: viewMode === 'sidebar' }"></span>
-      </div>
     </div>
   </div>
 
@@ -634,65 +607,6 @@ onUnmounted(() => {
   background-color: var(--color-bg-hover, #f1f5f9);
   color: var(--color-primary, #3b82f6);
   border-color: var(--color-border, #e2e8f0);
-}
-
-/* ===== 视图模式切换：经典 ⇄ 侧边栏（右侧对齐滑动开关） ===== */
-.view-toggle {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-  width: 176px;
-  margin-left: auto; /* 在 App Bar 右侧组中推到最右，确保靠右对齐 */
-  padding: 3px;
-  background-color: var(--color-bg-hover, #f1f5f9);
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  box-sizing: border-box;
-}
-.view-toggle-opt {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 6px 4px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 13px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: color 0.2s;
-  white-space: nowrap;
-}
-.view-toggle-opt .vt-ico {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-}
-.view-toggle-opt.active {
-  color: #fff;
-}
-.view-toggle-opt:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
-  outline-offset: 1px;
-}
-.view-toggle-thumb {
-  position: absolute;
-  z-index: 0;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc(50% - 3px);
-  border-radius: 999px;
-  background-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-  transition: transform 0.22s var(--motion-ease, ease);
-}
-.view-toggle-thumb.right {
-  transform: translateX(100%);
 }
 
 /* ===== 侧边栏导航布局 ===== */
@@ -1056,11 +970,7 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
   border-color: var(--color-border, #374151);
 }
 
-/* 暗色模式下的侧边栏 / 切换控件 */
-html.dark .view-toggle {
-  background-color: var(--color-bg-hover, #374151);
-  border-color: var(--color-border, #374151);
-}
+/* 暗色模式下的侧边栏 */
 html.dark .nav-sidebar {
   background-color: var(--color-surface, #1f2937);
   border-right-color: var(--color-border, #374151);

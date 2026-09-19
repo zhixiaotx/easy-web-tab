@@ -230,6 +230,7 @@ export interface AppSettingsData {
   cloudSyncInterval?: number           // 后台定时同步间隔（0 = 仅触发式，>0 = 分钟数）
   cloudSyncSilentThreshold?: number    // 静默合并阈值（本地与云端差异字符数 < 此值时后台静默合并，0=永不静默，默认 1000）
   homeCardLayout?: Record<string, HomeCardLayout> // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）
+  viewMode?: 'classic' | 'sidebar' // 导航管理页视图模式（经典网格 / 侧边栏导航；默认 'classic'，随 workbench 信封云同步）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

@@ -28,6 +28,7 @@ import type { SnapshotRecord } from '@/composables/snapshotCore'
 import { useWorkbenchTodosStore } from '@/stores/workbenchTodos'
 import { useWorkbenchNotesStore } from '@/stores/workbenchNotes'
 import { useWorkbenchDiaryStore } from '@/stores/workbenchDiary'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useCountdownsStore } from '@/stores/countdowns'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useWorkbenchHealthStore } from '@/stores/workbenchHealth'
@@ -1482,6 +1483,36 @@ onUnmounted(() => {
           </p>
         </div>
 
+        <!-- 主题与视图模式（导航设置 tab - 显示控制）：主题切换 + 经典/侧边栏视图，置于导航筛选栏之上 -->
+        <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config">
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">主题</h3>
+            <ThemeToggle />
+          </div>
+          <p class="wb-menu-hint">切换亮色 / 暗色外观，修改即时生效并随云同步跨设备。</p>
+
+          <div class="wb-menu-head">
+            <h3 class="wb-menu-title">经典侧边栏</h3>
+            <div class="seg-control" role="group" aria-label="视图模式切换">
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.viewMode === 'classic' }"
+                :aria-pressed="store.viewMode === 'classic'"
+                @click="store.setViewMode('classic')"
+              >经典</button>
+              <button
+                type="button"
+                class="seg-opt"
+                :class="{ active: store.viewMode === 'sidebar' }"
+                :aria-pressed="store.viewMode === 'sidebar'"
+                @click="store.setViewMode('sidebar')"
+              >侧边栏</button>
+            </div>
+          </div>
+          <p class="wb-menu-hint">管理页布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
+        </div>
+
         <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config nav-filter-config">
           <div class="wb-menu-head">
@@ -2915,6 +2946,45 @@ html.dark .tab-btn.active {
 .wb-menu-btn:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* 分段控件（显示控制：经典 / 侧边栏 视图模式二选一） */
+.seg-control {
+  display: inline-flex;
+  flex: none;
+  padding: 3px;
+  background-color: var(--color-bg-hover, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+.seg-opt {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 18px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s;
+  white-space: nowrap;
+}
+.seg-opt.active {
+  background-color: var(--color-primary, #3b82f6);
+  color: #fff;
+}
+.seg-opt:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 1px;
+}
+html.dark .seg-control {
+  background-color: var(--color-bg-hover, #374151);
+  border-color: var(--color-border, #374151);
 }
 
 /* 开关按钮（工作台菜单显示开关 / 导航筛选栏展开控制共用） */

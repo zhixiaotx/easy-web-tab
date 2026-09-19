@@ -247,6 +247,10 @@ function parseSettingsData(raw: unknown): AppSettingsData {
   if (typeof data.navFiltersExpanded === 'boolean') {
     out.navFiltersExpanded = data.navFiltersExpanded
   }
+  // 导航视图模式：仅采纳合法枚举；非法/缺失回退默认（经典）
+  if (data.viewMode === 'classic' || data.viewMode === 'sidebar') {
+    out.viewMode = data.viewMode
+  }
   // 页面命名与可见性（工作台/销售记账）
   if (typeof data.workbenchPageName === 'string') {
     out.workbenchPageName = data.workbenchPageName.trim()
@@ -332,6 +336,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   // 导航管理页分类/标签栏展开态：默认收起（false）
   const navFiltersExpanded = ref<boolean>(false)
 
+  // 导航管理页视图模式：经典网格 / 侧边栏导航（默认 classic）
+  const viewMode = ref<'classic' | 'sidebar'>('classic')
+
   // 页面命名与可见性（工作台/销售记账/学生工作台）
   const workbenchPageName = ref<string>('')
   const workbenchPageVisible = ref<boolean>(true)
@@ -382,6 +389,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       businessSidebarCollapsed: toRaw(businessSidebarCollapsed.value),
       businessActiveSection: toRaw(businessActiveSection.value),
       navFiltersExpanded: navFiltersExpanded.value,
+      viewMode: viewMode.value,
       workbenchPageName: workbenchPageName.value,
       workbenchPageVisible: workbenchPageVisible.value,
       businessPageName: businessPageName.value,
@@ -503,6 +511,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       workbenchMenuLabels.value = menu.labels
       workbenchMenuVisibility.value = normalizeWorkbenchMenuVisibility(effective.workbenchMenuVisibility)
       navFiltersExpanded.value = effective.navFiltersExpanded === true
+      viewMode.value = effective.viewMode === 'sidebar' ? 'sidebar' : 'classic'
       workbenchPageName.value = typeof effective.workbenchPageName === 'string' ? effective.workbenchPageName.trim() : ''
       workbenchPageVisible.value = effective.workbenchPageVisible !== false
       businessPageName.value = typeof effective.businessPageName === 'string' ? effective.businessPageName.trim() : ''
@@ -636,6 +645,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     businessActiveSection.value = undefined
     homeCardLayout.value = {}
     navFiltersExpanded.value = false
+    viewMode.value = 'classic'
     workbenchPageName.value = ''
     workbenchPageVisible.value = true
     businessPageName.value = ''
@@ -711,6 +721,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   function setNavFiltersExpanded(v: boolean) {
     navFiltersExpanded.value = v
+    persist()
+  }
+
+  function setViewMode(v: 'classic' | 'sidebar') {
+    viewMode.value = v
     persist()
   }
 
@@ -915,6 +930,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     workbenchSidebarCollapsed,
     businessActiveSection,
     navFiltersExpanded,
+    viewMode,
     workbenchPageName,
     workbenchPageVisible,
     businessPageName,
@@ -952,6 +968,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setWorkbenchMenuVisibility,
     isWorkbenchMenuEnabled,
     setNavFiltersExpanded,
+    setViewMode,
     setWorkbenchPageName,
     setWorkbenchPageVisible,
     setBusinessPageName,

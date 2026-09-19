@@ -209,7 +209,7 @@ export interface AppSettingsData {
   workbenchCity?: string // 天气卡城市（trim 后非空；空串/undefined/null = 未配置）
   workbenchSidebarCollapsed?: boolean // 工作台侧栏折叠态（非法/缺失 = 未配置即展开）
   businessSidebarCollapsed?: boolean // 销售记账工作台侧栏折叠态（非法/缺失 = 未配置即展开）
-  navFiltersExpanded?: boolean // 导航管理页分类/标签栏展开态（默认 false = 收起）
+  navFiltersExpanded?: boolean // 导航站分类/标签栏展开态（默认 false = 收起）
   desktopNotifyEnabled?: boolean // 定时提醒桌面通知总开关（默认 false = 关闭）
   reminderEmailEnabled?: boolean // 定时提醒邮件总开关（默认 false = 关闭）
   reminderEmailTo?: string // EmailJS 收件邮箱（空串 = 未配置）
@@ -230,7 +230,7 @@ export interface AppSettingsData {
   cloudSyncInterval?: number           // 后台定时同步间隔（0 = 仅触发式，>0 = 分钟数）
   cloudSyncSilentThreshold?: number    // 静默合并阈值（本地与云端差异字符数 < 此值时后台静默合并，0=永不静默，默认 1000）
   homeCardLayout?: Record<string, HomeCardLayout> // 工作台主页卡片布局（卡片 id → 列跨度/最小高度/排序）
-  viewMode?: 'classic' | 'sidebar' // 导航管理页视图模式（经典网格 / 侧边栏导航；默认 'classic'，随 workbench 信封云同步）
+  viewMode?: 'classic' | 'sidebar' // 导航站视图模式（经典网格 / 侧边栏导航；默认 'classic'，随 workbench 信封云同步）
 }
 
 export function emptyAppSettingsData(): AppSettingsData {

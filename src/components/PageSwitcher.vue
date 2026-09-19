@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// 工作台头部「页面切换下拉」：替代原来的「返回管理页」箭头按钮。
-// 显示当前所在页名称，点击展开菜单，可跳到管理页与其他工作台（隐藏的页面不列出，当前页排除）。
+// 工作台头部「页面切换下拉」：替代原来的「返回导航站」箭头按钮。
+// 显示当前所在页名称，点击展开菜单，可跳到导航站与其他工作台（隐藏的页面不列出，当前页排除）。
 // 三个工作台视图（Workbench / Business / Student）共用，样式自包含在 scoped 内。
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -27,7 +27,7 @@ const PAGES: Record<PageKey, { path: string; icon: string }> = {
 const nameOf = (key: PageKey): string => {
   switch (key) {
     case 'home':
-      return '管理页'
+      return '导航站'
     case 'workbench':
       return settings.workbenchPageDisplayName
     case 'business':

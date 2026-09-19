@@ -106,11 +106,11 @@ html.dark body.app-has-background.image .container {
 }
 
 /* ========================================
-   个人工作台（WorkbenchView）：不受管理页背景影响，始终使用自身不透明背景
+   个人工作台（WorkbenchView）：不受导航站背景影响，始终使用自身不透明背景
    选择器为普通全局 CSS（background.css 经 main.ts 全局引入，无 scoped 转换）。
    ======================================== */
 
-/* 工作台/销售记账外壳始终不透明，隔离管理页导航背景 */
+/* 工作台/销售记账外壳始终不透明，隔离导航站背景 */
 .wb-shell,
 .bs-shell {
   background-color: var(--color-bg, #f8fafc) !important;

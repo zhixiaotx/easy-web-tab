@@ -64,7 +64,7 @@ type NavSubTab = 'nav-appearance' | 'nav-display' | 'nav-site' | 'nav-size'
 type WbSubTab = 'wb-city' | 'wb-menu' | 'wb-card' | 'wb-cat' | 'wb-backup' | 'wb-snapshot' | 'wb-size'
 type BizSubTab = 'biz-base' | 'biz-backup'
 type StuSubTab = 'stu-stage' | 'stu-info' | 'stu-subject' | 'stu-menu'
-/** 来源页：nav=管理页、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
+/** 来源页：nav=导航站、workbench=个人工作台、business=销售记账、student=学生工作台、all=全显示(向后兼容) */
 type SettingsSource = 'nav' | 'workbench' | 'business' | 'student' | 'all'
 const props = withDefaults(defineProps<{ source?: SettingsSource }>(), { source: 'all' })
 
@@ -204,7 +204,7 @@ async function syncVercount() {
 }
 
 // ========================================
-// 站点管理（导航设置 tab）：原管理页工具栏九动作的迁移入口。
+// 站点管理（导航设置 tab）：原导航站工具栏九动作的迁移入口。
 // 弹窗类动作 = 先关本设置弹窗，再经 URL query 打开目标（与 HomeView 既有 URL 协议一致）；
 // 纯动作（导出/检测断链/导入）= 就地执行，不关设置。
 // ========================================
@@ -1510,10 +1510,10 @@ onUnmounted(() => {
               >侧边栏</button>
             </div>
           </div>
-          <p class="wb-menu-hint">管理页布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
+          <p class="wb-menu-hint">导航站布局：经典 = 卡片网格铺满；侧边栏 = 左侧分类导航 + 右侧内容。选择随刷新保留。</p>
         </div>
 
-        <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航管理页分类/标签栏展开或收起（默认收起） -->
+        <!-- 导航筛选栏（导航设置 tab - 显示控制）：控制导航站分类/标签栏展开或收起（默认收起） -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-display'" class="wb-menu-config nav-filter-config">
           <div class="wb-menu-head">
             <h3 class="wb-menu-title">导航筛选栏</h3>
@@ -1530,7 +1530,7 @@ onUnmounted(() => {
             </button>
           </div>
           <p class="wb-menu-hint">
-            控制导航管理页「分类 · 标签」筛选栏的展开与收起：{{ store.navFiltersExpanded ? '当前为展开模式' : '当前为收起模式（默认）' }}
+            控制导航站「分类 · 标签」筛选栏的展开与收起：{{ store.navFiltersExpanded ? '当前为展开模式' : '当前为收起模式（默认）' }}
           </p>
         </div>
 
@@ -1561,7 +1561,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制管理页「工作台」按钮的显示。关闭后工作台设置和提醒设置一并隐藏。
+            控制导航站「工作台」按钮的显示。关闭后工作台设置和提醒设置一并隐藏。
           </p>
 
           <!-- 销售记账 -->
@@ -1587,7 +1587,7 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制管理页「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
+            控制导航站「销售记账」按钮的显示。关闭后销售记账设置页一并隐藏。
           </p>
 
           <!-- 学生工作台 -->
@@ -1613,11 +1613,11 @@ onUnmounted(() => {
             </div>
           </div>
           <p class="wb-menu-hint">
-            控制管理页「学生工作台」按钮的显示。关闭后学生工作台设置页一并隐藏。
+            控制导航站「学生工作台」按钮的显示。关闭后学生工作台设置页一并隐藏。
           </p>
         </div>
 
-        <!-- 站点管理（导航设置 tab - 站点管理）：原管理页工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
+        <!-- 站点管理（导航设置 tab - 站点管理）：原导航站工具栏九动作迁移入口；弹窗类先关设置再开目标，纯动作就地执行 -->
         <div v-if="activeTab === 'nav' && activeSubTab === 'nav-site'" class="wb-menu-config">
           <h3 class="wb-menu-title">站点管理</h3>
           <div class="site-actions-grid" data-testid="stg-site-actions">
@@ -3258,8 +3258,8 @@ html.dark .remind-label {
 }
 
 /* ========================================
-   站点管理（导航设置 tab）：原管理页工具栏九动作按钮网格。
-   风格沿用管理页原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 html.dark 变量惯例
+   站点管理（导航设置 tab）：原导航站工具栏九动作按钮网格。
+   风格沿用导航站原 .btn-action（白底灰字蓝 hover）；暗色走文件既有 html.dark 变量惯例
    ======================================== */
 .site-actions-grid {
   display: flex;

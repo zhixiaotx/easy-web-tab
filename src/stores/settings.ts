@@ -333,10 +333,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const businessSidebarCollapsed = ref<boolean | undefined>(undefined)
   const businessActiveSection = ref<string | undefined>(undefined)
 
-  // 导航管理页分类/标签栏展开态：默认收起（false）
+  // 导航站分类/标签栏展开态：默认收起（false）
   const navFiltersExpanded = ref<boolean>(false)
 
-  // 导航管理页视图模式：经典网格 / 侧边栏导航（默认 classic）
+  // 导航站视图模式：经典网格 / 侧边栏导航（默认 classic）
   const viewMode = ref<'classic' | 'sidebar'>('classic')
 
   // 页面命名与可见性（工作台/销售记账/学生工作台）

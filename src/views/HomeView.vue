@@ -57,12 +57,12 @@ function toggleSidebar(): void {
 const sidebarCategories = computed(() => categoriesStore.allCategories)
 const countByCategory = computed<Record<string, number>>(() => {
   const counts: Record<string, number> = {}
-  for (const site of store.sites) {
+  for (const site of store.visibleSites) {
     counts[site.category] = (counts[site.category] ?? 0) + 1
   }
   return counts
 })
-const totalCount = computed(() => store.sites.length)
+const totalCount = computed(() => store.visibleSites.length)
 function selectCategory(id: string): void {
   if (store.selectedCategory === id) {
     store.setCategory('')
@@ -235,7 +235,7 @@ const hasAnyFilter = computed(
 )
 
 const filterCountText = computed(() => {
-  const total = store.sites.length
+  const total = store.visibleSites.length
   const shown = store.filteredSites.length
   return hasAnyFilter.value ? `筛选出 ${shown} / ${total} 个` : `共 ${total} 个`
 })

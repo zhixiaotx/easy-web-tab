@@ -103,10 +103,15 @@ export const useSitesStore = defineStore('sites', () => {
     currentPage.value = 1
   }, { deep: true })
 
+  // 排除「分类字段值为数值 0」的站点（数据层过滤：不渲染、不计数、不进分页）
+  const visibleSites = computed(() =>
+    sites.value.filter(site => (site.category as unknown as number) !== 0)
+  )
+
   // 获取所有分类（基于已有数据）
   const allCategories = computed(() => {
     const categorySet = new Set<string>()
-    sites.value.forEach(site => {
+    visibleSites.value.forEach(site => {
       if (site.category) {
         categorySet.add(site.category)
       }
@@ -129,7 +134,7 @@ export const useSitesStore = defineStore('sites', () => {
       return allTags.value
     }
     const tagSet = new Set<string>()
-    sites.value.forEach(site => {
+    visibleSites.value.forEach(site => {
       if (site.category === selectedCategory.value) {
         site.tags.forEach(tag => tagSet.add(tag))
       }
@@ -138,8 +143,8 @@ export const useSitesStore = defineStore('sites', () => {
   })
 
   const filteredSites = computed(() => {
-    // 先过滤
-    const filtered = sites.value.filter(site => {
+    // 先过滤（已排除分类值为数值 0 的站点）
+    const filtered = visibleSites.value.filter(site => {
       // 分类过滤
       if (selectedCategory.value && site.category !== selectedCategory.value) {
         return false
@@ -189,7 +194,7 @@ export const useSitesStore = defineStore('sites', () => {
   // 按分类分组的网站
   const sitesByCategory = computed(() => {
     const grouped: Record<string, Site[]> = {}
-    sites.value.forEach(site => {
+    visibleSites.value.forEach(site => {
       const cat = site.category || 'other'
       if (!grouped[cat]) {
         grouped[cat] = []
@@ -567,6 +572,7 @@ ${sitesList}
 
   return {
     sites,
+    visibleSites,
     searchQuery,
     selectedTags,
     selectedCategory,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, watchEffect } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Site } from '../types'
 import SiteCard from '../components/SiteCard.vue'
@@ -214,6 +214,39 @@ watchEffect(() => {
 })
 
 const filteredSites = computed(() => store.paginatedSites)
+
+// ===== 本站筛选：独立输入框，只过滤下方卡片列表；顶部 GlobalSearch 仍走外部搜索引擎 =====
+const siteFilter = ref(store.searchQuery)
+watch(siteFilter, (v) => {
+  store.setSearchQuery(v)
+})
+// 外部改了 store（清空筛选 / 分类联动）时回写输入框，保持双向一致
+watch(
+  () => store.searchQuery,
+  (v) => {
+    if (v !== siteFilter.value) siteFilter.value = v
+  }
+)
+
+const hasAnyFilter = computed(
+  () =>
+    store.searchQuery.trim() !== '' ||
+    store.selectedCategory !== '' ||
+    store.selectedTags.length > 0 ||
+    store.showOnlyInvalid
+)
+
+const filterCountText = computed(() => {
+  const total = store.sites.length
+  const shown = store.filteredSites.length
+  return hasAnyFilter.value ? `筛选出 ${shown} / ${total} 个` : `共 ${total} 个`
+})
+
+function clearAllFilters(): void {
+  store.clearFilters()
+  store.showOnlyInvalid = false
+  siteFilter.value = ''
+}
 
 // 关闭所有弹框并清除 URL query
 const closeAllModals = () => {
@@ -431,20 +464,39 @@ onUnmounted(() => {
         </div>
       </header>
 
-      <!-- 分类 · 标签筛选栏：折叠开关（默认收起，可在设置 → 导航设置 → 导航筛选栏切换模式）；侧边栏模式下由左侧菜单接管，隐藏此处 -->
-      <button
-        v-if="viewMode === 'classic'"
-        class="nav-filter-toggle"
-        data-testid="nav-filter-toggle"
-        :aria-expanded="settingsStore.navFiltersExpanded"
-        @click="settingsStore.setNavFiltersExpanded(!settingsStore.navFiltersExpanded)"
-      >
-        <span class="nav-filter-chevron" :class="{ open: settingsStore.navFiltersExpanded }">▸</span>
-        <span>分类 · 标签</span>
-        <span v-if="!settingsStore.navFiltersExpanded && (store.selectedCategory !== '' || store.selectedTags.length > 0 || store.showOnlyInvalid)" class="nav-filter-hint">
-          有筛选
-        </span>
-      </button>
+      <!-- 工具条：左侧「分类 · 标签」折叠开关（默认收起，可在设置 → 导航设置 → 导航筛选栏切换模式；侧边栏模式下由左侧菜单接管），右侧「筛选本站」只过滤下方卡片，与顶部外链搜索互不干扰 -->
+      <div class="nav-toolbar">
+        <button
+          v-if="viewMode === 'classic'"
+          class="nav-filter-toggle"
+          data-testid="nav-filter-toggle"
+          :aria-expanded="settingsStore.navFiltersExpanded"
+          @click="settingsStore.setNavFiltersExpanded(!settingsStore.navFiltersExpanded)"
+        >
+          <span class="nav-filter-chevron" :class="{ open: settingsStore.navFiltersExpanded }">▸</span>
+          <span>分类 · 标签</span>
+          <span v-if="!settingsStore.navFiltersExpanded && (store.selectedCategory !== '' || store.selectedTags.length > 0 || store.showOnlyInvalid)" class="nav-filter-hint">
+            有筛选
+          </span>
+        </button>
+
+        <span class="nav-filter-count">{{ filterCountText }}</span>
+
+        <div class="nav-site-filter">
+          <svg class="nsf-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+          <input
+            v-model="siteFilter"
+            type="text"
+            class="nsf-input"
+            data-testid="nav-site-filter"
+            placeholder="筛选本站…"
+            aria-label="按名称、描述或标签筛选本站"
+          />
+          <button v-if="siteFilter" type="button" class="nsf-clear" aria-label="清除关键词" @click="siteFilter = ''">×</button>
+        </div>
+
+        <button v-if="hasAnyFilter" type="button" class="nav-filter-clear" @click="clearAllFilters">清空筛选</button>
+      </div>
 
       <div v-if="viewMode === 'classic' && settingsStore.navFiltersExpanded" class="nav-filter-panel" data-testid="nav-filter-panel">
         <CategoryTabs />
@@ -861,6 +913,107 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+/* 工具条：分类·标签开关 + 结果计数 + 本站筛选 + 清空（右侧对齐） */
+.nav-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.nav-toolbar .nav-filter-toggle {
+  margin-top: 0;
+}
+
+.nav-filter-count {
+  font-size: 12px;
+  color: var(--color-text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.nav-site-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  height: 36px;
+  min-width: 200px;
+  padding: 0 10px;
+  background: var(--color-bg-card, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 18px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.nav-site-filter:focus-within {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.nsf-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-text-muted, #94a3b8);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.nsf-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-text, #334155);
+}
+
+.nsf-input::placeholder {
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.nsf-clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.nsf-clear:hover {
+  background: var(--color-border, #e2e8f0);
+  color: #ef4444;
+}
+
+.nav-filter-clear {
+  flex: none;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  background: transparent;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.nav-filter-clear:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
 .nav-filter-hint {
   font-size: 12px;
   color: #b45309;
@@ -942,6 +1095,21 @@ html.dark .view-hamburger {
   border-color: var(--color-border, #374151);
   color: var(--color-text-secondary, #d1d5db);
 }
+html.dark .nav-site-filter {
+  background-color: var(--color-bg-card, #1f2937);
+  border-color: var(--color-border, #374151);
+}
+html.dark .nsf-input {
+  color: var(--color-text, #e5e7eb);
+}
+html.dark .nsf-clear {
+  background-color: var(--color-bg-hover, #374151);
+  color: var(--color-text-secondary, #d1d5db);
+}
+html.dark .nav-filter-clear {
+  color: var(--color-text-secondary, #d1d5db);
+  border-color: var(--color-border, #374151);
+}
 
 @media (max-width: 768px) {
   .app-bar {
@@ -1010,8 +1178,17 @@ html.dark .view-hamburger {
     gap: 10px;
   }
 
-  .nav-filter-toggle {
+  .nav-toolbar {
     margin-top: 12px;
+    gap: 8px;
+  }
+
+  /* 窄屏：筛选框独占一行，避免和折叠开关互相挤压 */
+  .nav-site-filter {
+    margin-left: 0;
+    flex: 1 1 100%;
+    min-width: 0;
+    height: 40px;
   }
 
   .empty-state {

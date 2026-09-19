@@ -25,6 +25,7 @@ export interface MemberInput {
   deathDate?: string
   phone?: string
   note?: string
+  avatar?: string
 }
 
 export const useGenealogyStore = defineStore('genealogy', () => {

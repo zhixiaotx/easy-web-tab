@@ -273,6 +273,7 @@ export interface FamilyMember {
   deathDate?: string    // 可选（在世可空）
   phone?: string        // 可选
   note?: string         // 可选备注
+  avatar?: string       // 头像 base64 data URL（上传后压缩存储，可选）
   parents: string[]     // 父/母 id（不区分亲生/继/养）
   spouses: string[]     // 配偶 id（UI 仅一对一，模型允许多）
   createdAt: string

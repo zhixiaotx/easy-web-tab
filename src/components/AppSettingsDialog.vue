@@ -3305,7 +3305,10 @@ html.dark .remind-label {
 
 @media (max-width: 640px) {
   .manager {
-    max-height: 90vh;
+    width: 100%;
+    height: calc(100vh - 40px);
+    min-height: 0;
+    max-height: calc(100vh - 40px);
   }
 
   .grid-header {
@@ -3743,6 +3746,8 @@ html.dark .rail-item:hover { background-color: rgba(255, 255, 255, 0.06); }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .settings-content-head {
   display: flex;
@@ -3784,12 +3789,15 @@ html.dark .status-pill { color: #4ade80; background-color: rgba(74, 222, 128, 0.
   overflow-y: auto;
   padding: 20px 24px;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 @media (max-width: 768px) {
   .manager-body { flex-direction: column; }
   .settings-rail {
     width: 100%;
+    flex: 0 0 auto;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
     flex-direction: row;

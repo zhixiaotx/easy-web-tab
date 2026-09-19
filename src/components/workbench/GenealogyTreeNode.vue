@@ -98,6 +98,21 @@ function toggle() {
   font-weight: 400;
   color: var(--color-text-muted, #9ca3af);
 }
+.gtn-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary, #3b82f6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.gtn-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .gtn-root-badge {
   font-size: 11px;
   font-weight: 600;

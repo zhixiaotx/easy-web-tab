@@ -74,6 +74,70 @@ const formBirth = ref('')
 const formDeath = ref('')
 const formPhone = ref('')
 const formNote = ref('')
+const formAvatar = ref('')
+const avatarInput = ref<HTMLInputElement | null>(null)
+
+/** 读取图片文件 → 压缩为 ≤256px 的 JPEG base64 data URL（头像存储用，避免原图体积过大撑爆云同步信封） */
+function readImageAsDataURL(file: File, maxSize = 256, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('图片解析失败'))
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
+        const w = Math.max(1, Math.round(img.width * scale))
+        const h = Math.max(1, Math.round(img.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('canvas 不可用'))
+          return
+        }
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, w, h)
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onAvatarChange(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    toast.error('请选择图片文件')
+    input.value = ''
+    return
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    toast.error('图片过大（上限 8MB）')
+    input.value = ''
+    return
+  }
+  try {
+    formAvatar.value = await readImageAsDataURL(file)
+  } catch {
+    toast.error('头像读取失败')
+  } finally {
+    input.value = ''
+  }
+}
+
+function clearAvatar(): void {
+  formAvatar.value = ''
+}
+
+function triggerAvatarInput(): void {
+  avatarInput.value?.click()
+}
 
 const isMemberFormValid = computed(() => {
   const n = formName.value.trim().length
@@ -88,6 +152,7 @@ function startAdd(): void {
   formDeath.value = ''
   formPhone.value = ''
   formNote.value = ''
+  formAvatar.value = ''
   showMemberDialog.value = true
 }
 
@@ -116,7 +181,8 @@ async function handleSaveMember(): Promise<void> {
     birthDate: formBirth.value || undefined,
     deathDate: formDeath.value || undefined,
     phone: formPhone.value.trim() || undefined,
-    note: formNote.value.trim() || undefined
+    note: formNote.value.trim() || undefined,
+    avatar: formAvatar.value || undefined
   }
   if (editingId.value) {
     await store.updateMember(editingId.value, input)
@@ -318,6 +384,8 @@ onUnmounted(() => {
             <el-table-column label="姓名" min-width="160" align="center" show-overflow-tooltip>
               <template #default="{ row }">
                 <div class="fg-name">
+                  <img v-if="row.avatar" :src="row.avatar" class="fg-name-avatar" :alt="row.name" />
+                  <span v-else class="fg-name-initial">{{ (row.name || '?').slice(0, 1) }}</span>
                   {{ row.name }}
                   <span v-if="store.rootId === row.id" class="fg-root-badge">主根</span>
                 </div>
@@ -425,6 +493,20 @@ onUnmounted(() => {
             data-testid="fg-name-input"
             @keyup.enter="handleSaveMember"
           />
+        </div>
+        <div class="form-group">
+          <label>头像（可选）</label>
+          <div class="avatar-uploader">
+            <div class="avatar-preview" :class="{ empty: !formAvatar }">
+              <img v-if="formAvatar" :src="formAvatar" alt="头像预览" />
+              <span v-else class="avatar-placeholder">无</span>
+            </div>
+            <div class="avatar-actions">
+              <input ref="avatarInput" type="file" accept="image/*" class="avatar-file" data-testid="fg-avatar-input" @change="onAvatarChange" />
+              <el-button size="small" data-testid="fg-avatar-upload" @click="triggerAvatarInput">上传头像</el-button>
+              <el-button v-if="formAvatar" size="small" class="btn-cancel" data-testid="fg-avatar-clear" @click="clearAvatar">移除</el-button>
+            </div>
+          </div>
         </div>
         <div class="form-row-fields">
           <div class="field">
@@ -722,6 +804,40 @@ onUnmounted(() => {
 .field-gender { width: 140px; }
 .field-date { width: 170px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ===== 头像上传 ===== */
+.avatar-uploader { display: flex; align-items: center; gap: 14px; }
+.avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-card, #fff);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-placeholder { font-size: 12px; color: var(--color-text-muted, #9ca3af); }
+.avatar-actions { display: flex; align-items: center; gap: 8px; }
+.avatar-file { display: none; }
+.fg-name-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.fg-name-initial {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+}
+html.dark .avatar-preview { background: var(--color-bg-card, #1f2937); }
 
 /* ===== 暗色覆盖 ===== */
 html.dark .fg-tab { color: var(--color-text-secondary, #d1d5db); }

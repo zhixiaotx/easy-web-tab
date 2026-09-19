@@ -286,6 +286,11 @@ const handleUnmark = (url: string) => {
   }
 }
 
+const handleAdd = () => {
+  editingSite.value = null
+  router.push({ query: { modal: 'add' } })
+}
+
 const handleSave = (site: Site) => {
   if (editingSite.value) {
     // 编辑模式 - 直接更新
@@ -462,6 +467,10 @@ onUnmounted(() => {
           />
           <button v-if="siteFilter" type="button" class="nsf-clear" aria-label="清除关键词" @click="siteFilter = ''">×</button>
         </div>
+
+        <button type="button" class="nav-add-site" data-testid="nav-add-site" @click="handleAdd">
+          <span class="nas-plus" aria-hidden="true">＋</span>添加网站
+        </button>
 
         <button v-if="hasAnyFilter" type="button" class="nav-filter-clear" @click="clearAllFilters">清空筛选</button>
       </div>
@@ -908,6 +917,33 @@ onUnmounted(() => {
   border-color: #ef4444;
 }
 
+.nav-add-site {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border: 1px solid var(--color-primary, #3b82f6);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.nav-add-site:hover {
+  background: var(--color-primary-hover, #2563eb);
+  border-color: var(--color-primary-hover, #2563eb);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.nas-plus {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .nav-filter-hint {
   font-size: 12px;
   color: #b45309;
@@ -995,6 +1031,18 @@ html.dark .nsf-clear {
 html.dark .nav-filter-clear {
   color: var(--color-text-secondary, #d1d5db);
   border-color: var(--color-border, #374151);
+}
+
+html.dark .nav-add-site {
+  color: #fff;
+  background: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+html.dark .nav-add-site:hover {
+  background: var(--color-primary-hover, #2563eb);
+  border-color: var(--color-primary-hover, #2563eb);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
 }
 
 @media (max-width: 768px) {

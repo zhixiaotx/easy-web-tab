@@ -376,12 +376,7 @@ onUnmounted(() => {
       :class="{ open: sidebarOpen }"
       aria-label="分类导航"
     >
-      <div class="nav-sidebar-brand">
-        <svg class="nav-brand-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5m0 7L2 14l10 5 10-5-10-5m0 7L2 21l10 5 10-5-10-5z" /></svg>
-        <span>导航</span>
-      </div>
       <div class="nav-sidebar-scroll">
-        <div class="nav-sidebar-section-title">分类</div>
         <nav class="nav-sidebar-menu">
           <button
             type="button"
@@ -631,21 +626,6 @@ onUnmounted(() => {
 }
 .nav-sidebar.open {
   transform: translateX(0);
-}
-.nav-sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 18px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text, #1e293b);
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-}
-.nav-brand-ico {
-  width: 18px;
-  height: 18px;
-  fill: var(--color-primary, #3b82f6);
 }
 .nav-sidebar-scroll {
   flex: 1;
@@ -974,10 +954,6 @@ html.dark .app-bar-right :deep(.theme-toggle:hover) {
 html.dark .nav-sidebar {
   background-color: var(--color-surface, #1f2937);
   border-right-color: var(--color-border, #374151);
-}
-html.dark .nav-sidebar-brand {
-  border-bottom-color: var(--color-border, #374151);
-  color: var(--color-text, #e5e7eb);
 }
 html.dark .nav-menu-item {
   color: var(--color-text-secondary, #d1d5db);

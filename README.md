@@ -4,6 +4,7 @@
 
 ![alt text](public/img/webtab.png)
 
+[easy-web-tab：gitee地址](https://gitee.com/sifujiang/easy-web-tab)
 ---
 
 ## ✨ 功能特性
